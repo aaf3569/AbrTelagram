@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.gstatic.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; manifest-src 'self'; upgrade-insecure-requests; block-all-mixed-content">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; connect-src 'self' https://abrschool-bot.onrender.com http://127.0.0.1:3000 http://localhost:3000 https://cdn.jsdelivr.net https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.gstatic.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; manifest-src 'self'; upgrade-insecure-requests; block-all-mixed-content">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -217,6 +217,163 @@ main{ flex:1; padding:32px 20px 40px; display:flex }
   font-weight:900;
 }
 .spacer{ height:14px; }
+
+/* === Student Request (admin) === */
+.student-request-shell{
+  margin-top:16px;
+  border:1px solid var(--border);
+  border-radius:18px;
+  background:
+    radial-gradient(140% 180% at 100% -30%, rgba(3,60,84,.08), transparent 54%),
+    #fff;
+  box-shadow:var(--shadow-1);
+  padding:14px;
+}
+.student-request-toggle{
+  width:100%;
+  min-height:56px;
+  font-size:1.04rem;
+}
+.student-request-panel{
+  margin-top:12px;
+  border-top:1px solid var(--border);
+  padding-top:14px;
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
+#studentRequestSheet .student-request-panel{
+  margin-top:0;
+  border-top:none;
+  padding-top:0;
+}
+.student-request-panel[hidden]{
+  display:none !important;
+}
+.request-grid{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:12px;
+}
+.request-students-shell{
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:12px;
+  background:#fff;
+  box-shadow:0 8px 20px rgba(3,60,84,.06);
+}
+.request-students-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:10px;
+}
+.request-students-title{
+  font-weight:900;
+  color:#12395a;
+  font-size:.95rem;
+}
+.request-students-count{
+  font-size:.82rem;
+  font-weight:800;
+  color:#4b6486;
+  background:#eef5fb;
+  border:1px solid rgba(3,60,84,.12);
+  border-radius:999px;
+  padding:4px 10px;
+}
+.request-students-list{
+  max-height:240px;
+  overflow:auto;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+.request-student-item{
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:10px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  background:#fbfdff;
+}
+.request-student-item input[type="checkbox"]{
+  transform:scale(1.2);
+}
+.request-student-main{
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+}
+.request-student-name{
+  font-weight:900;
+  color:#153d5d;
+}
+.request-student-sub{
+  font-size:.82rem;
+  color:#5f7698;
+  font-weight:700;
+}
+.request-live-card{
+  border:1px solid rgba(3,60,84,.16);
+  border-radius:14px;
+  background:#f8fbff;
+  padding:12px;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+.request-live-title{
+  font-weight:900;
+  color:#0f2743;
+  font-size:.92rem;
+}
+.request-live-line{
+  font-size:.9rem;
+  font-weight:800;
+  color:#224c70;
+}
+.request-footer{
+  position:sticky;
+  bottom:0;
+  background:linear-gradient(180deg, rgba(255,255,255,0), #fff 36%);
+  padding-top:8px;
+}
+.request-submit{
+  width:100%;
+  min-height:58px;
+  font-size:1.08rem;
+  border-radius:18px;
+}
+.request-help{
+  font-size:.84rem;
+  color:#637a9a;
+  font-weight:700;
+}
+.request-summary{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+.request-summary-block{
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:10px;
+  background:#fff;
+}
+.request-summary-title{
+  font-weight:900;
+  color:#124062;
+  margin-bottom:4px;
+  font-size:.9rem;
+}
+.request-summary-text{
+  color:#304f70;
+  font-weight:700;
+  font-size:.9rem;
+}
 
 /* === School overview stats === */
 .school-overview{
@@ -1019,6 +1176,8 @@ body.student-profile-open #studentSheet .sheet-header{
   .panel { padding: 18px 16px; border-radius: 14px; } .section { padding: 16px; }
   .school-overview-body { grid-template-columns: 1fr; }
   .school-overview-head { flex-direction: column; align-items: flex-start; }
+  .request-grid { grid-template-columns: 1fr; }
+  .request-students-list { max-height: 210px; }
   .stats-grid { grid-template-columns: 1fr; gap: 10px; } .row { flex-direction: column; gap: 12px; }
   .sheet-body { padding: 16px; } .tabs { justify-content: center; } .card { flex-direction: column; gap: 12px; }
   .actions { width: 100%; justify-content: center; } .status-options { flex-direction: column; }
@@ -1190,9 +1349,100 @@ body.student-profile-open #studentSheet .sheet-header{
         <button class="subject grade-hero" type="button"> <span>الصف الثاني عشر</span> </button>
         <div class="group-body"> <div class="list" id="list12"></div> </div>
       </div>
+
+      <div class="student-request-shell" aria-label="طلب طالب">
+        <button id="toggleStudentRequest" class="btn primary student-request-toggle" type="button">طلب طالب</button>
+      </div>
     </section>
   </div>
 </main>
+
+<!-- STUDENT REQUEST SHEET -->
+<section id="studentRequestSheet" class="sheet" aria-hidden="true">
+  <div class="sheet-header">
+    <button id="closeStudentRequestSheet" class="back-btn" aria-label="رجوع">رجوع</button>
+    <h3 class="sheet-title">طلب طالب</h3>
+  </div>
+  <div class="sheet-body">
+    <section id="studentRequestPanel" class="student-request-panel">
+      <div class="request-grid">
+        <div class="field">
+          <div class="label">اختر الصف</div>
+          <div class="input-wrap">
+            <select id="requestGradeSelect" class="input">
+              <option value="">اختر الصف</option>
+              <option value="10">الصف العاشر</option>
+              <option value="11">الصف الحادي عشر</option>
+              <option value="12">الصف الثاني عشر</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <div class="label">اختر الفصل</div>
+          <div class="input-wrap">
+            <select id="requestClassSelect" class="input" disabled>
+              <option value="">اختر الفصل</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="request-students-shell">
+        <div class="request-students-head">
+          <div class="request-students-title">اختر الطلاب (متعدد)</div>
+          <div id="requestStudentsCount" class="request-students-count">0 محدد</div>
+        </div>
+        <div id="requestStudentsList" class="request-students-list">
+          <div class="request-help">اختر الفصل أولاً لعرض الطلاب.</div>
+        </div>
+      </div>
+
+      <div id="requestLiveInfo" class="request-live-card" style="display:none;">
+        <div class="request-live-title">الحصة الحالية للطلاب المحددين</div>
+        <div id="requestLiveClass" class="request-live-line">—</div>
+        <div id="requestLiveTeacher" class="request-live-line">—</div>
+        <div id="requestLiveLesson" class="request-live-line">—</div>
+      </div>
+
+      <div class="field">
+        <div class="label">إلى</div>
+        <div class="input-wrap">
+          <select id="requestDestinationSelect" class="input">
+            <option value="">اختر الجهة</option>
+            <option value="administration">الإدارة المدرسية</option>
+            <option value="absence_office">مكتب الغيابات</option>
+            <option value="custom">مخصص</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="requestDetailWrap" class="field" style="display:none;">
+        <div class="label">يرجى كتابة التفاصيل</div>
+        <div class="input-wrap">
+          <textarea id="requestDetailInput" class="input" rows="3" placeholder="اكتب التفاصيل المطلوبة"></textarea>
+        </div>
+      </div>
+
+      <div id="requestCustomWrap" class="field" style="display:none;">
+        <div class="label">الجهة المخصصة</div>
+        <div class="input-wrap">
+          <input id="requestCustomInput" class="input" type="text" placeholder="اكتب الجهة المطلوبة">
+        </div>
+      </div>
+
+      <label class="checkbox-field">
+        <input id="requestWithBag" type="checkbox">
+        <span class="label" style="margin:0; font-weight:700;">مع الحقيبة</span>
+      </label>
+
+      <div class="request-footer">
+        <button id="openRequestConfirm" class="btn primary request-submit" type="button">إرسال الطلب</button>
+      </div>
+      <div id="requestOk" class="ok"></div>
+      <div id="requestErr" class="err"></div>
+    </section>
+  </div>
+</section>
 
 <!-- CLASS PAGE -->
 <section id="classSheet" class="sheet" aria-hidden="true">
@@ -1557,6 +1807,28 @@ body.student-profile-open #studentSheet .sheet-header{
   </div>
 </div>
 
+<!-- Student Request Confirm Modal -->
+<div id="studentRequestConfirmModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title">تأكيد طلب الطالب</h3>
+      <button id="closeStudentRequestConfirmModal" class="modal-close" aria-label="إغلاق">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 6L6 18M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="request-help">تأكد من التفاصيل قبل الإرسال.</div>
+      <div id="requestConfirmSummary" class="request-summary"></div>
+    </div>
+    <div class="modal-footer">
+      <button id="cancelStudentRequestConfirm" class="btn ghost" type="button">إلغاء</button>
+      <button id="confirmStudentRequestSend" class="btn primary" type="button">تأكيد الإرسال</button>
+    </div>
+  </div>
+</div>
+
 <!-- Save indicator -->
 <div id="reorderSaveIndicator" class="reorder-save-indicator">
   تم حفظ الترتيب بنجاح
@@ -1575,6 +1847,22 @@ const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 const db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true, useFetchStreams: false });
 const auth = getAuth(app);
 
+const TELEGRAM_BACKEND_BASE_URL = (() => {
+  const fromWindow = String(window.__TELEGRAM_BACKEND_BASE_URL || '').trim();
+  if (fromWindow) return fromWindow.replace(/\/+$/, '');
+
+  const fromStorage = String(localStorage.getItem('telegramBackendBaseUrl') || '').trim();
+  if (fromStorage) return fromStorage.replace(/\/+$/, '');
+
+  // Default to deployed backend unless explicitly overridden above.
+  return 'https://abrschool-bot.onrender.com';
+})();
+
+function telegramApiUrl(path) {
+  const cleanPath = `/${String(path || '').replace(/^\/+/, '')}`;
+  return `${TELEGRAM_BACKEND_BASE_URL}${cleanPath}`;
+}
+
 /* ========= UI refs ========= */
 const sLoading = document.getElementById('stateLoading');
 const sNotLog = document.getElementById('stateNotLogged');
@@ -1591,6 +1879,8 @@ const schoolGrade11Count = document.getElementById('schoolGrade11Count');
 const schoolGrade12Count = document.getElementById('schoolGrade12Count');
 const gradesPieChart = document.getElementById('gradesPieChart');
 const gradesPieEmpty = document.getElementById('gradesPieEmpty');
+const studentRequestSheet = document.getElementById('studentRequestSheet');
+const closeStudentRequestSheet = document.getElementById('closeStudentRequestSheet');
 const classSheet = document.getElementById('classSheet');
 const closeClass = document.getElementById('closeClass');
 const classTitle = document.getElementById('classTitle');
@@ -1736,6 +2026,30 @@ const cancelExcused = document.getElementById('cancelExcused');
 const saveExcused = document.getElementById('saveExcused');
 const excusedReasonInput = document.getElementById('excusedReasonInput');
 const excusedReasonError = document.getElementById('excusedReasonError');
+const toggleStudentRequest = document.getElementById('toggleStudentRequest');
+const studentRequestPanel = document.getElementById('studentRequestPanel');
+const requestGradeSelect = document.getElementById('requestGradeSelect');
+const requestClassSelect = document.getElementById('requestClassSelect');
+const requestStudentsList = document.getElementById('requestStudentsList');
+const requestStudentsCount = document.getElementById('requestStudentsCount');
+const requestLiveInfo = document.getElementById('requestLiveInfo');
+const requestLiveClass = document.getElementById('requestLiveClass');
+const requestLiveTeacher = document.getElementById('requestLiveTeacher');
+const requestLiveLesson = document.getElementById('requestLiveLesson');
+const requestDestinationSelect = document.getElementById('requestDestinationSelect');
+const requestDetailWrap = document.getElementById('requestDetailWrap');
+const requestDetailInput = document.getElementById('requestDetailInput');
+const requestCustomWrap = document.getElementById('requestCustomWrap');
+const requestCustomInput = document.getElementById('requestCustomInput');
+const requestWithBag = document.getElementById('requestWithBag');
+const openRequestConfirm = document.getElementById('openRequestConfirm');
+const requestOk = document.getElementById('requestOk');
+const requestErr = document.getElementById('requestErr');
+const studentRequestConfirmModal = document.getElementById('studentRequestConfirmModal');
+const closeStudentRequestConfirmModal = document.getElementById('closeStudentRequestConfirmModal');
+const cancelStudentRequestConfirm = document.getElementById('cancelStudentRequestConfirm');
+const confirmStudentRequestSend = document.getElementById('confirmStudentRequestSend');
+const requestConfirmSummary = document.getElementById('requestConfirmSummary');
 let schoolPieChart = null;
 
 /* ========= Helpers ========= */
@@ -1745,7 +2059,11 @@ function setClassesBackVisible(visible){
 
 function syncClassesBackVisibility(){
   const mainVisible = sClasses.classList.contains('active');
-  const hasOpenSheet = classSheet.classList.contains('open') || studentSheet.classList.contains('open') || attDetailSheet.classList.contains('open');
+  const hasOpenSheet =
+    studentRequestSheet.classList.contains('open') ||
+    classSheet.classList.contains('open') ||
+    studentSheet.classList.contains('open') ||
+    attDetailSheet.classList.contains('open');
   setClassesBackVisible(mainVisible && !hasOpenSheet);
 }
 
@@ -1963,6 +2281,10 @@ const LONG_PRESS_DURATION = 500; // 0.5 seconds
 // NEW: Variables for modal state
 let specialCaseModalContext = { studentId: null, isEdit: false, originalChecked: false };
 let excusedModalContext = { studentId: null, attendanceId: null };
+let requestStudentsCache = [];
+let requestSelectedStudentIds = new Set();
+let requestLiveContext = null;
+let requestPreviewPayload = null;
 
 /* ========= NEW: Modal Functions ========= */
 function openModal(modal) {
@@ -2221,6 +2543,401 @@ renderGroups();
 updateStudentDesktopLayout();
 syncStudentProfileChrome();
 
+/* ========= Student Request (admins) ========= */
+const REQUEST_CLASSES_BY_GRADE = Object.freeze({
+  '10': GROUP_10,
+  '11': GROUP_11,
+  '12': GROUP_12
+});
+
+function escapeHtml(value){
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function resetRequestAlerts(){
+  requestOk.style.display = 'none';
+  requestErr.style.display = 'none';
+}
+
+function setRequestError(message){
+  requestErr.textContent = message || 'تعذّر تنفيذ الطلب.';
+  requestErr.style.display = 'block';
+  requestOk.style.display = 'none';
+}
+
+function setRequestSuccess(message){
+  requestOk.textContent = message || 'تم إرسال الطلب بنجاح.';
+  requestOk.style.display = 'block';
+  requestErr.style.display = 'none';
+}
+
+function renderRequestClassOptions(gradeValue){
+  const classes = REQUEST_CLASSES_BY_GRADE[String(gradeValue || '')] || [];
+  requestClassSelect.innerHTML = '<option value="">اختر الفصل</option>';
+  classes.forEach((classKey)=>{
+    const option = document.createElement('option');
+    option.value = classKey;
+    option.textContent = toArabicDigits(classKey);
+    requestClassSelect.appendChild(option);
+  });
+  requestClassSelect.disabled = classes.length === 0;
+}
+
+function renderRequestStudentsCount(){
+  const count = requestSelectedStudentIds.size;
+  requestStudentsCount.textContent = `${toArabicDigits(count)} محدد`;
+}
+
+function getSelectedRequestStudents(){
+  if(!requestSelectedStudentIds.size) return [];
+  return requestStudentsCache.filter((row)=> requestSelectedStudentIds.has(row.id));
+}
+
+function renderRequestStudentsList(){
+  renderRequestStudentsCount();
+  if(!requestClassSelect.value){
+    requestStudentsList.innerHTML = '<div class="request-help">اختر الفصل أولاً لعرض الطلاب.</div>';
+    return;
+  }
+  if(!requestStudentsCache.length){
+    requestStudentsList.innerHTML = '<div class="request-help">لا يوجد طلاب في هذا الفصل.</div>';
+    return;
+  }
+  const frag = document.createDocumentFragment();
+  requestStudentsCache.forEach((student)=>{
+    const row = document.createElement('label');
+    row.className = 'request-student-item';
+    const civil = student.civilid ? `الرقم المدني: ${toArabicDigits(student.civilid)}` : 'بدون رقم مدني';
+    row.innerHTML = `
+      <input type="checkbox" class="request-student-checkbox" value="${escapeHtml(student.id)}" ${requestSelectedStudentIds.has(student.id) ? 'checked' : ''}>
+      <div class="request-student-main">
+        <div class="request-student-name">${escapeHtml(student.name || '—')}</div>
+        <div class="request-student-sub">${escapeHtml(civil)}</div>
+      </div>
+    `;
+    frag.appendChild(row);
+  });
+  requestStudentsList.innerHTML = '';
+  requestStudentsList.appendChild(frag);
+}
+
+async function getRequestAuthHeaders(){
+  const user = auth.currentUser;
+  if(!user) throw new Error('يرجى تسجيل الدخول أولاً.');
+  const token = await user.getIdToken();
+  return {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${token}`
+  };
+}
+
+async function loadRequestStudentsForClass(classKey){
+  requestStudentsCache = [];
+  requestSelectedStudentIds = new Set();
+  requestLiveContext = null;
+  requestPreviewPayload = null;
+  renderRequestStudentsList();
+  renderRequestLiveInfo();
+  if(!classKey) return;
+
+  requestStudentsList.innerHTML = '<div class="request-help">جاري تحميل الطلاب...</div>';
+  try{
+    const qy = query(collection(db,'students'), where('class','==', classKey));
+    const snap = await getDocs(qy);
+    const list = [];
+    snap.forEach((docSnap)=>{
+      const row = docSnap.data() || {};
+      list.push({
+        id: docSnap.id,
+        name: String(row.name || '').trim(),
+        civilid: String(row.civilid || '').trim(),
+        studentNumber: Number(row.studentNumber)
+      });
+    });
+    list.sort((a,b)=>{
+      const aNum = Number.isFinite(a.studentNumber) ? a.studentNumber : 99999;
+      const bNum = Number.isFinite(b.studentNumber) ? b.studentNumber : 99999;
+      if(aNum !== bNum) return aNum - bNum;
+      return (a.name || '').localeCompare((b.name || ''), 'ar');
+    });
+    requestStudentsCache = list;
+    renderRequestStudentsList();
+  }catch(error){
+    console.error('[requestStudents] load failed:', error);
+    requestStudentsList.innerHTML = '<div class="request-help">تعذّر تحميل الطلاب حالياً.</div>';
+  }
+}
+
+async function refreshRequestLiveContext(){
+  requestLiveContext = null;
+  renderRequestLiveInfo();
+  const classKey = String(requestClassSelect.value || '').trim();
+  const selectedStudents = getSelectedRequestStudents();
+  if(!classKey || !selectedStudents.length) return;
+  try{
+    const headers = await getRequestAuthHeaders();
+    const url = `${telegramApiUrl('/api/telegram/class-live-info')}?classKey=${encodeURIComponent(classKey)}`;
+    const response = await fetch(url, { method:'GET', headers });
+    const body = await response.json().catch(()=> ({}));
+    if(!response.ok || !body?.ok){
+      throw new Error(body?.error || `class_live_info_failed_${response.status}`);
+    }
+    requestLiveContext = body;
+  }catch(error){
+    console.error('[requestStudents] live-info failed:', error);
+    requestLiveContext = { ok:false, error: error?.message || 'live_info_failed' };
+  }
+  renderRequestLiveInfo();
+}
+
+function renderRequestLiveInfo(){
+  const selectedStudents = getSelectedRequestStudents();
+  if(!selectedStudents.length){
+    requestLiveInfo.style.display = 'none';
+    return;
+  }
+  requestLiveInfo.style.display = 'flex';
+  const classLabel = toArabicDigits(requestClassSelect.value || '—');
+  requestLiveClass.textContent = `الفصل: ${classLabel}`;
+
+  if(!requestLiveContext){
+    requestLiveTeacher.textContent = 'المعلم الآن: جاري التحديث...';
+    requestLiveLesson.textContent = 'الحصة الحالية: جاري التحديث...';
+    return;
+  }
+
+  if(requestLiveContext.ok === false){
+    requestLiveTeacher.textContent = 'المعلم الآن: غير متاح';
+    requestLiveLesson.textContent = 'الحصة الحالية: تعذّر تحميلها';
+    return;
+  }
+
+  if(!requestLiveContext.inLesson){
+    requestLiveTeacher.textContent = 'المعلم الآن: لا توجد حصة حالياً';
+    requestLiveLesson.textContent = 'الحصة الحالية: خارج وقت الحصص';
+    return;
+  }
+
+  const teacherName = requestLiveContext.teacher?.teacherName || 'غير محدد';
+  const lessonLabel = requestLiveContext.lesson?.lessonLabel || 'حصة';
+  const subject = requestLiveContext.lesson?.subject ? ` - ${requestLiveContext.lesson.subject}` : '';
+  const start = requestLiveContext.lesson?.start || '';
+  const end = requestLiveContext.lesson?.end || '';
+  const timeText = start && end ? ` (${start} - ${end})` : '';
+
+  requestLiveTeacher.textContent = `المعلم الآن: ${toArabicDigits(teacherName)}`;
+  requestLiveLesson.textContent = `الحصة الحالية: ${toArabicDigits(lessonLabel)}${toArabicDigits(subject)}${toArabicDigits(timeText)}`;
+}
+
+function destinationLabelForValue(value){
+  if(value === 'administration') return 'الإدارة المدرسية';
+  if(value === 'absence_office') return 'مكتب الغيابات';
+  return '';
+}
+
+function validateStudentRequestForm(){
+  const grade = String(requestGradeSelect.value || '').trim();
+  const classKey = String(requestClassSelect.value || '').trim();
+  const selectedStudents = getSelectedRequestStudents();
+  const destinationType = String(requestDestinationSelect.value || '').trim();
+  const detail = String(requestDetailInput.value || '').trim();
+  const custom = String(requestCustomInput.value || '').trim();
+  const withBag = Boolean(requestWithBag.checked);
+
+  if(!grade) throw new Error('اختر الصف أولاً.');
+  if(!classKey) throw new Error('اختر الفصل أولاً.');
+  if(!selectedStudents.length) throw new Error('اختر طالباً واحداً على الأقل.');
+  if(!destinationType) throw new Error('اختر الجهة المطلوب التوجه إليها.');
+  if(destinationType === 'administration' && !detail){
+    throw new Error('الرجاء كتابة تفاصيل الطلب للإدارة المدرسية.');
+  }
+  if(destinationType === 'custom' && !custom){
+    throw new Error('الرجاء كتابة الجهة المخصصة.');
+  }
+
+  const destinationLabel = destinationType === 'custom' ? custom : destinationLabelForValue(destinationType);
+  const preview = {
+    grade,
+    classKey,
+    studentIds: selectedStudents.map((x)=> x.id),
+    studentNames: selectedStudents.map((x)=> x.name).filter(Boolean),
+    destinationType,
+    destinationLabel,
+    destinationDetails: destinationType === 'administration' ? detail : '',
+    withBag
+  };
+  return preview;
+}
+
+function renderRequestConfirmSummary(payload){
+  const studentNames = payload.studentNames.length ? payload.studentNames.join('، ') : '—';
+  const blocks = [];
+  blocks.push(`
+    <div class="request-summary-block">
+      <div class="request-summary-title">الطلاب</div>
+      <div class="request-summary-text">${escapeHtml(toArabicDigits(studentNames))}</div>
+    </div>
+  `);
+  blocks.push(`
+    <div class="request-summary-block">
+      <div class="request-summary-title">الفصل</div>
+      <div class="request-summary-text">${escapeHtml(toArabicDigits(payload.classKey))}</div>
+    </div>
+  `);
+  if(requestLiveContext?.inLesson){
+    const teacher = requestLiveContext.teacher?.teacherName || 'غير محدد';
+    const lesson = requestLiveContext.lesson?.lessonLabel || 'حصة';
+    blocks.push(`
+      <div class="request-summary-block">
+        <div class="request-summary-title">الوضع الحالي</div>
+        <div class="request-summary-text">${escapeHtml(`المعلم: ${toArabicDigits(teacher)} | الحصة: ${toArabicDigits(lesson)}`)}</div>
+      </div>
+    `);
+  }
+  blocks.push(`
+    <div class="request-summary-block">
+      <div class="request-summary-title">الوجهة</div>
+      <div class="request-summary-text">${escapeHtml(toArabicDigits(payload.destinationLabel || '—'))}</div>
+    </div>
+  `);
+  if(payload.destinationDetails){
+    blocks.push(`
+      <div class="request-summary-block">
+        <div class="request-summary-title">تفاصيل الطلب</div>
+        <div class="request-summary-text">${escapeHtml(toArabicDigits(payload.destinationDetails))}</div>
+      </div>
+    `);
+  }
+  blocks.push(`
+    <div class="request-summary-block">
+      <div class="request-summary-title">مع الحقيبة</div>
+      <div class="request-summary-text">${payload.withBag ? 'نعم' : 'لا'}</div>
+    </div>
+  `);
+  requestConfirmSummary.innerHTML = blocks.join('');
+}
+
+function closeStudentRequestConfirmDialog(){
+  closeModal(studentRequestConfirmModal);
+  requestPreviewPayload = null;
+}
+
+async function sendStudentRequestNow(){
+  if(!requestPreviewPayload) return;
+  confirmStudentRequestSend.disabled = true;
+  confirmStudentRequestSend.textContent = 'جاري الإرسال...';
+  try{
+    const headers = await getRequestAuthHeaders();
+    const response = await fetch(telegramApiUrl('/api/telegram/request-students'), {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(requestPreviewPayload)
+    });
+    const body = await response.json().catch(()=> ({}));
+    if(!response.ok || !body?.ok){
+      throw new Error(body?.error || `request_send_failed_${response.status}`);
+    }
+    closeStudentRequestConfirmDialog();
+    setRequestSuccess('تم إرسال طلب الطالب عبر التلغرام بنجاح.');
+  }catch(error){
+    console.error('[requestStudents] send failed:', error);
+    const raw = String(error?.message || '').trim();
+    const normalized = raw.replace(/_\d{3}$/,'');
+    const messageMap = {
+      no_active_lesson: 'لا توجد حصة فعّالة الآن لهذا الفصل.',
+      teacher_not_found: 'تعذّر تحديد معلم الحصة الحالية.',
+      teacher_chat_not_connected: 'حساب التلغرام للمعلم غير مربوط.',
+      request_send_failed: 'تعذّر إرسال الطلب حالياً.',
+      unauthorized: 'الجلسة منتهية. يرجى إعادة تسجيل الدخول.',
+      forbidden: 'لا تملك صلاحية إرسال هذا الطلب.',
+    };
+    setRequestError(messageMap[raw] || messageMap[normalized] || `تعذّر إرسال الطلب: ${raw || 'حدث خطأ غير متوقع'}`);
+  }finally{
+    confirmStudentRequestSend.disabled = false;
+    confirmStudentRequestSend.textContent = 'تأكيد الإرسال';
+  }
+}
+
+function initStudentRequestForm(){
+  if(!toggleStudentRequest || !studentRequestPanel || !studentRequestSheet || !closeStudentRequestSheet) return;
+
+  const openStudentRequestFlow = ()=>{
+    openSheet(studentRequestSheet);
+  };
+
+  const closeStudentRequestFlow = ()=>{
+    closeSheet(studentRequestSheet);
+  };
+
+  toggleStudentRequest.addEventListener('click', openStudentRequestFlow);
+  closeStudentRequestSheet.addEventListener('click', closeStudentRequestFlow);
+
+  requestGradeSelect.addEventListener('change', ()=>{
+    resetRequestAlerts();
+    requestClassSelect.value = '';
+    requestStudentsCache = [];
+    requestSelectedStudentIds = new Set();
+    requestLiveContext = null;
+    renderRequestClassOptions(requestGradeSelect.value);
+    renderRequestStudentsList();
+    renderRequestLiveInfo();
+  });
+
+  requestClassSelect.addEventListener('change', async ()=>{
+    resetRequestAlerts();
+    await loadRequestStudentsForClass(requestClassSelect.value);
+  });
+
+  requestStudentsList.addEventListener('change', async (event)=>{
+    const target = event.target;
+    if(!(target instanceof HTMLInputElement)) return;
+    if(!target.classList.contains('request-student-checkbox')) return;
+    if(target.checked){
+      requestSelectedStudentIds.add(target.value);
+    }else{
+      requestSelectedStudentIds.delete(target.value);
+    }
+    renderRequestStudentsCount();
+    await refreshRequestLiveContext();
+  });
+
+  requestDestinationSelect.addEventListener('change', ()=>{
+    resetRequestAlerts();
+    const value = requestDestinationSelect.value;
+    requestDetailWrap.style.display = value === 'administration' ? 'flex' : 'none';
+    requestCustomWrap.style.display = value === 'custom' ? 'flex' : 'none';
+  });
+
+  openRequestConfirm.addEventListener('click', async ()=>{
+    resetRequestAlerts();
+    try{
+      if(getSelectedRequestStudents().length){
+        await refreshRequestLiveContext();
+      }
+      requestPreviewPayload = validateStudentRequestForm();
+      renderRequestConfirmSummary(requestPreviewPayload);
+      openModal(studentRequestConfirmModal);
+    }catch(error){
+      setRequestError(error?.message || 'تحقق من الحقول قبل المتابعة.');
+    }
+  });
+
+  closeStudentRequestConfirmModal.addEventListener('click', closeStudentRequestConfirmDialog);
+  cancelStudentRequestConfirm.addEventListener('click', closeStudentRequestConfirmDialog);
+  confirmStudentRequestSend.addEventListener('click', sendStudentRequestNow);
+
+  renderRequestClassOptions('');
+  renderRequestStudentsList();
+  renderRequestLiveInfo();
+}
+
+initStudentRequestForm();
+
 /* ========= Class page ========= */
 let selectedClass = null;
 let currentClassStudents = []; // Store students for the current class
@@ -2239,6 +2956,10 @@ closeClass.addEventListener('click', ()=> closeSheet(classSheet));
 document.addEventListener('keydown', (e)=>{
   if(e.key!=='Escape') return;
   closeSheet(attDetailSheet);
+  if(studentRequestSheet.classList.contains('open')){
+    closeSheet(studentRequestSheet);
+    return;
+  }
   if(studentSheet.classList.contains('open') || getRouteStudentId()){
     closeStudentView();
     syncStudentProfileChrome();
