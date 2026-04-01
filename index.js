@@ -767,6 +767,94 @@ app.get("/api/telegram/test-message", async (req, res) => {
   }
 });
 
+app.get("/api/telegram/debug-reminders", async (req, res) => {
+  const userId = String(req.query?.userId || "teacher123").trim() || "teacher123";
+
+  try {
+    const now = kuwaitNowContext();
+    const lessonTimes = await loadLessonTimes();
+    const overrides = await loadOverridesForDate(now.dateISO);
+    const customLessonsByTeacher = await loadCustomLessonsByTeacher(now.dayIndex, lessonTimes);
+    const lessons = await buildTeacherLessonsForToday({
+      teacherUid: userId,
+      dateISO: now.dateISO,
+      weekdayEnglish: now.weekdayEnglish,
+      lessonTimes,
+      overrides,
+      customLessonsByTeacher,
+    });
+
+    let firestoreChatId = "";
+    let teacherName = "";
+    try {
+      const teacherSnap = await db.collection("teachers").doc(userId).get();
+      if (teacherSnap.exists) {
+        const data = teacherSnap.data() || {};
+        firestoreChatId = String(data.telegramChatId || "").trim();
+        teacherName = String(data.name || "").trim();
+      }
+    } catch (error) {
+      console.error(`[telegram] debug Firestore lookup failed for userId=${userId}:`, error.message);
+    }
+
+    const memoryChatId = String(users[userId] || "").trim();
+    const activeChatId = firestoreChatId || memoryChatId;
+
+    const lessonChecks = [];
+    for (const item of lessons) {
+      const attendanceExists = await hasAttendanceSession({
+        dateISO: now.dateISO,
+        lesson: item.lesson,
+        classKey: item.classKey,
+      });
+      const before5Window = now.nowMinutes >= item.startMin - LESSON_REMINDER_LEAD_MINUTES && now.nowMinutes < item.startMin;
+      const lateWindow =
+        now.nowMinutes >= item.startMin + ATTENDANCE_REMINDER_DELAY_MINUTES && now.nowMinutes <= item.endMin + 15;
+      const missedWindow = now.nowMinutes >= item.endMin + 16 && now.nowMinutes <= item.endMin + 180;
+
+      lessonChecks.push({
+        lesson: item.lesson,
+        lessonLabel: DEFAULT_LESSON_TIMES[item.lesson - 1]?.label || `lesson_${item.lesson}`,
+        classKey: item.classKey,
+        start: toTimeLabel(item.startMin),
+        end: toTimeLabel(item.endMin),
+        source: item.source || "schedule",
+        attendanceExists,
+        windows: {
+          before5Window,
+          lateWindow,
+          missedWindow,
+        },
+      });
+    }
+
+    return res.json({
+      ok: true,
+      userId,
+      teacherName,
+      now: {
+        dateISO: now.dateISO,
+        weekdayEnglish: now.weekdayEnglish,
+        nowMinutes: now.nowMinutes,
+        nowTime: toTimeLabel(now.nowMinutes),
+      },
+      chat: {
+        activeChatId: activeChatId || null,
+        firestoreChatId: firestoreChatId || null,
+        memoryChatId: memoryChatId || null,
+      },
+      lessonCount: lessonChecks.length,
+      lessons: lessonChecks,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      ok: false,
+      userId,
+      error: error.message,
+    });
+  }
+});
+
 app.post("/api/telegram-webhook", async (req, res) => {
   const update = req.body || {};
   const chatId = update?.message?.chat?.id;
