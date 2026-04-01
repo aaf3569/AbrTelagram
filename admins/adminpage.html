@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.gstatic.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; manifest-src 'self'; upgrade-insecure-requests; block-all-mixed-content">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; connect-src 'self' https://abrschool-bot.onrender.com https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.gstatic.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; manifest-src 'self'; upgrade-insecure-requests; block-all-mixed-content">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -419,6 +419,7 @@
           <button id="openSchedules" class="btn ghost" type="button" aria-label="الجداول">الجداول</button>
           <button id="openLogs" class="btn ghost" type="button" aria-label="السجلات">السجلات</button>
           <!-- /NEW -->
+          <button id="telegramSettingsBtn" class="btn ghost section-break" type="button" aria-label="إعدادات المستخدم">إعدادات المستخدم</button>
           <button id="logoutBtn" class="btn ghost section-break" type="button" aria-label="تسجيل الخروج">تسجيل الخروج</button>
           <button id="deleteBtn" class="btn danger" type="button" aria-label="حذف الحساب">حذف الحساب</button>
         </div>
@@ -715,6 +716,7 @@
       doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp
     } from "/shared/firebase.js";
     import { showActionPopup } from "/shared/action-popup.js";
+    import { mountTelegramSettings } from "/shared/telegram-settings.js";
 
     
 
@@ -742,6 +744,7 @@
     const profileAvatar = document.getElementById('profileAvatar');
     const adminName     = document.getElementById('adminName');
     const createdAtText = document.getElementById('createdAtText');
+    const telegramSettingsBtn = document.getElementById('telegramSettingsBtn');
 
     const openAbsence  = document.getElementById('openAbsence');
     const openTeachers = document.getElementById('openTeachers');
@@ -753,6 +756,11 @@
     // NEW: schedules button ref
     const openSchedules = document.getElementById('openSchedules');
     const openLogs = document.getElementById('openLogs');
+
+    mountTelegramSettings({
+      auth,
+      getDisplayName: () => adminName?.textContent || ''
+    });
 
     // NEW: Absence modal refs
     const absenceModal = document.getElementById('absenceModal');
