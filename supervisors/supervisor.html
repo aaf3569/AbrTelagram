@@ -1,0 +1,2941 @@
+﻿<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.gstatic.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; manifest-src 'self'; upgrade-insecure-requests; block-all-mixed-content">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://www.gstatic.com" crossorigin>    <title>لوحة المستخدم - ثانوية أحمد البشر الرومي</title>
+    <!-- Noto Kufi Arabic -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+    <!-- Font Awesome for Teams Icon -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/shared/base.css" />
+  <style>
+        :root {
+            --primary: #033C54;
+            --primary-light: #065372;
+            --primary-extra-light: #eef5fb;
+            --page: #f6f8fb;
+            --text: #0f172a;
+            --muted: #6b7f9f;
+            --border: #e6edf7;
+            --shadow-1: 0 8px 22px rgba(3, 60, 84, 0.14);
+            --radius: 16px;
+            --chip: #eef5fb;
+            --blueGlass: rgba(3, 60, 84, 0.08);
+            --green: #1a7f37;
+            --yellow: #a06d00;
+            --red: #b42318;
+            --greenBg: rgba(26, 127, 55, 0.08);
+            --yellowBg: rgba(160, 109, 0, 0.10);
+            --redBg: rgba(180, 35, 24, 0.10);
+            --transition: all 0.16s ease;
+            /* Teams colors */
+            --teams-primary: #6264A7;
+            --teams-light: rgba(98, 100, 167, 0.15);
+            --teams-medium: rgba(98, 100, 167, 0.25);
+        }
+        *{box-sizing:border-box;margin:0;padding:0}
+        html,body{height:100%;scroll-behavior:smooth}
+        body{
+            margin:0;background: radial-gradient(1200px 600px at 80% -20%, rgba(3,60,84,.08), transparent 60%), radial-gradient(900px 500px at -10% 120%, rgba(3,60,84,.06), transparent 60%), var(--page);
+            color:var(--text);
+            font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+            display:flex;flex-direction:column;min-height:100vh;
+            -webkit-tap-highlight-color:transparent;line-height:1.6;
+            /* NEW: Prevent scroll when sheets are open */
+            overflow-x: hidden;
+        }
+        /* NEW: Body scroll lock when sheets are open */
+        body.sheet-open {
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
+            height: 100%;
+        }
+        /* Header */
+        .site-header{position:sticky;top:0;z-index:100;background:rgba(255,255,255,.95);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);color:var(--primary);padding:16px 24px;display:flex;align-items:center;justify-content:center;border-bottom:1px solid rgba(3,60,84,.1);box-shadow:0 2px 15px rgba(3,60,84,.08)}
+        .site-title{margin:0;font-weight:900;letter-spacing:.2px;font-size:clamp(1.2rem,2.5vw,1.6rem);text-shadow:0 1px 0 rgba(255,255,255,.6)}
+        main{flex:1;padding:24px 16px 40px;display:flex;width:100%}
+        .credits-footer{width:100%;display:flex;justify-content:center;padding:20px 16px 28px}
+        .credits-card{width:100%;background:#fff;border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow-1);padding:18px 16px;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif}
+        .credits-logo{width:112px;height:112px;object-fit:contain}
+        .credits-line{margin:0;font-size:.92rem;font-weight:700;color:var(--muted);line-height:1.7}
+        .credits-label{color:var(--primary);font-weight:900}
+        @media(max-width:480px){
+            .credits-card{padding:16px 12px}
+            .credits-logo{width:90px;height:90px}
+            .credits-line{font-size:.86rem}
+        }
+        .column{width:min(1100px,100%);margin:0 auto;display:flex;flex-direction:column;align-items:center;gap:20px}
+        .panel{width:100%;background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:24px 20px;box-shadow:var(--shadow-1);transition:var(--transition)}
+        .state{display:none}
+        .state.active{display:block;animation:fadeIn .3s ease}
+        @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+        .loading{display:grid;place-items:center;gap:16px;padding:32px 24px}
+        .spinner{width:48px;height:48px;border-radius:50%;border:4px solid rgba(3,60,84,.15);border-top-color:var(--primary);animation:spin 1s linear infinite;margin-inline:auto}
+        @keyframes spin{to{transform:rotate(360deg)}}
+        .msg{text-align:center}
+        .error{color:var(--red);background:var(--redBg);border:1px solid rgba(180,35,24,.2);padding:16px;border-radius:14px;text-align:center}
+        .muted{color:var(--muted)}
+        .center{display:flex;flex-direction:column;align-items:center;gap:12px;margin-top:10px;text-align:center;width:100%}
+        .avatar{width:140px;height:140px;border-radius:50%;background:linear-gradient(145deg,var(--primary),var(--primary-light));display:grid;place-items:center;border:3px solid rgba(255,255,255,.95);box-shadow:var(--shadow-1);overflow:hidden;transition:var(--transition)}
+        .avatar:hover{transform:scale(1.03)}
+        .avatar svg{width:70px;height:70px;stroke:#fff;fill:none;stroke-width:2}
+        .name{font-size:1.4rem;font-weight:900;color:var(--primary);margin-top:8px}
+        .created{font-size:.95rem;color:var(--muted)}
+        
+        /* NEW: Teams Box Styles */
+        .teams-box {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--teams-light);
+            border: 1px solid var(--teams-medium);
+            border-radius: 14px;
+            padding: 12px 18px;
+            margin: 12px 0;
+            text-decoration: none;
+            color: var(--teams-primary);
+            font-weight: 800;
+            font-size: 0.95rem;
+            transition: var(--transition);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 12px rgba(98, 100, 167, 0.15);
+        }
+        .teams-box:hover {
+            background: rgba(98, 100, 167, 0.25);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(98, 100, 167, 0.25);
+        }
+        .teams-icon {
+            font-size: 1.2rem;
+            color: var(--teams-primary);
+        }
+        
+        .divider{width:100%;height:1px;background:linear-gradient(to right,transparent,var(--border),transparent);margin:20px 0;border-radius:1px}
+        .stack{width:100%;display:flex;flex-direction:column;gap:18px;margin-top:16px;align-items:center}
+        .stack.wide .btn{width:100%}
+        .btn{font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;width:100%;min-height:68px;border:none;border-radius:18px;cursor:pointer;font-weight:800;font-size:1.1rem;letter-spacing:.2px;padding:18px 24px;transition:var(--transition);user-select:none;display:flex;align-items:center;justify-content:center;gap:12px;position:relative;overflow:hidden}
+        .btn::after{content:'';position:absolute;inset:0;background:rgba(255,255,255,.1);opacity:0;transition:var(--transition)}
+        .btn:hover::after{opacity:1}
+        .btn .icon{width:24px;height:24px;display:inline-block;flex-shrink:0}
+        .btn.ghost{background:#fff;color:var(--primary);border:1px solid rgba(3,60,84,.25);box-shadow:var(--shadow-1)}
+        .btn.ghost:hover{transform:translateY(-3px);box-shadow:0 18px 40px rgba(3,60,84,.22);border-color:rgba(3,60,84,.4)}
+        .btn.class-btn{background:linear-gradient(145deg,var(--primary),var(--primary-light));color:#fff;box-shadow:0 18px 40px rgba(3,60,84,.32)}
+        .btn.class-btn:hover{transform:translateY(-3px);box-shadow:0 22px 48px rgba(3,60,84,.38)}
+        
+        /* Rest of your existing CSS remains the same */
+        .sheet{
+            position:fixed;
+            inset:0;
+            z-index:1000;
+            background:#fff;
+            display:flex;
+            flex-direction:column;
+            transform:translateX(100%);
+            transition:transform .3s cubic-bezier(.22,.7,.25,1);
+            overflow:hidden;
+            /* NEW: Prevent scroll chaining */
+            overscroll-behavior: contain;
+        }
+        .sheet.open{transform:translateX(0)}
+        .sheet-header{background:#fff;border-bottom:1px solid var(--border);padding:18px 20px;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:10;box-shadow:0 2px 10px rgba(3,60,84,.06)}
+        .back-btn{height:48px;padding:0 20px;border-radius:14px;border:1px solid rgba(3,60,84,.2);background:#fff;color:var(--primary);font-weight:800;cursor:pointer;box-shadow:var(--shadow-1);transition:var(--transition);display:flex;align-items:center;gap:8px}
+        .back-btn:hover{border-color:rgba(3,60,84,.4);transform:translateX(-2px)}
+        .sheet-title{margin:0;font-size:1.2rem;font-weight:900;color:var(--primary);display:flex;align-items:center;gap:10px}
+        .sheet-body{
+            flex:1 1 auto;
+            overflow:auto;
+            padding:24px 20px;
+            width:min(1100px,100%);
+            margin:0 auto;
+            display:flex;
+            flex-direction:column;
+            gap:20px;
+            /* NEW: Optimize scrolling performance */
+            -webkit-overflow-scrolling: touch;
+            will-change: transform;
+        }
+        details{border:1px solid var(--border);border-radius:16px;background:#fff;box-shadow:var(--shadow-1);overflow:hidden;transition:var(--transition)}
+        details:hover{box-shadow:0 12px 30px rgba(3,60,84,.15)}
+        summary{list-style:none;cursor:pointer;padding:20px;font-weight:900;color:var(--primary);display:flex;align-items:center;justify-content:space-between;gap:10px;transition:var(--transition)}
+        summary:hover{background:var(--primary-extra-light)}
+        summary .chev{width:24px;height:24px;transform:rotate(180deg);transition:transform .25s ease}
+        details[open] summary .chev{transform:rotate(0deg)}
+        .grade-list{padding:16px 20px;display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px}
+        .mini{min-height:60px;border-radius:14px;font-weight:800;font-size:1.05rem;padding:16px}
+        .mini.class-btn{background:linear-gradient(145deg,var(--primary),var(--primary-light));color:#fff;border:none}
+        .class-hero,.att-hero{border:2px dashed rgba(3,60,84,.2);background:var(--blueGlass);border-radius:20px;padding:24px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+        .class-name,.att-class{margin:0;font-size:clamp(1.3rem,4vw,1.8rem);color:var(--primary);font-weight:900}
+        .action-row,.att-row{display:flex;gap:12px;flex-wrap:wrap}
+        .btn.attend,.btn.submit{background:linear-gradient(145deg,var(--primary-light),var(--primary));color:#fff;border:none;box-shadow:0 14px 32px rgba(3,60,84,.3)}
+        .btn.attend:hover,.btn.submit:hover{transform:translateY(-2px)}
+        .input-wrap{display:flex;align-items:center;gap:12px;min-height:58px;padding:0 18px;background:#fff;border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-1);transition:var(--transition)}
+        .input-wrap:focus-within{border-color:rgba(3,60,84,.4);box-shadow:0 0 0 3px rgba(3,60,84,.1)}
+        .input{flex:1;height:56px;border:none;outline:none;background:transparent;font-size:16px;color:var(--text);font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif}
+        .input::placeholder{color:var(--muted)}
+        .student-grid{display:grid;gap:16px;grid-template-columns:1fr}
+        @media(min-width:600px){.student-grid{grid-template-columns:repeat(2,1fr)}}
+        @media(min-width:900px){.student-grid{grid-template-columns:repeat(3,1fr)}}
+        .student-item{width:100%;min-height:60px;padding:18px 20px;border:1px solid var(--border);border-radius:16px;background:#fff;box-shadow:var(--shadow-1);font-weight:800;color:var(--text);display:flex;align-items:center;justify-content:flex-start;line-height:1.4;word-break:break-word;transition:var(--transition)}
+        .student-item:hover{transform:translateY(-2px);box-shadow:0 12px 25px rgba(3,60,84,.15)}
+        /* NEW: Special case icon styling */
+        .special-case-icon {
+            width: 18px;
+            height: 18px;
+            margin-inline-start: 8px;
+            flex-shrink: 0;
+        }
+        .student-item-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            gap: 10px;
+        }
+        .student-number-badge {
+            background: var(--primary-extra-light);
+            color: var(--primary);
+            font-size: 0.85rem;
+            font-weight: 700;
+            padding: 3px 10px;
+            border-radius: 12px;
+            border: 1px solid rgba(3, 60, 84, 0.15);
+            flex-shrink: 0;
+            margin-inline-start: auto;
+            min-width: 36px;
+            text-align: center;
+        }
+        .student-name-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 1;
+            min-width: 0;
+        }
+        /* Attendance Create */
+        .att-list{display:flex;flex-direction:column;gap:16px}
+        .att-card{padding:16px;border:1px solid var(--border);border-radius:16px;background:#fff;box-shadow:var(--shadow-1);display:flex;flex-direction:column;gap:12px;transition:var(--transition)}
+        .att-card:hover{box-shadow:0 10px 25px rgba(3,60,84,.12)}
+        .att-name{font-weight:900;color:var(--text);line-height:1.4;word-break:break-word}
+        .seg{display:flex;align-items:center;border:1px solid var(--border);border-radius:14px;overflow:hidden;background:#fff;box-shadow:var(--shadow-1)}
+        .seg button{flex:1 1 0;min-height:48px;padding:12px 10px;background:transparent;border:0;cursor:pointer;font-weight:900;font-size:1rem;font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;transition:var(--transition)}
+        .seg .sep{width:1px;height:32px;background:var(--border)}
+        .seg .present{color:var(--green)}
+        .seg .late{color:var(--yellow)}
+        .seg .absent{color:var(--red)}
+        .seg button.active.present{background:var(--greenBg)}
+        .seg button.active.late{background:var(--yellowBg)}
+        .seg button.active.absent{background:var(--redBg)}
+        /* New: tint card on status */
+        .att-card.tint-late{background:rgba(160,109,0,.10);border-color:rgba(160,109,0,.25)}
+        .att-card.tint-absent{background:rgba(180,35,24,.10);border-color:rgba(180,35,24,.25)}
+        .stats{padding:20px;border:1px solid var(--border);border-radius:16px;background:#fff;box-shadow:var(--shadow-1);display:flex;flex-direction:column;gap:16px}
+        .chips{display:flex;gap:10px;flex-wrap:wrap}
+        .pill{background:var(--chip);color:var(--text);border:1px solid var(--border);padding:8px 14px;border-radius:999px;font-size:.92rem;font-weight:800;display:inline-flex;align-items:center;gap:6px}
+        .pill.g{color:var(--green);border-color:var(--greenBg);background:var(--greenBg)}
+        .pill.y{color:var(--yellow);border-color:var(--yellowBg);background:var(--yellowBg)}
+        .pill.r{color:var(--red);border-color:var(--redBg);background:var(--redBg)}
+        .submit-row{display:flex;justify-content:flex-start}
+        .btn.submit{min-height:60px;padding-inline:26px;border-radius:16px;box-shadow:0 16px 40px rgba(3,60,84,.32)}
+        /* Log */
+        .log-list{display:flex;flex-direction:column;gap:16px}
+        .log-item{padding:18px 20px;border:1px solid var(--border);border-radius:16px;background:#fff;box-shadow:var(--shadow-1);cursor:pointer;transition:var(--transition)}
+        .log-item:hover{transform:translateY(-2px);box-shadow:0 12px 25px rgba(3,60,84,.15)}
+        .log-title{font-weight:900;color:var(--primary);margin:0 0 8px}
+        .log-sub{color:var(--muted);font-weight:800;font-size:.96rem}
+        .warn{color:var(--yellow);font-weight:800;font-size:.94rem}
+        .ok{color:var(--green);font-weight:800;font-size:.94rem}
+        /* ====== Select (restored button style) ====== */
+        .select-wrap{position:relative;max-width:380px;width:100%}
+        .select{
+            appearance:none;-webkit-appearance:none;-moz-appearance:none;
+            width:100%;min-height:52px;
+            padding:12px 16px;
+            padding-inline-end:44px; /* space for arrow */
+            border-radius:16px;font-weight:800;font-size:1rem;cursor:pointer;
+            border:1px solid rgba(3,60,84,.15);
+            background:linear-gradient(145deg,var(--primary),var(--primary-light));
+            color:#fff;box-shadow:0 14px 32px rgba(3,60,84,.25);
+            transition:var(--transition);
+            font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+        }
+        .select:hover{transform:translateY(-2px);box-shadow:0 18px 40px rgba(3,60,84,.32)}
+        .select:focus{outline:none;box-shadow:0 0 0 3px rgba(3,60,84,.18), 0 18px 40px rgba(3,60,84,.32)}
+        .select-wrap::after{
+            content:"";
+            position:absolute;top:50%;transform:translateY(-50%);
+            inset-inline-start:14px; /* RTL-aware: arrow على يمين الحقل */
+            width:22px;height:22px;pointer-events:none;opacity:.95;
+            background:url('data:image/svg+xml;utf8,<svg fill="%23ffffff" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>') no-repeat center / 20px 20px;
+            filter: drop-shadow(0 1px 0 rgba(0,0,0,.15));
+        }
+        /* ===== Modals: centered ===== */
+        .modal{position:fixed;inset:0;z-index:1100;display:none}
+        .modal.open{display:grid;place-items:center}
+        .modal .overlay{position:absolute;inset:0;background:rgba(15,23,42,.35);backdrop-filter:blur(4px)}
+        .modal .card{
+            position:relative;z-index:1;width:min(560px,92vw);
+            background:#fff;border:1px solid var(--border);border-radius:20px;
+            box-shadow:0 24px 60px rgba(3,60,84,.28);padding:20px
+        }
+        .modal h3{margin:0 0 8px;font-size:1.15rem;color:var(--primary);font-weight:900}
+        .modal p{margin:0 0 12px;color:var(--muted);font-weight:800}
+        .names-list{border:1px dashed var(--border);border-radius:14px;background:#fafcff;padding:12px;max-height:320px;overflow:auto}
+        .names-list ul{margin:0;padding-inline-start:18px}
+        .names-list li{margin:6px 0;font-weight:800}
+        .modal .row{display:flex;gap:10px;justify-content:flex-start;margin-top:16px;flex-wrap:wrap}
+        .btn.cancel{background:#fff;color:var(--primary);border:1px solid rgba(3,60,84,.25)}
+        .btn.primary{background:linear-gradient(145deg,var(--primary-light),var(--primary));color:#fff;border:none}
+        /* Error modal variant */
+        .card.error{border-color:rgba(180,35,24,.25);box-shadow:0 24px 60px rgba(180,35,24,.20)}
+        .card.error h3{color:var(--red)}
+        .card.error .row .btn.primary{background:linear-gradient(145deg,#a93a33,#b42318)}
+        /* Toast */
+        .toast{position:fixed;inset-inline:0;bottom:20px;display:flex;justify-content:center;pointer-events:none;z-index:1200}
+        .toast .inner{pointer-events:auto;background:#fff;border:1px solid var(--border);border-radius:16px;box-shadow:0 20px 50px rgba(3,60,84,.25);padding:14px 18px;min-width:min(520px,92vw);display:flex;flex-direction:column;gap:6px}
+        .toast .title{font-weight:900;color:var(--green)}
+        .toast .sub{color:var(--text);font-weight:800}
+        .toast .close{align-self:flex-end;margin-top:4px;background:#fff;border:1px solid var(--border);border-radius:12px;padding:6px 10px;cursor:pointer;color:var(--primary);font-weight:800}
+        .toast.hidden{display:none}
+        /* New filter buttons */
+        .filter-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 16px;
+            justify-content: center;
+        }
+        .filter-btn {
+            flex: 1;
+            min-height: 50px;
+            border-radius: 12px;
+            font-weight: 800;
+            border: 2px solid var(--border);
+            background: #fff;
+            color: var(--primary);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        .filter-btn.active {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+        }
+        .filter-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(3,60,84,.15);
+        }
+        /* Not allowed popup with looping X animation */
+        .blocked-modal .overlay{
+            background:rgba(15,23,42,.45);
+            backdrop-filter:blur(6px);
+        }
+        .blocked-card{
+            position:relative;
+            z-index:1;
+            width:min(360px,92vw);
+            background:linear-gradient(180deg,#ffffff 0%, #fff7f7 100%);
+            border:1px solid rgba(185,28,28,.20);
+            border-radius:18px;
+            box-shadow:0 24px 60px rgba(185,28,28,.24);
+            padding:18px;
+            display:grid;
+            justify-items:center;
+            gap:12px;
+            text-align:center;
+        }
+        .blocked-close{
+            position:absolute;
+            top:8px;
+            left:8px;
+            width:32px;
+            height:32px;
+            border-radius:999px;
+            border:1px solid rgba(185,28,28,.18);
+            background:#fff;
+            color:#7f1d1d;
+            font-weight:900;
+            cursor:pointer;
+        }
+        .blocked-icon{width:96px;height:96px;display:grid;place-items:center}
+        .blocked-icon svg{width:96px;height:96px;overflow:visible}
+        .blocked-icon circle{
+            fill:none;
+            stroke:#dc2626;
+            stroke-width:6;
+            stroke-dasharray:220;
+            stroke-dashoffset:220;
+            animation:blockedRingDraw 1.2s ease-in-out infinite;
+        }
+        .blocked-icon path{
+            fill:none;
+            stroke:#dc2626;
+            stroke-width:7;
+            stroke-linecap:round;
+            stroke-linejoin:round;
+            stroke-dasharray:56;
+            stroke-dashoffset:56;
+            animation:blockedXDraw 1.2s ease-in-out infinite;
+        }
+        .blocked-title{
+            margin:0;
+            color:#991b1b;
+            font-weight:900;
+            font-size:1.06rem;
+        }
+        .blocked-msg{
+            margin:0;
+            color:#7f1d1d;
+            font-weight:800;
+            font-size:.95rem;
+            line-height:1.7;
+        }
+        .blocked-actions{
+            width:100%;
+            display:flex;
+            justify-content:center;
+        }
+        .blocked-actions .btn{
+            max-width:180px;
+            min-height:52px;
+        }
+        .blocked-modal.open .blocked-card{
+            animation:blockedCardIn .2s ease;
+        }
+        @keyframes blockedCardIn{
+            from{transform:translateY(8px) scale(.98);opacity:.7}
+            to{transform:translateY(0) scale(1);opacity:1}
+        }
+        @keyframes blockedRingDraw{
+            0%{stroke-dashoffset:220;opacity:.5}
+            30%{stroke-dashoffset:0;opacity:1}
+            70%{stroke-dashoffset:0;opacity:1}
+            100%{stroke-dashoffset:220;opacity:.5}
+        }
+        @keyframes blockedXDraw{
+            0%{stroke-dashoffset:56;opacity:0}
+            25%{stroke-dashoffset:56;opacity:0}
+            45%{stroke-dashoffset:0;opacity:1}
+            70%{stroke-dashoffset:0;opacity:1}
+            100%{stroke-dashoffset:56;opacity:0}
+        }
+        /* Responsive */
+        @media (max-width:768px){.sheet-header{padding:16px}.sheet-body{padding:20px 16px}.class-hero,.att-hero{flex-direction:column;align-items:flex-start}.action-row,.att-row{width:100%;justify-content:center}.grade-list{grid-template-columns:1fr}}
+        @media (max-width:480px){.site-header{padding:14px 16px}main{padding:16px 12px 32px}.panel{padding:20px 16px}.avatar{width:120px;height:120px}.btn{min-height:62px;font-size:1rem}}
+        .special-icon {
+            width: 18px;
+            height: 18px;
+            margin-left: 6px;
+            flex-shrink: 0;
+            color: #e6b800;
+        }
+        #logoutBtn{
+            margin-top: 12px;
+        }
+    </style>
+
+  <!-- iOS home screen icon -->
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/appicon.png" />
+  
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <meta name="theme-color" content="#033C54" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <!-- Browser tab icon (favicon) -->
+  <link rel="icon" type="image/png" sizes="64x64" href="https://framerusercontent.com/images/eepB7V11E8IMGVLttDUMaz62pPQ.png?width=64&height=64" />
+  <link rel="shortcut icon" href="https://framerusercontent.com/images/eepB7V11E8IMGVLttDUMaz62pPQ.png?width=64&height=64" />
+
+  <!-- Social / Safari preview (Open Graph & Twitter) -->
+  <meta property="og:title" content="لوحة المستخدم - ثانوية أحمد البشر الرومي">
+  <meta property="og:description" content="???? ?????? ???? ????? ??????.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://framerusercontent.com/images/jRnZLlPr90qwKsuUwfIlvDS9E.png?width=1200&height=630">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="لوحة المستخدم - ثانوية أحمد البشر الرومي">
+  <meta name="twitter:description" content="???? ?????? ???? ????? ??????.">
+  <meta name="twitter:image" content="https://framerusercontent.com/images/jRnZLlPr90qwKsuUwfIlvDS9E.png?width=1200&height=630">
+</head>
+<body>
+    <header class="site-header">
+        <h1 class="site-title">ثانوية أحمد البشر الرومي</h1>
+    </header>
+    <main>
+        <div class="column">
+            <!-- Loading / gate -->
+            <div id="stateLoading" class="state active panel">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <div class="muted">جاري التحقق من تسجيل الدخول والصلاحيات…</div>
+                </div>
+            </div>
+            <div id="stateNotLogged" class="state panel">
+                <div class="msg error">يرجى تسجيل الدخول أولاً.</div>
+                <p class="muted" style="text-align:center; margin:12px 0 0;">لا توجد جلسة نشطة. <a href="/index.html">انتقل إلى تسجيل الدخول</a>.</p>
+            </div>
+            <div id="stateDenied" class="state panel">
+                <div class="msg error">تم رفض الوصول - هذه الصفحة مخصصة للمستخدمين المصرح لهم فقط (دور: مستخدم/مدير).</div>
+            </div>
+            <!-- Dashboard -->
+            <section id="stateDashboard" class="state" aria-label="لوحة تحكم المستخدم">
+                <div class="center">
+                    <div id="profileAvatar" class="avatar"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.2"></circle><path d="M5 19c0-3.3 3.1-5.5 7-5.5s7 2.2 7 5.5"></path></svg></div>
+                    <div id="displayName" class="name">—</div>
+                    
+                    <!-- NEW: Teams Box -->
+                    <a id="teamsBox" class="teams-box" href="#" target="_blank" rel="noopener noreferrer">
+                        <i class="fab fa-microsoft teams-icon"></i>
+                        <span>Teams</span>
+                    </a>
+                    
+                    <div id="createdAtText" class="created">—</div>
+                </div>
+                <div class="divider" aria-hidden="true"></div>
+                <!-- Classes -->
+                <div id="classesButtons" class="stack wide" style="margin-top:10px;"></div>
+                <div class="stack wide">
+                    <!-- NEW: Chapters Button -->
+                    <button id="chaptersBtn" class="btn ghost" type="button">
+                        <span>الفصول</span>
+                        <span class="icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+                        </span>
+                    </button>
+                    
+                    <button id="moreBtn" class="btn ghost" type="button">
+                        <span>أُخرى</span>
+                        <span class="icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+                        </span>
+                    </button>
+                    <button id="teacherScheduleBtn" class="btn ghost" type="button">
+                        <span>جدول المعلم</span>
+                        <span class="icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16M12 4v16"/></svg>
+                        </span>
+                    </button>
+                    <button id="adminScheduleEditBtn" class="btn ghost" type="button" hidden>
+                        <span>تعديل جدول الإدارة</span>
+                        <span class="icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16M12 4v16"/></svg>
+                        </span>
+                    </button>
+                    <button id="morningLateBtn" class="btn ghost" type="button" hidden>
+                        <span>تسجيل تأخير الصباح</span>
+                        <span class="icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16M12 4v16"/></svg>
+                        </span>
+                    </button>
+                    <button id="logBtn" class="btn ghost" type="button">
+                        <span>سجل الغيابات</span>
+                        <span class="icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+                        </span>
+                    </button>
+                    <button id="logoutBtn" class="btn ghost" type="button">تسجيل الخروج</button>
+                </div>
+            </section>
+        </div>
+    </main>
+    <footer class="credits-footer" aria-label="اعتمادات الموقع">
+        <div class="credits-card">
+            <img class="credits-logo" src="/images/schoollogo.png" alt="شعار المدرسة" loading="lazy">
+            <p class="credits-line"><span class="credits-label">مدير المدرسة:</span> أ/ صلاح الناصر</p>
+            <p class="credits-line"><span class="credits-label">تصميم و برمجة:</span> الطالب عبدالله الصايغ</p>
+        </div>
+    </footer>
+    <!-- "More/Other" Sheet -->
+    <section id="moreSheet" class="sheet" aria-hidden="true">
+        <div class="sheet-header">
+            <button id="closeMore" class="back-btn" aria-label="رجوع">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                رجوع
+            </button>
+            <h3 class="sheet-title">اختر الصف</h3>
+        </div>
+        <div class="sheet-body">
+            <p class="lead" style="font-weight:800">اختر الصف ثم اضغط على الفصل لعرض الطلاب.</p>
+            <details id="d10" class="lazy-load">
+                <summary>
+                    <span>الصف العاشر</span>
+                    <span class="chev" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#6b7f9f" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"></path></svg></span>
+                </summary>
+                <div class="grade-list" id="g10List"></div>
+            </details>
+            <details id="d11" class="lazy-load">
+                <summary>
+                    <span>الصف الحادي عشر</span>
+                    <span class="chev" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#6b7f9f" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"></path></svg></span>
+                </summary>
+                <div class="grade-list" id="g11List"></div>
+            </details>
+            <details id="d12" class="lazy-load">
+                <summary>
+                    <span>الصف الثاني عشر</span>
+                    <span class="chev" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#6b7f9f" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"></path></svg></span>
+                </summary>
+                <div class="grade-list" id="g12List"></div>
+            </details>
+        </div>
+    </section>
+    <!-- Class Sheet -->
+    <section id="classSheet" class="sheet" aria-hidden="true">
+        <div class="sheet-header">
+            <button id="closeClass" class="back-btn" aria-label="رجوع">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                رجوع
+            </button>
+            <h3 class="sheet-title">الطلاب</h3>
+        </div>
+        <div class="sheet-body">
+            <div class="class-hero">
+                <h2 id="classHeroName" class="class-name">—</h2>
+                <div class="action-row">
+                    <button id="attendBtn" class="btn attend" type="button">تسجيل الغياب</button>
+                </div>
+            </div>
+            <div class="input-wrap">
+                <input id="studentSearch" class="input" type="text" placeholder="ابحث بالاسم…">
+            </div>
+            <div id="studentsList" class="student-grid"></div>
+        </div>
+    </section>
+    <!-- Attendance Create Sheet -->
+    <section id="attSheet" class="sheet" aria-hidden="true">
+        <div class="sheet-header">
+            <button id="closeAtt" class="back-btn" aria-label="رجوع">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                رجوع
+            </button>
+            <h3 class="sheet-title">تسجيل الغياب</h3>
+        </div>
+        <div class="sheet-body">
+            <div class="att-hero">
+                <h2 id="attClassName" class="att-class">—</h2>
+                <div class="att-row">
+                    <!-- Restored styled select -->
+                    <div class="select-wrap">
+                        <select id="lessonSelect" class="select" aria-label="اختر الحصة"></select>
+                    </div>
+                    <div id="lessonHint" class="hint"></div>
+                </div>
+            </div>
+            <div id="attList" class="att-list"></div>
+            <div class="stats">
+                <div class="chips">
+                    <span id="countPresent" class="pill g">حضور: 0</span>
+                    <span id="countLate" class="pill y">تأخير: 0</span>
+                    <details id="absentDetails">
+                        <summary class="pill r" id="countAbsent">غياب: 0</summary>
+                        <div id="absentNames" class="lead" style="margin-top:8px"></div>
+                    </details>
+                </div>
+                <div class="submit-row">
+                    <button id="submitAtt" class="btn submit" type="button">حفظ التقرير</button>
+                </div>
+            </div>
+        </div>
+    </section>
+    <!-- Attendance LOG Sheet -->
+    <section id="logSheet" class="sheet" aria-hidden="true">
+        <div class="sheet-header">
+            <button id="closeLog" class="back-btn" aria-label="رجوع">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                رجوع
+            </button>
+            <h3 class="sheet-title">تقارير الغياب</h3>
+        </div>
+        <div class="sheet-body">
+            <div id="logList" class="log-list"></div>
+        </div>
+    </section>
+    <!-- Attendance DETAIL (Edit) Sheet -->
+    <section id="logDetailSheet" class="sheet" aria-hidden="true">
+        <div class="sheet-header">
+            <button id="closeLogDetail" class="back-btn" aria-label="رجوع">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                رجوع
+            </button>
+            <h3 class="sheet-title" id="detailTitle">تعديل التقرير</h3>
+        </div>
+        <div class="sheet-body">
+            <div class="att-hero">
+                <h2 id="detailClass" class="att-class">—</h2>
+                <div class="att-row">
+                    <div class="hint" id="detailMeta">—</div>
+                    <div class="hint" id="editWindowHint"></div>
+                </div>
+            </div>
+            <div id="detailList" class="att-list"></div>
+            <div class="stats">
+                <div class="chips">
+                    <span id="dCountPresent" class="pill g">حضور: 0</span>
+                    <span id="dCountLate" class="pill y">تأخير: 0</span>
+                    <span id="dCountAbsent" class="pill r">غياب: 0</span>
+                </div>
+                <div class="submit-row">
+                    <button id="saveDetail" class="btn submit" type="button">حفظ التعديلات</button>
+                </div>
+                <div id="detailLockMsg" class="warn" style="display:none;">انتهت مهلة التعديل (24 ساعة).</div>
+            </div>
+        </div>
+    </section>
+    <!-- ===== Confirm Modal (Centered) - MODIFIED ===== -->
+    <div id="confirmModal" class="modal" aria-hidden="true">
+        <div class="overlay"></div>
+        <div class="card" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+            <h3 id="confirmTitle">تأكيد حفظ التقرير | الحصة</h3>
+            <p id="confirmSubtitle">سيتم حفظ الغياب للحصّة المحددة.</p>
+            
+            <!-- NEW: Filter buttons -->
+            <div class="filter-buttons">
+                <button id="filterAbsent" class="filter-btn active" type="button">الغياب</button>
+                <button id="filterLate" class="filter-btn" type="button">التاخير</button>
+            </div>
+            
+            <div class="names-list">
+                <ul id="confirmAbsentList"></ul>
+                <ul id="confirmLateList" style="display:none;"></ul>
+            </div>
+            <div class="row">
+                <button id="confirmCancel" class="btn cancel" type="button">رجوع</button>
+                <button id="confirmSave" class="btn primary" type="button">حفظ</button>
+            </div>
+        </div>
+    </div>
+    <!-- ===== Error Modal (Centered + Themed) ===== -->
+    <div id="errorModal" class="modal" aria-hidden="true">
+        <div class="overlay"></div>
+        <div class="card error" role="alertdialog" aria-modal="true" aria-labelledby="errorTitle">
+            <h3 id="errorTitle">تعذّر الحفظ</h3>
+            <p id="errorBody">تم تسجيل غياب هذه الحصّة مسبقًا.</p>
+            <div class="row">
+                <button id="errorOk" class="btn primary" type="button">حسناً</button>
+            </div>
+        </div>
+    </div>
+    <!-- Not Allowed Popup -->
+    <div id="blockedModal" class="modal blocked-modal" aria-hidden="true">
+        <div class="overlay"></div>
+        <div class="blocked-card" role="alertdialog" aria-modal="true" aria-labelledby="blockedTitle">
+            <button id="blockedClose" type="button" class="blocked-close" aria-label="إغلاق">&times;</button>
+            <div class="blocked-icon" aria-hidden="true">
+                <svg viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="35"></circle>
+                    <path d="M35 35 L65 65"></path>
+                    <path d="M65 35 L35 65"></path>
+                </svg>
+            </div>
+            <h3 id="blockedTitle" class="blocked-title">غير مسموح</h3>
+            <p id="blockedBody" class="blocked-msg">يمكنك تسجيل الغياب فقط أثناء حصتك الحالية.</p>
+            <div class="blocked-actions">
+                <button id="blockedOk" class="btn primary" type="button">إغلاق</button>
+            </div>
+        </div>
+    </div>
+    <!-- ===== Toast ===== -->
+    <div id="toast" class="toast hidden" aria-live="polite">
+        <div class="inner">
+            <div class="title" id="toastTitle">تم تسجيل الغياب بنجاح</div>
+            <div class="sub" id="toastSub">للحصة: —</div>
+            <button id="toastClose" class="close" type="button">إغلاق</button>
+        </div>
+    </div>
+    <script type="module">
+    import { firebaseConfig } from "/shared/firebase.js";
+        import { getTeacherProfile, hasGuardAccess } from "/shared/auth-guard.js";
+        /* ========= Firebase ========= */
+        import { initializeApp, getApp, getApps } from "/shared/firebase.js";
+        import { getAuth, onAuthStateChanged, signOut } from "/shared/firebase.js";
+        import { initializeFirestore, doc, getDoc, collection, getDocs, query, where, setDoc, serverTimestamp, writeBatch } from "/shared/firebase.js";
+        import { showActionPopup } from "/shared/action-popup.js";
+        
+        const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+        // NEW: Optimized Firestore configuration
+        const db = initializeFirestore(app, { 
+            experimentalAutoDetectLongPolling: true,
+            useFetchStreams: false 
+        });
+        const auth = getAuth(app);
+        
+        /* ========= NEW: UI references for added elements ========= */
+        const chaptersBtn = document.getElementById('chaptersBtn');
+        const teamsBox = document.getElementById('teamsBox');
+        
+        /* ========= Static Class Options ========= */
+        const CLASS_OPTIONS_RAW = [
+            "10 / 1","10 / 2","10 / 3","10 / 4","10 / 5","10 / 6","10 / 7",
+            "11 / 1 ع","11 / 2 ع","11 / 3 ع","11 / 4 ع","11 / 5 ع","11 / 1 د",
+            "12 / 1 ع","12 / 2 ع","12 / 3 ع","12 / 4 ع","12 / 5 ع","12 / 1 د"
+        ];
+        
+        /* ========= Existing UI refs ========= */
+        const sLoading = document.getElementById('stateLoading');
+        const sNotLog = document.getElementById('stateNotLogged');
+        const sDenied = document.getElementById('stateDenied');
+        const sDash = document.getElementById('stateDashboard');
+        const profileAvatar = document.getElementById('profileAvatar');
+        const displayName = document.getElementById('displayName');
+        const createdAtText = document.getElementById('createdAtText');
+        const classesButtons = document.getElementById('classesButtons');
+        const moreBtn = document.getElementById('moreBtn');
+        const teacherScheduleBtn = document.getElementById('teacherScheduleBtn');
+        const adminScheduleEditBtn = document.getElementById('adminScheduleEditBtn');
+        const morningLateBtn = document.getElementById('morningLateBtn');
+        function setPermissionBtnVisibility(btn, allowed){
+            if(!btn) return;
+            btn.hidden = !allowed;
+            btn.disabled = !allowed;
+            btn.style.display = allowed ? '' : 'none';
+        }
+        setPermissionBtnVisibility(adminScheduleEditBtn, false);
+        setPermissionBtnVisibility(morningLateBtn, false);
+        const moreSheet = document.getElementById('moreSheet');
+        const closeMore = document.getElementById('closeMore');
+        const g10List = document.getElementById('g10List');
+        const g11List = document.getElementById('g11List');
+        const g12List = document.getElementById('g12List');
+        const logoutBtn = document.getElementById('logoutBtn');
+        // LOG
+        const logBtn = document.getElementById('logBtn');
+        const logSheet = document.getElementById('logSheet');
+        const closeLog = document.getElementById('closeLog');
+        const logList = document.getElementById('logList');
+        const logDetailSheet = document.getElementById('logDetailSheet');
+        const closeLogDetail = document.getElementById('closeLogDetail');
+        const detailTitle = document.getElementById('detailTitle');
+        const detailClass = document.getElementById('detailClass');
+        const detailMeta = document.getElementById('detailMeta');
+        const editWindowHint = document.getElementById('editWindowHint');
+        const detailList = document.getElementById('detailList');
+        const saveDetail = document.getElementById('saveDetail');
+        const detailLockMsg = document.getElementById('detailLockMsg');
+        const dCountPresent = document.getElementById('dCountPresent');
+        const dCountLate = document.getElementById('dCountLate');
+        const dCountAbsent = document.getElementById('dCountAbsent');
+        // Class sheet
+        const classSheet = document.getElementById('classSheet');
+        const closeClass = document.getElementById('closeClass');
+        const classHeroName = document.getElementById('classHeroName');
+        const studentSearch = document.getElementById('studentSearch');
+        const studentsList = document.getElementById('studentsList');
+        // Attendance create
+        const attSheet = document.getElementById('attSheet');
+        const closeAtt = document.getElementById('closeAtt');
+        const attClassName = document.getElementById('attClassName');
+        const lessonSelect = document.getElementById('lessonSelect');
+        const lessonHint = document.getElementById('lessonHint');
+        const attList = document.getElementById('attList');
+        const countPresent = document.getElementById('countPresent');
+        const countLate = document.getElementById('countLate');
+        const countAbsent = document.getElementById('countAbsent');
+        const absentDetails = document.getElementById('absentDetails');
+        const absentNames = document.getElementById('absentNames');
+        const submitAtt = document.getElementById('submitAtt');
+        // New confirm modal & error modal & toast
+        const confirmModal = document.getElementById('confirmModal');
+        const confirmTitle = document.getElementById('confirmTitle');
+        const confirmAbsentList = document.getElementById('confirmAbsentList');
+        const confirmLateList = document.getElementById('confirmLateList');
+        const filterAbsent = document.getElementById('filterAbsent');
+        const filterLate = document.getElementById('filterLate');
+        const confirmCancel = document.getElementById('confirmCancel');
+        const confirmSave = document.getElementById('confirmSave');
+        const errorModal = document.getElementById('errorModal');
+        const errorBody = document.getElementById('errorBody');
+        const errorOk = document.getElementById('errorOk');
+        const blockedModal = document.getElementById('blockedModal');
+        const blockedBody = document.getElementById('blockedBody');
+        const blockedClose = document.getElementById('blockedClose');
+        const blockedOk = document.getElementById('blockedOk');
+        const toast = document.getElementById('toast');
+        const toastTitle = document.getElementById('toastTitle');
+        const toastSub = document.getElementById('toastSub');
+        const toastClose = document.getElementById('toastClose');
+
+        /* ========= Local Avatar (Per Account / Per Device) ========= */
+        const AVATAR_STORAGE_PREFIX = 'localAvatarByUid:';
+        const defaultAvatarMarkup = profileAvatar ? profileAvatar.innerHTML : '';
+        let avatarUserUid = null;
+
+        function getAvatarStorageKey(uid){
+            return `${AVATAR_STORAGE_PREFIX}${uid || ''}`;
+        }
+
+        function hasStoredAvatar(uid){
+            if(!uid) return false;
+            try{
+                return Boolean(localStorage.getItem(getAvatarStorageKey(uid)));
+            }catch{
+                return false;
+            }
+        }
+
+        function removeStoredAvatar(uid){
+            if(!uid) return;
+            try{
+                localStorage.removeItem(getAvatarStorageKey(uid));
+            }catch(e){
+                console.error('Avatar remove error:', e);
+            }
+        }
+
+        function applyAvatarToUI(dataUrl){
+            if(!profileAvatar) return;
+            if(!dataUrl){
+                profileAvatar.innerHTML = defaultAvatarMarkup;
+                return;
+            }
+            const img = document.createElement('img');
+            img.src = dataUrl;
+            img.alt = 'الصورة الشخصية';
+            img.style.width = '100%';
+            img.style.height = '100%';
+            img.style.objectFit = 'cover';
+            img.style.display = 'block';
+            profileAvatar.innerHTML = '';
+            profileAvatar.appendChild(img);
+        }
+
+        function loadStoredAvatar(uid){
+            if(!uid){
+                applyAvatarToUI(null);
+                return;
+            }
+            try{
+                const saved = localStorage.getItem(getAvatarStorageKey(uid));
+                applyAvatarToUI(saved || null);
+            }catch(e){
+                console.error('Avatar load error:', e);
+                applyAvatarToUI(null);
+            }
+        }
+
+        function saveStoredAvatar(uid, dataUrl){
+            if(!uid || !dataUrl) return false;
+            try{
+                localStorage.setItem(getAvatarStorageKey(uid), dataUrl);
+                return true;
+            }catch(e){
+                console.error('Avatar save error:', e);
+                return false;
+            }
+        }
+
+        function fileToDataUrl(file){
+            return new Promise((resolve, reject)=>{
+                const reader = new FileReader();
+                reader.onerror = () => reject(new Error('read-failed'));
+                reader.onload = () => resolve(String(reader.result || ''));
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function closeAvatarPicker(){
+            const existing = document.getElementById('avatarPickerOverlay');
+            if(existing) existing.remove();
+        }
+
+        function closeAvatarEditor(){
+            const existing = document.getElementById('avatarEditorOverlay');
+            if(existing) existing.remove();
+        }
+
+        function openAvatarEditor(sourceDataUrl){
+            return new Promise((resolve)=>{
+                closeAvatarEditor();
+
+                const overlay = document.createElement('div');
+                overlay.id = 'avatarEditorOverlay';
+                Object.assign(overlay.style, {
+                    position: 'fixed',
+                    inset: '0',
+                    zIndex: '3100',
+                    background: 'rgba(15, 23, 42, 0.55)',
+                    display: 'grid',
+                    placeItems: 'center',
+                    padding: '16px'
+                });
+
+                const card = document.createElement('div');
+                Object.assign(card.style, {
+                    width: 'min(460px, 94vw)',
+                    background: '#fff',
+                    border: '1px solid #e6edf7',
+                    borderRadius: '16px',
+                    boxShadow: '0 20px 55px rgba(3,60,84,.28)',
+                    padding: '18px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px',
+                    fontFamily: '"Noto Kufi Arabic", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif'
+                });
+
+                const title = document.createElement('div');
+                title.textContent = 'ضبط الصورة الشخصية';
+                Object.assign(title.style, {
+                    fontWeight: '900',
+                    color: '#033C54',
+                    textAlign: 'center'
+                });
+
+                const subtitle = document.createElement('div');
+                subtitle.textContent = 'حرّك الصورة داخل الدائرة ثم اضغط حفظ.';
+                Object.assign(subtitle.style, {
+                    fontWeight: '700',
+                    color: '#5f738c',
+                    textAlign: 'center',
+                    fontSize: '0.92rem'
+                });
+
+                const stageSize = 280;
+                const stage = document.createElement('div');
+                Object.assign(stage.style, {
+                    width: `${stageSize}px`,
+                    height: `${stageSize}px`,
+                    margin: '6px auto',
+                    borderRadius: '50%',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    background: '#d9e5f1',
+                    border: '2px solid rgba(255,255,255,.9)',
+                    boxShadow: 'inset 0 0 0 1px rgba(3,60,84,.12)',
+                    cursor: 'grab',
+                    touchAction: 'none'
+                });
+
+                const imageEl = document.createElement('img');
+                Object.assign(imageEl.style, {
+                    position: 'absolute',
+                    left: '0',
+                    top: '0',
+                    userSelect: 'none',
+                    pointerEvents: 'none'
+                });
+                imageEl.draggable = false;
+                stage.appendChild(imageEl);
+
+                const grid = document.createElement('div');
+                Object.assign(grid.style, {
+                    position: 'absolute',
+                    inset: '0',
+                    pointerEvents: 'none'
+                });
+                for(let i = 1; i <= 2; i++){
+                    const v = document.createElement('div');
+                    Object.assign(v.style, {
+                        position: 'absolute',
+                        top: '0',
+                        bottom: '0',
+                        left: `${(i * 100) / 3}%`,
+                        width: '1px',
+                        background: 'rgba(255,255,255,.52)'
+                    });
+                    const h = document.createElement('div');
+                    Object.assign(h.style, {
+                        position: 'absolute',
+                        left: '0',
+                        right: '0',
+                        top: `${(i * 100) / 3}%`,
+                        height: '1px',
+                        background: 'rgba(255,255,255,.52)'
+                    });
+                    grid.appendChild(v);
+                    grid.appendChild(h);
+                }
+                stage.appendChild(grid);
+
+                const actions = document.createElement('div');
+                Object.assign(actions.style, {
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 1fr',
+                    gap: '10px'
+                });
+
+                const cancelBtn = document.createElement('button');
+                cancelBtn.type = 'button';
+                cancelBtn.textContent = 'إلغاء';
+                Object.assign(cancelBtn.style, {
+                    minHeight: '48px',
+                    borderRadius: '12px',
+                    border: '1px solid rgba(3,60,84,.22)',
+                    background: '#fff',
+                    color: '#033C54',
+                    fontWeight: '800',
+                    cursor: 'pointer'
+                });
+
+                const saveBtn = document.createElement('button');
+                saveBtn.type = 'button';
+                saveBtn.textContent = 'حفظ الصورة';
+                saveBtn.disabled = true;
+                Object.assign(saveBtn.style, {
+                    minHeight: '48px',
+                    borderRadius: '12px',
+                    border: 'none',
+                    background: 'linear-gradient(145deg,#065372,#033C54)',
+                    color: '#fff',
+                    fontWeight: '800',
+                    cursor: 'pointer',
+                    opacity: '.6'
+                });
+
+                actions.appendChild(cancelBtn);
+                actions.appendChild(saveBtn);
+
+                card.appendChild(title);
+                card.appendChild(subtitle);
+                card.appendChild(stage);
+                card.appendChild(actions);
+                overlay.appendChild(card);
+                document.body.appendChild(overlay);
+
+                let drawW = 0;
+                let drawH = 0;
+                let offsetX = 0;
+                let offsetY = 0;
+                let ready = false;
+                let dragging = false;
+                let startX = 0;
+                let startY = 0;
+                let originX = 0;
+                let originY = 0;
+
+                const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
+                const minX = () => stageSize - drawW;
+                const minY = () => stageSize - drawH;
+
+                function renderImage(){
+                    imageEl.style.width = `${drawW}px`;
+                    imageEl.style.height = `${drawH}px`;
+                    imageEl.style.left = `${offsetX}px`;
+                    imageEl.style.top = `${offsetY}px`;
+                }
+
+                function finish(result){
+                    closeAvatarEditor();
+                    resolve(result);
+                }
+
+                imageEl.addEventListener('load', ()=>{
+                    const naturalW = imageEl.naturalWidth || 1;
+                    const naturalH = imageEl.naturalHeight || 1;
+                    const coverScale = Math.max(stageSize / naturalW, stageSize / naturalH);
+                    drawW = Math.max(stageSize, naturalW * coverScale);
+                    drawH = Math.max(stageSize, naturalH * coverScale);
+                    offsetX = (stageSize - drawW) / 2;
+                    offsetY = (stageSize - drawH) / 2;
+                    renderImage();
+                    ready = true;
+                    saveBtn.disabled = false;
+                    saveBtn.style.opacity = '1';
+                });
+                imageEl.src = sourceDataUrl;
+
+                stage.addEventListener('pointerdown', (e)=>{
+                    if(!ready) return;
+                    dragging = true;
+                    startX = e.clientX;
+                    startY = e.clientY;
+                    originX = offsetX;
+                    originY = offsetY;
+                    stage.style.cursor = 'grabbing';
+                    stage.setPointerCapture(e.pointerId);
+                });
+
+                stage.addEventListener('pointermove', (e)=>{
+                    if(!dragging || !ready) return;
+                    offsetX = clamp(originX + (e.clientX - startX), minX(), 0);
+                    offsetY = clamp(originY + (e.clientY - startY), minY(), 0);
+                    renderImage();
+                });
+
+                function stopDragging(e){
+                    if(!dragging) return;
+                    dragging = false;
+                    stage.style.cursor = 'grab';
+                    if(e && stage.hasPointerCapture(e.pointerId)){
+                        stage.releasePointerCapture(e.pointerId);
+                    }
+                }
+
+                stage.addEventListener('pointerup', stopDragging);
+                stage.addEventListener('pointercancel', stopDragging);
+
+                cancelBtn.addEventListener('click', ()=> finish(null));
+                saveBtn.addEventListener('click', ()=>{
+                    if(!ready) return;
+                    const outSize = 512;
+                    const ratio = outSize / stageSize;
+                    const canvas = document.createElement('canvas');
+                    canvas.width = outSize;
+                    canvas.height = outSize;
+                    const ctx = canvas.getContext('2d');
+                    if(!ctx){
+                        finish(null);
+                        return;
+                    }
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.arc(outSize / 2, outSize / 2, outSize / 2, 0, Math.PI * 2);
+                    ctx.closePath();
+                    ctx.clip();
+                    ctx.drawImage(
+                        imageEl,
+                        offsetX * ratio,
+                        offsetY * ratio,
+                        drawW * ratio,
+                        drawH * ratio
+                    );
+                    ctx.restore();
+                    finish(canvas.toDataURL('image/jpeg', 0.9));
+                });
+
+                overlay.addEventListener('click', (e)=>{
+                    if(e.target === overlay) finish(null);
+                });
+            });
+        }
+
+        const avatarCameraInput = document.createElement('input');
+        avatarCameraInput.type = 'file';
+        avatarCameraInput.accept = 'image/*';
+        avatarCameraInput.setAttribute('capture', 'environment');
+        avatarCameraInput.style.display = 'none';
+
+        const avatarLibraryInput = document.createElement('input');
+        avatarLibraryInput.type = 'file';
+        avatarLibraryInput.accept = 'image/*';
+        avatarLibraryInput.style.display = 'none';
+
+        document.body.appendChild(avatarCameraInput);
+        document.body.appendChild(avatarLibraryInput);
+
+        async function handleAvatarFile(file){
+            if(!file || !avatarUserUid) return;
+            try{
+                const sourceDataUrl = await fileToDataUrl(file);
+                const editedDataUrl = await openAvatarEditor(sourceDataUrl);
+                if(!editedDataUrl) return;
+                const ok = saveStoredAvatar(avatarUserUid, editedDataUrl);
+                if(!ok){
+                    alert('تعذّر حفظ الصورة محلياً. جرّب صورة بحجم أصغر.');
+                    return;
+                }
+                applyAvatarToUI(editedDataUrl);
+            }catch(e){
+                console.error('Avatar process error:', e);
+                alert('تعذّر معالجة الصورة. حاول مرة أخرى.');
+            }
+        }
+
+        avatarCameraInput.addEventListener('change', async ()=>{
+            const file = avatarCameraInput.files && avatarCameraInput.files[0];
+            avatarCameraInput.value = '';
+            await handleAvatarFile(file);
+        });
+
+        avatarLibraryInput.addEventListener('change', async ()=>{
+            const file = avatarLibraryInput.files && avatarLibraryInput.files[0];
+            avatarLibraryInput.value = '';
+            await handleAvatarFile(file);
+        });
+
+        function openAvatarPicker(){
+            if(!avatarUserUid || !profileAvatar) return;
+            closeAvatarPicker();
+            closeAvatarEditor();
+
+            const overlay = document.createElement('div');
+            overlay.id = 'avatarPickerOverlay';
+            Object.assign(overlay.style, {
+                position: 'fixed',
+                inset: '0',
+                zIndex: '3000',
+                background: 'rgba(15, 23, 42, 0.45)',
+                display: 'grid',
+                placeItems: 'center',
+                padding: '16px'
+            });
+
+            const card = document.createElement('div');
+            Object.assign(card.style, {
+                width: 'min(420px, 92vw)',
+                background: '#fff',
+                border: '1px solid #e6edf7',
+                borderRadius: '16px',
+                boxShadow: '0 20px 55px rgba(3,60,84,.28)',
+                padding: '18px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '10px',
+                fontFamily: '"Noto Kufi Arabic", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif'
+            });
+
+            const title = document.createElement('div');
+            title.textContent = 'اختر صورة الملف الشخصي';
+            Object.assign(title.style, {
+                fontWeight: '900',
+                color: '#033C54',
+                textAlign: 'center',
+                marginBottom: '4px'
+            });
+
+            const makeBtn = (label, onClick, isGhost = false) => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.textContent = label;
+                Object.assign(btn.style, {
+                    minHeight: '48px',
+                    borderRadius: '12px',
+                    border: isGhost ? '1px solid rgba(3,60,84,.22)' : 'none',
+                    background: isGhost ? '#fff' : 'linear-gradient(145deg,#065372,#033C54)',
+                    color: isGhost ? '#033C54' : '#fff',
+                    fontWeight: '800',
+                    cursor: 'pointer'
+                });
+                btn.addEventListener('click', onClick);
+                return btn;
+            };
+
+            const cameraBtn = makeBtn('التقاط صورة', () => {
+                closeAvatarPicker();
+                avatarCameraInput.click();
+            });
+
+            const libraryBtn = makeBtn('اختيار من المكتبة', () => {
+                closeAvatarPicker();
+                avatarLibraryInput.click();
+            });
+
+            card.appendChild(title);
+            card.appendChild(cameraBtn);
+            card.appendChild(libraryBtn);
+
+            if(hasStoredAvatar(avatarUserUid)){
+                const removeBtn = makeBtn('إزالة الصورة', () => {
+                    removeStoredAvatar(avatarUserUid);
+                    applyAvatarToUI(null);
+                    closeAvatarPicker();
+                }, true);
+                removeBtn.style.color = '#b42318';
+                removeBtn.style.border = '1px solid rgba(180,35,24,.26)';
+                card.appendChild(removeBtn);
+            }
+
+            const cancelBtn = makeBtn('إلغاء', () => closeAvatarPicker(), true);
+            card.appendChild(cancelBtn);
+            overlay.appendChild(card);
+
+            overlay.addEventListener('click', (e)=>{
+                if(e.target === overlay) closeAvatarPicker();
+            });
+
+            document.body.appendChild(overlay);
+        }
+
+        if(profileAvatar){
+            profileAvatar.style.cursor = 'pointer';
+            profileAvatar.setAttribute('role', 'button');
+            profileAvatar.setAttribute('tabindex', '0');
+            profileAvatar.setAttribute('aria-label', 'تغيير الصورة الشخصية');
+            profileAvatar.addEventListener('click', openAvatarPicker);
+            profileAvatar.addEventListener('keydown', (e)=>{
+                if(e.key === 'Enter' || e.key === ' '){
+                    e.preventDefault();
+                    openAvatarPicker();
+                }
+            });
+        }
+
+        /* ========= Firestore Optimization Variables ========= */
+        let cachedTakenLessons = null;
+        let lastClassCached = null;
+        let lastDateCached = null;
+        let studentsCache = {}; // NEW: Cache students by class
+        let currentClassScheduledLessons = new Set();
+        let scheduleLessonCache = { key: '', lessons: [], timestamp: 0 };
+        const PROFILE_NEXT_LESSON_REFRESH_MS = 1000;
+        const PROFILE_NEXT_LESSON_CACHE_MS = 30000;
+        let profileNextLessonTimer = null;
+        let profileNextLessonBusy = false;
+        let profileTodayLessonsCache = { key: '', at: 0, lessons: [] };
+        let profileCreatedFallbackText = '';
+
+        /* ========= Helpers ========= */
+        const show = (el)=>{ [sLoading, sNotLog, sDenied, sDash].forEach(x=>x.classList.remove('active')); el.classList.add('active'); };
+        
+        // NEW: Improved sheet management with scroll prevention
+        const openSheet = (el)=>{
+            document.body.classList.add('sheet-open');
+            el.classList.add('open'); 
+            el.setAttribute('aria-hidden','false');
+        };
+        const closeSheet = (el)=>{
+            document.body.classList.remove('sheet-open');
+            el.classList.remove('open'); 
+            el.setAttribute('aria-hidden','true');
+        };
+        
+        const openModal = (el)=>{ el.classList.add('open'); el.setAttribute('aria-hidden','false'); };
+        const closeModal = (el)=>{ el.classList.remove('open'); el.setAttribute('aria-hidden','true'); };
+        const fmtDate = (d)=> new Intl.DateTimeFormat('ar-KW', { dateStyle:'medium', timeZone:'Asia/Kuwait' }).format(d);
+        const TZ = 'Asia/Kuwait';
+        const START_H = 7, START_M = 40;
+        const DUR = [45,45,45, /*break*/ 15, 45,45, /*break*/ 15, 45, 40];
+        const LESSON_NAMES = [
+            "الحصة الأولى","الحصة الثانية","الحصة الثالثة",
+            "الحصة الرابعة","الحصة الخامسة","الحصة السادسة","الحصة السابعة"
+        ];
+        const BREAK_LABELS = {
+            first: "الفرصة الأولى",
+            second: "الفرصة الثانية"
+        };
+        let schoolBreaks = { firstAfter: null, secondAfter: null };
+        let lessonTimesData = null; // loaded from Firestore settings/lessonTimes
+
+        function normalizeLessonIndex(value){
+            const n = Number(value);
+            if(!Number.isFinite(n)) return null;
+            if(n < 1 || n > 7) return null;
+            return Math.floor(n);
+        }
+
+        function normalizeSchoolBreaks(raw = {}){
+            const firstRaw = raw.firstAfter ?? raw.opportunity1After ?? raw.opportunityOneAfter;
+            const secondRaw = raw.secondAfter ?? raw.opportunity2After ?? raw.opportunityTwoAfter;
+            const firstAfter = normalizeLessonIndex(firstRaw);
+            let secondAfter = normalizeLessonIndex(secondRaw);
+            if(firstAfter && secondAfter && firstAfter === secondAfter) secondAfter = null;
+            return { firstAfter, secondAfter };
+        }
+
+        async function loadSchoolBreaksSettings(){
+            try{
+                const snap = await getDoc(doc(db, 'settings', 'lessonTimes'));
+                if(!snap.exists()){
+                    schoolBreaks = { firstAfter: null, secondAfter: null };
+                    return;
+                }
+                const data = snap.data() || {};
+                schoolBreaks = normalizeSchoolBreaks(data.opportunityBreaks || data);
+                if (Array.isArray(data.times) && data.times.length === 7) {
+                    lessonTimesData = data.times.map(t => ({
+                        start: t.start || '00:00',
+                        end: t.end || '00:00'
+                    }));
+                }
+            }catch(error){
+                console.error('Error loading school breaks:', error);
+                schoolBreaks = { firstAfter: null, secondAfter: null };
+            }
+        }
+
+        function opportunityLabelsForLesson(lessonIndex){
+            const lesson = normalizeLessonIndex(lessonIndex);
+            if(!lesson) return [];
+            const labels = [];
+            if(schoolBreaks.firstAfter === lesson) labels.push(BREAK_LABELS.first);
+            if(schoolBreaks.secondAfter === lesson) labels.push(BREAK_LABELS.second);
+            return labels;
+        }
+
+        function formatLessonLabelWithBreak(baseLabel, lessonIndex){
+            const labels = opportunityLabelsForLesson(lessonIndex);
+            if(!labels.length) return baseLabel;
+            return `${baseLabel} • ${labels.join(' و ')} بعدها`;
+        }
+        
+        /* ========= NEW: Debounce function for search ========= */
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        function normalizeClassKey(v=''){
+            return String(v).replace(/\s+/g, ' ').trim();
+        }
+
+        function normalizeNum(v=''){
+            const x = String(v).trim();
+            if(!x) return '';
+            const n = parseInt(x, 10);
+            return Number.isFinite(n) ? String(n) : x;
+        }
+
+        function toArabicDigits(value){
+            const arabicDigits = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+            return String(value ?? '').replace(/\d/g, d => arabicDigits[parseInt(d, 10)]);
+        }
+
+        function formatClassLabel(label){
+            return toArabicDigits(label || '');
+        }
+
+        function getStudentNumber(student){
+            const possibleFields = ['studentNumber', 'number', 'no', 'roll', 'idNumber', 'studentNo'];
+            for(const field of possibleFields){
+                if(student[field] !== undefined && student[field] !== null){
+                    const num = parseInt(student[field], 10);
+                    if(!isNaN(num) && Number.isFinite(num)) return num;
+                }
+            }
+            return Infinity;
+        }
+
+        function sortStudentsByStudentNumberOnly(students){
+            return [...students].sort((a, b) => {
+                const numA = getStudentNumber(a);
+                const numB = getStudentNumber(b);
+                if (numA !== Infinity && numB !== Infinity) return numA - numB;
+                if (numA !== Infinity && numB === Infinity) return -1;
+                if (numA === Infinity && numB !== Infinity) return 1;
+                return 0;
+            });
+        }
+
+        function parseClassKeyParts(classKey=''){
+            const x = normalizeClassKey(classKey);
+            const m = x.match(/^(\d{1,2})\s*\/\s*(\d+)(?:\s+(.+))?$/);
+            if(!m) return { grade:'', section:'', track:'' };
+            return {
+                grade: normalizeNum(m[1]),
+                section: normalizeNum(m[2]),
+                track: normalizeClassKey(m[3] || '')
+            };
+        }
+
+        function classMatchesScheduleRow(row, classKey){
+            const target = normalizeClassKey(classKey);
+            const direct = normalizeClassKey(row.classKey || row.class || '');
+            if(direct && direct === target) return true;
+
+            const t = parseClassKeyParts(target);
+            if(!t.grade || !t.section) return false;
+
+            const g = normalizeNum(row.grade || '');
+            const s = normalizeNum(row.section || '');
+            const track = normalizeClassKey(row.track || '');
+
+            if(g !== t.grade || s !== t.section) return false;
+            if(t.track) return track === t.track;
+            return true;
+        }
+
+        function weekdayEnglishToSunIndex(weekday){
+            const w = String(weekday || '').trim().toLowerCase();
+            if (w === 'sunday') return 0;
+            if (w === 'monday') return 1;
+            if (w === 'tuesday') return 2;
+            if (w === 'wednesday') return 3;
+            if (w === 'thursday') return 4;
+            if (w === 'friday') return 5;
+            if (w === 'saturday') return 6;
+            return -1;
+        }
+
+        function weekdayMatchesToday(value, todayWeekdayEn){
+            const raw = String(value ?? '').trim();
+            if (!raw) return false;
+            const rawLower = raw.toLowerCase();
+            if (rawLower === todayWeekdayEn.toLowerCase()) return true;
+
+            const weekdayArToEn = {
+                'الأحد': 'Sunday',
+                'الاحد': 'Sunday',
+                'الاثنين': 'Monday',
+                'الثلاثاء': 'Tuesday',
+                'الأربعاء': 'Wednesday',
+                'الاربعاء': 'Wednesday',
+                'الخميس': 'Thursday',
+                'الجمعة': 'Friday',
+                'السبت': 'Saturday'
+            };
+            if (weekdayArToEn[raw] === todayWeekdayEn) return true;
+
+            const asNum = Number(raw);
+            if (Number.isFinite(asNum) && asNum >= 0 && asNum <= 6) {
+                return asNum === weekdayEnglishToSunIndex(todayWeekdayEn);
+            }
+            return false;
+        }
+
+        function extractClassKeyFromScheduleRow(row){
+            if (!row || typeof row !== 'object') return '';
+            const direct = normalizeClassKey(row.classKey || row.class || row.className || '');
+            if (direct) return direct;
+            const grade = normalizeNum(row.grade || '');
+            const section = normalizeNum(row.section || '');
+            const track = normalizeClassKey(row.track || '');
+            if (!grade || !section) return '';
+            return `${grade} / ${section}${track ? ` ${track}` : ''}`.trim();
+        }
+
+        function formatProfileNextLessonCountdown(totalSeconds){
+            const safe = Math.max(0, Math.floor(Number(totalSeconds) || 0));
+            const hours = Math.floor(safe / 3600);
+            const mins = Math.floor((safe % 3600) / 60);
+            const secs = safe % 60;
+            if (hours > 0) {
+                return toArabicDigits(`${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`);
+            }
+            return toArabicDigits(`${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`);
+        }
+        function formatProfileLessonStartTime(minutesFromMidnight){
+            const total = Math.max(0, Math.floor(Number(minutesFromMidnight) || 0));
+            const h24 = Math.floor(total / 60) % 24;
+            const mm = total % 60;
+            const meridiem = h24 < 12 ? 'صباحا' : 'مساءً';
+            let h12 = h24 % 12;
+            if (h12 === 0) h12 = 12;
+            return `${toArabicDigits(h12)}:${toArabicDigits(String(mm).padStart(2, '0'))} ${meridiem}`;
+        }
+
+        function kuwaitWeekdayEnglish(){
+            return new Intl.DateTimeFormat('en-US', { weekday: 'long', timeZone: 'Asia/Kuwait' }).format(new Date());
+        }
+
+        async function getScheduledLessonsForClass(classKey){
+            if(!auth.currentUser || !classKey) return new Set();
+
+            const teacherUid = auth.currentUser.uid;
+            const dateKW = dateInTZ('Asia/Kuwait');
+            const weekday = kuwaitWeekdayEnglish();
+            const normalizedClass = normalizeClassKey(classKey);
+            const cacheKey = `${teacherUid}__${normalizedClass}__${dateKW}`;
+            const now = Date.now();
+
+            if (scheduleLessonCache.key === cacheKey && (now - scheduleLessonCache.timestamp) < 30000) {
+                return new Set(scheduleLessonCache.lessons);
+            }
+
+            const lessonSet = new Set();
+            try{
+                const qRef = query(collection(db, 'schedules'), where('teacherUid', '==', teacherUid));
+                const snap = await getDocs(qRef);
+                snap.forEach(ds => {
+                    const data = ds.data() || {};
+                    const lesson = Number(data.lesson ?? data.lessonIndex);
+                    if(!Number.isFinite(lesson) || lesson < 1 || lesson > 7) return;
+
+                    const rowDate = (data.date || '').toString();
+                    const rowWeekday = (data.weekday || data.day || data.dow || '').toString();
+                    const appliesToday = (rowDate === dateKW) || (rowWeekday === weekday);
+                    if(!appliesToday) return;
+
+                    if(!classMatchesScheduleRow(data, normalizedClass)) return;
+                    lessonSet.add(lesson);
+                });
+            }catch(error){
+                console.error('Error loading schedule-linked lessons:', error);
+            }
+
+            scheduleLessonCache = {
+                key: cacheKey,
+                lessons: Array.from(lessonSet),
+                timestamp: now
+            };
+            return new Set(scheduleLessonCache.lessons);
+        }
+
+        async function getTeacherLessonsForProfileToday(teacherUid){
+            const dateKW = dateInTZ('Asia/Kuwait');
+            const weekday = kuwaitWeekdayEnglish();
+            const intervals = getDailyLessonIntervals();
+            const intervalByIndex = new Map(intervals.map(iv => [iv.index, iv]));
+            const cacheKey = `${teacherUid}__${dateKW}__${weekday}__${intervals.map(iv => `${iv.index}:${iv.start}-${iv.end}`).join('|')}`;
+            const now = Date.now();
+
+            if (profileTodayLessonsCache.key === cacheKey && (now - profileTodayLessonsCache.at) < PROFILE_NEXT_LESSON_CACHE_MS) {
+                return profileTodayLessonsCache.lessons;
+            }
+
+            const bySlot = new Map();
+            try{
+                const qRef = query(collection(db, 'schedules'), where('teacherUid', '==', teacherUid));
+                const snap = await getDocs(qRef);
+                snap.forEach(ds => {
+                    const data = ds.data() || {};
+                    const lesson = Number(data.lesson ?? data.lessonIndex ?? data.period ?? data.lessonNumber);
+                    if(!Number.isFinite(lesson) || lesson < 1 || lesson > 7) return;
+
+                    const rowDate = (data.date || '').toString().trim();
+                    const rowWeekday = data.weekday ?? data.day ?? data.dow ?? data.dayIndex ?? '';
+                    const appliesToday = (rowDate === dateKW) || weekdayMatchesToday(rowWeekday, weekday);
+                    if(!appliesToday) return;
+
+                    const classKey = extractClassKeyFromScheduleRow(data);
+                    if(!classKey) return;
+
+                    const interval = intervalByIndex.get(lesson);
+                    if(!interval) return;
+
+                    const slotKey = `${lesson}|${normalizeClassKey(classKey)}`;
+                    if (bySlot.has(slotKey)) return;
+
+                    bySlot.set(slotKey, {
+                        lesson,
+                        classKey,
+                        label: interval.label || `الحصة ${toArabicDigits(lesson)}`,
+                        startMin: interval.start,
+                        endMin: interval.end
+                    });
+                });
+            }catch(error){
+                console.error('Error loading profile next lessons:', error);
+            }
+
+            const lessons = Array.from(bySlot.values()).sort((a,b) => {
+                if (a.startMin === b.startMin) return a.lesson - b.lesson;
+                return a.startMin - b.startMin;
+            });
+            profileTodayLessonsCache = { key: cacheKey, at: now, lessons };
+            return lessons;
+        }
+
+        function stopProfileNextLessonTicker(){
+            if (profileNextLessonTimer) {
+                clearInterval(profileNextLessonTimer);
+                profileNextLessonTimer = null;
+            }
+            profileNextLessonBusy = false;
+        }
+
+        async function refreshProfileNextLessonLine(){
+            if (profileNextLessonBusy) return;
+            if (!createdAtText) return;
+            const user = auth.currentUser;
+            if (!user) {
+                createdAtText.textContent = '—';
+                return;
+            }
+
+            profileNextLessonBusy = true;
+            try{
+                const nowSec = nowSecondsInTZ(TZ);
+                const lessons = await getTeacherLessonsForProfileToday(user.uid);
+                const active = lessons.find(item => nowSec >= (item.startMin * 60) && nowSec < (item.endMin * 60)) || null;
+                if (active) {
+                    const classLabel = formatClassLabel(active.classKey || '—');
+                    const countdown = formatProfileNextLessonCountdown((active.endMin * 60) - nowSec);
+                    createdAtText.textContent = `${classLabel} : ${countdown}`;
+                    return;
+                }
+
+                const next = lessons.find(item => (item.startMin * 60) > nowSec) || null;
+                if (!next) {
+                    createdAtText.textContent = profileCreatedFallbackText || '—';
+                    return;
+                }
+
+                const classLabel = formatClassLabel(next.classKey || '—');
+                const startsAt = formatProfileLessonStartTime(next.startMin);
+                createdAtText.textContent = `${classLabel} : ${startsAt}`;
+            }catch(error){
+                console.error('Error updating profile next lesson:', error);
+                createdAtText.textContent = profileCreatedFallbackText || '—';
+            }finally{
+                profileNextLessonBusy = false;
+            }
+        }
+
+        function startProfileNextLessonTicker(){
+            stopProfileNextLessonTicker();
+            refreshProfileNextLessonLine();
+            profileNextLessonTimer = setInterval(refreshProfileNextLessonLine, PROFILE_NEXT_LESSON_REFRESH_MS);
+        }
+
+        /* ========= NEW: Chapters Button Event Listener ========= */
+        chaptersBtn.addEventListener('click', () => {
+            window.location.href = '/supervisors/supervisorstudents.html';
+        });
+        teacherScheduleBtn.addEventListener('click', () => {
+            window.location.href = '/Teachers/teacherschedule.html';
+        });
+        adminScheduleEditBtn.addEventListener('click', () => {
+            window.location.href = '/admins/adminschedule.html';
+        });
+        morningLateBtn.addEventListener('click', () => {
+            window.location.href = '/Teachers/morning.html';
+        });
+
+        /* ========= Gate ========= */
+        show(sLoading);
+        let currentUserData = null;
+        onAuthStateChanged(auth, async (user)=>{
+            if(!user){
+                avatarUserUid = null;
+                applyAvatarToUI(null);
+                stopProfileNextLessonTicker();
+                profileCreatedFallbackText = '';
+                show(sNotLog);
+                return;
+            }
+            try{
+                const data = await getTeacherProfile(db, user.uid);
+                if(!data){
+                    avatarUserUid = null;
+                    applyAvatarToUI(null);
+                    stopProfileNextLessonTicker();
+                    profileCreatedFallbackText = '';
+                    show(sDenied);
+                    return;
+                }
+                currentUserData = data;
+                const access = hasGuardAccess(data, {
+                    allowedRoles: ['admin'],
+                    allowSupervisor: true
+                });
+                if(!access.allowed){
+                    avatarUserUid = null;
+                    applyAvatarToUI(null);
+                    stopProfileNextLessonTicker();
+                    profileCreatedFallbackText = '';
+                    show(sDenied);
+                    return;
+                }
+                const allowScheduleEdit = data?.permissions?.allowEditSchedule === true;
+                const allowMorningLate = data?.permissions?.allowMorningLate === true;
+                setPermissionBtnVisibility(adminScheduleEditBtn, allowScheduleEdit);
+                setPermissionBtnVisibility(morningLateBtn, allowMorningLate);
+                await loadSchoolBreaksSettings();
+                displayName.textContent = data?.name || (user.email ? user.email.split('@')[0] : 'مستخدم');
+                
+                /* ========= NEW: Teams Link Setup ========= */
+                if (data?.teams) {
+                    teamsBox.href = data.teams;
+                } else {
+                    // Hide teams box if no link is available
+                    teamsBox.style.display = 'none';
+                }
+                
+                let created=null;
+                if (data?.createdAt?.toDate) created=data.createdAt.toDate();
+                else if (user.metadata?.creationTime) created=new Date(user.metadata.creationTime);
+                profileCreatedFallbackText = created ? `انضممت في: ${fmtDate(created)}` : '';
+                if (access.role === 'admin') {
+                    stopProfileNextLessonTicker();
+                    createdAtText.textContent = profileCreatedFallbackText || '—';
+                } else {
+                    createdAtText.textContent = profileCreatedFallbackText || '—';
+                    startProfileNextLessonTicker();
+                }
+                avatarUserUid = user.uid;
+                loadStoredAvatar(user.uid);
+                renderClassButtons(data?.classes || []);
+                renderMoreLists(CLASS_OPTIONS_RAW);
+                setTimeout(() => {
+                    document.querySelectorAll('.lazy-load').forEach(el => el.classList.add('loaded'));
+                }, 100);
+                show(sDash);
+            }catch(e){
+                console.error(e);
+                stopProfileNextLessonTicker();
+                profileCreatedFallbackText = '';
+                show(sDenied);
+            }
+        });
+        /* ========= Class buttons ========= */
+        function renderClassButtons(classesArr){
+            classesButtons.innerHTML = '';
+            const clean = Array.isArray(classesArr) ? classesArr.filter(Boolean) : [];
+            if(clean.length === 0){
+                const empty = document.createElement('div');
+                empty.className = 'error';
+                empty.textContent = 'لا توجد فصول مربوطة بحسابك.';
+                classesButtons.appendChild(empty);
+                return;
+            }
+            const uniqueSorted = Array.from(new Set(clean)).sort((a,b)=> a.localeCompare(b, 'ar-KW', {sensitivity:'base', numeric:true}));
+            uniqueSorted.forEach(cls=>{
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'btn class-btn';
+                btn.textContent = formatClassLabel(cls);
+                // NEW: Use requestAnimationFrame for smoother animation
+                btn.addEventListener('click', ()=> requestAnimationFrame(() => openClassView(cls)));
+                classesButtons.appendChild(btn);
+            });
+        }
+        /* ========= MORE ========= */
+        moreBtn.addEventListener('click', ()=> openSheet(moreSheet));
+        closeMore.addEventListener('click', ()=> closeSheet(moreSheet));
+        function renderMoreLists(raw){
+            g10List.innerHTML = '';
+            g11List.innerHTML = '';
+            g12List.innerHTML = '';
+            const byGrade = {10:[],11:[],12:[]};
+            raw.forEach(n=>{
+                const g = getGradeForClass(n);
+                if(g===10) byGrade[10].push(n);
+                else if(g===11) byGrade[11].push(n);
+                else if(g===12) byGrade[12].push(n);
+            });
+            const fill = (el, arr)=>{
+                const list = Array.from(new Set(arr)).sort((a,b)=> a.localeCompare(b, 'ar-KW', {sensitivity:'base', numeric:true}));
+                if(list.length===0){
+                    const empty = document.createElement('div');
+                    empty.className = 'error';
+                    empty.textContent = 'لا يوجد فصول.';
+                    el.appendChild(empty);
+                    return;
+                }
+                list.forEach(cls=>{
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'btn mini class-btn';
+                    btn.textContent = formatClassLabel(cls);
+                    btn.addEventListener('click', ()=>{
+                        closeSheet(moreSheet);
+                        requestAnimationFrame(() => openClassView(cls));
+                    });
+                    el.appendChild(btn);
+                });
+            };
+            fill(g10List, byGrade[10]);
+            fill(g11List, byGrade[11]);
+            fill(g12List, byGrade[12]);
+        }
+        function getGradeForClass(name=''){
+            const m = String(name).match(/\b(10|11|12)\b/);
+            return m ? parseInt(m[1],10) : null;
+        }
+        /* ========= Class view ========= */
+        let currentClass = null;
+        let cachedStudents = [];
+        async function openClassView(cls){
+            currentClass = cls;
+            classHeroName.textContent = formatClassLabel(cls);
+            studentsList.innerHTML = '';
+            studentSearch.value = '';
+            openSheet(classSheet);
+            await loadStudentsForClass(cls);
+        }
+        closeClass.addEventListener('click', ()=> closeSheet(classSheet));
+        
+        // NEW: Debounced search for better performance
+        studentSearch.addEventListener('input', debounce(()=>{
+            const q = studentSearch.value.trim();
+            renderStudentsGrid(filterStudents(cachedStudents, q));
+        }, 150));
+        
+        function filterStudents(list, query){
+            if(!query) return list;
+            const q = query.toLowerCase();
+            return list.filter(s => (s.name||'').toLowerCase().includes(q));
+        }
+        async function loadStudentsForClass(cls){
+            studentsList.innerHTML = '';
+            cachedStudents = [];
+            
+            // NEW: Check cache first
+            if (studentsCache[cls]) {
+                cachedStudents = studentsCache[cls];
+                renderStudentsGrid(cachedStudents);
+                return;
+            }
+            
+            const loadingEl = document.createElement('div');
+            loadingEl.className = 'loading';
+            loadingEl.innerHTML = '<div class="spinner"></div><div class="muted">جاري تحميل بيانات الطلاب...</div>';
+            studentsList.appendChild(loadingEl);
+            let students = await tryQueryStudents('students', cls);
+            if(students.length === 0){
+                const nested = await tryQueryStudents('students/uids', cls);
+                if(nested.length > 0) students = nested;
+            }
+            students = sortStudentsByStudentNumberOnly(students);
+            cachedStudents = students;
+            studentsCache[cls] = students; // NEW: Cache the results
+            renderStudentsGrid(students);
+        }
+        async function tryQueryStudents(path, cls){
+            try{
+                const parts = path.split('/');
+                if(parts.length === 1){
+                    const colRef = collection(db, parts[0]);
+                    const qRef = query(colRef, where('class', '==', cls));
+                    const snap = await getDocs(qRef);
+                    if(snap.empty) return [];
+                    const out = [];
+                    snap.forEach(d=>{
+                        const s = d.data() || {};
+                        out.push({
+                            name: s.name || s.fullName || d.id,
+                            uid: d.id,
+                            class: s.class || s.className || '',
+                            // NEW: Include specialCase property
+                            specialCase: s.specialCase || false,
+                            studentNumber: s.studentNumber || s.number || s.no || s.roll || s.idNumber || s.studentNo
+                        });
+                    });
+                    return out;
+                }else if(parts.length === 2){
+                    const mDoc = doc(db, parts[0], parts[1]);
+                    const mSnap = await getDoc(mDoc);
+                    if (mSnap.exists() && mSnap.data()) {
+                        const data = mSnap.data();
+                        const arr = Object.values(data || {}).filter(Boolean);
+                        return arr
+                            .filter(s => (s.class || s.className) === cls)
+                            .map(s => ({
+                                name: s.name || s.fullName || '',
+                                uid: s.uid || '',
+                                class: s.class || s.className || '',
+                                // NEW: Include specialCase property
+                                specialCase: s.specialCase || false,
+                                studentNumber: s.studentNumber || s.number || s.no || s.roll || s.idNumber || s.studentNo
+                            }));
+                    }
+                    return [];
+                }
+                return [];
+            }catch(e){
+                console.warn('[tryQueryStudents]', path, e?.message);
+                return [];
+            }
+        }
+        function renderStudentsGrid(list){
+            studentsList.innerHTML = '';
+            if(list.length === 0){
+                const empty = document.createElement('div');
+                empty.className = 'error';
+                empty.textContent = 'لا يوجد طلاب في هذا الفصل.';
+                studentsList.appendChild(empty);
+                return;
+            }
+            
+            // NEW: Use document fragment for better performance
+            const fragment = document.createDocumentFragment();
+            
+            list.forEach(s=>{
+                const el = document.createElement('div');
+                el.className = 'student-item';
+                el.setAttribute('role','button');
+                el.setAttribute('tabindex','0');
+                el.title='فتح صفحة الطالب';
+                
+                // NEW: Create container for content
+                const contentContainer = document.createElement('div');
+                contentContainer.className = 'student-item-content';
+
+                const nameContainer = document.createElement('div');
+                nameContainer.className = 'student-name-container';
+
+                // NEW: Add special case icon if needed
+                if (s.specialCase) {
+                    const icon = document.createElement('img');
+                    icon.src = 'https://cdn-icons-png.freepik.com/256/8984/8984792.png?semt=ais_white_label';
+                    icon.alt = 'خاص';
+                    icon.className = 'special-case-icon';
+                    nameContainer.appendChild(icon);
+                }
+                
+                const nameSpan = document.createElement('span');
+                nameSpan.textContent = s.name || '—';
+                nameContainer.appendChild(nameSpan);
+                contentContainer.appendChild(nameContainer);
+
+                const numberBadge = document.createElement('span');
+                numberBadge.className = 'student-number-badge';
+                const studentNumber = getStudentNumber(s);
+                numberBadge.textContent = studentNumber === Infinity ? '—' : toArabicDigits(studentNumber);
+                contentContainer.appendChild(numberBadge);
+                
+                el.appendChild(contentContainer);
+                
+                const stuId = s.uid || '';
+                const stuName = s.name || '';
+                const stuClass = (typeof currentClass === 'string' && currentClass) ? currentClass : (s.class || '');
+                const href = `/Teachers/studentprofile.html?id=${encodeURIComponent(stuId)}&name=${encodeURIComponent(stuName)}&class=${encodeURIComponent(stuClass)}`;
+                
+                // NEW: Use passive event listener for better scrolling performance
+                const clickHandler = () => { location.href = href; };
+                el.addEventListener('click', clickHandler, { passive: true });
+                el.addEventListener('keydown', (ev)=>{ 
+                    if(ev.key==='Enter'||ev.key===' '){ 
+                        ev.preventDefault(); 
+                        location.href=href; 
+                    }
+                });
+                
+                fragment.appendChild(el);
+            });
+            
+            studentsList.appendChild(fragment);
+        }
+        /* ========= Attendance (Create) ========= */
+        document.getElementById('attendBtn').addEventListener('click', async ()=>{
+            const checkResult = await checkAttendanceAllowedForCurrentClass();
+            if (!checkResult.allowed) {
+                showAttendanceBlockedPopup(checkResult.reason);
+                return;
+            }
+            await openAttendanceSheet(checkResult);
+        });
+        closeAtt.addEventListener('click', ()=> closeSheet(attSheet));
+        let attStatuses = {}; // uid -> 'present'|'late'|'absent'
+        let attStudentList = []; // [{uid,name}]
+        let pendingSave = null; // temp cache for confirm modal
+        
+        async function openAttendanceSheet(checkResult = null){
+            if(!currentClass){
+                return;
+            }
+
+            const gate = checkResult || await checkAttendanceAllowedForCurrentClass();
+            if (!gate.allowed) {
+                showAttendanceBlockedPopup(gate.reason);
+                return;
+            }
+            
+            // NEW: Invalidate cache when opening sheet
+            cachedTakenLessons = null;
+            
+            attClassName.textContent = formatClassLabel(currentClass);
+            await buildLessons(gate.lessonIndex);
+            attStudentList = sortStudentsByStudentNumberOnly((cachedStudents || []).slice());
+            attStatuses = {};
+            renderAttendanceList(attStudentList);
+            recalcStats();
+            openSheet(attSheet);
+        }
+
+        // NEW: Optimized lesson filtering with caching
+        async function buildLessons(forcedLessonIndex = null){
+            if(!currentClass) return;
+            
+            const intervals = getDailyLessonIntervals();
+
+            // Link absence flow to today's teacher schedule for the selected class
+            const scheduledLessons = await getScheduledLessonsForClass(currentClass);
+            currentClassScheduledLessons = scheduledLessons;
+            let scheduleLinkedIntervals = intervals.filter(iv => scheduledLessons.has(iv.index));
+            if (Number.isFinite(forcedLessonIndex)) {
+                scheduleLinkedIntervals = scheduleLinkedIntervals.filter(iv => iv.index === forcedLessonIndex);
+            }
+
+            // NEW: Smart caching - only re-query if class changed or cache expired
+            const currentDate = dateInTZ('Asia/Kuwait');
+            const now = Date.now();
+            if (!cachedTakenLessons || 
+                lastClassCached !== currentClass || 
+                lastDateCached !== currentDate || 
+                (now - (cachedTakenLessons.timestamp || 0) > 30000)) {
+                
+                const availableLessons = await filterTakenLessons(scheduleLinkedIntervals);
+                cachedTakenLessons = {
+                    lessons: availableLessons,
+                    timestamp: now
+                };
+                lastClassCached = currentClass;
+                lastDateCached = currentDate;
+            }
+
+            lessonSelect.innerHTML = '';
+            cachedTakenLessons.lessons.forEach(iv=>{
+                const o = document.createElement('option');
+                o.value = String(iv.index);
+                o.textContent = `${iv.label} — ${minToStr(iv.start)} – ${minToStr(iv.end)}`;
+                lessonSelect.appendChild(o);
+            });
+            
+            const nowMin = nowMinutesInTZ(TZ);
+            const current = cachedTakenLessons.lessons.find(iv => nowMin >= iv.start && nowMin < iv.end);
+            lessonSelect.value = current ? String(current.index) : (cachedTakenLessons.lessons.length > 0 ? String(cachedTakenLessons.lessons[0].index) : "");
+            updateLessonHint(cachedTakenLessons.lessons);
+            lessonSelect.onchange = ()=> updateLessonHint(cachedTakenLessons.lessons);
+        }
+
+        // NEW: Optimized function to filter out lessons that already have attendance records
+        async function filterTakenLessons(intervals) {
+            if (!currentClass || !auth.currentUser) return intervals;
+            if (!intervals || intervals.length === 0) return [];
+            
+            const dateKW = dateInTZ('Asia/Kuwait');
+            try {
+                // MODIFIED: Specific query for this class, date, and teacher only
+                const q = query(
+                    collection(db, 'attendance'), 
+                    where('class', '==', currentClass),
+                    where('date', '==', dateKW),
+                    where('createdBy', '==', auth.currentUser.uid)
+                );
+                const snapshot = await getDocs(q);
+                
+                const takenLessonIndices = [];
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    if (data.lessonIndex) {
+                        takenLessonIndices.push(data.lessonIndex);
+                    }
+                });
+                
+                const takenSet = new Set(takenLessonIndices);
+                return intervals.filter(iv => !takenSet.has(iv.index));
+            } catch (error) {
+                console.error('Error filtering taken lessons:', error);
+                return intervals;
+            }
+        }
+
+        function addInterval(arr, index, label, startMin, duration){
+            const endMin = startMin + duration;
+            arr.push({index,label,start:startMin,end:endMin});
+            return endMin;
+        }
+        function minToStr(m){
+            const h=Math.floor(m/60), mm=m%60;
+            const hh=(h<10?'0':'')+h, m2=(mm<10?'0':'')+mm;
+            return `${hh}:${m2}`;
+        }
+        function nowMinutesInTZ(timeZone){
+            const parts = new Intl.DateTimeFormat('en-GB',{timeZone,hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(new Date());
+            const hh=parseInt(parts.find(p=>p.type==='hour').value,10);
+            const mm=parseInt(parts.find(p=>p.type==='minute').value,10);
+            return hh*60+mm;
+        }
+        function nowSecondsInTZ(timeZone){
+            const parts = new Intl.DateTimeFormat('en-GB',{
+                timeZone,
+                hour:'2-digit',
+                minute:'2-digit',
+                second:'2-digit',
+                hour12:false
+            }).formatToParts(new Date());
+            const hh=parseInt(parts.find(p=>p.type==='hour').value,10) || 0;
+            const mm=parseInt(parts.find(p=>p.type==='minute').value,10) || 0;
+            const ss=parseInt(parts.find(p=>p.type==='second').value,10) || 0;
+            return (hh*3600) + (mm*60) + ss;
+        }
+        function parseHHMMtoMin(str){
+            const p = (str || '').split(':');
+            return parseInt(p[0] || 0, 10) * 60 + parseInt(p[1] || 0, 10);
+        }
+        function getDailyLessonIntervals(){
+            const opts = LESSON_NAMES.map((name, idx) => formatLessonLabelWithBreak(name, idx + 1));
+            const intervals = [];
+            if (lessonTimesData && lessonTimesData.length === 7) {
+                lessonTimesData.forEach((t, i) => {
+                    intervals.push({
+                        index: i + 1,
+                        label: opts[i],
+                        start: parseHHMMtoMin(t.start),
+                        end: parseHHMMtoMin(t.end)
+                    });
+                });
+                return intervals;
+            }
+            // Fallback to hardcoded times
+            let t = START_H*60 + START_M;
+            let idx=0;
+            t = addInterval(intervals, ++idx, opts[idx-1], t, DUR[0]);
+            t = addInterval(intervals, ++idx, opts[idx-1], t, DUR[1]);
+            t = addInterval(intervals, ++idx, opts[idx-1], t, DUR[2]);
+            t += DUR[3];
+            t = addInterval(intervals, ++idx, opts[idx-1], t, DUR[4]);
+            t = addInterval(intervals, ++idx, opts[idx-1], t, DUR[5]);
+            t += DUR[6];
+            t = addInterval(intervals, ++idx, opts[idx-1], t, DUR[7]);
+            t = addInterval(intervals, ++idx, opts[idx-1], t, DUR[8]);
+            return intervals;
+        }
+        function getCurrentLessonInterval(intervals){
+            const nowMin = nowMinutesInTZ(TZ);
+            return (intervals || []).find(iv => nowMin >= iv.start && nowMin < iv.end) || null;
+        }
+        function showAttendanceBlockedPopup(reason){
+            let message = '';
+            switch (reason) {
+                case 'outside_lessons':
+                case 'not_my_lesson':
+                    message = 'يمكنك تسجيل الغياب فقط أثناء حصتك الحالية.';
+                    break;
+                case 'not_logged_in':
+                    message = 'يرجى تسجيل الدخول أولاً.';
+                    break;
+                case 'no_class':
+                    message = 'اختر فصلاً أولاً.';
+                    break;
+                default:
+                    message = 'يمكنك تسجيل الغياب فقط أثناء حصتك الحالية.';
+            }
+            if (!blockedModal || !blockedBody) {
+                openError('غير مسموح', message);
+                return;
+            }
+            blockedBody.textContent = message;
+            openModal(blockedModal);
+        }
+        async function checkAttendanceAllowedForCurrentClass(){
+            if (!auth.currentUser) return { allowed:false, reason:'not_logged_in' };
+            if (!currentClass) return { allowed:false, reason:'no_class' };
+
+            const intervals = getDailyLessonIntervals();
+            const activeLesson = getCurrentLessonInterval(intervals);
+            if (!activeLesson) return { allowed:false, reason:'outside_lessons' };
+
+            try {
+                const scheduledLessons = await getScheduledLessonsForClass(currentClass);
+                currentClassScheduledLessons = scheduledLessons;
+                if (!scheduledLessons.has(activeLesson.index)) {
+                    return { allowed:false, reason:'not_my_lesson' };
+                }
+                return { allowed:true, lessonIndex:activeLesson.index, lesson:activeLesson };
+            } catch (error) {
+                console.error('Error checking attendance allowance:', error);
+                return { allowed:false, reason:'not_my_lesson' };
+            }
+        }
+        function updateLessonHint(intervals){
+            const idx=parseInt(lessonSelect.value,10);
+            const iv=intervals.find(x=>x.index===idx);
+            lessonHint.textContent = iv ? `${iv.label} — ${minToStr(iv.start)} – ${minToStr(iv.end)} (تلقائي/يدوي)` : 'لا توجد حصص متاحة';
+        }
+        function renderAttendanceList(list){
+            attList.innerHTML = '';
+            if(list.length===0){
+                const empty = document.createElement('div');
+                empty.className = 'error';
+                empty.textContent = 'لا يوجد طلاب.';
+                attList.appendChild(empty);
+                return;
+            }
+            
+            // NEW: Use document fragment for better performance
+            const fragment = document.createDocumentFragment();
+            
+            list.forEach(s=>{
+                const card = document.createElement('div');
+                card.className = 'att-card';
+                const name = document.createElement('div');
+                name.className = 'att-name';
+                
+                // NEW: Add special case icon in attendance list if needed
+                if (s.specialCase) {
+                    const icon = document.createElement('img');
+                    icon.src = 'https://cdn-icons-png.freepik.com/256/8984/8984792.png?semt=ais_white_label';
+                    icon.alt = 'خاص';
+                    icon.className = 'special-case-icon';
+                    name.appendChild(icon);
+                }
+                
+                const nameText = document.createTextNode(s.name || '—');
+                name.appendChild(nameText);
+                
+                const seg = document.createElement('div');
+                seg.className = 'seg';
+                const bPres = document.createElement('button');
+                bPres.className = 'present';
+                bPres.textContent = 'حضور';
+                const sep1 = document.createElement('div');
+                sep1.className = 'sep';
+                const bLate = document.createElement('button');
+                bLate.className = 'late';
+                bLate.textContent = 'تأخير';
+                const sep2 = document.createElement('div');
+                sep2.className = 'sep';
+                const bAbs = document.createElement('button');
+                bAbs.className = 'absent';
+                bAbs.textContent = 'غياب';
+                // default = حضور
+                attStatuses[s.uid || s.name] = 'present';
+                bPres.classList.add('active');
+                // ensure no tint initially
+                card.classList.remove('tint-late','tint-absent');
+                
+                // NEW: Use passive event listeners for better performance
+                bPres.addEventListener('click', () => setStatus(s, 'present', bPres, bLate, bAbs, card), { passive: true });
+                bLate.addEventListener('click', () => setStatus(s, 'late', bPres, bLate, bAbs, card), { passive: true });
+                bAbs.addEventListener('click', () => setStatus(s, 'absent', bPres, bLate, bAbs, card), { passive: true });
+                
+                seg.appendChild(bPres);
+                seg.appendChild(sep1);
+                seg.appendChild(bLate);
+                seg.appendChild(sep2);
+                seg.appendChild(bAbs);
+                card.appendChild(name);
+                card.appendChild(seg);
+                fragment.appendChild(card);
+            });
+            
+            attList.appendChild(fragment);
+            recalcStats();
+        }
+        function setStatus(student, status, btnP, btnL, btnA, card){
+            const key = student.uid || student.name;
+            attStatuses[key] = status;
+            btnP.classList.toggle('active', status==='present');
+            btnL.classList.toggle('active', status==='late');
+            btnA.classList.toggle('active', status==='absent');
+            // NEW: tint card
+            if(card){
+                card.classList.remove('tint-late','tint-absent');
+                if(status==='late') card.classList.add('tint-late');
+                if(status==='absent') card.classList.add('tint-absent');
+            }
+            recalcStats();
+        }
+        function recalcStats(){
+            const vals = Object.values(attStatuses);
+            const present = vals.filter(v=>v==='present').length;
+            const late = vals.filter(v=>v==='late').length;
+            const absent = vals.filter(v=>v==='absent').length;
+            countPresent.textContent = `حضور: ${present}`;
+            countLate.textContent = `تأخير: ${late}`;
+            countAbsent.textContent = `غياب: ${absent}`;
+            const namesAbsent = attStudentList
+                .filter(s=> attStatuses[s.uid || s.name] === 'absent')
+                .map(s=> s.name)
+                .join('، ');
+            absentNames.textContent = namesAbsent || '—';
+            if(!namesAbsent){
+                absentDetails.open = false;
+            }
+        }
+        function dateInTZ(timeZone){
+            const parts = new Intl.DateTimeFormat('en-CA',{timeZone,year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
+            const y = parts.find(p=>p.type==='year').value;
+            const m = parts.find(p=>p.type==='month').value;
+            const d = parts.find(p=>p.type==='day').value;
+            return `${y}-${m}-${d}`;
+        }
+        function sanitizeId(s){
+            return String(s).replace(/[^\w\-]+/g,'_');
+        }
+
+        // NEW: Filter button functionality
+        filterAbsent.addEventListener('click', () => {
+            filterAbsent.classList.add('active');
+            filterLate.classList.remove('active');
+            confirmAbsentList.style.display = 'block';
+            confirmLateList.style.display = 'none';
+        });
+
+        filterLate.addEventListener('click', () => {
+            filterLate.classList.add('active');
+            filterAbsent.classList.remove('active');
+            confirmAbsentList.style.display = 'none';
+            confirmLateList.style.display = 'block';
+        });
+
+        /* ===== Submit attendance with Confirm Modal ===== */
+        submitAtt.addEventListener('click', async ()=>{
+            if(!currentClass){
+                openError('تعذّر الحفظ','اختر فصلًا أولاً.');
+                return;
+            }
+
+            const checkResult = await checkAttendanceAllowedForCurrentClass();
+            if (!checkResult.allowed) {
+                showAttendanceBlockedPopup(checkResult.reason);
+                return;
+            }
+
+            // Check if there are any lessons available
+            if (lessonSelect.options.length === 0) {
+                openError('تعذّر الحفظ', 'لا توجد حصص متاحة للتسجيل اليوم.');
+                return;
+            }
+
+            const selectedLesson = parseInt(lessonSelect.value, 10);
+            if (selectedLesson !== checkResult.lessonIndex) {
+                showAttendanceBlockedPopup('not_my_lesson');
+                return;
+            }
+            if (!Number.isFinite(selectedLesson) || !currentClassScheduledLessons.has(selectedLesson)) {
+                openError('تعذّر الحفظ', 'هذه الحصة ليست ضمن جدولك لهذا الفصل اليوم.');
+                return;
+            }
+
+            // Build arrays preview
+            const present = [], late = [], absent = [];
+            const absNames = [];
+            const lateNames = [];
+            
+            attStudentList.forEach(s=>{
+                const key = s.uid || s.name;
+                const st = attStatuses[key];
+                if(st==='present') present.push(s.uid);
+                else if(st==='late') {
+                    late.push(s.uid);
+                    lateNames.push(s.name);
+                }
+                else if(st==='absent'){
+                    absent.push(s.uid);
+                    absNames.push(s.name);
+                }
+            });
+
+            // NEW: Update modal title with lesson name
+            const lessonLabel = lessonSelect.options[lessonSelect.selectedIndex]?.textContent?.split(' — ')?.[0] || '';
+            confirmTitle.textContent = `تأكيد حفظ التقرير | ${lessonLabel}`;
+
+            // Fill modal lists
+            confirmAbsentList.innerHTML = '';
+            confirmLateList.innerHTML = '';
+            
+            if(absNames.length){
+                absNames.forEach(n=>{
+                    const li = document.createElement('li');
+                    li.textContent = n;
+                    confirmAbsentList.appendChild(li);
+                });
+            }else{
+                const li = document.createElement('li');
+                li.textContent = 'لا يوجد طلاب غائبون.';
+                confirmAbsentList.appendChild(li);
+            }
+
+            if(lateNames.length){
+                lateNames.forEach(n=>{
+                    const li = document.createElement('li');
+                    li.textContent = n;
+                    confirmLateList.appendChild(li);
+                });
+            }else{
+                const li = document.createElement('li');
+                li.textContent = 'لا يوجد طلاب متأخرون.';
+                confirmLateList.appendChild(li);
+            }
+
+            // Reset filter to absent by default
+            filterAbsent.click();
+
+            // Cache pending data for save
+            const dateKW = dateInTZ('Asia/Kuwait');
+            const lessonIndex = parseInt(lessonSelect.value,10);
+            pendingSave = { present, late, absent, dateKW, lessonIndex, lessonLabel };
+            openModal(confirmModal);
+        });
+
+        confirmCancel.addEventListener('click', ()=> closeModal(confirmModal));
+        confirmSave.addEventListener('click', async ()=>{
+            try{
+                if(!auth.currentUser){
+                    openError('تعذّر الحفظ','يرجى تسجيل الدخول.');
+                    return;
+                }
+                if(!currentClass || !pendingSave){
+                    closeModal(confirmModal);
+                    return;
+                }
+
+                const checkResult = await checkAttendanceAllowedForCurrentClass();
+                if (!checkResult.allowed) {
+                    closeModal(confirmModal);
+                    showAttendanceBlockedPopup(checkResult.reason);
+                    return;
+                }
+                const uid = auth.currentUser.uid;
+                const { present, late, absent, dateKW, lessonIndex, lessonLabel } = pendingSave;
+                if (lessonIndex !== checkResult.lessonIndex) {
+                    closeModal(confirmModal);
+                    showAttendanceBlockedPopup('not_my_lesson');
+                    return;
+                }
+                const total = present.length + late.length + absent.length;
+                const sessionId = `${dateKW}__${sanitizeId(currentClass)}__L${lessonIndex}`;
+                const sessionRef = doc(db, 'attendance', sessionId);
+                // Pre-check if the session already exists (avoid duplicate lesson attendance)
+                const existing = await getDoc(sessionRef);
+                if (existing.exists()) {
+                    closeModal(confirmModal);
+                    openError('تعذّر الحفظ', 'تم تسجيل غياب هذه الحصّة مسبقًا.');
+                    pendingSave = null;
+                    return;
+                }
+                const batch = writeBatch(db);
+                // session doc
+                batch.set(sessionRef, {
+                    class: currentClass,
+                    date: dateKW,
+                    lessonIndex,
+                    lessonLabel,
+                    present,
+                    late,
+                    absent,
+                    counts: { present: present.length, late: late.length, absent: absent.length, total },
+                    createdAt: serverTimestamp(),
+                    createdBy: uid
+                });
+                // per-student fan-out
+                const all = [
+                    ...present.map(u=>({u,status:'present'})),
+                    ...late.map(u=>({u,status:'late'})),
+                    ...absent.map(u=>({u,status:'absent'}))
+                ];
+                const nameByUid = {};
+                attStudentList.forEach(s=>{
+                    nameByUid[s.uid] = s.name;
+                });
+                all.forEach(({u,status})=>{
+                    if(!u) return;
+                    const subRef = doc(db, 'students', u, 'attendance', sessionId);
+                    batch.set(subRef, {
+                        sessionId,
+                        class: currentClass,
+                        date: dateKW,
+                        lessonIndex,
+                        lessonLabel,
+                        status,
+                        createdAt: serverTimestamp(),
+                        createdBy: uid,
+                        sessionPath: sessionRef.path,
+                        studentName: nameByUid[u] || null
+                    });
+                });
+                await batch.commit();
+                
+                // NEW: Invalidate cache after successful save
+                cachedTakenLessons = null;
+                
+                closeModal(confirmModal);
+                // Go home and toast
+                goHomeAndToast(`تم تسجيل الغياب بنجاح`, `للحصة: ${lessonLabel || ('حصة '+lessonIndex)}`);
+            }catch(e){
+                console.error(e);
+                closeModal(confirmModal);
+                // In case rules/network say no, show themed error popup
+                openError('تعذّر الحفظ', 'تم تسجيل غياب هذه الحصّة مسبقًا أو لا تملك الصلاحية.');
+            }finally{
+                pendingSave = null;
+            }
+        });
+        function goHomeAndToast(title, sub){
+            // close sheets
+            closeSheet(attSheet);
+            closeSheet(classSheet);
+            // show dashboard
+            show(sDash);
+            // show toast
+            toastTitle.textContent = title || 'تم';
+            toastSub.textContent = sub || '';
+            toast.classList.remove('hidden');
+        }
+        toastClose.addEventListener('click', ()=> toast.classList.add('hidden'));
+        document.addEventListener('keydown', (e)=>{
+            if(e.key==='Escape') {
+                toast.classList.add('hidden');
+                closeModal(confirmModal);
+                closeModal(errorModal);
+                closeModal(blockedModal);
+            }});
+        confirmModal.querySelector('.overlay').addEventListener('click', ()=> closeModal(confirmModal));
+        errorModal.querySelector('.overlay').addEventListener('click', ()=> closeModal(errorModal));
+        errorOk.addEventListener('click', ()=> closeModal(errorModal));
+        blockedModal.querySelector('.overlay').addEventListener('click', ()=> closeModal(blockedModal));
+        blockedClose.addEventListener('click', ()=> closeModal(blockedModal));
+        blockedOk.addEventListener('click', ()=> closeModal(blockedModal));
+        function openError(title, body){
+            document.getElementById('errorTitle').textContent = title || 'خطأ';
+            errorBody.textContent = body || 'حدث خطأ غير متوقع.';
+            openModal(errorModal);
+        }
+        /* ========= Attendance LOG ========= */
+        logBtn.addEventListener('click', async ()=>{
+            await loadMyAttendanceLog();
+            openSheet(logSheet);
+        });
+        closeLog.addEventListener('click', ()=> closeSheet(logSheet));
+        
+        // NEW: Optimized attendance log loading with class and teacher scoping
+        async function loadMyAttendanceLog(){
+            logList.innerHTML = '';
+            if(!auth.currentUser || !currentClass) return; // Add currentClass check
+            
+            const loadingEl = document.createElement('div');
+            loadingEl.className = 'loading';
+            loadingEl.innerHTML = '<div class="spinner"></div><div class="muted">جاري تحميل سجل الغيابات...</div>';
+            logList.appendChild(loadingEl);
+
+            // MODIFIED: Add class filter and teacher filter
+            const qRef = query(
+                collection(db, 'attendance'), 
+                where('class', '==', currentClass),
+                where('createdBy', '==', auth.currentUser.uid)
+            );
+            
+            const snap = await getDocs(qRef);
+            if(snap.empty){
+                logList.innerHTML = '';
+                const empty = document.createElement('div');
+                empty.className = 'error';
+                empty.textContent = 'لا توجد تقارير مسجلة لك.';
+                logList.appendChild(empty);
+                return;
+            }
+            const items = [];
+            snap.forEach(d=>{
+                const data = d.data() || {};
+                items.push({ id: d.id, ...data });
+            });
+            items.sort((a,b)=>{
+                if(a.date === b.date) return (b.lessonIndex||0) - (a.lessonIndex||0);
+                return a.date < b.date ? 1 : -1;
+            });
+            logList.innerHTML = '';
+            
+            // NEW: Use document fragment for better performance
+            const fragment = document.createDocumentFragment();
+            
+            items.forEach(item=>{
+                const div = document.createElement('div');
+                const canEdit = canEditByTime(item.createdAt);
+                const classLabel = item.class ? formatClassLabel(item.class) : '—';
+                div.className = 'log-item';
+                div.innerHTML = `
+                    <h4 class="log-title">${classLabel}</h4>
+                    <div class="log-sub">التاريخ: ${item.date || '—'} — ${item.lessonLabel || ('حصة '+(item.lessonIndex||''))}</div>
+                    <div class="${canEdit ? 'ok':'warn'}">${canEdit ? 'متاح للتعديل خلال 24 ساعة' : 'انتهت مهلة التعديل'}</div>
+                `;
+                div.addEventListener('click', ()=> requestAnimationFrame(() => openLogDetail(item.id)));
+                fragment.appendChild(div);
+            });
+            
+            logList.appendChild(fragment);
+        }
+        function canEditByTime(createdAtField){
+            if(!createdAtField) return false;
+            let created = null;
+            if (createdAtField?.toDate) created = createdAtField.toDate();
+            else if (createdAtField?.seconds) created = new Date(createdAtField.seconds*1000);
+            if(!created) return false;
+            const now = new Date();
+            return (now - created) <= 24*60*60*1000;
+        }
+        /* ========= Attendance DETAIL / EDIT ========= */
+        closeLogDetail.addEventListener('click', ()=> closeSheet(logDetailSheet));
+        let detailSession = null; // {id,data}
+        let dStatuses = {}; // uid -> status
+        let dStudents = []; // [{uid,name}]
+        async function openLogDetail(sessionId){
+            const sRef = doc(db, 'attendance', sessionId);
+            const sSnap = await getDoc(sRef);
+            if(!sSnap.exists()){
+                openError('غير موجود','التقرير غير موجود.');
+                return;
+            }
+            const data = sSnap.data() || {};
+            detailSession = { id: sessionId, data };
+            detailTitle.textContent = 'تعديل التقرير';
+            detailClass.textContent = data.class ? formatClassLabel(data.class) : '—';
+            detailMeta.textContent = `التاريخ: ${data.date || '—'} — ${data.lessonLabel || ('حصة '+(data.lessonIndex||''))}`;
+            dStudents = await fetchStudentsByClass(data.class);
+            const nameByUid = {};
+            dStudents.forEach(s=> nameByUid[s.uid] = s.name);
+            dStatuses = {};
+            (data.present||[]).forEach(u=> dStatuses[u]='present');
+            (data.late||[]).forEach(u=> dStatuses[u]='late');
+            (data.absent||[]).forEach(u=> dStatuses[u]='absent');
+            renderDetailList(dStudents, nameByUid);
+            const canEdit = canEditByTime(data.createdAt);
+            saveDetail.disabled = !canEdit;
+            detailLockMsg.style.display = canEdit ? 'none' : 'block';
+            editWindowHint.textContent = canEdit ? 'متاح للتعديل حتى 24 ساعة من الإنشاء' : 'غير متاح للتعديل';
+            openSheet(logDetailSheet);
+        }
+        async function fetchStudentsByClass(cls){
+            // NEW: Check cache first
+            if (studentsCache[cls]) {
+                return studentsCache[cls];
+            }
+            
+            let list = await tryQueryStudents('students', cls);
+            if(list.length === 0){
+                const nested = await tryQueryStudents('students/uids', cls);
+                if(nested.length > 0) list = nested;
+            }
+            list = sortStudentsByStudentNumberOnly(list);
+            studentsCache[cls] = list; // NEW: Cache the results
+            return list;
+        }
+        function renderDetailList(students, nameByUid){
+            detailList.innerHTML = '';
+            if(students.length===0){
+                const empty = document.createElement('div');
+                empty.className = 'error';
+                empty.textContent = 'لا يوجد طلاب.';
+                detailList.appendChild(empty);
+                return;
+            }
+            
+            // NEW: Use document fragment for better performance
+            const fragment = document.createDocumentFragment();
+            
+            students.forEach(s=>{
+                const card = document.createElement('div');
+                card.className = 'att-card';
+                const name = document.createElement('div');
+                name.className = 'att-name';
+                
+                // NEW: Add special case icon in detail list if needed
+                if (s.specialCase) {
+                    const icon = document.createElement('img');
+                    icon.src = 'https://cdn-icons-png.freepik.com/256/8984/8984792.png?semt=ais_white_label';
+                    icon.alt = 'خاص';
+                    icon.className = 'special-case-icon';
+                    name.appendChild(icon);
+                }
+                
+                const nameText = document.createTextNode(s.name || '—');
+                name.appendChild(nameText);
+                
+                const seg = document.createElement('div');
+                seg.className = 'seg';
+                const bPres = document.createElement('button');
+                bPres.className = 'present';
+                bPres.textContent = 'حضور';
+                const sep1 = document.createElement('div');
+                sep1.className = 'sep';
+                const bLate = document.createElement('button');
+                bLate.className = 'late';
+                bLate.textContent = 'تأخير';
+                const sep2 = document.createElement('div');
+                sep2.className = 'sep';
+                const bAbs = document.createElement('button');
+                bAbs.className = 'absent';
+                bAbs.textContent = 'غياب';
+                const key = s.uid;
+                const cur = dStatuses[key] || 'present';
+                if(cur==='present') bPres.classList.add('active');
+                if(cur==='late') bLate.classList.add('active');
+                if(cur==='absent') bAbs.classList.add('active');
+                
+                // NEW: Use passive event listeners for better performance
+                bPres.addEventListener('click', () => setDStatus(key,'present', bPres,bLate,bAbs), { passive: true });
+                bLate.addEventListener('click', () => setDStatus(key,'late', bPres,bLate,bAbs), { passive: true });
+                bAbs.addEventListener('click', () => setDStatus(key,'absent', bPres,bLate,bAbs), { passive: true });
+                
+                seg.appendChild(bPres);
+                seg.appendChild(sep1);
+                seg.appendChild(bLate);
+                seg.appendChild(sep2);
+                seg.appendChild(bAbs);
+                card.appendChild(name);
+                card.appendChild(seg);
+                fragment.appendChild(card);
+            });
+            
+            detailList.appendChild(fragment);
+            recalcDetailStats();
+        }
+        function setDStatus(uid, status, btnP, btnL, btnA){
+            dStatuses[uid] = status;
+            btnP.classList.toggle('active', status==='present');
+            btnL.classList.toggle('active', status==='late');
+            btnA.classList.toggle('active', status==='absent');
+            recalcDetailStats();
+        }
+        function recalcDetailStats(){
+            const vals = Object.values(dStatuses);
+            const present = vals.filter(v=>v==='present').length;
+            const late = vals.filter(v=>v==='late').length;
+            const absent = vals.filter(v=>v==='absent').length;
+            dCountPresent.textContent = `حضور: ${present}`;
+            dCountLate.textContent = `تأخير: ${late}`;
+            dCountAbsent.textContent = `غياب: ${absent}`;
+        }
+        saveDetail.addEventListener('click', async ()=>{
+            try{
+                if(!auth.currentUser){
+                    openError('تعذّر الحفظ','يرجى تسجيل الدخول.');
+                    return;
+                }
+                if(!detailSession){
+                    openError('تعذّر الحفظ','لا يوجد تقرير مفتوح.');
+                    return;
+                }
+                const canEdit = canEditByTime(detailSession.data.createdAt);
+                if(!canEdit){
+                    openError('تعذّر الحفظ','انتهت مهلة التعديل (24 ساعة).');
+                    return;
+                }
+                const present=[], late=[], absent=[];
+                Object.entries(dStatuses).forEach(([uid,st])=>{
+                    if(st==='present') present.push(uid);
+                    else if(st==='late') late.push(uid);
+                    else if(st==='absent') absent.push(uid);
+                });
+                const sessionRef = doc(db, 'attendance', detailSession.id);
+                const batch = writeBatch(db);
+                batch.set(sessionRef, {
+                    present,
+                    late,
+                    absent,
+                    counts: { present: present.length, late: late.length, absent: absent.length, total: present.length+late.length+absent.length }
+                }, { merge: true });
+                const data = detailSession.data;
+                const all = [
+                    ...present.map(u=>({u,status:'present'})),
+                    ...late.map(u=>({u,status:'late'})),
+                    ...absent.map(u=>({u,status:'absent'}))
+                ];
+                const nameByUid = {};
+                dStudents.forEach(s=> nameByUid[s.uid] = s.name);
+                all.forEach(({u,status})=>{
+                    const subRef = doc(db, 'students', u, 'attendance', detailSession.id);
+                    batch.set(subRef, {
+                        sessionId: detailSession.id,
+                        class: data.class,
+                        date: data.date,
+                        lessonIndex: data.lessonIndex,
+                        lessonLabel: data.lessonLabel,
+                        status,
+                        updatedAt: serverTimestamp(),
+                        updatedBy: auth.currentUser.uid,
+                        sessionPath: sessionRef.path,
+                        studentName: nameByUid[u] || null
+                    }, { merge: true });
+                });
+                await batch.commit();
+                
+                // NEW: Invalidate cache after successful edit
+                cachedTakenLessons = null;
+                
+                goHomeAndToast('تم حفظ التعديلات', `للحصة: ${data.lessonLabel || ('حصة '+data.lessonIndex)}`);
+            }catch(e){
+                console.error(e);
+                openError('تعذّر الحفظ','تحقق من الصلاحيات أو الشبكة.');
+            }
+        });
+        /* ========= Logout ========= */
+        logoutBtn.addEventListener('click', async ()=>{
+            const isConfirmed = await showActionPopup({
+                title: 'تسجيل الخروج',
+                message: 'هل تريد تسجيل الخروج الآن؟',
+                confirmText: 'نعم، تسجيل الخروج',
+                cancelText: 'إلغاء',
+                icon: '↩'
+            });
+            if(!isConfirmed) return;
+            await signOut(auth);
+            location.href='/index.html';
+        });
+    </script>
+  <script src="/shared/hub-title-link.js" defer></script>
+<script src="/name-glow.js" defer></script>
+</body>
+</html>
+
+
+
+
+
+
+
+

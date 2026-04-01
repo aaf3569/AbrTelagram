@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.gstatic.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; manifest-src 'self'; upgrade-insecure-requests; block-all-mixed-content">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  <title>إدارة المعلّمين - ثانوية أحمد البشر الرومي</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+
+  <!-- iOS home screen icon -->
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/appicon.png" />
+  
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <meta name="theme-color" content="#033C54" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <!-- Browser tab icon (favicon) -->
+  <link rel="icon" type="image/png" sizes="64x64" href="https://framerusercontent.com/images/eepB7V11E8IMGVLttDUMaz62pPQ.png?width=64&height=64" />
+  <link rel="shortcut icon" href="https://framerusercontent.com/images/eepB7V11E8IMGVLttDUMaz62pPQ.png?width=64&height=64" />
+
+  <!-- Social / Safari preview (Open Graph & Twitter) -->
+  <meta property="og:title" content="إدارة المعلّمين - ثانوية أحمد البشر الرومي">
+  <meta property="og:description" content="منصة ثانوية أحمد البشر الرومي.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://framerusercontent.com/images/jRnZLlPr90qwKsuUwfIlvDS9E.png?width=1200&height=630">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="إدارة المعلّمين - ثانوية أحمد البشر الرومي">
+  <meta name="twitter:description" content="منصة ثانوية أحمد البشر الرومي.">
+  <meta name="twitter:image" content="https://framerusercontent.com/images/jRnZLlPr90qwKsuUwfIlvDS9E.png?width=1200&height=630">
+
+  <link rel="stylesheet" href="/shared/base.css" />
+  <style>
+    :root{--primary:#033C54;--page:#f6f8fb;--text:#0f172a;--muted:#6b7f9f;--border:#e6edf7;--shadow-1:0 8px 22px rgba(3,60,84,.14);--radius:16px;--focus:#79b3c8}
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;padding:0}
+    body{background:radial-gradient(1200px 600px at 80% -20%, rgba(3,60,84,.08), transparent 60%),radial-gradient(900px 500px at -10% 120%, rgba(3,60,84,.06), transparent 60%),var(--page);color:var(--text);font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;display:flex;flex-direction:column;min-height:100vh}
+    .site-header{position:sticky;top:0;z-index:10;background:rgba(255,255,255,.68);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);color:var(--primary);padding:16px 20px;display:flex;align-items:center;justify-content:center;border-bottom:1px solid rgba(3,60,84,.08);box-shadow:0 2px 10px rgba(3,60,84,.06)}
+    .site-title{margin:0;font-weight:900;letter-spacing:.2px;font-size:clamp(1.1rem,2.4vw,1.5rem)}
+    main{flex:1;padding:24px 14px 32px;display:flex}
+    .column{width:min(820px,96vw);margin:0 auto;display:flex;flex-direction:column;gap:16px}
+    .panel{width:100%;background:#fff;border:1px solid var(--border);border-radius:16px;padding:16px 14px;box-shadow:var(--shadow-1)}
+    .state{display:none}.state.active{display:block}
+    .loading{display:grid;place-items:center;gap:12px;padding:24px}
+    .spinner{width:40px;height:40px;border-radius:50%;border:4px solid rgba(3,60,84,.18);border-top-color:var(--primary);animation:spin 1s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .error{color:#a11;background:#fde8e8;border:1px solid #f5c5c5;padding:12px;border-radius:14px}
+    .muted{color:var(--muted)}
+    .floating-back{position:fixed;right:20px;top:90px;z-index:24;height:46px;padding:0 16px;border-radius:14px;border:1px solid rgba(3,60,84,.24);background:#fff;color:#033C54;font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;font-weight:900;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;box-shadow:0 14px 34px rgba(3,60,84,.2);transition:.16s ease}
+    .floating-back:hover{transform:translateY(-2px);box-shadow:0 18px 40px rgba(3,60,84,.26);border-color:rgba(3,60,84,.45)}
+    .btn{font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;height:52px;border:none;border-radius:14px;cursor:pointer;font-weight:900;font-size:.98rem;padding:0 16px;transition:.14s ease}
+    .btn:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+    .btn.primary{background:linear-gradient(180deg,#065372,#033C54);color:#fff;box-shadow:0 12px 28px rgba(3,60,84,.26)}
+    .btn.ghost{background:#fff;color:#033C54;border:1px solid rgba(3,60,84,.35);box-shadow:var(--shadow-1)}
+    .btn.danger{background:#fff;color:#cb2b2b;border:1px solid rgba(203,43,43,.4);box-shadow:var(--shadow-1)}
+    .subject{width:100%;background:#fff;border:1px solid #d6e4f2;border-radius:14px;padding:15px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;box-shadow:0 3px 10px rgba(3,60,84,.06);color:#0f2743;font-weight:800;transition:transform .14s ease, box-shadow .14s ease, border-color .14s ease}
+    .subject:hover{transform:translateY(-2px);box-shadow:0 12px 24px rgba(3,60,84,.12);border-color:#a3bfd8}
+    .subject:active{transform:translateY(0);box-shadow:0 5px 12px rgba(3,60,84,.09)}
+    .subject:focus-visible{outline:3px solid rgba(11,111,149,.28);outline-offset:2px}
+    .subject-card{background:#fff}
+    .subject-card span{font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;font-size:1.02rem;font-weight:900;letter-spacing:.04px;line-height:1.4}
+    .subject-admin-entry{margin-bottom:20px}
+    .chev{width:22px;height:22px;flex-shrink:0}
+    .chev path{stroke:#6b7f9f;stroke-width:2.35;fill:none;stroke-linecap:round;stroke-linejoin:round;transition:stroke .14s ease, transform .14s ease}
+    .subject:hover .chev path{stroke:#033c54;transform:translateX(-1px)}
+    .section{background:#fff;border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow-1);padding:14px;display:flex;flex-direction:column;gap:12px}
+    .stack{width:100%;display:flex;flex-direction:column;gap:10px}
+    .teacher-item{padding:14px;border:1px solid var(--border);border-radius:14px;background:#fff;box-shadow:var(--shadow-1);font-weight:900;color:#0f2743;display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:.12s ease}
+    .teacher-item:hover{transform:translateY(-2px);box-shadow:0 16px 32px rgba(3,60,84,.18);border-color:rgba(3,60,84,.35)}
+    .teacher-sub{font-size:.86rem;color:#6b7f9f;font-weight:700}
+    .teachers-separator{height:10px}
+    .sheet{position:fixed;inset:0;z-index:50;background:var(--page);display:flex;flex-direction:column;transform:translateX(100%);transition:transform .28s cubic-bezier(.22,.7,.25,1)}
+    .sheet.open{transform:translateX(0)}
+    .sheet-header{background:#fff;border-bottom:1px solid var(--border);padding:14px 12px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10}
+    .back-btn{height:40px;padding:0 14px;border-radius:12px;border:1px solid rgba(3,60,84,.25);background:#fff;color:#033C54;font-weight:900;cursor:pointer;box-shadow:var(--shadow-1)}
+    .sheet-title{margin:0;font-size:1.05rem;font-weight:900;color:#033C54}
+    .sheet-body{flex:1 1 auto;overflow:auto;padding:16px;width:min(820px,94vw);margin:0 auto;display:flex;flex-direction:column;gap:12px}
+    .sheet.small .sheet-body{width:min(620px,94vw)}
+    body.teacher-route-active main, body.teacher-route-active #subjectSheet{display:none !important}
+    body.teacher-route-active .floating-back{display:none}
+    body.teacher-route-active #teacherSheet{position:static;inset:auto;transform:none !important;display:flex;min-height:calc(100vh - 80px)}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .field{display:flex;flex-direction:column;gap:8px;width:100%}
+    .label{font-size:.92rem;font-weight:800;color:#0f2743}
+    .input-wrap{display:flex;align-items:center;gap:10px;min-height:52px;padding:0 14px;background:#fff;border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-1)}
+    .input{flex:1;height:48px;border:none;outline:none;background:transparent;font-size:16px;color:#0a0a0a;font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif}
+    .input:disabled{color:#334155;opacity:1;cursor:default}
+    .value-wrap{display:flex;align-items:center;min-height:52px;padding:0 14px;background:#f8fbff;border:1px solid #dce8f5;border-radius:var(--radius);box-shadow:var(--shadow-1);color:#0f2743;font-weight:800}
+    .view-value{font-size:.95rem}
+    .checkbox-wrap{display:flex;align-items:center;gap:10px}
+    .ok,.err{padding:12px;border-radius:14px;margin-top:6px;font-size:.9rem;box-shadow:var(--shadow-1);display:none}
+    .ok{color:#126a2e;background:#e6f6ea;border:1px solid #c7ebd0}.err{color:#a12;background:#fde8e8;border:1px solid #f5c5c5}
+    .classes-list{display:flex;flex-direction:column;gap:10px}.class-row{display:flex;flex-direction:column;gap:8px;border:1px dashed var(--border);border-radius:14px;padding:10px;background:#fcfeff}.class-row .top{display:flex;gap:10px;align-items:center}.class-row .remove{height:40px;padding:0 12px;border-radius:10px;border:1px solid rgba(203,43,43,.35);color:#cb2b2b;background:#fff;font-weight:800;cursor:pointer;font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif}.inline-add{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.inline-add .add{height:44px;padding:0 16px;border-radius:12px;border:1px solid rgba(3,60,84,.3);background:#fff;color:#033C54;font-weight:900;cursor:pointer;box-shadow:var(--shadow-1);font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif}
+    .profile-shell{display:flex;flex-direction:column;gap:12px}
+    .profile-hero{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px;border:1px solid var(--border);border-radius:16px;background:linear-gradient(180deg,#ffffff,#f5fbff);box-shadow:var(--shadow-1)}
+    .profile-head{display:flex;align-items:center;gap:12px;min-width:0}
+    .avatar{width:56px;height:56px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(180deg,#065372,#033C54);color:#fff;font-weight:900;font-size:1.08rem;box-shadow:0 10px 24px rgba(3,60,84,.28);flex-shrink:0}
+    .profile-name-wrap{min-width:0}
+    .profile-name{font-weight:900;font-size:1.02rem;color:#0f2743;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .profile-email{font-size:.88rem;color:#6b7f9f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .profile-badges{display:flex;flex-wrap:wrap;gap:8px}
+    .pill{display:inline-flex;align-items:center;height:30px;padding:0 10px;border-radius:999px;border:1px solid rgba(3,60,84,.2);background:#fff;color:#0f2743;font-size:.8rem;font-weight:800}
+    .pill.role-head{border-color:rgba(203,160,18,.38);color:#7a5a00;background:#fffaf0}
+    .profile-grid{display:grid;grid-template-columns:1fr;gap:12px}
+    .profile-card{border:1px solid var(--border);border-radius:16px;background:#fff;box-shadow:var(--shadow-1);padding:14px}
+    .profile-card-title{margin:0 0 10px;font-size:.96rem;color:#033C54;font-weight:900}
+    .info-grid{display:grid;grid-template-columns:1fr;gap:10px}
+    .plain-value{padding:2px 0 8px;color:#0f2743;font-weight:900;min-height:30px;font-size:.95rem;line-height:1.8}
+    .teacher-readonly .field .label{color:#6b7f9f;font-weight:700;font-size:.86rem}
+    .view-value.empty{color:#94a3b8;font-weight:700}
+    .class-chips{display:flex;flex-wrap:wrap;gap:8px}
+    .class-chip{height:32px;display:inline-flex;align-items:center;padding:0 10px;border-radius:999px;background:#f3f8fd;border:1px solid #d8e8f8;color:#0f2743;font-size:.82rem;font-weight:800}
+    .class-empty{color:#7b8ea8;font-size:.88rem}
+    .permissions-view{display:flex;flex-wrap:wrap;gap:8px;min-height:34px}
+    .perm-chip{height:34px;display:inline-flex;align-items:center;padding:0 12px;border-radius:999px;background:#edf7f1;border:1px solid #ccead8;color:#126a2e;font-size:.84rem;font-weight:900}
+    .perm-empty{color:#7b8ea8;font-size:.88rem}
+    .permissions-editor{display:flex;flex-direction:column;gap:12px}
+    .permissions-editor .checkbox-wrap{padding:12px 14px;border:1px dashed #d8e8f8;border-radius:14px;background:#f8fbff}
+    .classes-editor[hidden]{display:none}
+    .profile-actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+    #saveTeacher[hidden], #cancelTeacherEdit[hidden], #editTeacher[hidden]{display:none}
+    .pill[hidden]{display:none}
+    .teacher-readonly .classes-editor{display:none !important}
+    .teacher-readonly .edit-only{display:none !important}
+    .teacher-editing .view-only{display:none !important}
+    .teacher-profile-back{position:fixed;right:20px;top:92px;z-index:55;height:46px;padding:0 16px;border-radius:14px;border:1px solid rgba(3,60,84,.24);background:#fff;color:#033C54;font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;font-weight:900;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;box-shadow:0 14px 34px rgba(3,60,84,.2);transition:.16s ease}
+    .teacher-profile-back:hover{transform:translateY(-2px);box-shadow:0 18px 40px rgba(3,60,84,.26);border-color:rgba(3,60,84,.45)}
+    #teacherSheet:not(.open) .teacher-profile-back{display:none}
+    @media (min-width:980px){
+      .sheet.small .sheet-body{width:min(1060px,94vw)}
+      .profile-grid{grid-template-columns:1.55fr .75fr;align-items:start}
+      .profile-card-basic{grid-column:1;grid-row:1 / span 2}
+      .profile-card-classes{grid-column:2;grid-row:1}
+      .profile-card-perms{grid-column:2;grid-row:2}
+      .profile-card-classes{max-width:360px;justify-self:stretch}
+      .profile-card-basic .info-grid{grid-template-columns:repeat(2, minmax(220px,1fr));gap:14px 18px}
+    }
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;z-index:100;opacity:0;visibility:hidden;transition:opacity .3s ease,visibility .3s ease}
+    .modal-overlay.active{opacity:1;visibility:visible}.modal{background:#fff;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.3);width:min(90vw,500px);max-height:90vh;overflow-y:auto;transform:scale(.9);opacity:0;transition:transform .3s ease,opacity .3s ease}.modal.active{transform:scale(1);opacity:1}.modal-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}.modal-title{margin:0;font-size:1.2rem;font-weight:800;color:var(--primary)}.close-modal{background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--muted);width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:50%}.modal-body{padding:20px}.modal-footer{padding:16px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px}
+    #addTeacherModal .modal{width:min(92vw,560px)}
+    .add-teacher-body{display:flex;flex-direction:column;gap:12px}
+    .add-teacher-body .field{margin:0}
+    .add-teacher-full{grid-column:auto}
+    .success-modal{position:fixed;inset:0;z-index:105;display:none;place-items:center;background:rgba(255,255,255,.55);backdrop-filter:blur(8px);padding:16px}
+    .success-modal.show{display:grid}
+    .success-card{width:min(340px,92vw);background:#fff;border:1px solid var(--border);border-radius:18px;box-shadow:0 20px 60px rgba(0,0,0,.25);padding:18px;display:grid;justify-items:center;gap:12px;position:relative}
+    .success-close{position:absolute;top:8px;left:8px;width:32px;height:32px;border-radius:999px;border:1px solid var(--border);background:#fff;color:#64748b;font-weight:900;cursor:pointer}
+    .success-check{width:96px;height:96px;display:grid;place-items:center}
+    .success-check svg{width:96px;height:96px;overflow:visible}
+    .success-check circle{fill:none;stroke:#16a34a;stroke-width:6;stroke-dasharray:220;stroke-dashoffset:220;transform-origin:50% 50%;animation:ringDraw 1.2s ease-in-out infinite}
+    .success-check path{fill:none;stroke:#16a34a;stroke-width:7;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:70;stroke-dashoffset:70;animation:checkDraw 1.2s ease-in-out infinite}
+    .success-text{font-weight:900;color:#166534;font-size:15px}
+    @keyframes ringDraw{0%{stroke-dashoffset:220;opacity:.5}30%{stroke-dashoffset:0;opacity:1}70%{stroke-dashoffset:0;opacity:1}100%{stroke-dashoffset:220;opacity:.5}}
+    @keyframes checkDraw{0%{stroke-dashoffset:70;opacity:0}25%{stroke-dashoffset:70;opacity:0}45%{stroke-dashoffset:0;opacity:1}70%{stroke-dashoffset:0;opacity:1}100%{stroke-dashoffset:70;opacity:0}}
+    @media (max-width:700px){.floating-back,.teacher-profile-back{right:12px;top:76px;height:42px;padding:0 12px}}
+    @media (max-width:640px){.add-teacher-body{gap:10px}}
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <h1 class="site-title">ثانوية أحمد البشر الرومي</h1>
+  </header>
+  <a class="floating-back" href="/admins/adminpage.html" aria-label="رجوع">رجوع</a>
+
+  <main>
+    <div class="column">
+      <div id="stateLoading" class="state active panel">
+        <div class="loading"><div class="spinner"></div><div class="muted">جاري التحقق من الصلاحيات...</div></div>
+      </div>
+      <div id="stateNotLogged" class="state panel">
+        <div class="error">يرجى تسجيل الدخول أولًا.</div>
+        <p class="muted" style="text-align:center; margin-top:12px;"><a href="/index.html">العودة لتسجيل الدخول</a></p>
+      </div>
+      <div id="stateDenied" class="state panel">
+        <div class="error">هذه الصفحة للمشرفين فقط.</div>
+        <p class="muted" style="text-align:center; margin-top:12px;"><a href="/admins/adminpage.html">العودة للوحة الإدارة</a></p>
+      </div>
+
+      <section id="stateTeachers" class="state" aria-label="اختر المادة">
+        <button id="openAdminsTop" class="subject subject-card subject-admin-entry" type="button" aria-label="الإدارة">
+          <span>الإدارة</span>
+          <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+        </button>
+        <div id="subjectsList" class="stack"></div>
+      </section>
+    </div>
+  </main>
+
+  <section id="subjectSheet" class="sheet" aria-hidden="true">
+    <div class="sheet-header">
+      <button id="closeSubject" class="back-btn" aria-label="رجوع">رجوع</button>
+      <h3 id="subjectTitle" class="sheet-title">—</h3>
+    </div>
+    <div class="sheet-body">
+      <div class="section">
+        <div class="row" style="justify-content:space-between;">
+          <div class="label" style="margin:0;">إدارة المعلّمين لمادة <span id="subjectNameStrong" style="font-weight:900;"></span></div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <button id="refreshTeachers" class="btn ghost" type="button">تحديث</button>
+            <button id="openAddUser" class="btn primary" type="button">إضافة معلم</button>
+          </div>
+        </div>
+      </div>
+      <div class="section">
+        <div class="label">قائمة المعلّمين</div>
+        <div id="teachersList" class="stack"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="teacherSheet" class="sheet small" aria-hidden="true">
+    <button id="closeTeacher" class="teacher-profile-back" aria-label="رجوع">رجوع</button>
+    <div class="sheet-body">
+      <div class="profile-shell teacher-readonly" id="teacherProfileShell">
+        <section class="profile-hero">
+          <div class="profile-head">
+            <div id="teacherAvatar" class="avatar">--</div>
+            <div class="profile-name-wrap">
+              <div id="profileName" class="profile-name">—</div>
+              <div id="profileEmail" class="profile-email">—</div>
+            </div>
+          </div>
+          <div class="profile-badges">
+            <span id="profileRolePill" class="pill">مدرس</span>
+            <span id="profileSupervisorPill" class="pill" hidden>⭐ مشرف</span>
+          </div>
+        </section>
+
+        <div class="profile-grid">
+          <section class="profile-card profile-card-basic">
+            <h4 class="profile-card-title">البيانات الأساسية</h4>
+            <div class="info-grid">
+              <div class="field"><label class="label" for="edTName">الاسم الكامل</label><div class="plain-value view-only"><span id="vEdTName" class="view-value">—</span></div><div class="input-wrap edit-only"><input id="edTName" class="input" type="text"></div></div>
+              <div class="field"><label class="label" for="edTEmail">البريد الإلكتروني</label><div class="plain-value view-only"><span id="vEdTEmail" class="view-value">—</span></div><div class="input-wrap edit-only"><input id="edTEmail" class="input" type="email"></div></div>
+              <div class="field"><label class="label" for="edTPhone">رقم الهاتف</label><div class="plain-value view-only"><span id="vEdTPhone" class="view-value">—</span></div><div class="input-wrap edit-only"><input id="edTPhone" class="input" type="tel"></div></div>
+              <div class="field"><label class="label" for="edTTeams">رابط Teams</label><div class="plain-value view-only"><span id="vEdTTeams" class="view-value">—</span></div><div class="input-wrap edit-only"><input id="edTTeams" class="input" type="url"></div></div>
+              <div class="field"><label class="label" for="edTRole">الدور</label><div class="plain-value view-only"><span id="vEdTRole" class="view-value">—</span></div><div class="input-wrap edit-only"><select id="edTRole" class="input"><option value="user">مدرس</option><option value="head">رئيس القسم</option></select></div></div>
+              <div class="field"><label class="label">الصلاحية</label><div class="plain-value view-only"><span id="vEdTSupervisor" class="view-value">—</span></div><div class="input-wrap edit-only"><div class="checkbox-wrap"><input type="checkbox" id="edTIsSupervisor"><label for="edTIsSupervisor" class="label" style="margin:0;">تعيين كمشرف</label></div></div></div>
+            </div>
+          </section>
+
+          <section class="profile-card profile-card-classes">
+            <h4 class="profile-card-title">الفصول</h4>
+            <div id="classesView" class="class-chips"></div>
+            <div id="classesEditorWrap" class="classes-editor" hidden>
+              <div id="edClasses" class="classes-list"></div>
+              <div class="inline-add"><button id="edAddClass" class="add" type="button">+ إضافة</button></div>
+            </div>
+          </section>
+
+          <section class="profile-card profile-card-perms">
+            <h4 class="profile-card-title">صلاحيات المستخدم</h4>
+            <div id="permissionsView" class="permissions-view view-only"></div>
+            <div class="permissions-editor edit-only">
+              <div class="checkbox-wrap"><input type="checkbox" id="edTAllowEditSchedule"><label for="edTAllowEditSchedule" class="label" style="margin:0;">السماح بتعديل الجدول</label></div>
+              <div class="checkbox-wrap"><input type="checkbox" id="edTAllowMorningLate"><label for="edTAllowMorningLate" class="label" style="margin:0;">تسجيل تأخير الصباح</label></div>
+              <div class="checkbox-wrap"><input type="checkbox" id="edTAllowSupervisorStudents"><label for="edTAllowSupervisorStudents" class="label" style="margin:0;">ملفات الطلاب</label></div>
+            </div>
+          </section>
+        </div>
+
+        <section class="profile-card">
+          <div class="profile-actions">
+            <button id="editTeacher" class="btn ghost" type="button">تعديل</button>
+            <button id="cancelTeacherEdit" class="btn ghost" type="button" hidden>إلغاء</button>
+            <button id="saveTeacher" class="btn primary" type="button" hidden>حفظ</button>
+            <button id="deleteTeacher" class="btn danger" type="button">حذف</button>
+          </div>
+          <div id="edOk" class="ok"></div><div id="edErr" class="err"></div>
+        </section>
+      </div>
+    </div>
+  </section>
+
+  <div id="addTeacherModal" class="modal-overlay" aria-hidden="true">
+    <div class="modal add-teacher-modal">
+      <div class="modal-header"><h3 class="modal-title">إضافة معلم جديد</h3><button class="close-modal" aria-label="إغلاق">×</button></div>
+      <div class="modal-body add-teacher-body">
+        <div class="field"><label class="label" for="teacherName">الاسم الكامل</label><div class="input-wrap"><input id="teacherName" class="input" type="text"></div></div>
+        <div class="field"><label class="label" for="teacherEmail">رقم البطاقة المدنية</label><div class="input-wrap"><input id="teacherEmail" class="input" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="مثال: 298040100633"></div></div>
+        <div class="field"><label class="label" for="teacherPassword">كلمة المرور</label><div class="input-wrap"><input id="teacherPassword" class="input" type="password"></div></div>
+        <div class="field"><label class="label" for="teacherPhone">رقم الهاتف</label><div class="input-wrap"><input id="teacherPhone" class="input" type="tel"></div></div>
+        <div class="field"><label class="label" for="teacherRole">الدور</label><div class="input-wrap"><select id="teacherRole" class="input"><option value="user">مدرس</option><option value="head">رئيس القسم</option></select></div></div>
+        <div id="teacherSpecializationField" class="field" hidden><label class="label" for="teacherSpecialization">التخصص داخل القسم</label><div class="input-wrap"><select id="teacherSpecialization" class="input"><option value="الفيزياء">الفيزياء</option><option value="الكيمياء">الكيمياء</option></select></div></div>
+        <div class="field add-teacher-full"><div class="checkbox-wrap"><input type="checkbox" id="teacherIsSupervisor"><label for="teacherIsSupervisor" class="label" style="margin:0;">تعيين كمشرف</label></div></div>
+        <div class="field add-teacher-full"><div class="checkbox-wrap"><input type="checkbox" id="teacherAllowEditSchedule"><label for="teacherAllowEditSchedule" class="label" style="margin:0;">السماح بتعديل الجدول</label></div></div>
+        <div class="field add-teacher-full"><div class="checkbox-wrap"><input type="checkbox" id="teacherAllowMorningLate"><label for="teacherAllowMorningLate" class="label" style="margin:0;">تسجيل تأخير الصباح</label></div></div>
+        <div class="field add-teacher-full"><div class="checkbox-wrap"><input type="checkbox" id="teacherAllowSupervisorStudents"><label for="teacherAllowSupervisorStudents" class="label" style="margin:0;">ملفات الطلاب</label></div></div>
+        <div class="field add-teacher-full"><label class="label">الفصول (Classes)</label><div id="auClasses" class="classes-list"></div><div class="inline-add"><button id="auAddClass" class="add" type="button">+ إضافة</button></div></div>
+      </div>
+      <div class="modal-footer"><button id="cancelAddTeacher" class="btn ghost" type="button">إلغاء</button><button id="createTeacherBtn" class="btn primary" type="button">إنشاء الحساب</button></div>
+    </div>
+  </div>
+
+  <div id="successModal" class="success-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-label="تمت إضافة المعلّم بنجاح">
+    <div class="success-card">
+      <button id="closeSuccessModal" type="button" class="success-close">×</button>
+      <div class="success-check">
+        <svg viewBox="0 0 100 100" aria-hidden="true">
+          <circle cx="50" cy="50" r="35"></circle>
+          <path d="M32 52 L45 65 L70 40"></path>
+        </svg>
+      </div>
+      <div class="success-text">تمت إضافة المعلّم بنجاح</div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { firebaseConfig } from "/shared/firebase.js";
+    import { initializeApp, getApp, getApps } from "/shared/firebase.js";
+    import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signOut } from "/shared/firebase.js";
+    import { initializeFirestore, collection, getDocs, query, where, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp } from "/shared/firebase.js";
+
+    
+    const app=getApps().length?getApp():initializeApp(firebaseConfig);
+    const db=initializeFirestore(app,{experimentalAutoDetectLongPolling: true,useFetchStreams:false});
+    const auth=getAuth(app);
+    const helperApp=getApps().some(a=>a.name==="AdminHelper")?getApp("AdminHelper"):initializeApp(firebaseConfig,"AdminHelper");
+    const helperAuth=getAuth(helperApp);
+
+    const sLoading=document.getElementById('stateLoading');
+    const sNotLog=document.getElementById('stateNotLogged');
+    const sDenied=document.getElementById('stateDenied');
+    const sTeachers=document.getElementById('stateTeachers');
+    const openAdminsTop=document.getElementById('openAdminsTop');
+    const subjectsList=document.getElementById('subjectsList');
+    const subjectSheet=document.getElementById('subjectSheet');
+    const closeSubject=document.getElementById('closeSubject');
+    const subjectTitle=document.getElementById('subjectTitle');
+    const subjectNameStrong=document.getElementById('subjectNameStrong');
+    const refreshTeachers=document.getElementById('refreshTeachers');
+    const openAddUser=document.getElementById('openAddUser');
+    const teachersList=document.getElementById('teachersList');
+    const teacherSheet=document.getElementById('teacherSheet');
+    const closeTeacher=document.getElementById('closeTeacher');
+    const teacherProfileShell=document.getElementById('teacherProfileShell');
+    const teacherAvatar=document.getElementById('teacherAvatar');
+    const profileName=document.getElementById('profileName');
+    const profileEmail=document.getElementById('profileEmail');
+    const profileRolePill=document.getElementById('profileRolePill');
+    const profileSupervisorPill=document.getElementById('profileSupervisorPill');
+    const vEdTName=document.getElementById('vEdTName');
+    const vEdTEmail=document.getElementById('vEdTEmail');
+    const vEdTPhone=document.getElementById('vEdTPhone');
+    const vEdTTeams=document.getElementById('vEdTTeams');
+    const vEdTRole=document.getElementById('vEdTRole');
+    const vEdTSupervisor=document.getElementById('vEdTSupervisor');
+    const permissionsView=document.getElementById('permissionsView');
+    const classesView=document.getElementById('classesView');
+    const classesEditorWrap=document.getElementById('classesEditorWrap');
+    const edTName=document.getElementById('edTName');
+    const edTEmail=document.getElementById('edTEmail');
+    const edTPhone=document.getElementById('edTPhone');
+    const edTTeams=document.getElementById('edTTeams');
+    const edTRole=document.getElementById('edTRole');
+    const edTIsSupervisor=document.getElementById('edTIsSupervisor');
+    const edTAllowEditSchedule=document.getElementById('edTAllowEditSchedule');
+    const edTAllowMorningLate=document.getElementById('edTAllowMorningLate');
+    const edTAllowSupervisorStudents=document.getElementById('edTAllowSupervisorStudents');
+    const editTeacherBtn=document.getElementById('editTeacher');
+    const cancelTeacherEditBtn=document.getElementById('cancelTeacherEdit');
+    const saveTeacher=document.getElementById('saveTeacher');
+    const deleteTeacherBtn=document.getElementById('deleteTeacher');
+    const edOk=document.getElementById('edOk');
+    const edErr=document.getElementById('edErr');
+    const edClasses=document.getElementById('edClasses');
+    const edAddClass=document.getElementById('edAddClass');
+    const addTeacherModal=document.getElementById('addTeacherModal');
+    const closeAddTeacherModal=document.querySelector('#addTeacherModal .close-modal');
+    const cancelAddTeacher=document.getElementById('cancelAddTeacher');
+    const teacherName=document.getElementById('teacherName');
+    const teacherEmail=document.getElementById('teacherEmail');
+    const teacherPassword=document.getElementById('teacherPassword');
+    const teacherPhone=document.getElementById('teacherPhone');
+    const teacherRole=document.getElementById('teacherRole');
+    const teacherSpecializationField=document.getElementById('teacherSpecializationField');
+    const teacherSpecialization=document.getElementById('teacherSpecialization');
+    const teacherIsSupervisor=document.getElementById('teacherIsSupervisor');
+    const teacherAllowEditSchedule=document.getElementById('teacherAllowEditSchedule');
+    const teacherAllowMorningLate=document.getElementById('teacherAllowMorningLate');
+    const teacherAllowSupervisorStudents=document.getElementById('teacherAllowSupervisorStudents');
+    const createTeacherBtn=document.getElementById('createTeacherBtn');
+    const auClasses=document.getElementById('auClasses');
+    const auAddClass=document.getElementById('auAddClass');
+    const successModal=document.getElementById('successModal');
+    const closeSuccessModal=document.getElementById('closeSuccessModal');
+
+    const show=(el)=>{[sLoading,sNotLog,sDenied,sTeachers].forEach(x=>x.classList.remove('active'));el.classList.add('active');};
+    const openSheet=(el)=>{el.classList.add('open');el.setAttribute('aria-hidden','false');};
+    const closeSheet=(el)=>{el.classList.remove('open');el.setAttribute('aria-hidden','true');};
+    const emailRx=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const toArabicDigits=(str)=>(str||'').toString().replace(/\d/g,d=>'٠١٢٣٤٥٦٧٨٩'[d]);
+    const TEACHER_HASH_PREFIX = '#/teacher/';
+    const PHYSICS_CHEM_DEPARTMENT = "الفيزياء والكيمياء";
+    const PHYSICS_CHEM_SUBJECTS = ["الفيزياء","الكيمياء"];
+    const GEO_BIO_DEPARTMENT = "الجيولوجيا والأحياء";
+    const GEO_BIO_SUBJECTS = ["الجيولوجيا","الأحياء"];
+    const PSY_PHIL_DEPARTMENT = "علم النفس والفلسفة";
+    const PSY_PHIL_SUBJECTS = ["علم النفس","الفلسفة"];
+    const HIST_GEO_DEPARTMENT = "التاريخ والجغرافيا";
+    const HIST_GEO_SUBJECTS = ["التاريخ","الجغرافيا"];
+    const HIST_GEO_SUBJECT_MATCHES = ["التاريخ","الجغرافيا","جغرافيا"];
+
+    function getRouteTeacherId(){
+      return window.location.hash.startsWith(TEACHER_HASH_PREFIX)
+        ? decodeURIComponent(window.location.hash.slice(TEACHER_HASH_PREFIX.length))
+        : null;
+    }
+    function setTeacherRoute(uid){
+      window.location.hash = `/teacher/${encodeURIComponent(uid)}`;
+    }
+    function clearTeacherRoute(){
+      history.pushState("", document.title, window.location.pathname + window.location.search);
+    }
+    function syncTeacherRouteMode(){
+      document.body.classList.toggle('teacher-route-active', !!getRouteTeacherId());
+    }
+
+    let lastFocusedBeforeSuccessModal=null;
+    function syncBodyScrollLock(){
+      const anyOverlayOpen=addTeacherModal.classList.contains('active') || successModal.classList.contains('show');
+      document.body.style.overflow=anyOverlayOpen?'hidden':'';
+    }
+    function focusIfPossible(el){
+      if(!el || typeof el.focus!=='function') return false;
+      try{el.focus(); return true;}catch{return false;}
+    }
+    function moveFocusOutside(container, fallback){
+      const active=document.activeElement;
+      if(active instanceof HTMLElement && container.contains(active)){
+        if(!focusIfPossible(fallback)) active.blur();
+      }
+    }
+    const openModal=(m)=>{
+      m.setAttribute('aria-hidden','false');
+      m.classList.add('active');
+      setTimeout(()=>m.querySelector('.modal').classList.add('active'),10);
+      syncBodyScrollLock();
+    };
+    const closeModal=(m)=>{
+      moveFocusOutside(m, openAddUser);
+      m.querySelector('.modal').classList.remove('active');
+      setTimeout(()=>{
+        m.classList.remove('active');
+        m.setAttribute('aria-hidden','true');
+        syncBodyScrollLock();
+      },300);
+    };
+    const openSuccessModal=()=>{
+      lastFocusedBeforeSuccessModal=(document.activeElement instanceof HTMLElement)?document.activeElement:null;
+      successModal.setAttribute('aria-hidden','false');
+      successModal.classList.add('show');
+      syncBodyScrollLock();
+      requestAnimationFrame(()=>focusIfPossible(closeSuccessModal));
+    };
+    const closeSuccessModalFn=()=>{
+      const restoreFocusTo=(lastFocusedBeforeSuccessModal && lastFocusedBeforeSuccessModal.isConnected && !successModal.contains(lastFocusedBeforeSuccessModal))
+        ? lastFocusedBeforeSuccessModal
+        : openAddUser;
+      moveFocusOutside(successModal, restoreFocusTo);
+      successModal.classList.remove('show');
+      successModal.setAttribute('aria-hidden','true');
+      lastFocusedBeforeSuccessModal=null;
+      syncBodyScrollLock();
+    };
+
+    const subjectsKW=["اللغة العربية","اللغة الإنجليزية","الرياضيات","التربية الإسلامية",HIST_GEO_DEPARTMENT,PSY_PHIL_DEPARTMENT,PHYSICS_CHEM_DEPARTMENT,GEO_BIO_DEPARTMENT,"الحاسوب","التربية البدنية","التربية الفنية"];
+
+    const classOptionsRaw=["10 / 1","10 / 2","10 / 3","10 / 4","10 / 5","10 / 6","10 / 7","11 / 1 ع","11 / 2 ع","11 / 3 ع","11 / 4 ع","11 / 5 ع","11 / 1 د","12 / 1 ع","12 / 2 ع","12 / 3 ع","12 / 4 ع","12 / 5 ع","12 / 1 د"];
+    function sortedClassOptions(){const parse=(s)=>{const m=s.match(/^(\d+)\s*\/\s*(\d+)(?:\s*(.*))?$/);if(!m)return {g:999,s:999,suf:""};return {g:+m[1],s:+m[2],suf:(m[3]||"").trim()};};return [...classOptionsRaw].sort((a,b)=>{const A=parse(a),B=parse(b);if(A.g!==B.g)return A.g-B.g;if(A.s!==B.s)return A.s-B.s;return A.suf.localeCompare(B.suf,'ar');});}
+    const classOptions=sortedClassOptions();
+
+    function getMergedSubjectsForDepartment(subject){
+      if(subject===PHYSICS_CHEM_DEPARTMENT) return PHYSICS_CHEM_SUBJECTS;
+      if(subject===GEO_BIO_DEPARTMENT) return GEO_BIO_SUBJECTS;
+      if(subject===PSY_PHIL_DEPARTMENT) return PSY_PHIL_SUBJECTS;
+      if(subject===HIST_GEO_DEPARTMENT) return HIST_GEO_SUBJECTS;
+      return [];
+    }
+    function isMergedDepartment(subject){
+      return getMergedSubjectsForDepartment(subject).length>0;
+    }
+    function mapTeacherSubjectToDepartment(subject){
+      if(!subject) return null;
+      if(subject===PHYSICS_CHEM_DEPARTMENT || PHYSICS_CHEM_SUBJECTS.includes(subject)) return PHYSICS_CHEM_DEPARTMENT;
+      if(subject===GEO_BIO_DEPARTMENT || GEO_BIO_SUBJECTS.includes(subject)) return GEO_BIO_DEPARTMENT;
+      if(subject===PSY_PHIL_DEPARTMENT || PSY_PHIL_SUBJECTS.includes(subject)) return PSY_PHIL_DEPARTMENT;
+      if(subject===HIST_GEO_DEPARTMENT || HIST_GEO_SUBJECT_MATCHES.includes(subject)) return HIST_GEO_DEPARTMENT;
+      return subject;
+    }
+    function getDepartmentSubjectFilters(subject){
+      const mergedSubjects=getMergedSubjectsForDepartment(subject);
+      if(subject===HIST_GEO_DEPARTMENT) return [subject, ...HIST_GEO_SUBJECT_MATCHES];
+      return mergedSubjects.length ? [subject, ...mergedSubjects] : [subject];
+    }
+    function getMergedDepartmentSpecializationMessage(subject){
+      if(subject===PHYSICS_CHEM_DEPARTMENT) return 'اختر التخصص: الفيزياء أو الكيمياء.';
+      if(subject===GEO_BIO_DEPARTMENT) return 'اختر التخصص: الجيولوجيا أو الأحياء.';
+      if(subject===PSY_PHIL_DEPARTMENT) return 'اختر التخصص: علم النفس أو الفلسفة.';
+      if(subject===HIST_GEO_DEPARTMENT) return 'اختر التخصص: التاريخ أو الجغرافيا.';
+      return 'اختر التخصص.';
+    }
+    async function ensureSingleHeadForDepartment(department, { excludeUid=null } = {}){
+      if(!isMergedDepartment(department)) return;
+      const subjectFilters=[...new Set(getDepartmentSubjectFilters(department).filter(Boolean))];
+      if(!subjectFilters.length) return;
+      const qy=subjectFilters.length===1
+        ? query(collection(db,'teachers'), where('subject','==',subjectFilters[0]))
+        : query(collection(db,'teachers'), where('subject','in',subjectFilters));
+      const snap=await getDocs(qy);
+      const existingHead=snap.docs.find(docSnap=>{
+        if(docSnap.id===excludeUid) return false;
+        const data=docSnap.data()||{};
+        return (data.role||'').toString().toLowerCase()==='head';
+      });
+      if(existingHead){
+        const data=existingHead.data()||{};
+        const name=(data.name||data.email||existingHead.id||'—').toString();
+        throw new Error(`يوجد رئيس قسم حالي لهذا القسم المدمج: ${name}`);
+      }
+    }
+    function setTeacherSpecializationOptions(options){
+      teacherSpecialization.innerHTML='';
+      options.forEach(value=>{
+        const option=document.createElement('option');
+        option.value=value;
+        option.textContent=value;
+        teacherSpecialization.appendChild(option);
+      });
+    }
+    function syncAddTeacherSpecializationField(){
+      const mergedSubjects=getMergedSubjectsForDepartment(selectedSubject);
+      const showSpecialization=mergedSubjects.length>0;
+      teacherSpecializationField.hidden=!showSpecialization;
+      teacherSpecialization.required=showSpecialization;
+      if(!showSpecialization){
+        teacherSpecialization.innerHTML='';
+        return;
+      }
+      const prevValue=teacherSpecialization.value;
+      setTeacherSpecializationOptions(mergedSubjects);
+      if(mergedSubjects.includes(prevValue)){
+        teacherSpecialization.value=prevValue;
+      }else{
+        teacherSpecialization.value=mergedSubjects[0];
+      }
+    }
+
+    function makeClassRow(initialValue=""){
+      const row=document.createElement('div');row.className='class-row';
+      const top=document.createElement('div');top.className='top';
+      const wrap=document.createElement('div');wrap.className='input-wrap';
+      const sel=document.createElement('select');sel.className='input';
+      classOptions.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=toArabicDigits(v);sel.appendChild(o);});
+      const removeBtn=document.createElement('button');removeBtn.type='button';removeBtn.className='remove';removeBtn.textContent='حذف';removeBtn.addEventListener('click',()=>row.remove());
+      sel.addEventListener('change',()=>updateProfileSummary());
+      removeBtn.addEventListener('click',()=>setTimeout(updateProfileSummary,0));
+      if(initialValue && !classOptions.includes(initialValue)){
+        const customOption=document.createElement('option');
+        customOption.value=initialValue;
+        customOption.textContent=toArabicDigits(initialValue);
+        sel.appendChild(customOption);
+      }
+      if(initialValue){sel.value=initialValue;} else if(classOptions.length){sel.value=classOptions[0];}
+      wrap.appendChild(sel);top.appendChild(wrap);top.appendChild(removeBtn);row.appendChild(top);
+      row.getValue=()=> sel.value;
+      return row;
+    }
+    const getClassesFrom=(c)=>[...new Set(Array.from(c.querySelectorAll('.class-row')).map(r=>r.getValue&&r.getValue()).filter(Boolean))];
+
+    function renderSubjects(){
+      subjectsList.innerHTML='';
+      subjectsKW.forEach(label=>{
+        const btn=document.createElement('button');btn.type='button';btn.className='subject subject-card';
+        btn.innerHTML=`<span>${label}</span><svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>`;
+        btn.addEventListener('click',()=>openSubject(label));
+        subjectsList.appendChild(btn);
+      });
+    }
+
+    let selectedSubject=null;
+    let currentTeacher={uid:null,data:null};
+    let teacherEditMode=false;
+
+    function getInitials(name,email,uid){
+      const source=(name||email||uid||'').trim();
+      if(!source) return '--';
+      const words=source.split(/\s+/).filter(Boolean);
+      if(words.length>=2) return (words[0][0]+words[1][0]).toUpperCase();
+      return source.slice(0,2).toUpperCase();
+    }
+    function renderClassesPreview(classes){
+      classesView.innerHTML='';
+      const list=Array.isArray(classes)?classes.filter(Boolean):[];
+      if(!list.length){
+        const empty=document.createElement('div');
+        empty.className='class-empty';
+        empty.textContent='لا توجد فصول مضافة.';
+        classesView.appendChild(empty);
+        return;
+      }
+      list.forEach(c=>{
+        const chip=document.createElement('span');
+        chip.className='class-chip';
+        chip.textContent=toArabicDigits(c);
+        classesView.appendChild(chip);
+      });
+    }
+    function normalizePermissions(data){
+      const p=(data&&typeof data==='object'&&data.permissions&&typeof data.permissions==='object')?data.permissions:{};
+      return { allowEditSchedule: !!p.allowEditSchedule, allowMorningLate: !!p.allowMorningLate, allowSupervisorStudents: !!p.allowSupervisorStudents };
+    }
+    function renderPermissionsPreview(permissions){
+      permissionsView.innerHTML='';
+      const active=[];
+      if(permissions.allowEditSchedule) active.push('السماح بتعديل الجدول');
+      if(permissions.allowMorningLate) active.push('تسجيل تأخير الصباح');
+      if(permissions.allowSupervisorStudents) active.push('ملفات الطلاب');
+      if(!active.length){
+        const empty=document.createElement('div');
+        empty.className='perm-empty';
+        empty.textContent='لا توجد صلاحيات إضافية.';
+        permissionsView.appendChild(empty);
+        return;
+      }
+      active.forEach(label=>{
+        const chip=document.createElement('span');
+        chip.className='perm-chip';
+        chip.textContent=label;
+        permissionsView.appendChild(chip);
+      });
+    }
+    function setViewValue(el, value){
+      const normalized=(value==null?'':String(value).trim());
+      if(!normalized || normalized==='—'){
+        el.textContent='غير متوفر';
+        el.classList.add('empty');
+        return;
+      }
+      el.textContent=normalized;
+      el.classList.remove('empty');
+    }
+    function updateProfileSummary(){
+      const name=edTName.value.trim() || currentTeacher?.data?.name || currentTeacher?.uid || '—';
+      const email=edTEmail.value.trim() || currentTeacher?.data?.email || '—';
+      const phone=edTPhone.value.trim() || '—';
+      const teams=edTTeams.value.trim() || '—';
+      const role=(edTRole.value||'user').toLowerCase();
+      const isSupervisor=!!edTIsSupervisor.checked;
+      const allowEditSchedule=!!edTAllowEditSchedule.checked;
+      const allowMorningLate=!!edTAllowMorningLate.checked;
+      const allowSupervisorStudents=!!edTAllowSupervisorStudents.checked;
+      profileName.textContent=name;
+      profileEmail.textContent=email;
+      teacherAvatar.textContent=getInitials(name,email,currentTeacher?.uid);
+      profileRolePill.textContent=role==='head'?'👑 رئيس القسم':'مدرس';
+      profileRolePill.classList.toggle('role-head', role==='head');
+      profileSupervisorPill.hidden=!isSupervisor;
+      setViewValue(vEdTName,name);
+      setViewValue(vEdTEmail,email);
+      setViewValue(vEdTPhone,phone);
+      setViewValue(vEdTTeams,teams);
+      setViewValue(vEdTRole,role==='head'?'رئيس القسم':'مدرس');
+      setViewValue(vEdTSupervisor,isSupervisor?'مشرف':'غير مشرف');
+      renderPermissionsPreview({ allowEditSchedule, allowMorningLate, allowSupervisorStudents });
+      renderClassesPreview(getClassesFrom(edClasses));
+    }
+    function setTeacherEditMode(isEdit){
+      teacherEditMode=!!isEdit;
+      teacherProfileShell.classList.toggle('teacher-readonly', !teacherEditMode);
+      teacherProfileShell.classList.toggle('teacher-editing', teacherEditMode);
+      [edTName,edTEmail,edTPhone,edTTeams,edTRole,edTIsSupervisor,edTAllowEditSchedule,edTAllowMorningLate,edTAllowSupervisorStudents].forEach(el=>el.disabled=!teacherEditMode);
+      classesEditorWrap.hidden=!teacherEditMode;
+      editTeacherBtn.hidden=teacherEditMode;
+      cancelTeacherEditBtn.hidden=!teacherEditMode;
+      saveTeacher.hidden=!teacherEditMode;
+      updateProfileSummary();
+    }
+
+    function openSubject(label){
+      selectedSubject=label;
+      subjectTitle.textContent=label;
+      subjectNameStrong.textContent=label;
+      syncAddTeacherSpecializationField();
+      openSheet(subjectSheet);
+      loadTeachers(label);
+    }
+    closeSubject.addEventListener('click',()=>closeSheet(subjectSheet));
+    function closeTeacherView(){
+      if(getRouteTeacherId()){
+        clearTeacherRoute();
+        syncTeacherRouteMode();
+        closeSheet(teacherSheet);
+        if(selectedSubject){
+          subjectTitle.textContent=selectedSubject;
+          subjectNameStrong.textContent=selectedSubject;
+          syncAddTeacherSpecializationField();
+          openSheet(subjectSheet);
+          loadTeachers(selectedSubject);
+        }
+        return;
+      }
+      closeSheet(teacherSheet);
+    }
+    closeTeacher.addEventListener('click', closeTeacherView);
+    openAdminsTop.addEventListener('click', ()=>{window.location.href='/admins/adminpage.html#admins';});
+    editTeacherBtn.addEventListener('click',()=>setTeacherEditMode(true));
+    cancelTeacherEditBtn.addEventListener('click',()=>{
+      const d=currentTeacher.data||{};
+      edTName.value=d.name||'';
+      edTEmail.value=d.email||'';
+      edTPhone.value=d.phone||'';
+      edTTeams.value=d.teams||'';
+      edTRole.value=d.role||'user';
+      edTIsSupervisor.checked=!!d.isSupervisor;
+      edTAllowEditSchedule.checked=!!normalizePermissions(d).allowEditSchedule;
+      edTAllowMorningLate.checked=!!normalizePermissions(d).allowMorningLate;
+      edTAllowSupervisorStudents.checked=!!normalizePermissions(d).allowSupervisorStudents;
+      edClasses.innerHTML='';
+      const cls=Array.isArray(d.classes)?d.classes:[];
+      if(!cls.length) edClasses.appendChild(makeClassRow(""));
+      else cls.forEach(v=>edClasses.appendChild(makeClassRow(v)));
+      setTeacherEditMode(false);
+    });
+    edAddClass.addEventListener('click',()=>{edClasses.appendChild(makeClassRow(""));updateProfileSummary();});
+    [edTName,edTEmail,edTPhone,edTTeams,edTRole,edTIsSupervisor,edTAllowEditSchedule,edTAllowMorningLate,edTAllowSupervisorStudents].forEach(el=>{
+      const ev=el.tagName==='SELECT'||el.type==='checkbox'?'change':'input';
+      el.addEventListener(ev, updateProfileSummary);
+    });
+    refreshTeachers.addEventListener('click',()=>{if(selectedSubject)loadTeachers(selectedSubject);});
+
+    function resetTeacherForm(){
+      teacherName.value='';
+      teacherEmail.value='';
+      teacherPassword.value='';
+      teacherPhone.value='';
+      teacherRole.value='user';
+      teacherIsSupervisor.checked=false;
+      teacherAllowEditSchedule.checked=false;
+      teacherAllowMorningLate.checked=false;
+      teacherAllowSupervisorStudents.checked=false;
+      auClasses.innerHTML='';
+      auClasses.appendChild(makeClassRow(""));
+      syncAddTeacherSpecializationField();
+    }
+
+    openAddUser.addEventListener('click',()=>{
+      resetTeacherForm();
+      openModal(addTeacherModal);
+      setTimeout(()=>focusIfPossible(teacherName),20);
+    });
+    closeAddTeacherModal.addEventListener('click',()=>closeModal(addTeacherModal));
+    cancelAddTeacher.addEventListener('click',()=>closeModal(addTeacherModal));
+    auAddClass.addEventListener('click',()=>auClasses.appendChild(makeClassRow("")));
+    closeSuccessModal.addEventListener('click', closeSuccessModalFn);
+    teacherEmail.addEventListener('input',()=>{const digits=teacherEmail.value.replace(/\D+/g,''); if(teacherEmail.value!==digits) teacherEmail.value=digits;});
+    successModal.addEventListener('click',(e)=>{if(e.target===successModal)closeSuccessModalFn();});
+
+    async function loadTeachers(subject){
+      teachersList.innerHTML='';
+      try{
+        const subjectFilters=getDepartmentSubjectFilters(subject).filter(Boolean);
+        const qy=subjectFilters.length===1
+          ? query(collection(db,'teachers'), where('subject','==',subjectFilters[0]))
+          : query(collection(db,'teachers'), where('subject','in',subjectFilters));
+        const snap=await getDocs(qy);
+        if(snap.empty){const empty=document.createElement('div');empty.className='teacher-item';empty.textContent='لا يوجد معلمون بعد.';teachersList.appendChild(empty);return;}
+        const allTeachers = snap.docs
+          .map(d=>d.data())
+          .filter(t=>subjectFilters.includes((t.subject||'').toString().trim()));
+        const heads = allTeachers.filter(t => (t.role || '').toString().toLowerCase() === 'head');
+        const regularTeachers = allTeachers.filter(t => (t.role || '').toString().toLowerCase() !== 'head');
+        const orderedTeachers = [...heads, ...regularTeachers];
+
+        orderedTeachers.forEach((t, idx)=>{
+          if(idx === heads.length && heads.length && regularTeachers.length){
+            const sep=document.createElement('div');
+            sep.className='teachers-separator';
+            teachersList.appendChild(sep);
+          }
+          const el=document.createElement('div');el.className='teacher-item';
+          const isHead = (t.role || '').toString().toLowerCase() === 'head';
+          const teacherSubject=(t.subject||'').toString().trim();
+          const mergedSubjects=getMergedSubjectsForDepartment(subject);
+          const showTeacherSubject=mergedSubjects.length>0 && !!teacherSubject && teacherSubject!==subject;
+          const meta=[t.email||'', isHead?'رئيس القسم':'مدرس'];
+          if(showTeacherSubject) meta.push(teacherSubject);
+          const nameLine = isHead
+            ? `<div style="display:flex;align-items:center;gap:8px;"><span aria-hidden="true" title="رئيس القسم">👑</span><span>${t.name||t.email||t.uid}</span></div>`
+            : `<div>${t.name||t.email||t.uid}</div>`;
+          let html=`<div>${nameLine}<div class="teacher-sub">${meta.filter(Boolean).join(' | ')}</div></div>`;
+          if(t.isSupervisor){html=`<div style="display:flex;align-items:center;gap:8px;"><span style="color:gold">⭐</span>${html}</div>`;}
+          el.innerHTML=html + `<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>`;
+          el.addEventListener('click',()=>openTeacherEditor(t.uid,{ syncRoute:true }));teachersList.appendChild(el);
+        });
+      }catch(e){const err=document.createElement('div');err.className='teacher-item';err.textContent='تعذّر تحميل القائمة.';teachersList.appendChild(err);}
+    }
+
+    async function openTeacherEditor(uid,{ syncRoute=true } = {}){
+      edOk.style.display='none';edErr.style.display='none';
+      try{
+        const s=await getDoc(doc(db,'teachers',uid));
+        if(!s.exists()){alert('الملف غير موجود.');return;}
+        const d=s.data();currentTeacher={uid,data:d};
+        selectedSubject = mapTeacherSubjectToDepartment(d.subject) || selectedSubject;
+        edTName.value=d.name||'';edTEmail.value=d.email||'';edTPhone.value=d.phone||'';edTTeams.value=d.teams||'';edTRole.value=d.role||'user';edTIsSupervisor.checked=!!d.isSupervisor;
+        edTAllowEditSchedule.checked=!!normalizePermissions(d).allowEditSchedule;
+        edTAllowMorningLate.checked=!!normalizePermissions(d).allowMorningLate;
+        edTAllowSupervisorStudents.checked=!!normalizePermissions(d).allowSupervisorStudents;
+        edClasses.innerHTML='';const cls=Array.isArray(d.classes)?d.classes:[];if(!cls.length)edClasses.appendChild(makeClassRow(""));else cls.forEach(v=>edClasses.appendChild(makeClassRow(v)));
+        setTeacherEditMode(false);
+        updateProfileSummary();
+        openSheet(teacherSheet);
+        if(syncRoute){ setTeacherRoute(uid); }
+        syncTeacherRouteMode();
+      }catch{alert('تعذّر فتح صفحة المعلّم.');}
+    }
+
+    saveTeacher.addEventListener('click', async ()=>{
+      edOk.style.display='none';edErr.style.display='none';
+      try{
+        const {uid}=currentTeacher;if(!uid) throw new Error('لم يتم اختيار معلّم.');
+        const name=edTName.value.trim(), email=edTEmail.value.trim(), phone=edTPhone.value.trim(), teams=edTTeams.value.trim();
+        const role=edTRole.value, isSupervisor=edTIsSupervisor.checked, classes=getClassesFrom(edClasses);
+        const teacherDepartment=mapTeacherSubjectToDepartment((currentTeacher?.data?.subject || '').toString().trim()) || mapTeacherSubjectToDepartment(selectedSubject) || selectedSubject;
+        const prevPermissions=(currentTeacher?.data?.permissions&&typeof currentTeacher.data.permissions==='object')?currentTeacher.data.permissions:{};
+        const permissions={...prevPermissions,allowEditSchedule:!!edTAllowEditSchedule.checked,allowMorningLate:!!edTAllowMorningLate.checked,allowSupervisorStudents:!!edTAllowSupervisorStudents.checked};
+        if(!name) throw new Error('أدخل الاسم.'); if(!emailRx.test(email)) throw new Error('أدخل بريدًا صالحًا.');
+        if(role==='head') await ensureSingleHeadForDepartment(teacherDepartment,{ excludeUid: uid });
+        await updateDoc(doc(db,'teachers',uid),{name,email,phone,teams,role,isSupervisor,classes,permissions});
+        currentTeacher.data={...(currentTeacher.data||{}),name,email,phone,teams,role,isSupervisor,classes,permissions};
+        setTeacherEditMode(false);
+        edOk.textContent='تم حفظ التعديلات.';edOk.style.display='block';setTimeout(()=>{edOk.style.display='none';closeTeacherView();},900);
+        if(selectedSubject) await loadTeachers(selectedSubject);
+      }catch(e){edErr.textContent=e?.message||'تعذّر الحفظ.';edErr.style.display='block';}
+    });
+
+    deleteTeacherBtn.addEventListener('click', async ()=>{
+      edOk.style.display='none';edErr.style.display='none';
+      try{
+        const {uid}=currentTeacher;if(!uid) return; if(!confirm('حذف ملف المعلّم من Firestore؟')) return;
+        await deleteDoc(doc(db,'teachers',uid));
+        edOk.textContent='تم الحذف.';edOk.style.display='block';setTimeout(()=>{edOk.style.display='none';closeTeacherView();},700);
+        if(selectedSubject) await loadTeachers(selectedSubject);
+      }catch(e){edErr.textContent=e?.message||'تعذّر الحذف.';edErr.style.display='block';}
+    });
+
+    createTeacherBtn.addEventListener('click', async ()=>{
+      try{
+        const name=teacherName.value.trim(), civilId=teacherEmail.value.trim().replace(/\D+/g,''), email=civilId?`t${civilId}@gmail.com`:'', password=teacherPassword.value, phone=teacherPhone.value.trim();
+        const role=teacherRole.value, isSupervisor=teacherIsSupervisor.checked, classes=getClassesFrom(auClasses);
+        const permissions={allowEditSchedule:!!teacherAllowEditSchedule.checked,allowMorningLate:!!teacherAllowMorningLate.checked,allowSupervisorStudents:!!teacherAllowSupervisorStudents.checked};
+        const selectedSpecialization=(teacherSpecialization.value||'').trim();
+        const mergedSubjects=getMergedSubjectsForDepartment(selectedSubject);
+        const subjectToSave=isMergedDepartment(selectedSubject) ? selectedSpecialization : selectedSubject;
+        const departmentToSave=mapTeacherSubjectToDepartment(subjectToSave) || selectedSubject;
+        if(!name) throw new Error('أدخل الاسم الكامل.');
+        if(!civilId) throw new Error('أدخل رقم البطاقة المدنية بالأرقام فقط.');
+        if(!emailRx.test(email)) throw new Error('تعذّر توليد البريد الإلكتروني من رقم البطاقة المدنية.');
+        if(!password||password.length<6) throw new Error('كلمة المرور ٦ أحرف على الأقل.');
+        if(!subjectToSave) throw new Error('اختر القسم أولاً.');
+        if(isMergedDepartment(selectedSubject) && !mergedSubjects.includes(subjectToSave)) throw new Error(getMergedDepartmentSpecializationMessage(selectedSubject));
+        if(role==='head') await ensureSingleHeadForDepartment(departmentToSave);
+        const cred=await createUserWithEmailAndPassword(helperAuth,email,password); const newUid=cred.user.uid;
+        await setDoc(doc(db,'teachers',newUid),{uid:newUid,name,email,civilId,phone,role,isSupervisor,subject:subjectToSave,department:departmentToSave,classes,permissions,createdAt:serverTimestamp()},{merge:true});
+        try{await signOut(helperAuth);}catch{}
+        closeModal(addTeacherModal);openSuccessModal();
+        await loadTeachers(selectedSubject);
+      }catch(e){alert('تعذّر إنشاء الحساب: ' + (e?.message||''));}
+    });
+
+    async function applyTeacherRoute(){
+      const routeTeacherId = getRouteTeacherId();
+      syncTeacherRouteMode();
+      if(!routeTeacherId){
+        closeSheet(teacherSheet);
+        return;
+      }
+      await openTeacherEditor(routeTeacherId,{ syncRoute:false });
+    }
+
+    onAuthStateChanged(auth, async (user)=>{
+      if(!user){show(sNotLog);return;}
+      try{
+        const snap=await getDoc(doc(db,'teachers',user.uid));
+        const data=snap.exists()?snap.data():{};
+        if((data?.role||'').toString().toLowerCase()!=='admin'){show(sDenied);return;}
+        renderSubjects();
+        show(sTeachers);
+        await applyTeacherRoute();
+      }catch{show(sDenied);}
+    });
+
+    window.addEventListener('hashchange', ()=>{ applyTeacherRoute(); });
+    document.addEventListener('keydown',(e)=>{
+      if(e.key==='Escape'){
+        [subjectSheet,teacherSheet].forEach(s=>closeSheet(s));
+        if(addTeacherModal.classList.contains('active')) closeModal(addTeacherModal);
+        if(successModal.classList.contains('show')) closeSuccessModalFn();
+        syncTeacherRouteMode();
+      }
+    });
+  </script>
+
+  <script src="/shared/hub-title-link.js" defer></script>
+<script src="/name-glow.js" defer></script>
+</body>
+</html>
+
+
+
+
+
+
+
+

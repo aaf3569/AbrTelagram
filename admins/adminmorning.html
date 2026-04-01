@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.gstatic.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; manifest-src 'self'; upgrade-insecure-requests; block-all-mixed-content">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  <title>تأخير الصباح - لوحة الإدارة | ثانوية أحمد البشر الرومي</title>
+
+  <!-- Noto Kufi Arabic -->
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <link rel="stylesheet" href="/shared/base.css" />
+  <style>
+    :root{
+      --primary:#033C54;
+      --primary-2:#065372;
+
+      --page:#f6f8fb;
+      --text:#0f172a;
+      --muted:#6b7f9f;
+
+      --border:#e6edf7;
+      --shadow-1:0 8px 22px rgba(3,60,84,.10);
+      --shadow-2:0 18px 44px rgba(2,6,23,.14);
+
+      --radius:14px;
+      --radius-lg:18px;
+      --focus:#79b3c8;
+
+      --red:#ef4444;
+      --yellow:#f59e0b;
+      --green:#10b981;
+
+      --yellowBg: rgba(245,158,11,.10);
+      --chip:#f1f5f9;
+
+      --headerH: 122px;
+    }
+
+    *{ box-sizing:border-box; margin:0; padding:0 }
+    html,body{ height:100% }
+
+    body{
+      margin:0;
+      background:
+        radial-gradient(1200px 600px at 80% -20%, rgba(3,60,84,.08), transparent 60%),
+        radial-gradient(900px 500px at -10% 120%, rgba(3,60,84,.06), transparent 60%),
+        var(--page);
+      color:var(--text);
+      font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      display:flex; flex-direction:column; min-height:100vh;
+      -webkit-tap-highlight-color: transparent;
+      overflow-x:hidden;
+    }
+
+    body.modal-open{
+      overflow:hidden;
+      position:fixed;
+      width:100%;
+    }
+
+    @media (prefers-reduced-motion: reduce){
+      *{ animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.001ms !important; scroll-behavior:auto !important; }
+    }
+
+    /* Header */
+    .site-header{
+      position:sticky; top:0; z-index:30;
+      background: rgba(255,255,255,.86);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      padding:14px 14px 12px;
+      border-bottom:1px solid rgba(3,60,84,.10);
+      box-shadow: 0 2px 10px rgba(3,60,84,.06);
+    }
+
+    .header-inner{
+      width:min(100%, 1200px);
+      margin:0 auto;
+      display:grid;
+      grid-template-columns: 44px 1fr 44px;
+      align-items:center;
+      gap:10px;
+    }
+
+    .header-center{
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap:2px;
+      text-align:center;
+      padding:2px 0;
+    }
+
+    .site-title{
+      margin:0;
+      font-weight:900;
+      letter-spacing:.2px;
+      font-size: clamp(1.05rem, 2.8vw, 1.5rem);
+      color: var(--primary);
+      line-height:1.25;
+    }
+
+    .site-subtitle{
+      color: var(--muted);
+      font-weight:900;
+      font-size: .9rem;
+    }
+
+    .icon-btn{
+      width:44px; height:44px;
+      border-radius:14px;
+      border:1px solid rgba(3,60,84,.12);
+      background:#fff;
+      color:var(--primary);
+      display:flex; align-items:center; justify-content:center;
+      cursor:pointer;
+      transition: transform .12s ease, box-shadow .12s ease, background .12s ease, border-color .12s ease;
+      box-shadow: var(--shadow-1);
+    }
+    .icon-btn:hover{ transform:translateY(-1px); box-shadow: var(--shadow-2); border-color: rgba(3,60,84,.22) }
+    .icon-btn:active{ transform:translateY(0) scale(.99) }
+    .icon-btn:focus-visible{ outline:3px solid var(--focus); outline-offset:2px }
+
+    /* Date selector */
+    .date-chip{
+      margin-top:10px;
+      width:min(100%, 1200px);
+      margin-inline:auto;
+      display:flex;
+      justify-content:center;
+      position:relative;
+    }
+    .date-btn{
+      border:none;
+      cursor:pointer;
+      font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      font-weight:900;
+      font-size:.95rem;
+      color:var(--primary);
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      padding:10px 14px;
+      border-radius:999px;
+      background:#fff;
+      border:1px solid var(--border);
+      box-shadow: var(--shadow-1);
+      transition: transform .12s ease, box-shadow .12s ease, background .12s ease, border-color .12s ease;
+      max-width:95%;
+      position:relative;
+    }
+    .date-btn:hover{ transform: translateY(-1px); box-shadow: var(--shadow-2); border-color: rgba(3,60,84,.22) }
+    .date-btn:active{ transform: translateY(0) scale(.99) }
+    .date-btn:focus-visible{ outline:3px solid var(--focus); outline-offset:2px }
+    .date-btn span{ font-weight:900 }
+    .date-btn small{ color:var(--muted); font-weight:900; font-size:.82rem }
+
+    .date-input-wrapper{
+      position:absolute;
+      inset:0;
+      opacity:0;
+      pointer-events:auto;
+    }
+    .mobile-date-input{
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
+      opacity:0;
+      pointer-events:auto;
+      font-size:16px;
+      border:0;
+      background:transparent;
+    }
+
+    /* States */
+    main{
+      flex:1;
+      padding:0;
+      display:flex;
+      flex-direction:column;
+      overflow:hidden;
+    }
+
+    .panel{
+      width:min(100%, 1200px);
+      margin:14px auto 0;
+      background:#fff;
+      border:1px solid var(--border);
+      border-radius:var(--radius-lg);
+      padding:16px;
+      box-shadow: var(--shadow-1);
+    }
+
+    .state{ display:none }
+    .state.active{ display:block }
+
+    .loading{ display:grid; place-items:center; gap:12px; padding:24px }
+    .spinner{ width:40px; height:40px; border-radius:50%; border:4px solid rgba(3,60,84,.18); border-top-color:var(--primary); animation:spin 1s linear infinite; margin-inline:auto }
+    @keyframes spin{ to{ transform: rotate(360deg); } }
+
+    .msg{ font-size:.98rem; text-align:center }
+    .error{ color:#a11; background:#fde8e8; border:1px solid #f5c5c5; padding:12px; border-radius:14px }
+    .muted{ color:var(--muted) }
+
+    /* Table shell */
+    .full-width{ width:100%; }
+
+    .table-shell{
+      width:100%;
+      height: calc(100vh - var(--headerH) - 20px);
+      background:#fff;
+      border-top:1px solid var(--border);
+      border-bottom:1px solid var(--border);
+      border-left:none;
+      border-right:none;
+      border-radius:0;
+      overflow:hidden;
+      box-shadow:none;
+    }
+
+    .table-scroll{
+      width:100%;
+      height:100%;
+      overflow:auto;
+      -webkit-overflow-scrolling:touch;
+      position:relative;
+    }
+
+    table{
+      width:100%;
+      border-collapse:separate;
+      border-spacing:0;
+      min-width: 560px;
+      direction:rtl;
+      table-layout:fixed;
+    }
+
+    thead{
+      position:sticky;
+      top:0;
+      z-index:20;
+      background:#fff;
+    }
+
+    thead th{
+      position:relative;
+      background:#fff;
+      border-bottom:2px solid var(--primary);
+      padding:16px 10px;
+      text-align:center;
+      font-weight:900;
+      color:var(--primary);
+      white-space:nowrap;
+      box-shadow: 0 4px 12px rgba(3,60,84,.08);
+    }
+
+    th.sticky-col, td.sticky-col{
+      position:sticky;
+      right:0;
+      background:#fff;
+      border-left:2px solid var(--border);
+      text-align:center;
+      min-width:140px;
+      padding:12px 10px;
+      z-index:15;
+    }
+
+    thead th.sticky-col{
+      z-index:25;
+      box-shadow: 4px 0 12px rgba(3,60,84,.08);
+    }
+
+    tbody td{
+      border-bottom:1px solid var(--border);
+      padding:10px 10px;
+      text-align:center;
+      background:#fff;
+    }
+
+    tbody tr:hover td{ background:#fbfdff; }
+    tbody tr:hover td.sticky-col{ background:#fbfdff; }
+
+    .class-name{
+      font-weight:900;
+      color:var(--text);
+      font-size:1rem;
+      line-height:1.2;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      min-height:38px;
+    }
+
+    .cell-btn{
+      width:72px; height:40px;
+      border-radius:12px;
+      border:1px solid rgba(245,158,11,.35);
+      background: rgba(245, 158, 11, 0.15);
+      color:#7c2d12;
+      font-weight:900;
+      cursor:pointer;
+      transition: transform .12s ease, box-shadow .12s ease, filter .12s ease, border-color .12s ease;
+      box-shadow: 0 10px 20px rgba(245,158,11,.12);
+      font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:8px;
+    }
+    .cell-btn:hover{ transform: translateY(-1px); box-shadow: 0 14px 26px rgba(245,158,11,.16); border-color: rgba(245,158,11,.55); filter:saturate(1.05) }
+    .cell-btn:active{ transform: translateY(0) scale(.99) }
+    .cell-btn:focus-visible{ outline:3px solid var(--focus); outline-offset:2px }
+
+    .cell-empty{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width:72px; height:40px;
+      border-radius:12px;
+      border:1px solid rgba(3,60,84,.12);
+      background:#f8fafc;
+      color: rgba(100,116,139,.8);
+      font-weight:900;
+      user-select:none;
+    }
+
+    /* Modal */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(2, 6, 23, 0.45);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      z-index: 1000;
+      display: none;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+    .modal-backdrop.open { display:block; opacity:1; }
+
+    .modal{
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1001;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      pointer-events:none;
+    }
+    .modal.open{ display:flex; opacity:1; pointer-events:auto; }
+
+    .modal-card{
+      width: 100%;
+      max-width: 560px;
+      max-height: 85vh;
+      background: #fff;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+      box-shadow: 0 24px 48px rgba(2, 6, 23, 0.2);
+      display:flex;
+      flex-direction:column;
+      overflow:hidden;
+      transform: translateY(10px);
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .modal.open .modal-card{ transform: translateY(0); }
+
+    .modal-head{
+      background: rgba(255, 255, 255, 0.98);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--border);
+      padding: 18px 20px;
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+      flex-shrink:0;
+    }
+
+    .modal-title{
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+    }
+    .modal-title b{
+      color: var(--primary);
+      font-size: 1.1rem;
+      font-weight: 900;
+      line-height: 1.3;
+    }
+    .modal-title span{
+      color: var(--muted);
+      font-weight: 900;
+      font-size: 0.9rem;
+    }
+
+    .modal-close{
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #fff;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 22px;
+      line-height: 1;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      transition: all 0.12s ease;
+      flex-shrink:0;
+      box-shadow: 0 8px 16px rgba(2, 6, 23, 0.05);
+    }
+    .modal-close:hover{
+      background: var(--chip);
+      transform: translateY(-1px);
+      box-shadow: 0 12px 24px rgba(2, 6, 23, 0.08);
+      border-color: rgba(3, 60, 84, 0.2);
+    }
+
+    .modal-body{
+      padding: 16px 20px 18px;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      flex:1;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+    }
+
+    .section{
+      border:1px solid var(--border);
+      background:#fff;
+      border-radius:14px;
+      padding:12px;
+      box-shadow: 0 10px 22px rgba(2,6,23,.04);
+    }
+
+    .sec-title{
+      font-weight:900;
+      color:var(--primary);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      padding-bottom:10px;
+      border-bottom:1px solid var(--border);
+      margin-bottom:10px;
+    }
+
+    .list{ display:flex; flex-direction:column; gap:8px; }
+
+    .li{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      padding:10px 10px;
+      border-radius:12px;
+      border:1px solid rgba(3,60,84,.10);
+      background:#fbfdff;
+      font-weight:900;
+      cursor:pointer;
+      transition: all 0.12s ease;
+    }
+    .li:hover{
+      background:#f1f5f9;
+      border-color: rgba(3,60,84,.20);
+      transform: translateY(-1px);
+    }
+    .li .name{ color:var(--text); }
+    .li .meta{ color:var(--muted); font-weight:900; font-size:.86rem; }
+
+    .tag{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:8px 10px;
+      border-radius:999px;
+      background: var(--chip);
+      border:1px solid var(--border);
+      font-weight:900;
+      color: var(--text);
+      font-size:.9rem;
+    }
+
+    .tag.warning{
+      background: rgba(245, 158, 11, 0.10);
+      border-color: rgba(245, 158, 11, 0.25);
+      color:#7c2d12;
+    }
+
+    /* Mobile */
+    @media (max-width: 480px){
+      .header-inner{ grid-template-columns: 40px 1fr 40px; }
+      .icon-btn{ width:40px; height:40px; border-radius:12px; }
+      table{ min-width: 520px; }
+      th.sticky-col, td.sticky-col{ min-width: 132px; }
+      .table-shell{ height: calc(100vh - var(--headerH) - 10px); }
+
+      thead th{
+        padding:12px 6px;
+        font-size:.86rem;
+        white-space: normal;
+        line-height:1.25;
+      }
+
+      .date-btn{
+        padding: 12px 16px;
+        min-height: 48px;
+      }
+
+      .modal{ padding:12px; }
+      .modal-card{ max-height: 90vh; }
+    }
+
+    @supports (-webkit-touch-callout: none) {
+      .mobile-date-input { font-size: 16px !important; }
+      .modal-body { max-height: 60vh; }
+    }
+  </style>
+
+  <!-- iOS home screen icon -->
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/appicon.png" />
+  
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <meta name="theme-color" content="#033C54" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <!-- Browser tab icon (favicon) -->
+  <link rel="icon" type="image/png" sizes="64x64" href="https://framerusercontent.com/images/eepB7V11E8IMGVLttDUMaz62pPQ.png?width=64&height=64" />
+  <link rel="shortcut icon" href="https://framerusercontent.com/images/eepB7V11E8IMGVLttDUMaz62pPQ.png?width=64&height=64" />
+
+  <!-- Social / Safari preview (Open Graph & Twitter) -->
+  <meta property="og:title" content="تأخير الصباح - لوحة الإدارة | ثانوية أحمد البشر الرومي">
+  <meta property="og:description" content="???? ?????? ???? ????? ??????.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://framerusercontent.com/images/jRnZLlPr90qwKsuUwfIlvDS9E.png?width=1200&height=630">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="تأخير الصباح - لوحة الإدارة | ثانوية أحمد البشر الرومي">
+  <meta name="twitter:description" content="???? ?????? ???? ????? ??????.">
+  <meta name="twitter:image" content="https://framerusercontent.com/images/jRnZLlPr90qwKsuUwfIlvDS9E.png?width=1200&height=630">
+</head>
+
+<body>
+  <header class="site-header" id="siteHeader">
+    <div class="header-inner">
+      <button class="icon-btn" id="refreshBtn" title="تحديث" aria-label="تحديث" type="button">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+        </svg>
+      </button>
+
+      <div class="header-center">
+        <h1 class="site-title">ثانوية أحمد البشر الرومي</h1>
+        <div class="site-subtitle">تأخير الصباح | لوحة الإدارة</div>
+      </div>
+
+      <div></div>
+    </div>
+
+    <div class="date-chip">
+      <button class="date-btn" id="dateBtn" type="button" aria-label="اختيار تاريخ">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="4" width="18" height="18" rx="2"/>
+          <line x1="16" y1="2" x2="16" y2="6"/>
+          <line x1="8" y1="2" x2="8" y2="6"/>
+          <line x1="3" y1="10" x2="21" y2="10"/>
+        </svg>
+        <span id="dateLabel">—</span>
+        <small>اضغط لتغيير التاريخ</small>
+
+        <div class="date-input-wrapper" aria-hidden="true">
+          <input class="mobile-date-input" id="mobileDateInput" type="date" inputmode="none" />
+        </div>
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <div id="stateLoading" class="state active panel">
+      <div class="loading">
+        <div class="spinner"></div>
+        <div class="muted">جاري التحقق من تسجيل الدخول وجلب بيانات تأخير الصباح…</div>
+      </div>
+    </div>
+
+    <div id="stateNotLogged" class="state panel">
+      <div class="msg error">يرجى تسجيل الدخول قبل الاستخدام.</div>
+      <p class="muted" style="text-align:center; margin:8px 0 0;">لا توجد جلسة نشطة. <a href="/index.html">اذهب لصفحة الدخول</a>.</p>
+    </div>
+
+    <div id="stateDenied" class="state panel">
+      <div class="msg error">تم رفض الوصول. هذه الصفحة مخصّصة للإدارة فقط.</div>
+    </div>
+
+    <section id="stateOk" class="state full-width" aria-label="تأخير الصباح">
+      <div class="table-shell">
+        <div class="table-scroll">
+          <table aria-label="تأخير الصباح">
+            <thead>
+              <tr>
+                <th class="sticky-col">الصف</th>
+                <th>عدد المتأخرين صباحًا</th>
+              </tr>
+            </thead>
+            <tbody id="gridBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal -->
+  <div class="modal-backdrop" id="modalBackdrop"></div>
+  <div class="modal" id="lessonModal" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true">
+      <div class="modal-head">
+        <div class="modal-title">
+          <b id="modalTitle">—</b>
+          <span id="modalSubtitle">—</span>
+        </div>
+        <button class="modal-close" id="modalClose" aria-label="إغلاق" type="button">×</button>
+      </div>
+      <div class="modal-body" id="modalBody"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { firebaseConfig } from "/shared/firebase.js";
+    import { initializeApp, getApp, getApps } from "/shared/firebase.js";
+    import { getAuth, onAuthStateChanged } from "/shared/firebase.js";
+    import {
+      initializeFirestore, collection, getDocs, query, where,
+      doc, getDoc
+    } from "/shared/firebase.js";
+
+    
+
+    const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+    const db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true, useFetchStreams: false });
+    const auth = getAuth(app);
+
+    const sLoading = document.getElementById('stateLoading');
+    const sNotLog  = document.getElementById('stateNotLogged');
+    const sDenied  = document.getElementById('stateDenied');
+    const sOk      = document.getElementById('stateOk');
+
+    const refreshBtn = document.getElementById('refreshBtn');
+    const gridBody = document.getElementById('gridBody');
+
+    const dateBtn = document.getElementById('dateBtn');
+    const dateLabel = document.getElementById('dateLabel');
+    const mobileDateInput = document.getElementById('mobileDateInput');
+
+    const siteHeader = document.getElementById('siteHeader');
+
+    // Modal elements
+    const modalBackdrop = document.getElementById('modalBackdrop');
+    const lessonModal = document.getElementById('lessonModal');
+    const modalClose = document.getElementById('modalClose');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalSubtitle = document.getElementById('modalSubtitle');
+    const modalBody = document.getElementById('modalBody');
+
+    const show = (el) => {
+      [sLoading, sNotLog, sDenied, sOk].forEach(x => x.classList.remove('active'));
+      el.classList.add('active');
+      syncHeaderH();
+    };
+
+    function syncHeaderH(){
+      const headerHeight = siteHeader.getBoundingClientRect().height || 122;
+      document.documentElement.style.setProperty('--headerH', headerHeight + 'px');
+    }
+
+    const toArabicDigits = (str) => (str || "").toString().replace(/\d/g, d => '٠١٢٣٤٥٦٧٨٩'[d]);
+
+    function fmtDateLong(d){
+      return new Intl.DateTimeFormat('ar-KW', {
+        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+        timeZone: 'Asia/Kuwait'
+      }).format(d);
+    }
+
+    function toInputDate(d) {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const da = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${da}`;
+    }
+
+    // Classes
+    const CLASS_OPTIONS_RAW = [
+      "10 / 1", "10 / 2", "10 / 3", "10 / 4", "10 / 5", "10 / 6", "10 / 7",
+      "11 / 1 ع", "11 / 2 ع", "11 / 3 ع", "11 / 4 ع", "11 / 5 ع", "11 / 1 د",
+      "12 / 1 ع", "12 / 2 ع", "12 / 3 ع", "12 / 4 ع", "12 / 5 ع", "12 / 1 د"
+    ];
+
+    function sorted(list) {
+      const parse = (s) => {
+        const m = s.match(/^(\d+)\s*\/\s*(\d+)(?:\s*(.*))?$/);
+        return m ? { g: +m[1], s: +m[2], suf: (m[3] || '').trim() } : { g: 999, s: 999, suf: "" };
+      };
+      return [...list].sort((A, B) => {
+        const a = parse(A), b = parse(B);
+        if (a.g !== b.g) return a.g - b.g;
+        if (a.s !== b.s) return a.s - b.s;
+        return a.suf.localeCompare(b.suf, 'ar');
+      });
+    }
+
+    const ALL_CLASSES = sorted(CLASS_OPTIONS_RAW);
+
+    /*
+      Firestore structure used by this page (you can match your own, but keep fields):
+      Collection: morningLates
+      Each doc fields:
+        - date: "YYYY-MM-DD" (string)
+        - classKey: "10 / 1" (string)
+        - studentId: "..." (string)
+        - studentName: "..." (string)  (optional if you want to fetch from students)
+        - time: "07:58" (string)       (optional)
+        - minutesLate: 3 (number)      (optional)
+        - reason: "..." (string)       (optional)
+    */
+    const MORNING_LATES_COLLECTION = "morningLates";
+
+    // Grid data
+    let GRID = Object.create(null);
+    let selectedDate = new Date();
+
+    function initGrid(){
+      GRID = Object.create(null);
+      for (const cn of ALL_CLASSES){
+        GRID[cn] = {
+          count: 0,
+          items: [] // {studentId, studentName, time, minutesLate, reason, classKey}
+        };
+      }
+    }
+
+    function renderGrid(){
+      gridBody.innerHTML = '';
+
+      for (const cn of ALL_CLASSES){
+        const tr = document.createElement('tr');
+
+        const tdClass = document.createElement('td');
+        tdClass.className = 'sticky-col';
+        tdClass.innerHTML = `<div class="class-name">${toArabicDigits(cn)}</div>`;
+        tr.appendChild(tdClass);
+
+        const td = document.createElement('td');
+        const cell = GRID?.[cn];
+
+        if (cell && cell.count > 0){
+          const btn = document.createElement('button');
+          btn.className = 'cell-btn';
+          btn.type = 'button';
+          btn.innerHTML = `<i class="fa-solid fa-user-clock"></i> ${toArabicDigits(cell.count)}`;
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            openModalForClass(cn);
+          });
+          td.appendChild(btn);
+        } else {
+          const empty = document.createElement('div');
+          empty.className = 'cell-empty';
+          empty.textContent = '';
+          td.appendChild(empty);
+        }
+
+        tr.appendChild(td);
+        gridBody.appendChild(tr);
+      }
+    }
+
+    // Modal helpers
+    function openModal() {
+      document.body.classList.add('modal-open');
+      modalBackdrop.classList.add('open');
+      lessonModal.classList.add('open');
+      lessonModal.setAttribute('aria-hidden', 'false');
+    }
+
+    function closeModal() {
+      document.body.classList.remove('modal-open');
+      modalBackdrop.classList.remove('open');
+      lessonModal.classList.remove('open');
+      lessonModal.setAttribute('aria-hidden', 'true');
+      modalBody.innerHTML = '';
+    }
+
+    modalClose.addEventListener('click', closeModal);
+    modalBackdrop.addEventListener('click', closeModal);
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && lessonModal.classList.contains('open')) closeModal();
+    });
+
+    lessonModal.addEventListener('click', (e) => {
+      if (e.target === lessonModal) closeModal();
+    });
+
+    function normalizeTimeString(t){
+      if (!t) return "";
+      const s = t.toString().trim();
+      const m = s.match(/^(\d{1,2}):(\d{2})$/);
+      if (!m) return s;
+      const hh = String(+m[1]).padStart(2, '0');
+      return `${hh}:${m[2]}`;
+    }
+
+    function openModalForClass(classKey){
+      const cell = GRID?.[classKey];
+      if (!cell || cell.count <= 0) return;
+
+      const niceClass = toArabicDigits(classKey);
+      const niceDate = toArabicDigits(fmtDateLong(selectedDate));
+
+      modalTitle.textContent = `تأخير الصباح | ${niceClass}`;
+      modalSubtitle.textContent = `التاريخ: ${niceDate}`;
+
+      const items = [...cell.items];
+
+      // Sort by minutesLate desc, then time, then name
+      items.sort((a,b) => {
+        const ma = Number.isFinite(+a.minutesLate) ? +a.minutesLate : -1;
+        const mb = Number.isFinite(+b.minutesLate) ? +b.minutesLate : -1;
+        if (mb !== ma) return mb - ma;
+        const ta = normalizeTimeString(a.time);
+        const tb = normalizeTimeString(b.time);
+        if (ta !== tb) return ta.localeCompare(tb);
+        return (a.studentName || "").localeCompare((b.studentName || ""), 'ar', { sensitivity: 'base' });
+      });
+
+      const headerTags = [];
+      headerTags.push(`<span class="tag warning"><i class="fa-solid fa-triangle-exclamation"></i> ${toArabicDigits(items.length)} متأخر</span>`);
+      headerTags.push(`<span class="tag"><i class="fa-solid fa-calendar-day"></i> ${toArabicDigits(toInputDate(selectedDate))}</span>`);
+
+      modalBody.innerHTML = `
+        <div class="section">
+          <div class="sec-title">
+            <span>ملخّص</span>
+            <span class="muted" style="font-weight:900">الصف ${niceClass}</span>
+          </div>
+          <div style="display:flex; flex-wrap:wrap; gap:8px;">
+            ${headerTags.join('')}
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="sec-title">
+            <span>قائمة المتأخرين</span>
+            <span class="muted" style="font-weight:900">${toArabicDigits(items.length)} اسم</span>
+          </div>
+          <div class="list" id="lateList"></div>
+        </div>
+      `;
+
+      const list = modalBody.querySelector('#lateList');
+
+      for (const it of items){
+        const row = document.createElement('div');
+        row.className = 'li';
+
+        const nm = (it.studentName || "—").toString();
+        const time = normalizeTimeString(it.time);
+        const mins = Number.isFinite(+it.minutesLate) ? +it.minutesLate : null;
+
+        const metaParts = [];
+        if (time) metaParts.push(`الوقت: ${time}`);
+        if (mins !== null) metaParts.push(`الدقائق: ${toArabicDigits(mins)}`);
+        if (it.reason) metaParts.push(`السبب: ${it.reason}`);
+
+        row.innerHTML = `
+          <div class="name">${nm}</div>
+          <div class="meta">${metaParts.length ? metaParts.join(' • ') : '—'}</div>
+        `;
+
+        // Click to student page if studentId exists
+        row.addEventListener('click', () => {
+          if (!it.studentId) return;
+          window.location.href = `students.html?studentId=${encodeURIComponent(it.studentId)}&class=${encodeURIComponent(classKey)}`;
+        });
+
+        list.appendChild(row);
+      }
+
+      openModal();
+    }
+
+    async function promisePool(items, worker, concurrency = 12){
+      const results = [];
+      let i = 0;
+      const runners = new Array(Math.min(concurrency, items.length)).fill(0).map(async () => {
+        while (i < items.length){
+          const idx = i++;
+          try { results[idx] = await worker(items[idx], idx); }
+          catch { results[idx] = undefined; }
+        }
+      });
+      await Promise.all(runners);
+      return results;
+    }
+
+    async function loadMorningLatesForDate(dateObj){
+      initGrid();
+
+      const iso = toInputDate(dateObj);
+      dateLabel.textContent = toArabicDigits(fmtDateLong(dateObj));
+      mobileDateInput.value = iso;
+
+      // For best performance with this design:
+      // Create composite index on morningLates: (date ==) and (classKey ==)
+      await promisePool(ALL_CLASSES, async (classKey) => {
+        const qy = query(
+          collection(db, MORNING_LATES_COLLECTION),
+          where('date', '==', iso),
+          where('classKey', '==', classKey)
+        );
+
+        let snap;
+        try {
+          snap = await getDocs(qy);
+        } catch (e) {
+          console.error('Error loading morning lates for class:', classKey, e);
+          return;
+        }
+
+        snap.forEach(ds => {
+          const x = ds.data() || {};
+          const stId = (x.studentId || '').toString().trim();
+          const stName = (x.studentName || '').toString().trim();
+          const time = (x.time || '').toString().trim();
+          const minutesLate = (x.minutesLate !== undefined) ? Number(x.minutesLate) : null;
+          const reason = (x.reason || '').toString().trim();
+
+          if (!GRID[classKey]) return;
+
+          GRID[classKey].count += 1;
+          GRID[classKey].items.push({
+            studentId: stId || null,
+            studentName: stName || "—",
+            time,
+            minutesLate: Number.isFinite(minutesLate) ? minutesLate : null,
+            reason,
+            classKey
+          });
+        });
+      }, 10);
+
+      renderGrid();
+      requestAnimationFrame(syncHeaderH);
+    }
+
+    // Date picker
+    dateBtn.addEventListener('click', () => {
+      try {
+        if (typeof mobileDateInput.showPicker === 'function') {
+          mobileDateInput.showPicker();
+          return;
+        }
+      } catch {}
+      mobileDateInput.focus({ preventScroll: true });
+      mobileDateInput.click();
+    });
+
+    mobileDateInput.addEventListener('change', async () => {
+      if (!mobileDateInput.value) return;
+      const [yy, mm, dd] = mobileDateInput.value.split('-').map(Number);
+      const d = new Date(yy, (mm || 1) - 1, dd || 1);
+      if (Number.isNaN(d.getTime())) return;
+
+      selectedDate = d;
+      closeModal();
+      show(sLoading);
+      try {
+        show(sOk);
+        await loadMorningLatesForDate(selectedDate);
+      } catch (e) {
+        console.error(e);
+      }
+    });
+
+    refreshBtn.addEventListener('click', async () => {
+      try{
+        refreshBtn.disabled = true;
+        closeModal();
+        show(sLoading);
+        show(sOk);
+        await loadMorningLatesForDate(selectedDate);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        refreshBtn.disabled = false;
+      }
+    });
+
+    window.addEventListener('resize', () => {
+      if (sOk.classList.contains('active')) syncHeaderH();
+    });
+
+    window.addEventListener('load', () => {
+      syncHeaderH();
+      setTimeout(syncHeaderH, 250);
+    });
+
+    // Auth gate: admin only
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) { show(sNotLog); return; }
+
+      try {
+        const tRef = doc(db, 'teachers', user.uid);
+        const snap = await getDoc(tRef);
+        const data = snap.exists() ? snap.data() : {};
+
+        if ((data?.role || '').toString().toLowerCase() !== 'admin') {
+          show(sDenied);
+          return;
+        }
+
+        show(sOk);
+        selectedDate = new Date();
+        await loadMorningLatesForDate(selectedDate);
+      } catch (e) {
+        console.error(e);
+        show(sDenied);
+      }
+    });
+  </script>
+
+  <script src="/shared/hub-title-link.js" defer></script>
+<script src="/name-glow.js" defer></script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,3070 @@
+﻿<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.gstatic.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; manifest-src 'self'; upgrade-insecure-requests; block-all-mixed-content">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  <title>جدول رئيس القسم - ثانوية أحمد البشر الرومي</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <link rel="stylesheet" href="/shared/base.css" />
+  <style>
+    :root {
+      --primary: #022b42;
+      --primary-2: #044563;
+      --primary-light: rgba(2, 43, 66, 0.08);
+      --page: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #0f172a;
+      --text-light: #475569;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --border-light: #f1f5f9;
+      --radius: 16px;
+      --radius-sm: 12px;
+      --shadow-1: 0 4px 12px rgba(2, 43, 66, 0.08);
+      --shadow-2: 0 10px 25px rgba(2, 43, 66, 0.12);
+      --headerText: #ffffff;
+      --focus: #79b3c8;
+      --success: #10b981;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --transition: all 0.16s ease;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      background:
+        radial-gradient(1200px 600px at 80% -20%, rgba(2, 43, 66, 0.05), transparent 60%),
+        radial-gradient(900px 500px at -10% 120%, rgba(2, 43, 66, 0.04), transparent 60%),
+        var(--page);
+      color: var(--text);
+      font-family: "Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      line-height: 1.6;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body.modal-open { overflow: hidden; }
+
+    /* Header */
+    .site-header {
+      position: sticky; top: 0; z-index: 20;
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(2, 43, 66, 0.08);
+      box-shadow: 0 2px 10px rgba(2, 43, 66, 0.06);
+      padding: 16px 20px;
+    }
+    .header-container {
+      max-width: 1200px; margin: 0 auto;
+      display: flex; justify-content: space-between; align-items: center; gap: 16px;
+    }
+    .site-title {
+      font-weight: 900;
+      font-size: clamp(1.2rem, 2.5vw, 1.5rem);
+      color: var(--primary);
+      display: flex; align-items: center; gap: 10px;
+    }
+    .site-title i { font-size: 1.3em; }
+    .top-info { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+
+    .badge {
+      padding: 6px 14px; border-radius: 999px; background: var(--primary-light);
+      border: 1px solid var(--border); color: var(--primary);
+      font-weight: 800; font-size: 12px; display: flex; align-items: center; gap: 6px;
+    }
+    .badge i { font-size: 0.9em; }
+
+    /* Buttons */
+    .filter-btn {
+      height: 44px; padding: 0 18px; border-radius: var(--radius-sm);
+      border: 1px solid rgba(2, 43, 66, 0.2); background: var(--card-bg); color: var(--primary);
+      font-weight: 800; cursor: pointer; box-shadow: var(--shadow-1); transition: var(--transition);
+      display: inline-flex; align-items: center; gap: 8px; font-size: 0.9rem; position: relative;
+      font-family: "Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+    .filter-btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-2); border-color: rgba(2, 43, 66, 0.4); }
+    .filter-btn:active { transform: translateY(0); }
+    .filter-btn.active { background: linear-gradient(135deg, var(--primary-2), var(--primary)); color: var(--headerText); border-color: var(--primary); }
+    .filter-btn[disabled] { opacity: 0.6; cursor: not-allowed; }
+
+    .btn-solid {
+      background: linear-gradient(135deg, var(--primary-2), var(--primary));
+      border-color: var(--primary);
+      color: var(--headerText);
+    }
+    .btn-danger {
+      background: #fff;
+      border-color: rgba(239, 68, 68, 0.35);
+      color: #b91c1c;
+    }
+    .btn-danger:hover { border-color: rgba(239, 68, 68, 0.6); }
+    .btn-ghost {
+      background: rgba(2, 43, 66, 0.04);
+      border-color: rgba(2, 43, 66, 0.14);
+      color: var(--primary);
+    }
+
+    /* Loading dot */
+    .filter-btn.loading::after {
+      content: ""; width: 10px; height: 10px; border-radius: 50%;
+      border: 2px solid currentColor; border-top-color: transparent;
+      position: absolute; left: 10px; animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Main & cards */
+    main { flex: 1; padding: 20px; }
+    .board { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-1);
+      padding: 20px;
+      transition: var(--transition);
+    }
+    .card:hover { box-shadow: var(--shadow-2); }
+    .muted { color: var(--muted); font-size: 0.9rem; }
+
+    /* Table */
+    .table { display: grid; grid-template-columns: repeat(2, minmax(160px, 1fr)); column-gap: 12px; row-gap: 8px; align-items: stretch; }
+    .header-full {
+      grid-column: 1 / -1; background: linear-gradient(135deg, var(--primary-2), var(--primary));
+      color: var(--headerText); border-radius: var(--radius-sm); padding: 16px; text-align: center;
+      font-weight: 900; box-shadow: var(--shadow-1);
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+    }
+    .th {
+      background: linear-gradient(135deg, var(--primary-2), var(--primary));
+      color: var(--headerText); border-radius: var(--radius-sm);
+      padding: 14px 10px; text-align: center; font-weight: 900; box-shadow: var(--shadow-1);
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .cell {
+      background: var(--card-bg); border: 1px solid var(--border-light); border-radius: var(--radius-sm);
+      padding: 16px 12px; text-align: center; min-height: 60px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      font-weight: 800; transition: var(--transition);
+      position: relative;
+      line-height: 1.25;
+    }
+    .cell:hover { border-color: var(--border); transform: translateY(-2px); box-shadow: var(--shadow-1); }
+    .small { font-size: 0.8rem; color: var(--muted); margin-top: 4px; font-weight: 700; }
+    .lesson-meta {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      margin-inline: auto;
+      text-align: center;
+    }
+    .lesson-title-row {
+      font-weight: 900;
+      line-height: 1.2;
+      text-align: center;
+      direction: rtl;
+      width: 100%;
+      display: block;
+    }
+    .lesson-time-row {
+      font-size: 0.8rem;
+      color: var(--muted);
+      font-weight: 700;
+      line-height: 1.2;
+      direction: ltr;
+      text-align: center;
+      width: 100%;
+      display: block;
+    }
+    .opportunity-divider {
+      grid-column: 1 / -1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 30px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(2, 43, 66, 0.18);
+      background: rgba(2, 43, 66, 0.06);
+      color: var(--primary);
+      font-size: 12px;
+      font-weight: 900;
+      line-height: 1.2;
+      text-align: center;
+    }
+    .opportunity-divider-label {
+      display: block;
+      width: 100%;
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .cell.clickable { cursor: pointer; }
+    .cell.clickable::after {
+      content: "";
+      position: absolute; inset: 0;
+      border-radius: var(--radius-sm);
+      box-shadow: 0 0 0 0 rgba(2, 43, 66, 0.0);
+      transition: box-shadow 0.25s ease;
+      pointer-events: none;
+    }
+    .cell.clickable:hover::after { box-shadow: 0 0 0 3px rgba(2, 43, 66, 0.10); }
+
+    /* Grid */
+    .grid-wrap { overflow: visible; }
+    .grid { direction: rtl; display: grid; grid-template-columns: 140px repeat(7, minmax(130px, 1fr)); gap: 12px; align-items: stretch; }
+    .gth {
+      background: linear-gradient(135deg, var(--primary-2), var(--primary)); color: var(--headerText);
+      border-radius: var(--radius-sm); padding: 14px 10px; text-align: center; font-weight: 900; box-shadow: var(--shadow-1);
+      display: grid;
+      place-items: center;
+      align-content: center;
+    }
+    .gcell {
+      background: var(--card-bg); border: 1px solid var(--border-light); border-radius: var(--radius-sm);
+      padding: 14px 10px; display: grid; align-items: center; justify-items: center; text-align: center;
+      min-height: 60px; position: relative; font-weight: 800; transition: var(--transition);
+    }
+    .gcell:hover { border-color: var(--border); transform: translateY(-2px); box-shadow: var(--shadow-1); }
+    .day-col { background: var(--primary-light); }
+
+    /* Status */
+    .status-message {
+      padding: 12px 16px; border-radius: var(--radius-sm); background: var(--primary-light);
+      color: var(--primary); font-weight: 700; margin-top: 12px; display: none; align-items: center; gap: 10px;
+    }
+
+    /* Highlight (has lesson) */
+    .lesson-highlight {
+      background-color: #fff9c4 !important;
+      border: 2px solid #ffd54f !important;
+      color: #5d4037;
+      font-weight: 900;
+    }
+
+    /* Current lesson highlight (time-based, day view only) */
+    .current-lesson {
+      background-color: rgba(4, 69, 99, 0.10) !important;
+      border: 2px solid var(--primary-2) !important;
+      box-shadow: 0 0 0 3px rgba(2, 43, 66, 0.28);
+      color: var(--primary-2) !important;
+      position: relative;
+      font-weight: 900;
+    }
+
+    /* Override badges */
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 900;
+      border: 1px solid var(--border);
+      background: rgba(2, 43, 66, 0.06);
+      color: var(--primary);
+      margin-top: 8px;
+      justify-content: center;
+      width: fit-content;
+    }
+    .pill.success {
+      background: rgba(16, 185, 129, 0.12);
+      border-color: rgba(16, 185, 129, 0.25);
+      color: #065f46;
+    }
+    .pill.warn {
+      background: rgba(245, 158, 11, 0.14);
+      border-color: rgba(245, 158, 11, 0.30);
+      color: #7c2d12;
+    }
+
+    /* Compact on mobile */
+    .compact-table { display: grid; grid-template-columns: 1fr 1fr; column-gap: 8px; row-gap: 6px; width: 100%; }
+    .compact-header {
+      grid-column: 1 / -1; background: linear-gradient(135deg, var(--primary-2), var(--primary));
+      color: var(--headerText); border-radius: var(--radius-sm); padding: 12px; text-align: center;
+      font-weight: 900; display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 8px;
+    }
+    .compact-th {
+      background: var(--primary-light); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 10px 8px; text-align: center;
+      font-weight: 900; font-size: 0.9rem;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .compact-cell {
+      background: var(--card-bg); border: 1px solid var(--border-light);
+      border-radius: var(--radius-sm); padding: 12px 8px; text-align: center;
+      min-height: 50px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 0.9rem;
+      position: relative;
+      line-height: 1.25;
+    }
+    .compact-cell.lesson-cell {
+      align-items: stretch;
+      justify-content: center;
+    }
+    .compact-cell.lesson-cell .lesson-meta {
+      min-height: 100%;
+      justify-content: center;
+    }
+    .compact-cell.clickable { cursor: pointer; }
+    .compact-cell.clickable:hover { border-color: var(--border); box-shadow: var(--shadow-1); transform: translateY(-1px); }
+
+    /* Sheet */
+    .sheet {
+      position: fixed; inset: 0; z-index: 50; background: var(--page);
+      display: flex; flex-direction: column;
+      transform: translateX(100%);
+      transition: transform 0.3s cubic-bezier(0.22, 0.7, 0.25, 1);
+    }
+    .sheet.open { transform: translateX(0); }
+    .sheet-header {
+      background: var(--card-bg); border-bottom: 1px solid var(--border);
+      padding: 18px 20px; display: flex; align-items: center; gap: 12px;
+      position: sticky; top: 0; z-index: 10;
+      box-shadow: 0 2px 8px rgba(2, 43, 66, 0.06);
+    }
+    .back-btn {
+      height: 44px; padding: 0 18px; border-radius: var(--radius-sm);
+      border: 1px solid rgba(2, 43, 66, 0.25); background: var(--card-bg);
+      color: var(--primary); font-weight: 900; cursor: pointer;
+      box-shadow: var(--shadow-1); transition: var(--transition);
+      display: flex; align-items: center; gap: 8px;
+      font-family: "Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+    .back-btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-2); }
+    .sheet-title { margin: 0; font-size: 1.15rem; font-weight: 900; color: var(--primary); }
+    .sheet-body {
+      flex: 1 1 auto; overflow: auto; padding: 24px;
+      max-width: 1200px; margin: 0 auto;
+      display: flex; flex-direction: column; gap: 20px; width: 100%;
+    }
+
+    .input-wrap {
+      display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 16px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      box-shadow: var(--shadow-1);
+      transition: var(--transition);
+    }
+    .input-wrap:focus-within { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(2, 43, 66, 0.1); }
+    .select, .input {
+      flex: 1; height: 50px; border: none; outline: none; background: transparent;
+      font-size: 1rem; font-weight: 800; color: var(--text);
+      font-family: "Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      cursor: pointer;
+    }
+    .input { cursor: text; font-weight: 700; }
+    .input::placeholder { color: rgba(71, 85, 105, 0.65); font-weight: 700; }
+
+    /* Modal - IMPROVED FOR MOBILE */
+    .modal {
+      position: fixed; inset: 0; z-index: 70;
+      display: none;
+      align-items: center; justify-content: center;
+      padding: 16px;
+      width: 100%;
+      height: 100%;
+      box-sizing: border-box;
+    }
+    .modal.open { display: flex; }
+    .modal-backdrop {
+      position: absolute; inset: 0;
+      background: rgba(2, 43, 66, 0.55);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      animation: fadeIn 0.18s ease both;
+    }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    .modal-card {
+      position: relative;
+      width: 100%;
+      max-width: 720px;
+      max-height: 90vh;
+      background: rgba(255,255,255,0.97);
+      border: 1px solid rgba(226, 232, 240, 0.9);
+      border-radius: 20px;
+      box-shadow: 0 24px 60px rgba(2, 43, 66, 0.25);
+      overflow: hidden;
+      transform: translateY(10px) scale(0.98);
+      animation: popIn 0.18s ease both;
+      display: flex;
+      flex-direction: column;
+    }
+    @keyframes popIn { to { transform: translateY(0) scale(1); } }
+
+    .modal-head {
+      padding: 16px 18px;
+      background: linear-gradient(135deg, rgba(4, 69, 99, 0.12), rgba(2, 43, 66, 0.05));
+      border-bottom: 1px solid rgba(226, 232, 240, 0.85);
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      flex-shrink: 0;
+    }
+    .modal-title {
+      font-weight: 900;
+      color: var(--primary);
+      display: flex; align-items: center; gap: 10px;
+      font-size: 1.05rem;
+      flex: 1;
+      min-width: 0;
+    }
+    .modal-title span:last-child {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .icon-circle {
+      width: 36px; height: 36px; border-radius: 12px;
+      background: rgba(2, 43, 66, 0.08);
+      border: 1px solid rgba(2, 43, 66, 0.10);
+      display: grid; place-items: center;
+      color: var(--primary);
+      flex-shrink: 0;
+    }
+    .modal-close {
+      width: 44px; height: 44px; border-radius: 14px;
+      border: 1px solid rgba(2, 43, 66, 0.18);
+      background: rgba(255,255,255,0.75);
+      cursor: pointer;
+      display: grid; place-items: center;
+      color: var(--primary);
+      box-shadow: var(--shadow-1);
+      transition: var(--transition);
+      flex-shrink: 0;
+    }
+    .modal-close:hover { transform: translateY(-2px); box-shadow: var(--shadow-2); }
+    .modal-body {
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      flex: 1;
+      min-height: 0;
+    }
+    .modal-footer {
+      padding: 16px 18px;
+      border-top: 1px solid rgba(226, 232, 240, 0.85);
+      display: flex; gap: 10px; justify-content: flex-start; flex-wrap: wrap;
+      background: rgba(248, 250, 252, 0.65);
+      flex-shrink: 0;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .info-box {
+      border: 1px solid rgba(226, 232, 240, 0.95);
+      background: rgba(255,255,255,0.8);
+      border-radius: 14px;
+      padding: 12px;
+      box-shadow: 0 8px 18px rgba(2, 43, 66, 0.06);
+    }
+    .info-k { color: var(--muted); font-weight: 800; font-size: 12px; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+    .info-v { color: var(--text); font-weight: 900; font-size: 14px; }
+
+    .split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .hint {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 12px;
+      border-radius: 14px;
+      background: rgba(2, 43, 66, 0.06);
+      border: 1px solid rgba(2, 43, 66, 0.10);
+      color: var(--primary);
+      font-weight: 700;
+    }
+
+    .toast-wrap {
+      position: fixed;
+      bottom: 18px;
+      left: 18px;
+      z-index: 90;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      width: min(420px, calc(100% - 36px));
+    }
+    .toast {
+      border-radius: 16px;
+      background: rgba(255,255,255,0.92);
+      border: 1px solid rgba(226, 232, 240, 0.95);
+      box-shadow: 0 18px 50px rgba(2, 43, 66, 0.18);
+      padding: 12px 14px;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      animation: toastIn 0.22s ease both;
+    }
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .toast .ticon {
+      width: 38px; height: 38px; border-radius: 14px;
+      display: grid; place-items: center;
+      background: rgba(2, 43, 66, 0.08);
+      border: 1px solid rgba(2, 43, 66, 0.10);
+      color: var(--primary);
+      flex: 0 0 auto;
+    }
+    .toast .tmain { flex: 1 1 auto; min-width: 0; }
+    .toast .ttitle { font-weight: 900; color: var(--text); font-size: 0.95rem; margin-bottom: 2px; }
+    .toast .ttext { color: var(--muted); font-weight: 700; font-size: 0.86rem; }
+    .toast .tclose {
+      width: 40px; height: 40px; border-radius: 14px;
+      border: 1px solid rgba(2, 43, 66, 0.16);
+      background: rgba(255,255,255,0.7);
+      cursor: pointer;
+      display: grid; place-items: center;
+      transition: var(--transition);
+      color: var(--primary);
+      flex: 0 0 auto;
+    }
+    .toast .tclose:hover { transform: translateY(-2px); box-shadow: var(--shadow-1); }
+
+    /* Request Cards */
+    .request-card {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      background: var(--card-bg);
+      box-shadow: var(--shadow-1);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .request-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .request-type {
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      font-weight: 900;
+    }
+    .type-cover { background: rgba(59, 130, 246, 0.12); color: #1d4ed8; }
+    .type-swap { background: rgba(168, 85, 247, 0.12); color: #7c3aed; }
+    .request-body { display: grid; gap: 8px; }
+    .request-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 700;
+    }
+    .request-label {
+      color: var(--muted);
+      font-size: 0.85rem;
+      min-width: 70px;
+    }
+    .request-value {
+      color: var(--text);
+      font-weight: 800;
+    }
+    .status-badge {
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      font-weight: 900;
+    }
+    .status-pending { background: rgba(245, 158, 11, 0.12); color: #92400e; }
+    .status-accepted { background: rgba(16, 185, 129, 0.12); color: #065f46; }
+    .status-denied { background: rgba(239, 68, 68, 0.12); color: #991b1b; }
+    .request-footer {
+      display: flex;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    /* Responsive - ENHANCED FOR MOBILE */
+    @media (max-width: 920px) {
+      .grid-wrap { overflow: auto; }
+      .grid { min-width: 1100px; }
+      .header-container { flex-direction: column; align-items: flex-start; gap: 12px; }
+      .top-info { width: 100%; justify-content: flex-end; }
+    }
+    @media (max-width: 768px) {
+      .site-header { padding: 14px 16px; }
+      main { padding: 16px; }
+      .card { padding: 16px; }
+      .sheet-body { padding: 16px; }
+      .top-info { gap: 8px; }
+      .filter-btn { padding: 0 14px; font-size: 0.85rem; }
+      .table { display: none; }
+      .compact-table { display: grid; }
+      .header-full { grid-column: 1; }
+      .info-grid, .split { grid-template-columns: 1fr; }
+      .modal-card { border-radius: 18px; max-height: 85vh; }
+      
+      /* Mobile modal improvements */
+      .modal { padding: 12px; }
+      .modal-head { padding: 14px 16px; }
+      .modal-body { padding: 16px; gap: 12px; }
+      .modal-footer { padding: 14px 16px; gap: 8px; }
+      .modal-title { font-size: 1rem; }
+      .icon-circle { width: 32px; height: 32px; }
+      .modal-close { width: 40px; height: 40px; }
+      .info-box { padding: 10px; }
+      .request-footer { flex-wrap: wrap; }
+      .request-footer .filter-btn { flex: 1; min-width: 120px; }
+    }
+    @media (min-width: 769px) { .compact-table { display: none; } }
+    @media (max-width: 480px) {
+      .filter-btn span { display: none; }
+      .filter-btn { width: 44px; height: 44px; justify-content: center; padding: 0; }
+      .badge { padding: 6px 10px; }
+      .sheet-header { padding: 14px 16px; }
+      .compact-cell, .compact-th { padding: 8px 6px; font-size: 0.85rem; min-height: 45px; }
+      
+      /* Extra small mobile improvements */
+      .modal { padding: 8px; }
+      .modal-card { border-radius: 16px; max-height: 95vh; }
+      .modal-head { padding: 12px 14px; }
+      .modal-body { padding: 14px; gap: 10px; }
+      .modal-footer { 
+        padding: 12px 14px; 
+        flex-direction: column;
+      }
+      .modal-footer .filter-btn {
+        width: 100%;
+        justify-content: center;
+      }
+      .modal-title { font-size: 0.95rem; }
+      .icon-circle { width: 30px; height: 30px; border-radius: 10px; }
+      .modal-close { width: 36px; height: 36px; border-radius: 12px; }
+      .hint { padding: 10px; font-size: 0.9rem; }
+      .info-k, .info-v { font-size: 0.9rem; }
+    }
+    
+    /* Very small phones */
+    @media (max-width: 360px) {
+      .modal { padding: 6px; }
+      .modal-card { border-radius: 14px; }
+      .modal-head { padding: 10px 12px; }
+      .modal-body { padding: 12px; }
+      .modal-footer { padding: 10px 12px; }
+      .modal-title { font-size: 0.9rem; gap: 6px; }
+      .modal-close { width: 34px; height: 34px; }
+      .info-box { padding: 8px; }
+    }
+    
+    /* Fix for landscape orientation */
+    @media (max-height: 500px) and (orientation: landscape) {
+      .modal-card { max-height: 85vh; }
+      .modal-body { max-height: 60vh; }
+    }
+  </style>
+
+  <!-- iOS home screen icon -->
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/appicon.png" />
+  
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <meta name="theme-color" content="#033C54" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <!-- Browser tab icon (favicon) -->
+  <link rel="icon" type="image/png" sizes="64x64" href="https://framerusercontent.com/images/eepB7V11E8IMGVLttDUMaz62pPQ.png?width=64&height=64" />
+  <link rel="shortcut icon" href="https://framerusercontent.com/images/eepB7V11E8IMGVLttDUMaz62pPQ.png?width=64&height=64" />
+
+  <!-- Social / Safari preview (Open Graph & Twitter) -->
+  <meta property="og:title" content="جدول رئيس القسم - ثانوية أحمد البشر الرومي">
+  <meta property="og:description" content="???? ?????? ???? ????? ??????.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://framerusercontent.com/images/jRnZLlPr90qwKsuUwfIlvDS9E.png?width=1200&height=630">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="جدول رئيس القسم - ثانوية أحمد البشر الرومي">
+  <meta name="twitter:description" content="???? ?????? ???? ????? ??????.">
+  <meta name="twitter:image" content="https://framerusercontent.com/images/jRnZLlPr90qwKsuUwfIlvDS9E.png?width=1200&height=630">
+</head>
+
+<body>
+  <header class="site-header">
+    <div class="header-container">
+      <h1 class="site-title">
+        <i class="fas fa-user-tie"></i>
+        جدول رئيس القسم
+      </h1>
+      <div class="top-info">
+        <span id="weekLabel" class="badge">
+          <i class="far fa-calendar"></i>
+          —
+        </span>
+        <span id="departmentBadge" class="badge" style="display:none">
+          <i class="fas fa-graduation-cap"></i>
+          <span id="departmentName">—</span>
+        </span>
+        <span id="meBadge" class="badge" style="display:none">
+          <i class="fas fa-user"></i>
+          <span id="meName">—</span>
+        </span>
+
+        <button id="btnRequests" class="filter-btn" type="button">
+          <i class="fas fa-inbox"></i>
+          <span>طلبات القسم</span>
+        </button>
+
+        <button id="btnToday" class="filter-btn active" type="button">
+          <i class="fas fa-chalkboard-user"></i>
+          <span>عرض اليوم</span>
+        </button>
+
+        <button id="btnWeek" class="filter-btn" type="button">
+          <i class="fas fa-calendar-week"></i>
+          <span>الأسبوع كامل</span>
+        </button>
+
+        <button id="btnMore" class="filter-btn" type="button">
+          <i class="fas fa-ellipsis-h"></i>
+          <span>المزيد</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="board">
+      <div class="card">
+        <div id="containerMain"></div>
+        <div id="status" class="status-message"></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- REQUESTS SHEET -->
+  <section id="requestsSheet" class="sheet" aria-hidden="true">
+    <div class="sheet-header">
+      <button id="closeRequests" class="back-btn" type="button">
+        <i class="fas fa-arrow-right"></i>
+        <span>رجوع</span>
+      </button>
+      <h3 class="sheet-title">طلبات القسم</h3>
+    </div>
+    <div class="sheet-body">
+      <div id="requestsContainer"></div>
+    </div>
+  </section>
+
+  <!-- MORE SHEET -->
+  <section id="moreSheet" class="sheet" aria-hidden="true">
+    <div class="sheet-header">
+      <button id="closeMore" class="back-btn" type="button">
+        <i class="fas fa-arrow-right"></i>
+        <span>رجوع</span>
+      </button>
+      <h3 class="sheet-title">عرض جدول فصل آخر</h3>
+    </div>
+    <div class="sheet-body">
+      <div class="card">
+        <div class="input-wrap">
+          <select id="classPicker" class="select">
+            <option value="">اختر الفصل...</option>
+          </select>
+        </div>
+        <div class="muted" style="margin-top: 12px; display: flex; align-items: center; gap: 8px;">
+          <i class="fas fa-info-circle"></i>
+          <span>اختر فصلًا لعرض جدوله للأسبوع (غير قابل للتعديل).</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="grid-wrap">
+          <div id="classWeekGrid" class="grid"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MODAL -->
+  <section id="modal" class="modal" aria-hidden="true">
+    <div class="modal-backdrop" id="modalBackdrop"></div>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modal-head">
+        <div class="modal-title" id="modalTitle">
+          <span class="icon-circle"><i class="fas fa-exchange-alt"></i></span>
+          <span id="modalTitleText">—</span>
+        </div>
+        <button class="modal-close" id="modalClose" type="button" aria-label="إغلاق">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div class="modal-body" id="modalBody"></div>
+
+      <div class="modal-footer" id="modalFooter"></div>
+    </div>
+  </section>
+
+  <!-- Toasts -->
+  <div class="toast-wrap" id="toastWrap" aria-live="polite" aria-atomic="true"></div>
+
+  <script type="module">
+    import { firebaseConfig } from "/shared/firebase.js";
+    /* ========= Firebase ========= */
+    import { initializeApp, getApp, getApps } from "/shared/firebase.js";
+    import {
+      getAuth, onAuthStateChanged, setPersistence, browserLocalPersistence
+    } from "/shared/firebase.js";
+    import {
+      initializeFirestore, persistentSingleTabManager,
+      collection, getDocs, query, where, doc, getDoc,
+      addDoc, serverTimestamp, updateDoc, runTransaction,
+      limit, orderBy, onSnapshot, writeBatch
+    } from "/shared/firebase.js";
+
+    
+
+    const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+    let db;
+    try {
+      db = initializeFirestore(app, {
+        localCache: persistentSingleTabManager()
+      });
+    } catch (e) {
+      db = initializeFirestore(app, {});
+    }
+    const auth = getAuth(app);
+
+    /* ========= Constants ========= */
+    const DAYS_AR = ["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس"];
+    const LESSONS_AR = [
+      "الحصة الأولى","الحصة الثانية","الحصة الثالثة",
+      "الحصة الرابعة","الحصة الخامسة","الحصة السادسة","الحصة السابعة"
+    ];
+    const FIXED_LESSON_COUNT = 7;
+
+    const LESSON_TIMES = [
+      { start: "07:55", end: "08:40" },
+      { start: "08:45", end: "09:30" },
+      { start: "09:35", end: "10:20" },
+      { start: "10:35", end: "11:20" },
+      { start: "11:25", end: "12:10" },
+      { start: "12:25", end: "13:10" },
+      { start: "13:15", end: "13:55" }
+    ];
+    const BREAK_LABELS = {
+      first: "الفرصة الأولى",
+      second: "الفرصة الثانية"
+    };
+
+    const CLASS_OPTIONS = [
+      "10 / 1","10 / 2","10 / 3","10 / 4","10 / 5","10 / 6","10 / 7",
+      "11 / 1 ع","11 / 2 ع","11 / 3 ع","11 / 4 ع","11 / 5 ع","11 / 1 د",
+      "12 / 1 ع","12 / 2 ع","12 / 3 ع","12 / 4 ع","12 / 5 ع","12 / 1 د"
+    ];
+
+    /* ========= Elements ========= */
+    const containerMain = document.getElementById('containerMain');
+    const statusEl = document.getElementById('status');
+    const weekLabel = document.getElementById('weekLabel');
+    const departmentBadge = document.getElementById('departmentBadge');
+    const departmentName = document.getElementById('departmentName');
+    const meBadge = document.getElementById('meBadge');
+    const meNameEl = document.getElementById('meName');
+
+    const btnRequests = document.getElementById('btnRequests');
+    const btnToday = document.getElementById('btnToday');
+    const btnWeek = document.getElementById('btnWeek');
+    const btnMore = document.getElementById('btnMore');
+
+    const requestsSheet = document.getElementById('requestsSheet');
+    const closeRequests = document.getElementById('closeRequests');
+    const requestsContainer = document.getElementById('requestsContainer');
+
+    const moreSheet = document.getElementById('moreSheet');
+    const closeMore = document.getElementById('closeMore');
+    const classPicker = document.getElementById('classPicker');
+    const classWeekGrid = document.getElementById('classWeekGrid');
+
+    const modalEl = document.getElementById('modal');
+    const modalBackdrop = document.getElementById('modalBackdrop');
+    const modalCloseBtn = document.getElementById('modalClose');
+    const modalTitleText = document.getElementById('modalTitleText');
+    const modalBody = document.getElementById('modalBody');
+    const modalFooter = document.getElementById('modalFooter');
+
+    const toastWrap = document.getElementById('toastWrap');
+
+    /* ========= State ========= */
+    let weekDates = [];
+    let currentUser = null;
+    let currentHead = null;
+    let headSubject = '';
+    let headUid = '';
+
+    let currentView = 'today';
+    let activeTodayISO = null;
+    let activeTodayByLesson = new Map();
+    let activeTodayMeta = new Map();
+
+    let headsList = [];
+    let unsubRequestsFrom = null;
+    let unsubRequestsTo = null;
+    let breaksUnsubscribe = null;
+    let SCHOOL_BREAKS = { firstAfter: null, secondAfter: null };
+
+    const cache = {
+      headWeek: new Map(),
+      classWeek: new Map(),
+      overridesByHead: new Map(),
+      headNameByUid: new Map(),
+      teacherNameByUid: new Map(),
+      teacherList: null,
+      weekKey: ""
+    };
+
+    const MERGED_DEPARTMENTS = [
+      { department: 'الفيزياء والكيمياء', subjects: ['الفيزياء','الكيمياء'] },
+      { department: 'الجيولوجيا والأحياء', subjects: ['الجيولوجيا','الأحياء'] },
+      { department: 'علم النفس والفلسفة', subjects: ['علم النفس','الفلسفة'] },
+      { department: 'التاريخ والجغرافيا', subjects: ['التاريخ','الجغرافيا','جغرافيا'] }
+    ];
+    function resolveDepartmentName(rawValue){
+      const value=(rawValue||'').toString().trim();
+      if(!value) return '';
+      for(const group of MERGED_DEPARTMENTS){
+        if(value===group.department || group.subjects.includes(value)) return group.department;
+      }
+      return value;
+    }
+
+    /* ========= Helpers ========= */
+    const pad2 = (n)=> String(n).padStart(2,'0');
+    const toISO = (d)=> {
+      const y = d.getUTCFullYear();
+      const m = pad2(d.getUTCMonth() + 1);
+      const dd = pad2(d.getUTCDate());
+      return `${y}-${m}-${dd}`;
+    };
+    const isoToUTCDate = (iso)=> {
+      const [y,m,d] = String(iso || '').split('-').map(Number);
+      return new Date(Date.UTC(y || 0, (m || 1) - 1, d || 1));
+    };
+    const kuwaitTodayISO = ()=> {
+      const fmt = new Intl.DateTimeFormat('en-CA',{
+        timeZone:'Asia/Kuwait', year:'numeric', month:'2-digit', day:'2-digit'
+      });
+      return fmt.format(new Date());
+    };
+    const startOfWeekSunday = (iso)=> {
+      const d = isoToUTCDate(iso);
+      const diff = d.getUTCDay();
+      const s = new Date(d);
+      s.setUTCDate(d.getUTCDate() - diff);
+      return toISO(s);
+    };
+    const addDaysISO = (iso,n)=> {
+      const d = isoToUTCDate(iso);
+      d.setUTCDate(d.getUTCDate() + n);
+      return toISO(d);
+    };
+
+    const parseClassKey = (label)=> {
+      const m = (label||"").match(/^(\d+)\s*\/\s*(\d+)(?:\s*(.+))?$/);
+      if(!m) return {grade:'', section:'', track:undefined, classKey: label};
+      const grade=m[1], section=m[2], track=(m[3]||"").trim();
+      return { grade, section, track: track || undefined, classKey: label };
+    };
+
+    function setFilterActive(which){
+      [btnToday, btnWeek].forEach(b=> b.classList.remove('active'));
+      which.classList.add('active');
+    }
+    function clearStatus(){
+      statusEl.textContent='';
+      statusEl.style.display = 'none';
+    }
+    function showStatus(message, isError = false) {
+      statusEl.textContent = message;
+      statusEl.style.display = 'flex';
+      statusEl.style.background = isError ? '#fef2f2' : 'var(--primary-light)';
+      statusEl.style.color = isError ? '#dc2626' : 'var(--primary)';
+    }
+    function setLoading(btn, on=true){
+      if(!btn) return;
+      if(on){ btn.classList.add('loading'); btn.setAttribute('disabled','disabled'); }
+      else { btn.classList.remove('loading'); btn.removeAttribute('disabled'); }
+    }
+    function dayNameByISO(iso){
+      const idx = weekDates.indexOf(iso);
+      return idx>=0 ? DAYS_AR[idx] : '';
+    }
+    function lessonTimeLabel(idx){
+      const t = LESSON_TIMES[idx-1];
+      if(!t) return '—';
+      return `${t.start} - ${t.end}`;
+    }
+
+    function normalizeBreakAfterLesson(value){
+      const normalized = normalizeLessonNumber(value);
+      return normalized || null;
+    }
+
+    function normalizeSchoolBreaks(raw = {}){
+      const firstRaw = raw.firstAfter ?? raw.opportunity1After ?? raw.opportunityOneAfter;
+      const secondRaw = raw.secondAfter ?? raw.opportunity2After ?? raw.opportunityTwoAfter;
+      const firstAfter = normalizeBreakAfterLesson(firstRaw);
+      let secondAfter = normalizeBreakAfterLesson(secondRaw);
+      if (firstAfter && secondAfter && firstAfter === secondAfter) secondAfter = null;
+      return { firstAfter, secondAfter };
+    }
+
+    function getOpportunityLabelsForLesson(lessonNumber){
+      const normalized = normalizeLessonNumber(lessonNumber);
+      if(!normalized) return [];
+      const labels = [];
+      if(SCHOOL_BREAKS.firstAfter === normalized) labels.push(BREAK_LABELS.first);
+      if(SCHOOL_BREAKS.secondAfter === normalized) labels.push(BREAK_LABELS.second);
+      return labels;
+    }
+
+    function renderOpportunityDivider(parentEl, lessonNumber){
+      if(!parentEl) return;
+      const labels = getOpportunityLabelsForLesson(lessonNumber);
+      if(!labels.length) return '';
+      const divider = document.createElement('div');
+      divider.className = 'opportunity-divider';
+      divider.dataset.lessonAfter = String(lessonNumber);
+      divider.innerHTML = `<span class="opportunity-divider-label">${escapeHtml(labels.join(' • '))}</span>`;
+      parentEl.appendChild(divider);
+    }
+
+    function lessonMetaHtml(lessonNumber){
+      const lesson = normalizeLessonNumber(lessonNumber) || 1;
+      const lessonLabel = LESSONS_AR[lesson - 1] || `الحصة #${lesson}`;
+      return `
+        <div class="lesson-meta" data-lesson-meta="${lesson}">
+          <div class="lesson-title-row">${escapeHtml(lessonLabel)}</div>
+          <div class="lesson-time-row" data-lesson-time>#${lesson} • ${escapeHtml(lessonTimeLabel(lesson))}</div>
+        </div>
+      `;
+    }
+
+    function refreshRenderedLessonMeta(root = document){
+      if(!root?.querySelectorAll) return;
+      root.querySelectorAll('[data-lesson-meta]').forEach((metaEl)=>{
+        const lessonNumber = normalizeLessonNumber(metaEl.dataset.lessonMeta);
+        if(!lessonNumber) return;
+
+        const timeEl = metaEl.querySelector('[data-lesson-time]');
+        if(timeEl) timeEl.textContent = `#${lessonNumber} • ${lessonTimeLabel(lessonNumber)}`;
+      });
+    }
+
+    function setupBreaksListener(){
+      if (breaksUnsubscribe) {
+        breaksUnsubscribe();
+      }
+
+      const breaksDocRef = doc(db, 'settings', 'lessonTimes');
+      breaksUnsubscribe = onSnapshot(breaksDocRef, (snap) => {
+        if (!snap.exists()) {
+          SCHOOL_BREAKS = { firstAfter: null, secondAfter: null };
+        } else {
+          const data = snap.data() || {};
+          SCHOOL_BREAKS = normalizeSchoolBreaks(data.opportunityBreaks || data);
+        }
+
+        if (currentView === 'today' && activeTodayISO && activeTodayByLesson instanceof Map) {
+          renderTodayTable(activeTodayISO, activeTodayByLesson);
+        } else {
+          refreshRenderedLessonMeta(containerMain);
+          refreshRenderedLessonMeta(classWeekGrid);
+        }
+      }, (error) => {
+        console.error('Error listening to school breaks:', error);
+      });
+    }
+
+    function safeText(s){
+      return (s ?? '').toString();
+    }
+
+    function escapeHtml(str){
+      return String(str)
+        .replaceAll('&','&amp;')
+        .replaceAll('<','&lt;')
+        .replaceAll('>','&gt;')
+        .replaceAll('"','&quot;')
+        .replaceAll("'","&#039;");
+    }
+
+    function toast({title, text, icon='fa-info-circle', ms=3500}){
+      const el = document.createElement('div');
+      el.className = 'toast';
+      el.innerHTML = `
+        <div class="ticon"><i class="fas ${icon}"></i></div>
+        <div class="tmain">
+          <div class="ttitle">${escapeHtml(title)}</div>
+          <div class="ttext">${escapeHtml(text)}</div>
+        </div>
+        <button class="tclose" type="button" aria-label="إغلاق">
+          <i class="fas fa-times"></i>
+        </button>
+      `;
+      const close = ()=> {
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(8px)';
+        setTimeout(()=> el.remove(), 180);
+      };
+      el.querySelector('.tclose').addEventListener('click', close);
+      toastWrap.appendChild(el);
+      setTimeout(close, ms);
+    }
+
+    function getCurrentKuwaitMinutes() {
+      const now = new Date();
+      const fmt = new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Asia/Kuwait',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      });
+      const parts = fmt.formatToParts(now);
+      const h = parseInt(parts.find(p => p.type === 'hour').value, 10);
+      const m = parseInt(parts.find(p => p.type === 'minute').value, 10);
+      return h * 60 + m;
+    }
+
+    function parseTimeToMinutes(t) {
+      const [h, m] = t.split(':').map(Number);
+      return h * 60 + m;
+    }
+
+    function getActiveLessonIndex() {
+      const minutes = getCurrentKuwaitMinutes();
+      for (let i = 0; i < LESSON_TIMES.length; i++) {
+        const start = parseTimeToMinutes(LESSON_TIMES[i].start);
+        const end = parseTimeToMinutes(LESSON_TIMES[i].end);
+        if (minutes >= start && minutes < end) {
+          return i + 1;
+        }
+      }
+      return null;
+    }
+
+    function displayTeacherNameFromDoc(data){
+      const d = data || {};
+      return (d.name || d.fullName || d.teacherName || d.displayName || d.username || d.email || 'معلم').toString();
+    }
+
+    /* ========= Modal helpers ========= */
+    function openModal({ title, bodyHtml, footerHtml }){
+      modalTitleText.textContent = title || '';
+      modalBody.innerHTML = bodyHtml || '';
+      modalFooter.innerHTML = footerHtml || '';
+      modalEl.classList.add('open');
+      modalEl.setAttribute('aria-hidden','false');
+      document.body.classList.add('modal-open');
+    }
+
+    function closeModal(){
+      modalEl.classList.remove('open');
+      modalEl.setAttribute('aria-hidden','true');
+      document.body.classList.remove('modal-open');
+      modalBody.innerHTML = '';
+      modalFooter.innerHTML = '';
+    }
+
+    modalBackdrop.addEventListener('click', closeModal);
+    modalCloseBtn.addEventListener('click', closeModal);
+    document.addEventListener('keydown', (e)=>{
+      if(e.key === 'Escape' && modalEl.classList.contains('open')) closeModal();
+    });
+
+    /* ========= Teacher / Head directory ========= */
+    async function getTeacherName(uid){
+      if(!uid) return '—';
+      if(cache.teacherNameByUid.has(uid)) return cache.teacherNameByUid.get(uid);
+      try{
+        const snap = await getDoc(doc(db,'teachers',uid));
+        const name = snap.exists() ? displayTeacherNameFromDoc(snap.data()) : uid;
+        cache.teacherNameByUid.set(uid, name);
+        return name;
+      }catch{
+        return uid;
+      }
+    }
+
+    async function loadTeachersList(){
+      if(cache.teacherList) return cache.teacherList;
+      const list = [];
+      try{
+        const snap = await getDocs(collection(db,'teachers'));
+        snap.forEach(d=>{
+          const data = d.data() || {};
+          const role = (data.role || '').toString().toLowerCase().trim();
+          if(!['user','teacher','head'].includes(role)) return;
+
+          const subject = (data.subject || '').toString().trim();
+          const department = (data.department || data.dept || '').toString().trim();
+          const normalizedDepartment = resolveDepartmentName(department || subject);
+          const teacherName = displayTeacherNameFromDoc(data);
+
+          list.push({
+            uid: d.id,
+            name: teacherName,
+            role,
+            subject,
+            department,
+            normalizedDepartment
+          });
+
+          cache.teacherNameByUid.set(d.id, teacherName);
+          if(role === 'head'){
+            cache.headNameByUid.set(d.id, teacherName);
+          }
+        });
+      }catch(e){
+        console.error(e);
+      }
+      list.sort((a,b)=> a.name.localeCompare(b.name,'ar'));
+      cache.teacherList = list;
+      return list;
+    }
+
+    async function getTeachersByDepartment(department, excludeUid = headUid){
+      const normalizedDepartment = resolveDepartmentName(department);
+      const teachers = await loadTeachersList();
+      return teachers
+        .filter(t=>
+          t.uid !== excludeUid &&
+          resolveDepartmentName(t.normalizedDepartment || t.department || t.subject || '') === normalizedDepartment
+        )
+        .sort((a,b)=> a.name.localeCompare(b.name,'ar'));
+    }
+
+    async function loadHeadsList(excludeUid){
+      if(headsList.length === 0){
+        const teachers = await loadTeachersList();
+        headsList = teachers
+          .filter(t => t.role === 'head')
+          .map(t => ({
+            uid: t.uid,
+            name: t.name,
+            subject: resolveDepartmentName(t.normalizedDepartment || t.department || t.subject || '')
+          }))
+          .sort((a,b)=> a.name.localeCompare(b.name,'ar'));
+      }
+      if(!excludeUid) return [...headsList];
+      return headsList.filter(h => h.uid !== excludeUid);
+    }
+
+    async function findHeadOfDepartment(department){
+      const normalizedDepartment = resolveDepartmentName(department);
+      if(!normalizedDepartment) return null;
+
+      if(headUid && normalizedDepartment === resolveDepartmentName(headSubject)){
+        return {
+          uid: headUid,
+          name: currentHead?.name || await getTeacherName(headUid),
+          subject: normalizedDepartment
+        };
+      }
+
+      const heads = await loadHeadsList();
+      const head = heads.find(h => resolveDepartmentName(h.subject) === normalizedDepartment);
+      return head ? { ...head } : null;
+    }
+
+    async function getHeadName(uid){
+      if(!uid) return '—';
+      if(cache.headNameByUid.has(uid)) return cache.headNameByUid.get(uid);
+      const name = await getTeacherName(uid);
+      cache.headNameByUid.set(uid, name);
+      return name;
+    }
+
+    function buildClassKeyFromScheduleData(data){
+      const d = data || {};
+      if(d.classKey) return d.classKey.toString();
+      const grade = (d.grade ?? '').toString().trim();
+      const section = (d.section ?? '').toString().trim();
+      const track = (d.track ?? '').toString().trim();
+      if(!grade && !section) return '';
+      return `${grade} / ${section}${track ? ` ${track}` : ''}`.trim();
+    }
+
+    function isSchoolDayISO(iso){
+      if (!iso) return false;
+      const day = isoToUTCDate(iso).getUTCDay();
+      return day >= 0 && day <= 4;
+    }
+
+    function isPastISO(iso){
+      if (!iso) return false;
+      return iso < kuwaitTodayISO();
+    }
+
+    function normalizeLessonNumber(value){
+      const lesson = Number(value);
+      if (!Number.isFinite(lesson)) return null;
+      if (lesson < 1 || lesson > FIXED_LESSON_COUNT) return null;
+      return Math.floor(lesson);
+    }
+
+    async function getTeacherSlotsForDate(uid, dateISO){
+      if(!uid || !dateISO) return [];
+      const map = await buildTodayMapForHead(uid, dateISO);
+      const slots = [];
+      for(let i=1;i<=FIXED_LESSON_COUNT;i++){
+        const hit = map.get(String(i));
+        if(!hit || hit._coveredAway) continue;
+        slots.push({
+          date: dateISO,
+          lesson: i,
+          classKey: hit.classKey || buildClassKeyFromScheduleData(hit) || '—',
+          subject: hit.subject || '',
+          teacherUid: uid
+        });
+      }
+      return slots;
+    }
+
+    async function getTeacherSlotForDateLesson(uid, dateISO, lesson){
+      const lessonNum = normalizeLessonNumber(lesson);
+      if(!uid || !dateISO || !lessonNum) return null;
+      const slots = await getTeacherSlotsForDate(uid, dateISO);
+      return slots.find(x => x.lesson === lessonNum) || null;
+    }
+
+    async function getTeacherClassKeyForLesson(uid, dateISO, lesson){
+      const slot = await getTeacherSlotForDateLesson(uid, dateISO, lesson);
+      return slot ? (slot.classKey || null) : null;
+    }
+
+    async function loadOverridesForHeadInDates(uid, dates){
+      const targetDates = Array.isArray(dates) ? dates : [dates];
+      const mapByDate = cache.overridesByHead.get(uid) || new Map();
+
+      let allCached = true;
+      for(const iso of targetDates){
+        if(!mapByDate.has(iso)) { allCached = false; break; }
+      }
+      if(allCached){
+        cache.overridesByHead.set(uid, mapByDate);
+        return mapByDate;
+      }
+
+      for(const iso of targetDates){
+        if(!mapByDate.has(iso)) mapByDate.set(iso, new Map());
+      }
+
+      try{
+        const qNew = query(
+          collection(db,'scheduleOverrides'),
+          where('newTeacherUid','==', uid),
+          where('active','==', true),
+          where('date','in', targetDates)
+        );
+        const sNew = await getDocs(qNew);
+        sNew.forEach(d=>{
+          const x = d.data();
+          if(!x || !x.date) return;
+          const iso = x.date;
+          if(!mapByDate.has(iso)) mapByDate.set(iso, new Map());
+          mapByDate.get(iso).set(Number(x.lesson), { ...x, _id: d.id, _kind: 'new' });
+        });
+
+        const qOld = query(
+          collection(db,'scheduleOverrides'),
+          where('originalTeacherUid','==', uid),
+          where('active','==', true),
+          where('date','in', targetDates)
+        );
+        const sOld = await getDocs(qOld);
+        sOld.forEach(d=>{
+          const x = d.data();
+          if(!x || !x.date) return;
+          const iso = x.date;
+          if(!mapByDate.has(iso)) mapByDate.set(iso, new Map());
+          const existing = mapByDate.get(iso).get(Number(x.lesson));
+          if(!existing){
+            mapByDate.get(iso).set(Number(x.lesson), { ...x, _id: d.id, _kind: 'original' });
+          }
+        });
+      }catch(e){
+        console.error(e);
+      }
+
+      cache.overridesByHead.set(uid, mapByDate);
+      return mapByDate;
+    }
+
+    /* ========= Today View ========= */
+    async function buildTodayMapForHead(uid, dateISO){
+      const byLesson = new Map();
+
+      const q1 = query(
+        collection(db,'schedules'),
+        where('teacherUid','==', uid),
+        where('date','==', dateISO)
+      );
+      const snap = await getDocs(q1);
+      snap.forEach(d=>{
+        const x=d.data();
+        byLesson.set(String(x.lesson), x);
+      });
+
+      await loadOverridesForHeadInDates(uid, [dateISO]);
+      const mapByDate = cache.overridesByHead.get(uid) || new Map();
+      const dayMap = mapByDate.get(dateISO) || new Map();
+
+      for(let i=1;i<=FIXED_LESSON_COUNT;i++){
+        const o = dayMap.get(i);
+        if(!o) continue;
+
+        if(o._kind === 'new'){
+          byLesson.set(String(i), {
+            classKey: o.classKey || '—',
+            _isOverride: true,
+            _overrideInfo: o
+          });
+        } else if(o._kind === 'original'){
+          byLesson.set(String(i), {
+            _coveredAway: true,
+            _isOverride: true,
+            _overrideInfo: o
+          });
+        }
+      }
+
+      return byLesson;
+    }
+
+    function renderTodayTable(dayISO, entriesByLesson){
+      containerMain.innerHTML = '';
+      activeTodayISO = dayISO;
+      activeTodayByLesson = entriesByLesson;
+      activeTodayMeta = new Map();
+
+      const todayISO = kuwaitTodayISO();
+      const activeLesson = (dayISO === todayISO) ? getActiveLessonIndex() : null;
+
+      const wrap = document.createElement('div');
+      wrap.className = 'table';
+
+      const header = document.createElement('div');
+      header.className='header-full';
+      header.innerHTML = `<i class="far fa-calendar-check"></i> ${dayNameByISO(dayISO) || 'اليوم'} | ${dayISO}`;
+      wrap.appendChild(header);
+
+      const thR = document.createElement('div');
+      thR.className='th';
+      thR.innerHTML = '<i class="far fa-clock"></i> الحصة';
+      const thL = document.createElement('div');
+      thL.className='th';
+      thL.innerHTML = '<i class="fas fa-users"></i> الصف';
+      wrap.appendChild(thR);
+      wrap.appendChild(thL);
+
+      for(let i=1;i<=FIXED_LESSON_COUNT;i++){
+        const cLesson = document.createElement('div');
+        cLesson.className='cell';
+        cLesson.dataset.rowRole = 'lesson';
+        cLesson.dataset.lessonIndex = String(i);
+        cLesson.innerHTML = lessonMetaHtml(i);
+        const cClass = document.createElement('div');
+        cClass.className='cell';
+        cClass.dataset.rowRole = 'class';
+        cClass.dataset.lessonIndex = String(i);
+        const hit = entriesByLesson.get(String(i));
+
+        if (hit && hit._coveredAway){
+          cClass.innerHTML = `
+            <div style="font-weight:900">—</div>
+            <div class="pill warn"><i class="fas fa-user-clock"></i> تم تغطيتها</div>
+          `;
+          cClass.classList.add('lesson-highlight');
+        } else {
+          const txt = hit
+            ? (hit.classKey || `${hit.grade} / ${hit.section}${hit.track?' '+hit.track:''}`)
+            : '—';
+          cClass.textContent = txt;
+          if (hit) cClass.classList.add('lesson-highlight');
+          if (hit && (dayISO === todayISO)) {
+            cClass.classList.add('clickable');
+            cClass.dataset.lesson = String(i);
+          }
+        }
+
+        if(hit){
+          activeTodayMeta.set(String(i), {
+            lesson: i,
+            date: dayISO,
+            classKey: hit.classKey || `${hit.grade} / ${hit.section}${hit.track?' '+hit.track:''}`,
+            subject: hit.subject || '',
+            teacherUid: hit.teacherUid || headUid,
+            teacherName: hit.teacherName || currentHead?.name || '',
+            _isOverride: !!hit._isOverride,
+            _coveredAway: !!hit._coveredAway,
+            _overrideInfo: hit._overrideInfo || null
+          });
+        }
+
+        if (activeLesson === i) {
+          cLesson.classList.add('current-lesson');
+          cClass.classList.add('current-lesson');
+        }
+
+        wrap.appendChild(cLesson);
+        wrap.appendChild(cClass);
+        renderOpportunityDivider(wrap, i);
+      }
+
+      const compactWrap = document.createElement('div');
+      compactWrap.className = 'compact-table';
+
+      const compactHeader = document.createElement('div');
+      compactHeader.className = 'compact-header';
+      compactHeader.innerHTML = `<i class="far fa-calendar-check"></i> ${dayNameByISO(dayISO) || 'اليوم'} | ${dayISO}`;
+      compactWrap.appendChild(compactHeader);
+
+      const compactThLesson = document.createElement('div');
+      compactThLesson.className = 'compact-th';
+      compactThLesson.innerHTML = '<i class="far fa-clock"></i> الحصة';
+      compactWrap.appendChild(compactThLesson);
+
+      const compactThClass = document.createElement('div');
+      compactThClass.className = 'compact-th';
+      compactThClass.innerHTML = '<i class="fas fa-users"></i> الصف';
+      compactWrap.appendChild(compactThClass);
+
+      for(let i=1;i<=FIXED_LESSON_COUNT;i++){
+        const compactLesson = document.createElement('div');
+        compactLesson.className = 'compact-cell lesson-cell';
+        compactLesson.dataset.rowRole = 'lesson';
+        compactLesson.dataset.lessonIndex = String(i);
+        compactLesson.innerHTML = lessonMetaHtml(i);
+
+        const compactClass = document.createElement('div');
+        compactClass.className = 'compact-cell';
+        compactClass.dataset.rowRole = 'class';
+        compactClass.dataset.lessonIndex = String(i);
+
+        const hit = entriesByLesson.get(String(i));
+        if (hit && hit._coveredAway){
+          compactClass.innerHTML = `
+            <div style="font-weight:900">—</div>
+            <div class="pill warn"><i class="fas fa-user-clock"></i> تم تغطيتها</div>
+          `;
+          compactClass.classList.add('lesson-highlight');
+        } else {
+          const txt = hit
+            ? (hit.classKey || `${hit.grade} / ${hit.section}${hit.track?' '+hit.track:''}`)
+            : '—';
+          compactClass.textContent = txt;
+          if (hit) compactClass.classList.add('lesson-highlight');
+          if (hit && (dayISO === todayISO)) {
+            compactClass.classList.add('clickable');
+            compactClass.dataset.lesson = String(i);
+          }
+        }
+
+        if (activeLesson === i) {
+          compactLesson.classList.add('current-lesson');
+          compactClass.classList.add('current-lesson');
+        }
+
+        compactWrap.appendChild(compactLesson);
+        compactWrap.appendChild(compactClass);
+        renderOpportunityDivider(compactWrap, i);
+      }
+
+      containerMain.appendChild(wrap);
+      containerMain.appendChild(compactWrap);
+
+      containerMain.querySelectorAll('[data-lesson]').forEach(el=>{
+        el.addEventListener('click', ()=>{
+          const lesson = Number(el.dataset.lesson || 0);
+          if(!lesson) return;
+          const meta = activeTodayMeta.get(String(lesson));
+          if(!meta) return;
+          openLessonActionsModal(meta);
+        });
+      });
+    }
+
+    async function loadTodayForHead(){
+      clearStatus();
+      setLoading(btnToday, true);
+      currentView = 'today';
+
+      const today = kuwaitTodayISO();
+      let byLesson = new Map();
+
+      try{
+        byLesson = await buildTodayMapForHead(headUid, today);
+        if (byLesson.size === 0) showStatus('لا توجد حصص مدرجة لهذا اليوم.', false);
+      }catch(e){
+        console.error(e);
+        showStatus('تعذّر تحميل جدول اليوم.', true);
+      }finally{
+        setLoading(btnToday, false);
+      }
+
+      renderTodayTable(today, byLesson);
+    }
+
+    /* ========= Week View ========= */
+    async function fetchWeekDocsForHead(uid){
+      const q1 = query(
+        collection(db,'schedules'),
+        where('teacherUid','==', uid),
+        where('date','in', weekDates)
+      );
+      return getDocs(q1);
+    }
+
+    function renderWeekHeaders(gridEl){
+      const dayH = document.createElement('div');
+      dayH.className='gth';
+      dayH.innerHTML = '<i class="far fa-calendar"></i> اليوم';
+      gridEl.appendChild(dayH);
+      for(let i=1;i<=FIXED_LESSON_COUNT;i++){
+        const h = document.createElement('div');
+        h.className='gth';
+        h.dataset.lesson = String(i);
+        h.innerHTML = lessonMetaHtml(i);
+        gridEl.appendChild(h);
+      }
+    }
+
+    function renderWeekHeadStyle(containerEl, getCell, options = {}){
+      const onLessonClick = typeof options.onLessonClick === 'function' ? options.onLessonClick : null;
+      containerEl.innerHTML = '';
+      const wrap = document.createElement('div');
+      wrap.className = 'grid-wrap';
+      const grid = document.createElement('div');
+      grid.className = 'grid';
+      wrap.appendChild(grid);
+      containerEl.appendChild(wrap);
+
+      renderWeekHeaders(grid);
+
+      for(let r=0;r<5;r++){
+        const iso = weekDates[r];
+
+        const dayCell = document.createElement('div');
+        dayCell.className='gcell day-col';
+        dayCell.innerHTML = `<div style="font-weight:900">${DAYS_AR[r]}</div><div class="small">${iso}</div>`;
+        grid.appendChild(dayCell);
+
+        for(let i=1;i<=FIXED_LESSON_COUNT;i++){
+          const c = document.createElement('div');
+          c.className='gcell';
+          const cellContent = getCell(iso, i);
+          c.textContent = (cellContent ?? '—');
+          if (cellContent && cellContent !== '—') {
+            c.classList.add('lesson-highlight');
+            if (onLessonClick) {
+              c.classList.add('clickable');
+              c.dataset.date = iso;
+              c.dataset.lesson = String(i);
+              c.addEventListener('click', () => {
+                const classKey = (typeof cellContent === 'string')
+                  ? cellContent
+                  : (cellContent?.classKey || '—');
+                onLessonClick({ date: iso, lesson: i, classKey });
+              });
+            }
+          }
+          grid.appendChild(c);
+        }
+      }
+    }
+
+    async function loadWeekForHead(){
+      clearStatus();
+      setLoading(btnWeek, true);
+      currentView = 'week';
+
+      const cacheKey = `${headUid}_${cache.weekKey}`;
+      if (cache.headWeek.has(cacheKey)) {
+        const map = cache.headWeek.get(cacheKey);
+        renderWeekHeadStyle(containerMain, (iso, lessonIdx)=>{
+          const row = map.get(iso);
+          return row ? (row.get(lessonIdx) || null) : null;
+        }, {
+          onLessonClick: (slotMeta) => {
+            if (!slotMeta?.classKey || slotMeta.classKey === '—') return;
+            openLessonActionsModal({
+              date: slotMeta.date,
+              lesson: slotMeta.lesson,
+              classKey: slotMeta.classKey,
+              teacherUid: headUid
+            });
+          }
+        });
+        setLoading(btnWeek, false);
+        return;
+      }
+
+      const map = new Map();
+      let hasData = false;
+
+      try{
+        const snap = await fetchWeekDocsForHead(headUid);
+        for(const iso of weekDates){ map.set(iso, new Map()); }
+        snap.forEach(d=>{
+          const x = d.data();
+          const iso = x.date;
+          if (!map.has(iso)) map.set(iso, new Map());
+          const classText = x.classKey || `${x.grade} / ${x.section}${x.track ? ' '+x.track : ''}`;
+          map.get(iso).set(Number(x.lesson), classText);
+          hasData = true;
+        });
+
+        await loadOverridesForHeadInDates(headUid, weekDates);
+        const mapByDate = cache.overridesByHead.get(headUid) || new Map();
+        for(const iso of weekDates){
+          const dayOv = mapByDate.get(iso);
+          if(!dayOv) continue;
+          for(let i=1;i<=FIXED_LESSON_COUNT;i++){
+            const o = dayOv.get(i);
+            if(!o) continue;
+            if(o._kind === 'new'){
+              map.get(iso).set(i, (o.classKey || 'بديل'));
+              hasData = true;
+            } else if(o._kind === 'original'){
+              map.get(iso).set(i, '—');
+            }
+          }
+        }
+
+        if (!hasData) showStatus('لا توجد حصص مدرجة لهذا الأسبوع.', false);
+        cache.headWeek.set(cacheKey, map);
+
+      }catch(e){
+        console.error(e);
+        showStatus('تعذّر تحميل جدول الأسبوع.', true);
+      }finally{
+        setLoading(btnWeek, false);
+      }
+
+      renderWeekHeadStyle(containerMain, (iso, lessonIdx)=>{
+        const row = map.get(iso);
+        return row ? (row.get(lessonIdx) || null) : null;
+      }, {
+        onLessonClick: (slotMeta) => {
+          if (!slotMeta?.classKey || slotMeta.classKey === '—') return;
+          openLessonActionsModal({
+            date: slotMeta.date,
+            lesson: slotMeta.lesson,
+            classKey: slotMeta.classKey,
+            teacherUid: headUid
+          });
+        }
+      });
+    }
+
+    /* ========= Lesson Actions Modal ========= */
+    function lessonInfoBox(meta){
+      const dayName = (meta.date === kuwaitTodayISO()) ? 'اليوم' : (dayNameByISO(meta.date) || meta.date);
+      return `
+        <div class="info-grid">
+          <div class="info-box">
+            <div class="info-k"><i class="far fa-calendar"></i> التاريخ</div>
+            <div class="info-v">${escapeHtml(dayName)} | ${escapeHtml(meta.date)}</div>
+          </div>
+          <div class="info-box">
+            <div class="info-k"><i class="far fa-clock"></i> الوقت</div>
+            <div class="info-v">${escapeHtml(lessonTimeLabel(meta.lesson))}</div>
+          </div>
+          <div class="info-box">
+            <div class="info-k"><i class="fas fa-hashtag"></i> الحصة</div>
+            <div class="info-v">${escapeHtml(LESSONS_AR[meta.lesson-1])} (#${meta.lesson})</div>
+          </div>
+          <div class="info-box">
+            <div class="info-k"><i class="fas fa-users"></i> الصف</div>
+            <div class="info-v">${escapeHtml(meta.classKey || '—')}</div>
+          </div>
+        </div>
+      `;
+    }
+
+    function slotSummaryLine(slot){
+      if(!slot) return '—';
+      const lesson = normalizeLessonNumber(slot.lesson) || 1;
+      const dayName = dayNameByISO(slot.date) || slot.date || '—';
+      const classKey = slot.classKey || '—';
+      return `${dayName} | ${slot.date} | ${LESSONS_AR[lesson-1]} (#${lesson}) | ${classKey}`;
+    }
+
+    function openLessonActionsModal(slotOrLesson){
+      let meta = null;
+      if (typeof slotOrLesson === 'number') {
+        meta = activeTodayMeta.get(String(slotOrLesson)) || null;
+      } else if (slotOrLesson && typeof slotOrLesson === 'object') {
+        const lesson = normalizeLessonNumber(slotOrLesson.lesson);
+        meta = {
+          date: safeText(slotOrLesson.date).trim(),
+          lesson,
+          classKey: safeText(slotOrLesson.classKey).trim() || '—',
+          teacherUid: slotOrLesson.teacherUid || headUid,
+          teacherName: slotOrLesson.teacherName || currentHead?.name || '',
+          subject: slotOrLesson.subject || ''
+        };
+      }
+
+      if(!meta || !meta.date || !meta.lesson || meta._coveredAway){
+        toast({ title: 'لا يمكن إنشاء طلب', text: 'هذه الحصة ليست متاحة للطلب.', icon: 'fa-circle-exclamation' });
+        return;
+      }
+
+      const body = `
+        ${lessonInfoBox(meta)}
+        <div class="hint">
+          <i class="fas fa-lightbulb" style="margin-top:2px"></i>
+          <div>
+            <div style="font-weight:900; margin-bottom:2px">اختيار أسهل</div>
+            <div style="color:rgba(2,43,66,0.75)">
+              يمكنك اختيار حصة من يوم آخر أو أسبوع مستقبلي. التبديل يدعم أيامًا وأوقاتًا مختلفة، والتغطية لا تتطلب أن تكون لدى المعلّم الآخر حصة.
+            </div>
+          </div>
+        </div>
+      `;
+
+      const footer = `
+        <button id="actCover" class="filter-btn btn-solid" type="button">
+          <i class="fas fa-user-check"></i> طلب تغطية
+        </button>
+        <button id="actSwap" class="filter-btn" type="button">
+          <i class="fas fa-right-left"></i> طلب تبديل
+        </button>
+        <button id="actClose" class="filter-btn btn-ghost" type="button">
+          <i class="fas fa-xmark"></i> إغلاق
+        </button>
+      `;
+
+      openModal({ title: 'إدارة الحصة', bodyHtml: body, footerHtml: footer });
+
+      document.getElementById('actClose').addEventListener('click', closeModal);
+      document.getElementById('actCover').addEventListener('click', ()=> openRequestModal('cover', meta));
+      document.getElementById('actSwap').addEventListener('click', ()=> openRequestModal('swap', meta));
+    }
+
+    function teacherSelectOptions(list, excludeUid){
+      const filtered = (list || []).filter(t => t.uid !== excludeUid);
+      const options = filtered.map(t => {
+        const dep = resolveDepartmentName(t.normalizedDepartment || t.department || t.subject || '');
+        const depSuffix = dep ? ` - ${escapeHtml(dep)}` : '';
+        return `<option value="${escapeHtml(t.uid)}">${escapeHtml(t.name)}${depSuffix}</option>`;
+      }).join('');
+      return `<option value="">اختر المعلّم...</option>${options}`;
+    }
+
+    async function openRequestModal(type, meta){
+      const isSwap = type === 'swap';
+      const todayISO = kuwaitTodayISO();
+      const teachers = await loadTeachersList();
+      const fromDepartment = resolveDepartmentName(headSubject || '');
+      const fromHeadName = currentHead?.name || await getHeadName(headUid);
+      const fromHead = { uid: headUid, name: fromHeadName, subject: fromDepartment };
+
+      const defaultFromDate = safeText(meta?.date || todayISO).trim() || todayISO;
+      const defaultFromLesson = normalizeLessonNumber(meta?.lesson);
+      const defaultFromClassKey = safeText(meta?.classKey).trim() || '—';
+
+      const departmentSet = new Set();
+      teachers.forEach(t => {
+        const dep = resolveDepartmentName(t.normalizedDepartment || t.department || t.subject || '');
+        if (dep) departmentSet.add(dep);
+      });
+      if (fromDepartment) departmentSet.add(fromDepartment);
+      const departmentOptions = Array.from(departmentSet)
+        .sort((a, b) => a.localeCompare(b, 'ar'))
+        .map(dep => `<option value="${escapeHtml(dep)}">${escapeHtml(dep)}</option>`)
+        .join('');
+
+      let body = `
+        ${lessonInfoBox({ ...meta, date: defaultFromDate, lesson: defaultFromLesson || 1, classKey: defaultFromClassKey })}
+        <div class="split">
+          <div class="info-box">
+            <div class="info-k"><i class="fas fa-calendar-day"></i> 1) اختر تاريخ حصتك</div>
+            <div class="input-wrap" style="margin-top:10px">
+              <input id="reqFromDate" class="input" type="date" min="${todayISO}" value="${escapeHtml(defaultFromDate)}" />
+            </div>
+            <div class="muted" style="margin-top:8px">يمكنك اختيار اليوم الحالي أو أي يوم مستقبلي.</div>
+          </div>
+          <div class="info-box">
+            <div class="info-k"><i class="far fa-clock"></i> 2) اختر حصتك</div>
+            <div class="input-wrap" style="margin-top:10px">
+              <select id="reqFromLesson" class="select">
+                <option value="">اختر الحصة...</option>
+              </select>
+            </div>
+            <div class="muted" style="margin-top:8px" id="reqFromPreview">—</div>
+          </div>
+        </div>
+      `;
+
+      if (isSwap) {
+        body += `
+          <div class="split">
+            <div class="info-box">
+              <div class="info-k"><i class="fas fa-building"></i> 3) اختر القسم</div>
+              <div class="input-wrap" style="margin-top:10px">
+                <select id="reqDepartment" class="select">
+                  <option value="">اختر القسم...</option>
+                  ${departmentOptions}
+                </select>
+              </div>
+            </div>
+            <div class="info-box">
+              <div class="info-k"><i class="fas fa-user"></i> 4) اختر المعلّم</div>
+              <div class="input-wrap" style="margin-top:10px">
+                <select id="reqTeacherUid" class="select" disabled>
+                  <option value="">اختر المعلّم...</option>
+                </select>
+              </div>
+              <div class="muted" style="margin-top:8px" id="teacherSelectMessage">اختر القسم أولاً.</div>
+            </div>
+          </div>
+          <div class="split">
+            <div class="info-box">
+              <div class="info-k"><i class="fas fa-calendar-week"></i> 5) تاريخ حصة المعلّم الآخر</div>
+              <div class="input-wrap" style="margin-top:10px">
+                <input id="reqToDate" class="input" type="date" min="${todayISO}" value="${escapeHtml(defaultFromDate)}" />
+              </div>
+            </div>
+            <div class="info-box">
+              <div class="info-k"><i class="far fa-clock"></i> 6) حصة المعلّم الآخر</div>
+              <div class="input-wrap" style="margin-top:10px">
+                <select id="reqToLesson" class="select" disabled>
+                  <option value="">اختر الحصة...</option>
+                </select>
+              </div>
+              <div class="muted" style="margin-top:8px" id="reqToPreview">اختر المعلّم أولاً.</div>
+            </div>
+          </div>
+        `;
+      } else {
+        body += `
+          <div class="info-box">
+            <div class="info-k"><i class="fas fa-user"></i> 3) اختر المعلّم للتغطية</div>
+            <div class="input-wrap" style="margin-top:10px">
+              <select id="reqTeacherUid" class="select">
+                ${teacherSelectOptions(teachers, headUid)}
+              </select>
+            </div>
+            <div class="muted" style="margin-top:8px">يمكنك اختيار أي معلّم حتى لو لم تكن لديه حصة في هذا الوقت.</div>
+          </div>
+        `;
+      }
+
+      body += `
+        <div class="info-box">
+          <div class="info-k"><i class="fas fa-message"></i> ملاحظة (اختياري)</div>
+          <div class="input-wrap" style="margin-top:10px">
+            <input id="reqMessage" class="input" maxlength="160" placeholder="مثال: هل يناسبك التبديل؟" />
+          </div>
+        </div>
+        <div id="reqStateHint" class="hint">
+          <i class="fas fa-circle-info" style="margin-top:2px"></i>
+          <div>حدد تفاصيل الحصص لإكمال الطلب.</div>
+        </div>
+      `;
+
+      const actionTitle = isSwap ? 'طلب تبديل' : 'طلب تغطية';
+      const footer = `
+        <button id="sendReq" class="filter-btn btn-solid" type="button" disabled>
+          <i class="fas fa-paper-plane"></i> إرسال الطلب
+        </button>
+        <button id="backToActions" class="filter-btn btn-ghost" type="button">
+          <i class="fas fa-arrow-right"></i> رجوع
+        </button>
+      `;
+
+      openModal({ title: actionTitle, bodyHtml: body, footerHtml: footer });
+      document.getElementById('backToActions').addEventListener('click', ()=> openLessonActionsModal(meta));
+
+      const sendBtn = document.getElementById('sendReq');
+      const hintEl = document.getElementById('reqStateHint');
+      const fromDateInput = document.getElementById('reqFromDate');
+      const fromLessonSelect = document.getElementById('reqFromLesson');
+      const fromPreview = document.getElementById('reqFromPreview');
+      const teacherSelect = document.getElementById('reqTeacherUid');
+      const reqMessage = document.getElementById('reqMessage');
+
+      const departmentSelect = isSwap ? document.getElementById('reqDepartment') : null;
+      const teacherMessage = isSwap ? document.getElementById('teacherSelectMessage') : null;
+      const toDateInput = isSwap ? document.getElementById('reqToDate') : null;
+      const toLessonSelect = isSwap ? document.getElementById('reqToLesson') : null;
+      const toPreview = isSwap ? document.getElementById('reqToPreview') : null;
+
+      const state = {
+        fromSlots: [],
+        toSlots: [],
+        fromSlot: null,
+        toSlot: null,
+        toUid: '',
+        toDepartment: ''
+      };
+      let fromLoadToken = 0;
+      let toLoadToken = 0;
+
+      function setHint(text, isError = false){
+        if (!hintEl) return;
+        hintEl.style.background = isError ? 'rgba(239, 68, 68, 0.12)' : 'rgba(2, 43, 66, 0.06)';
+        hintEl.style.borderColor = isError ? 'rgba(239, 68, 68, 0.25)' : 'rgba(2, 43, 66, 0.10)';
+        hintEl.style.color = isError ? '#991b1b' : 'var(--primary)';
+        hintEl.innerHTML = `
+          <i class="fas ${isError ? 'fa-triangle-exclamation' : 'fa-circle-info'}" style="margin-top:2px"></i>
+          <div>${escapeHtml(text)}</div>
+        `;
+      }
+
+      function fillSlotSelect(selectEl, slots, placeholder){
+        if (!selectEl) return;
+        const options = (slots || []).map(slot => `
+          <option value="${slot.lesson}">
+            ${escapeHtml(LESSONS_AR[slot.lesson-1])} (#${slot.lesson}) • ${escapeHtml(lessonTimeLabel(slot.lesson))} • ${escapeHtml(slot.classKey || '—')}
+          </option>
+        `).join('');
+        selectEl.innerHTML = `<option value="">${escapeHtml(placeholder)}</option>${options}`;
+      }
+
+      function updateSlotPreview(el, slot, fallbackText){
+        if (!el) return;
+        if (!slot) {
+          el.textContent = fallbackText;
+          return;
+        }
+        el.textContent = slotSummaryLine(slot);
+      }
+
+      function validateDateInput(dateISO){
+        if (!dateISO) return 'اختر التاريخ.';
+        if (isPastISO(dateISO)) return 'لا يمكن اختيار تاريخ ماضٍ.';
+        if (!isSchoolDayISO(dateISO)) return 'اختر يومًا دراسيًا من الأحد إلى الخميس.';
+        return '';
+      }
+
+      function syncSendState(){
+        const srcDateErr = validateDateInput(fromDateInput.value);
+        if (srcDateErr) {
+          sendBtn.disabled = true;
+          setHint(`الحصة الأساسية: ${srcDateErr}`, true);
+          return;
+        }
+        if (!state.fromSlot) {
+          sendBtn.disabled = true;
+          setHint('اختر حصتك الأساسية أولاً.', true);
+          return;
+        }
+        if (!state.toUid) {
+          sendBtn.disabled = true;
+          setHint('اختر المعلّم المطلوب.', true);
+          return;
+        }
+        if (state.toUid === headUid) {
+          sendBtn.disabled = true;
+          setHint('لا يمكنك إرسال طلب لنفسك.', true);
+          return;
+        }
+
+        if (isSwap) {
+          const toDateErr = validateDateInput(toDateInput.value);
+          if (toDateErr) {
+            sendBtn.disabled = true;
+            setHint(`حصة المعلّم الآخر: ${toDateErr}`, true);
+            return;
+          }
+          if (!state.toSlot) {
+            sendBtn.disabled = true;
+            setHint('اختر حصة المعلّم الآخر لإتمام التبديل.', true);
+            return;
+          }
+          sendBtn.disabled = false;
+          setHint(`سيتم التبديل بين: ${slotSummaryLine(state.fromSlot)} ⇄ ${slotSummaryLine(state.toSlot)}`, false);
+          return;
+        }
+
+        sendBtn.disabled = false;
+        setHint(`سيتم إرسال طلب تغطية للحصة: ${slotSummaryLine(state.fromSlot)}`, false);
+      }
+
+      async function refreshFromSlots(preferredLesson = null){
+        const token = ++fromLoadToken;
+        const dateISO = safeText(fromDateInput.value).trim();
+        state.fromSlots = [];
+        state.fromSlot = null;
+        fillSlotSelect(fromLessonSelect, [], 'اختر الحصة...');
+        updateSlotPreview(fromPreview, null, 'اختر التاريخ ثم الحصة.');
+
+        const dateErr = validateDateInput(dateISO);
+        if (dateErr) {
+          syncSendState();
+          return;
+        }
+
+        const slots = await getTeacherSlotsForDate(headUid, dateISO);
+        if (token !== fromLoadToken) return;
+        state.fromSlots = slots;
+        fillSlotSelect(fromLessonSelect, slots, slots.length ? 'اختر الحصة...' : 'لا توجد حصص في هذا التاريخ');
+
+        const selected = normalizeLessonNumber(preferredLesson || fromLessonSelect.value);
+        if (selected && slots.some(s => s.lesson === selected)) {
+          fromLessonSelect.value = String(selected);
+        } else if (defaultFromLesson && slots.some(s => s.lesson === defaultFromLesson)) {
+          fromLessonSelect.value = String(defaultFromLesson);
+        } else if (slots.length === 1) {
+          fromLessonSelect.value = String(slots[0].lesson);
+        }
+
+        const chosenLesson = normalizeLessonNumber(fromLessonSelect.value);
+        state.fromSlot = chosenLesson ? (slots.find(s => s.lesson === chosenLesson) || null) : null;
+        updateSlotPreview(fromPreview, state.fromSlot, slots.length ? 'اختر الحصة.' : 'لا توجد حصص لك في هذا التاريخ.');
+        syncSendState();
+      }
+
+      async function refreshTargetSlots(preferredLesson = null){
+        if (!isSwap) return;
+        const token = ++toLoadToken;
+        state.toSlots = [];
+        state.toSlot = null;
+        fillSlotSelect(toLessonSelect, [], 'اختر الحصة...');
+        updateSlotPreview(toPreview, null, 'اختر المعلّم والتاريخ.');
+        toLessonSelect.disabled = true;
+
+        const toUid = safeText(teacherSelect.value).trim();
+        state.toUid = toUid;
+        const dateISO = safeText(toDateInput.value).trim();
+
+        const dateErr = validateDateInput(dateISO);
+        if (!toUid || dateErr) {
+          syncSendState();
+          return;
+        }
+
+        const slots = await getTeacherSlotsForDate(toUid, dateISO);
+        if (token !== toLoadToken) return;
+        state.toSlots = slots;
+        fillSlotSelect(toLessonSelect, slots, slots.length ? 'اختر الحصة...' : 'لا توجد حصص للمعلم في هذا التاريخ');
+        toLessonSelect.disabled = !slots.length;
+
+        const selected = normalizeLessonNumber(preferredLesson || toLessonSelect.value);
+        if (selected && slots.some(s => s.lesson === selected)) {
+          toLessonSelect.value = String(selected);
+        } else if (slots.length === 1) {
+          toLessonSelect.value = String(slots[0].lesson);
+        }
+
+        const chosenLesson = normalizeLessonNumber(toLessonSelect.value);
+        state.toSlot = chosenLesson ? (slots.find(s => s.lesson === chosenLesson) || null) : null;
+        updateSlotPreview(toPreview, state.toSlot, slots.length ? 'اختر حصة المعلم.' : 'لا توجد حصص في هذا التاريخ.');
+        syncSendState();
+      }
+
+      if (isSwap) {
+        departmentSelect.addEventListener('change', async ()=>{
+          const selectedDepartment = resolveDepartmentName(departmentSelect.value);
+          state.toDepartment = selectedDepartment;
+          teacherSelect.innerHTML = '<option value="">اختر المعلّم...</option>';
+          teacherSelect.disabled = true;
+          teacherMessage.textContent = selectedDepartment ? 'جاري تحميل المعلمين...' : 'اختر القسم أولاً.';
+          state.toUid = '';
+          await refreshTargetSlots();
+
+          if (!selectedDepartment) {
+            syncSendState();
+            return;
+          }
+
+          const departmentTeachers = await getTeachersByDepartment(selectedDepartment, headUid);
+          if(!departmentTeachers.length){
+            teacherMessage.textContent = 'لا يوجد معلمون في هذا القسم.';
+            syncSendState();
+            return;
+          }
+
+          teacherSelect.disabled = false;
+          teacherMessage.textContent = 'اختر المعلّم.';
+          departmentTeachers.forEach(t=>{
+            const option = document.createElement('option');
+            option.value = t.uid;
+            option.textContent = t.name;
+            teacherSelect.appendChild(option);
+          });
+          syncSendState();
+        });
+
+        teacherSelect.addEventListener('change', async ()=>{
+          const selectedTeacher = teachers.find(t => t.uid === teacherSelect.value);
+          if (selectedTeacher && !state.toDepartment) {
+            state.toDepartment = resolveDepartmentName(
+              selectedTeacher.normalizedDepartment || selectedTeacher.department || selectedTeacher.subject || ''
+            );
+          }
+          await refreshTargetSlots();
+        });
+        toDateInput.addEventListener('change', async ()=>{
+          await refreshTargetSlots();
+        });
+        toLessonSelect.addEventListener('change', ()=>{
+          const chosenLesson = normalizeLessonNumber(toLessonSelect.value);
+          state.toSlot = chosenLesson ? (state.toSlots.find(s => s.lesson === chosenLesson) || null) : null;
+          updateSlotPreview(toPreview, state.toSlot, state.toSlots.length ? 'اختر حصة المعلم.' : 'لا توجد حصص في هذا التاريخ.');
+          syncSendState();
+        });
+      } else {
+        teacherSelect.addEventListener('change', ()=>{
+          state.toUid = safeText(teacherSelect.value).trim();
+          syncSendState();
+        });
+      }
+
+      fromDateInput.addEventListener('change', async ()=>{
+        await refreshFromSlots();
+      });
+      fromLessonSelect.addEventListener('change', ()=>{
+        const chosenLesson = normalizeLessonNumber(fromLessonSelect.value);
+        state.fromSlot = chosenLesson ? (state.fromSlots.find(s => s.lesson === chosenLesson) || null) : null;
+        updateSlotPreview(fromPreview, state.fromSlot, state.fromSlots.length ? 'اختر الحصة.' : 'لا توجد حصص لك في هذا التاريخ.');
+        syncSendState();
+      });
+
+      await refreshFromSlots(defaultFromLesson);
+      if (!isSwap) {
+        state.toUid = safeText(teacherSelect.value).trim();
+        syncSendState();
+      }
+
+      sendBtn.addEventListener('click', async ()=>{
+        const toTeacherUid = safeText(teacherSelect.value).trim();
+        if(!toTeacherUid){
+          toast({ title: 'ناقص', text: 'اختر المعلّم أولاً.', icon: 'fa-circle-exclamation' });
+          return;
+        }
+        if(toTeacherUid === headUid){
+          toast({ title: 'غير صالح', text: 'لا يمكنك إرسال طلب لنفسك.', icon: 'fa-circle-exclamation' });
+          return;
+        }
+
+        const sourceDate = safeText(fromDateInput.value).trim();
+        const sourceLesson = normalizeLessonNumber(fromLessonSelect.value);
+        const sourceSlot = await getTeacherSlotForDateLesson(headUid, sourceDate, sourceLesson);
+        if (!sourceSlot) {
+          toast({ title: 'تعذّر إكمال الطلب', text: 'تعذّر العثور على حصتك في التاريخ/الحصة المحددة.', icon: 'fa-circle-exclamation' });
+          return;
+        }
+
+        const targetTeacher = teachers.find(t => t.uid === toTeacherUid);
+        if(!targetTeacher){
+          toast({ title: 'خطأ', text: 'تعذّر العثور على بيانات المعلم المطلوب.', icon: 'fa-triangle-exclamation' });
+          return;
+        }
+
+        let toDepartment = isSwap
+          ? resolveDepartmentName(state.toDepartment || departmentSelect?.value || '')
+          : resolveDepartmentName(targetTeacher.normalizedDepartment || targetTeacher.department || targetTeacher.subject || '');
+
+        if(!toDepartment){
+          toDepartment = resolveDepartmentName(targetTeacher.subject || '');
+        }
+        if(!toDepartment){
+          toast({
+            title: 'خطأ',
+            text: 'قسم المعلم المطلوب غير محدد. حدّث بيانات المعلم أولاً.',
+            icon: 'fa-triangle-exclamation'
+          });
+          return;
+        }
+
+        let targetSlot = null;
+        if (isSwap) {
+          const targetDate = safeText(toDateInput.value).trim();
+          const targetLesson = normalizeLessonNumber(toLessonSelect.value);
+          targetSlot = await getTeacherSlotForDateLesson(toTeacherUid, targetDate, targetLesson);
+          if (!targetSlot) {
+            toast({
+              title: 'تعذّر إتمام التبديل',
+              text: 'المعلم المطلوب لا يملك حصة في التاريخ/الحصة المحددة.',
+              icon: 'fa-circle-exclamation'
+            });
+            return;
+          }
+        }
+
+        let toHead = null;
+        if(toDepartment === fromDepartment){
+          toHead = fromHead;
+        } else {
+          toHead = await findHeadOfDepartment(toDepartment);
+          if(!toHead){
+            toast({
+              title: 'خطأ',
+              text: 'لا يمكن العثور على رئيس القسم الخاص بالمعلم المطلوب.',
+              icon: 'fa-triangle-exclamation',
+              ms: 5000
+            });
+            return;
+          }
+        }
+
+        try{
+          const qDup = query(
+            collection(db,'swapRequests'),
+            where('fromHeadUid','==', headUid),
+            where('date','==', sourceSlot.date),
+            where('lesson','==', sourceSlot.lesson),
+            where('status','in', ['pending_head_to', 'pending_head_from', 'pending_head']),
+            limit(1)
+          );
+          const dup = await getDocs(qDup);
+          if(!dup.empty){
+            toast({ title: 'موجود مسبقاً', text: 'يوجد طلب معلّق لهذه الحصة بالفعل.', icon: 'fa-clock' });
+            closeModal();
+            return;
+          }
+        }catch(e){
+          console.warn('dup check skipped', e);
+        }
+
+        sendBtn.setAttribute('disabled','disabled');
+        sendBtn.classList.add('loading');
+
+        try{
+          const toHeadName = toHead.name || await getHeadName(toHead.uid);
+          const reqRef = await addDoc(collection(db,'swapRequests'), {
+            date: sourceSlot.date,
+            lesson: sourceSlot.lesson,
+            fromDate: sourceSlot.date,
+            fromLesson: sourceSlot.lesson,
+            fromClassKey: sourceSlot.classKey,
+            toDate: isSwap ? targetSlot.date : null,
+            toLesson: isSwap ? targetSlot.lesson : null,
+            toClassKey: isSwap ? targetSlot.classKey : null,
+            type,
+            requestVersion: 2,
+            fromTeacherUid: headUid,
+            fromTeacherName: fromHeadName,
+            fromSubject: fromDepartment,
+            fromDepartment,
+            toTeacherUid,
+            toTeacherName: targetTeacher.name,
+            toSubject: targetTeacher.subject || '',
+            toDepartment,
+            fromHeadUid: fromHead.uid,
+            fromHeadName: fromHead.name,
+            toHeadUid: toHead.uid,
+            toHeadName,
+            status: 'pending_head_to',
+            stage: 'head_to',
+            createdAt: serverTimestamp(),
+            respondedAt: null,
+            message: safeText(reqMessage.value).trim() || null
+          });
+
+          if(toDepartment === fromDepartment){
+            await runTransaction(db, async (tx)=>{
+              const requestRef = doc(db, 'swapRequests', reqRef.id);
+              const requestSnap = await tx.get(requestRef);
+              if(!requestSnap.exists()) throw new Error('missing_request');
+              const requestData = requestSnap.data();
+              if(requestData.status !== 'pending_head_to') throw new Error('request_not_pending');
+              if(requestData.toHeadUid !== headUid) throw new Error('not_authorized');
+
+              tx.update(requestRef, {
+                status: 'accepted',
+                respondedAt: serverTimestamp()
+              });
+              await createOverridesInTransaction(tx, requestData, reqRef.id);
+            });
+
+            toast({
+              title: 'تم التنفيذ',
+              text: `تم تنفيذ ${type === 'cover' ? 'التغطية' : 'التبديل'} مباشرة داخل القسم.`,
+              icon: 'fa-circle-check'
+            });
+          } else {
+            toast({
+              title: 'تم إرسال الطلب',
+              text: `تم إرسال ${type === 'cover' ? 'طلب التغطية' : 'طلب التبديل'} إلى ${toHeadName} للموافقة.`,
+              icon: 'fa-circle-check'
+            });
+          }
+
+          closeModal();
+          if(currentView === 'today' && activeTodayISO === kuwaitTodayISO()){
+            await loadTodayForHead();
+          } else if (currentView === 'week') {
+            await loadWeekForHead();
+          }
+        }catch(e){
+          console.error(e);
+          toast({
+            title: 'خطأ',
+            text: 'تعذّر إرسال الطلب أو تنفيذه. حاول مرة أخرى.',
+            icon: 'fa-triangle-exclamation',
+            ms: 5000
+          });
+        }finally{
+          sendBtn.classList.remove('loading');
+          syncSendState();
+        }
+      });
+    }
+
+    /* ========= Requests Sheet ========= */
+    function openRequestsSheet(){
+      requestsSheet.classList.add('open');
+      requestsSheet.setAttribute('aria-hidden','false');
+      document.body.style.overflow = 'hidden';
+      loadRequests();
+    }
+
+    function closeRequestsSheet(){
+      requestsSheet.classList.remove('open');
+      requestsSheet.setAttribute('aria-hidden','true');
+      document.body.style.overflow = '';
+      if(unsubRequestsFrom) unsubRequestsFrom();
+      if(unsubRequestsTo) unsubRequestsTo();
+    }
+
+    function renderRequestCard(requestDocId, request){
+      const card = document.createElement('div');
+      card.className = 'request-card';
+      card.dataset.id = requestDocId;
+      
+      const typeLabel = request.type === 'cover' ? 'تغطية' : 'تبديل';
+      const typeClass = request.type === 'cover' ? 'type-cover' : 'type-swap';
+      
+      // Update status labels according to new Arabic labels
+      let statusLabel = '';
+      let statusClass = '';
+      switch(request.status) {
+        case 'pending_head_from':
+          statusLabel = 'بانتظار موافقة رئيس قسم المرسل';
+          statusClass = 'status-pending';
+          break;
+        case 'pending_head_to':
+          statusLabel = 'بانتظار موافقة رئيس قسم المستلم';
+          statusClass = 'status-pending';
+          break;
+        case 'accepted':
+          statusLabel = 'مقبول';
+          statusClass = 'status-accepted';
+          break;
+        case 'denied':
+          statusLabel = 'مرفوض';
+          statusClass = 'status-denied';
+          break;
+        default:
+          statusLabel = request.status || '—';
+          statusClass = 'status-pending';
+      }
+      
+      const isToMe = request.toHeadUid === headUid;
+      const isFromMe = request.fromHeadUid === headUid;
+      
+      // Show action buttons only when THIS head must act
+      let actionsHtml = '';
+      if(request.status === 'pending_head_from' && isFromMe){
+        actionsHtml = `
+          <button class="filter-btn btn-solid btn-approve" data-id="${requestDocId}">
+            <i class="fas fa-check"></i> موافقة
+          </button>
+          <button class="filter-btn btn-danger btn-deny" data-id="${requestDocId}">
+            <i class="fas fa-xmark"></i> رفض
+          </button>
+        `;
+      } else if(request.status === 'pending_head_to' && isToMe){
+        actionsHtml = `
+          <button class="filter-btn btn-solid btn-approve" data-id="${requestDocId}">
+            <i class="fas fa-check"></i> قبول
+          </button>
+          <button class="filter-btn btn-danger btn-deny" data-id="${requestDocId}">
+            <i class="fas fa-xmark"></i> رفض
+          </button>
+        `;
+      }
+      
+      const fromDate = request.fromDate || request.date || '—';
+      const fromLessonNumber = Number(request.fromLesson || request.lesson) || 0;
+      const fromLessonLabel = fromLessonNumber ? `${LESSONS_AR[fromLessonNumber - 1]} (#${fromLessonNumber})` : '—';
+      const toDate = request.toDate || '—';
+      const toLessonNumber = Number(request.toLesson) || 0;
+      const toLessonLabel = toLessonNumber ? `${LESSONS_AR[toLessonNumber - 1]} (#${toLessonNumber})` : '—';
+      
+      card.innerHTML = `
+        <div class="request-header">
+          <span class="request-type ${typeClass}">${typeLabel}</span>
+          <span class="status-badge ${statusClass}">${statusLabel}</span>
+        </div>
+        <div class="request-body">
+          <div class="request-row">
+            <span class="request-label"><i class="far fa-calendar"></i> تاريخ الحصة الأساسية</span>
+            <span class="request-value">${escapeHtml(fromDate)}</span>
+          </div>
+          <div class="request-row">
+            <span class="request-label"><i class="far fa-clock"></i> الحصة الأساسية</span>
+            <span class="request-value">${escapeHtml(fromLessonLabel)}</span>
+          </div>
+          ${request.type === 'swap' ? `
+          <div class="request-row">
+            <span class="request-label"><i class="fas fa-calendar-week"></i> تاريخ الحصة المقابلة</span>
+            <span class="request-value">${escapeHtml(toDate)}</span>
+          </div>
+          <div class="request-row">
+            <span class="request-label"><i class="fas fa-arrows-left-right"></i> الحصة المقابلة</span>
+            <span class="request-value">${escapeHtml(toLessonLabel)}</span>
+          </div>
+          ` : ''}
+          <div class="request-row">
+            <span class="request-label"><i class="fas fa-users"></i> الصف</span>
+            <span class="request-value">${escapeHtml(request.fromClassKey || '—')}</span>
+          </div>
+          <div class="request-row">
+            <span class="request-label"><i class="fas fa-user"></i> المرسل</span>
+            <span class="request-value">${escapeHtml(request.fromTeacherName || '—')} (${escapeHtml(request.fromSubject || '—')})</span>
+          </div>
+          <div class="request-row">
+            <span class="request-label"><i class="fas fa-user-tie"></i> المُرسل إليه</span>
+            <span class="request-value">${escapeHtml(request.toTeacherName || '—')} (${escapeHtml(request.toSubject || '—')})</span>
+          </div>
+          ${request.message ? `
+          <div class="request-row">
+            <span class="request-label"><i class="fas fa-message"></i> الملاحظة</span>
+            <span class="request-value">${escapeHtml(request.message)}</span>
+          </div>
+          ` : ''}
+        </div>
+        ${actionsHtml ? `<div class="request-footer">${actionsHtml}</div>` : ''}
+      `;
+      
+      return card;
+    }
+
+    async function loadRequests(){
+      requestsContainer.innerHTML = '<div style="text-align:center; padding:20px; color:var(--muted);">جاري التحميل...</div>';
+      
+      // Clean up previous listeners
+      if(unsubRequestsFrom) unsubRequestsFrom();
+      if(unsubRequestsTo) unsubRequestsTo();
+      
+      // Create two separate queries for fromHeadUid and toHeadUid
+      const qFrom = query(
+        collection(db,'swapRequests'),
+        where('fromHeadUid','==', headUid),
+        orderBy('createdAt','desc')
+      );
+      
+      const qTo = query(
+        collection(db,'swapRequests'),
+        where('toHeadUid','==', headUid),
+        orderBy('createdAt','desc')
+      );
+      
+      let requestsMap = new Map();
+      
+      function renderAllRequests() {
+        requestsContainer.innerHTML = '';
+        
+        if(requestsMap.size === 0){
+          requestsContainer.innerHTML = '<div style="text-align:center; padding:40px; color:var(--muted); font-weight:700;">لا توجد طلبات حالياً.</div>';
+          return;
+        }
+        
+        // Convert map to array and sort by createdAt desc
+        const allRequests = Array.from(requestsMap.values()).sort((a, b) => {
+          const aTime = a.request.createdAt?.toMillis() || 0;
+          const bTime = b.request.createdAt?.toMillis() || 0;
+          return bTime - aTime;
+        });
+        
+        allRequests.forEach(({id, request}) => {
+          const card = renderRequestCard(id, request);
+          requestsContainer.appendChild(card);
+        });
+        
+        // Add event listeners for buttons
+        requestsContainer.querySelectorAll('.btn-approve').forEach(btn => {
+          btn.addEventListener('click', () => handleRequestApprove(btn.dataset.id));
+        });
+        requestsContainer.querySelectorAll('.btn-deny').forEach(btn => {
+          btn.addEventListener('click', () => handleRequestDeny(btn.dataset.id));
+        });
+      }
+      
+      // Set up two listeners
+      unsubRequestsFrom = onSnapshot(qFrom, (snap) => {
+        snap.docChanges().forEach(change => {
+          const id = change.doc.id;
+          const request = change.doc.data();
+          
+          if(change.type === 'added' || change.type === 'modified') {
+            requestsMap.set(id, { id, request });
+          } else if(change.type === 'removed') {
+            requestsMap.delete(id);
+          }
+        });
+        
+        renderAllRequests();
+      }, (error) => {
+        console.error('Error loading fromHeadUid requests:', error);
+        toast({
+          title: 'خطأ',
+          text: 'حدث خطأ في تحميل بعض الطلبات.',
+          icon: 'fa-triangle-exclamation'
+        });
+      });
+      
+      unsubRequestsTo = onSnapshot(qTo, (snap) => {
+        snap.docChanges().forEach(change => {
+          const id = change.doc.id;
+          const request = change.doc.data();
+          
+          if(change.type === 'added' || change.type === 'modified') {
+            requestsMap.set(id, { id, request });
+          } else if(change.type === 'removed') {
+            requestsMap.delete(id);
+          }
+        });
+        
+        renderAllRequests();
+      }, (error) => {
+        console.error('Error loading toHeadUid requests:', error);
+        toast({
+          title: 'خطأ',
+          text: 'حدث خطأ في تحميل بعض الطلبات.',
+          icon: 'fa-triangle-exclamation'
+        });
+      });
+      
+      // Also load initial data for both queries
+      try {
+        const [fromSnap, toSnap] = await Promise.all([
+          getDocs(qFrom),
+          getDocs(qTo)
+        ]);
+        
+        requestsMap.clear();
+        
+        fromSnap.forEach(docSnap => {
+          requestsMap.set(docSnap.id, { id: docSnap.id, request: docSnap.data() });
+        });
+        
+        toSnap.forEach(docSnap => {
+          requestsMap.set(docSnap.id, { id: docSnap.id, request: docSnap.data() });
+        });
+        
+        renderAllRequests();
+      } catch (error) {
+        console.error('Error loading initial requests:', error);
+        requestsContainer.innerHTML = '<div style="text-align:center; padding:20px; color:var(--danger); font-weight:700;">حدث خطأ في تحميل الطلبات.</div>';
+      }
+    }
+
+    async function handleRequestApprove(requestId){
+      try {
+        await runTransaction(db, async (tx) => {
+          const requestRef = doc(db, 'swapRequests', requestId);
+          const requestSnap = await tx.get(requestRef);
+          
+          if(!requestSnap.exists()) {
+            throw new Error('الطلب غير موجود');
+          }
+          
+          const request = requestSnap.data();
+          
+          // Check if this head is authorized to approve at this stage
+          if(request.status === 'pending_head_from' && request.fromHeadUid === headUid) {
+            // First stage approval
+            if(request.fromDepartment === request.toDepartment || request.toHeadUid === request.fromHeadUid) {
+              // Same department or same head - final approval
+              tx.update(requestRef, {
+                status: 'accepted',
+                respondedAt: serverTimestamp()
+              });
+              
+              // Create override(s) immediately
+              await createOverridesInTransaction(tx, request, requestId);
+            } else {
+              // Different departments - move to second stage
+              tx.update(requestRef, {
+                status: 'pending_head_to',
+                respondedAt: serverTimestamp()
+              });
+              // Don't create overrides yet
+            }
+          } else if(request.status === 'pending_head_to' && request.toHeadUid === headUid) {
+            // Second stage approval - final approval
+            tx.update(requestRef, {
+              status: 'accepted',
+              respondedAt: serverTimestamp()
+            });
+            
+            // Create override(s)
+            await createOverridesInTransaction(tx, request, requestId);
+          } else {
+            throw new Error('غير مصرح لك بالموافقة على هذا الطلب في هذه المرحلة');
+          }
+        });
+        
+        toast({
+          title: 'تم القبول',
+          text: 'تمت الموافقة على الطلب بنجاح.',
+          icon: 'fa-circle-check'
+        });
+        
+        if(currentView === 'today' && activeTodayISO === kuwaitTodayISO()){
+          loadTodayForHead();
+        } else if (currentView === 'week') {
+          loadWeekForHead();
+        }
+        
+      } catch (error) {
+        console.error('Error approving request:', error);
+        toast({
+          title: 'خطأ',
+          text: error.message || 'تعذّر تنفيذ العملية.',
+          icon: 'fa-triangle-exclamation'
+        });
+      }
+    }
+
+    async function handleRequestDeny(requestId){
+      try {
+        const requestRef = doc(db, 'swapRequests', requestId);
+        const requestSnap = await getDoc(requestRef);
+        
+        if(!requestSnap.exists()) return;
+        
+        const request = requestSnap.data();
+        
+        // Check if this head is authorized to deny
+        if((request.status === 'pending_head_from' && request.fromHeadUid === headUid) ||
+           (request.status === 'pending_head_to' && request.toHeadUid === headUid)) {
+          
+          await updateDoc(requestRef, {
+            status: 'denied',
+            respondedAt: serverTimestamp()
+          });
+          
+          toast({
+            title: 'تم الرفض',
+            text: 'تم رفض الطلب.',
+            icon: 'fa-circle-xmark'
+          });
+        } else {
+          toast({
+            title: 'غير مصرح',
+            text: 'غير مصرح لك برفض هذا الطلب.',
+            icon: 'fa-circle-exclamation'
+          });
+        }
+        
+      } catch (error) {
+        console.error('Error denying request:', error);
+        toast({
+          title: 'خطأ',
+          text: 'تعذّر تنفيذ العملية.',
+          icon: 'fa-triangle-exclamation'
+        });
+      }
+    }
+
+    async function createOverridesInTransaction(tx, request, requestId){
+      const fromDate = request.fromDate || request.date;
+      const fromLesson = Number(request.fromLesson || request.lesson);
+
+      if(request.type === 'cover') {
+        const overrideId = `cover_${fromDate}_${fromLesson}_${request.fromTeacherUid}_${request.toTeacherUid}`;
+        const overrideRef = doc(db, 'scheduleOverrides', overrideId);
+        
+        tx.set(overrideRef, {
+          date: fromDate,
+          lesson: fromLesson,
+          classKey: request.fromClassKey,
+          originalTeacherUid: request.fromTeacherUid,
+          newTeacherUid: request.toTeacherUid,
+          active: true,
+          createdAt: serverTimestamp(),
+          sourceRequestId: requestId,
+          type: 'cover'
+        }, { merge: true });
+        
+      } else if(request.type === 'swap') {
+        const toDate = request.toDate || fromDate;
+        const toLesson = Number(request.toLesson || request.lesson);
+
+        const overrideId1 = `swapA_${fromDate}_${fromLesson}_${request.fromTeacherUid}_${request.toTeacherUid}`;
+        const overrideRef1 = doc(db, 'scheduleOverrides', overrideId1);
+        
+        tx.set(overrideRef1, {
+          date: fromDate,
+          lesson: fromLesson,
+          classKey: request.fromClassKey,
+          originalTeacherUid: request.fromTeacherUid,
+          newTeacherUid: request.toTeacherUid,
+          active: true,
+          createdAt: serverTimestamp(),
+          sourceRequestId: requestId,
+          type: 'swap'
+        }, { merge: true });
+        
+        const toClassKey = request.toClassKey || '—';
+        
+        const overrideId2 = `swapB_${toDate}_${toLesson}_${request.toTeacherUid}_${request.fromTeacherUid}`;
+        const overrideRef2 = doc(db, 'scheduleOverrides', overrideId2);
+        
+        tx.set(overrideRef2, {
+          date: toDate,
+          lesson: toLesson,
+          classKey: toClassKey,
+          originalTeacherUid: request.toTeacherUid,
+          newTeacherUid: request.fromTeacherUid,
+          active: true,
+          createdAt: serverTimestamp(),
+          sourceRequestId: requestId,
+          type: 'swap'
+        }, { merge: true });
+      }
+    }
+
+    /* ========= More Sheet ========= */
+    async function loadWeekForClass(classKey){
+      classWeekGrid.innerHTML = '';
+      showStatus('جاري تحميل جدول الفصل المختار...', false);
+
+      if (cache.classWeek.has(classKey)) {
+        renderClassWeekGrid(cache.classWeek.get(classKey));
+        clearStatus();
+        return;
+      }
+
+      const map = new Map();
+      const {grade, section, track} = parseClassKey(classKey);
+
+      try{
+        for(const iso of weekDates){ map.set(iso, new Map()); }
+
+        const snap = await getDocs(query(
+          collection(db,'schedules'),
+          where('grade','==', String(grade)),
+          where('section','==', String(section)),
+          ...(track ? [where('track','==', track)] : []),
+          where('date','in', weekDates)
+        ));
+        snap.forEach(d=>{
+          const x=d.data();
+          const iso = x.date;
+          if (!map.has(iso)) map.set(iso, new Map());
+          map.get(iso).set(Number(x.lesson), x.subject || '—');
+        });
+
+        // Apply overrides
+        const qOv = query(
+          collection(db,'scheduleOverrides'),
+          where('classKey','==', classKey),
+          where('active','==', true),
+          where('date','in', weekDates)
+        );
+        const ovSnap = await getDocs(qOv);
+        const nameCache = new Map();
+        for(const d of ovSnap.docs){
+          const x = d.data();
+          const iso = x.date;
+          if(!iso || !map.has(iso)) continue;
+
+          let tName = nameCache.get(x.newTeacherUid);
+          if(!tName){
+            tName = await getHeadName(x.newTeacherUid);
+            nameCache.set(x.newTeacherUid, tName);
+          }
+
+          map.get(iso).set(Number(x.lesson), `بديل (${tName})`);
+        }
+
+        cache.classWeek.set(classKey, map);
+      }catch(e){
+        console.error(e);
+        showStatus('تعذّر تحميل جدول الفصل.', true);
+      }
+
+      renderClassWeekGrid(map);
+      clearStatus();
+    }
+
+    function renderClassWeekGrid(map){
+      classWeekGrid.innerHTML = '';
+      renderWeekHeaders(classWeekGrid);
+      for(let r=0;r<5;r++){
+        const iso = weekDates[r];
+
+        const dayCell = document.createElement('div');
+        dayCell.className='gcell day-col';
+        dayCell.innerHTML = `<div style="font-weight:900">${DAYS_AR[r]}</div><div class="small">${iso}</div>`;
+        classWeekGrid.appendChild(dayCell);
+
+        for(let i=1;i<=FIXED_LESSON_COUNT;i++){
+          const c = document.createElement('div');
+          c.className='gcell';
+          const row = map.get(iso);
+          const cellContent = row ? (row.get(i) || '—') : '—';
+          c.textContent = cellContent;
+          if (cellContent && cellContent !== '—') c.classList.add('lesson-highlight');
+          classWeekGrid.appendChild(c);
+        }
+      }
+    }
+
+    function openMoreSheet(){
+      moreSheet.classList.add('open');
+      moreSheet.setAttribute('aria-hidden','false');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeMoreSheet(){
+      moreSheet.classList.remove('open');
+      moreSheet.setAttribute('aria-hidden','true');
+      document.body.style.overflow = '';
+    }
+
+    /* ========= Init ========= */
+    function initWeek(){
+      const today = kuwaitTodayISO();
+      const start = startOfWeekSunday(today);
+      weekDates = [0,1,2,3,4].map(n => addDaysISO(start, n));
+      cache.weekKey = start;
+      weekLabel.innerHTML = `<i class="far fa-calendar"></i> أسبوع: ${start} → ${weekDates[4]}`;
+    }
+
+    function initClassPicker(){
+      CLASS_OPTIONS.forEach((c)=>{
+        const opt = document.createElement('option');
+        opt.value = c;
+        opt.textContent = c;
+        classPicker.appendChild(opt);
+      });
+    }
+
+    /* ========= Event Listeners ========= */
+    btnRequests.addEventListener('click', openRequestsSheet);
+    closeRequests.addEventListener('click', closeRequestsSheet);
+    
+    btnToday.addEventListener('click', async ()=>{
+      if(!headUid) return;
+      setFilterActive(btnToday);
+      await loadTodayForHead();
+    });
+
+    btnWeek.addEventListener('click', async ()=>{
+      if(!headUid) return;
+      setFilterActive(btnWeek);
+      await loadWeekForHead();
+    });
+
+    btnMore.addEventListener('click', openMoreSheet);
+    closeMore.addEventListener('click', closeMoreSheet);
+
+    classPicker.addEventListener('change', async ()=>{
+      const v = classPicker.value;
+      if(!v){
+        classWeekGrid.innerHTML = '';
+        return;
+      }
+      await loadWeekForClass(v);
+    });
+
+    /* ========= Auth & Main Init ========= */
+    setPersistence(auth, browserLocalPersistence).catch(()=>{});
+
+    onAuthStateChanged(auth, async (user)=>{
+      if(!user){
+        currentUser = null;
+        showStatus('الرجاء تسجيل الدخول أولاً.', true);
+        containerMain.innerHTML = '<div style="text-align:center; padding:40px; color:var(--danger); font-weight:900;">هذه الصفحة خاصة برؤساء الأقسام فقط</div>';
+        [btnRequests, btnToday, btnWeek, btnMore].forEach(b => b.setAttribute('disabled', 'disabled'));
+        return;
+      }
+
+      currentUser = user;
+
+      try{
+        const snap = await getDoc(doc(db,'teachers', user.uid));
+        if(snap.exists()){
+          const data = snap.data();
+          const role = (data.role || '').toString().toLowerCase();
+          
+          if(role !== 'head'){
+            showStatus('هذه الصفحة خاصة برؤساء الأقسام فقط.', true);
+            containerMain.innerHTML = '<div style="text-align:center; padding:40px; color:var(--danger); font-weight:900;">عذراً، يجب أن تكون رئيس قسم للوصول إلى هذه الصفحة</div>';
+            [btnRequests, btnToday, btnWeek, btnMore].forEach(b => b.setAttribute('disabled', 'disabled'));
+            return;
+          }
+          
+          // User is a head
+          currentHead = {
+            uid: user.uid,
+            name: displayTeacherNameFromDoc(data),
+            subject: resolveDepartmentName(data.department || data.dept || data.subject || '')
+          };
+          headUid = user.uid;
+          headSubject = currentHead.subject;
+          
+          meNameEl.textContent = currentHead.name;
+          meBadge.style.display = 'inline-flex';
+          
+          departmentName.textContent = headSubject;
+          departmentBadge.style.display = 'inline-flex';
+          
+          // Enable buttons
+          [btnRequests, btnToday, btnWeek, btnMore].forEach(b => b.removeAttribute('disabled'));
+          
+          setupBreaksListener();
+          initWeek();
+          initClassPicker();
+          
+          setFilterActive(btnToday);
+          await loadTodayForHead();
+          
+        } else {
+          showStatus('لم يتم العثور على ملفك الشخصي.', true);
+          containerMain.innerHTML = '<div style="text-align:center; padding:40px; color:var(--danger); font-weight:900;">هذه الصفحة خاصة برؤساء الأقسام فقط</div>';
+          [btnRequests, btnToday, btnWeek, btnMore].forEach(b => b.setAttribute('disabled', 'disabled'));
+        }
+      }catch(e){
+        console.error(e);
+        showStatus('حدث خطأ في تحميل البيانات.', true);
+      }
+    });
+  </script>
+  <script src="/shared/hub-title-link.js" defer></script>
+<script src="/name-glow.js" defer></script>
+</body>
+</html>
+
+
+
+
+
+
+
+

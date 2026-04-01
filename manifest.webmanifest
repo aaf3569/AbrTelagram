@@ -1,0 +1,23 @@
+﻿{
+  "name": "ثانوية أحمد البشر الرومي",
+  "short_name": "ثانوية الرومي",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f6f8fb",
+  "theme_color": "#033C54",
+  "icons": [
+    {
+      "src": "./images/appicon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./images/appicon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

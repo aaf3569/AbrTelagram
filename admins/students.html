@@ -1,0 +1,3286 @@
+﻿<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.gstatic.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; manifest-src 'self'; upgrade-insecure-requests; block-all-mixed-content">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://www.gstatic.com" crossorigin><title>الفصول - ثانوية أحمد البشر الرومي</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+<script defer src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link rel="stylesheet" href="/shared/base.css" />
+  <style>
+:root{
+  --primary:#033C54;
+  --primary-light: #e8f1f5;
+  --page:#f6f8fb;
+  --text:#0f172a;
+  --muted:#6b7f9f;
+  --border:#e6edf7;
+  --shadow-1:0 8px 22px rgba(3,60,84,.08);
+  --radius:16px;
+  --focus:#79b3c8;
+  --green:#1a7f37;
+  --yellow:#a06d00;
+  --red:#b42318;
+  --excused:#9333ea;
+  --greenBg: rgba(26,127,55,.08);
+  --yellowBg: rgba(160,109,0,.10);
+  --redBg: rgba(180,35,24,.10);
+  --excusedBg: rgba(147,51,234,.10);
+  --chip:#eef5fb;
+  --transition: all 0.16s ease;
+}
+*{ box-sizing:border-box }
+html,body{ height:100% }
+body{
+  margin:0;
+  background: radial-gradient(1200px 600px at 80% -20%, rgba(3,60,84,.04), transparent 60%),
+              radial-gradient(900px 500px at -10% 120%, rgba(3,60,84,.03), transparent 60%),
+              var(--page);
+  color:var(--text);
+  font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  display:flex; flex-direction:column; min-height:100vh;
+  -webkit-tap-highlight-color: transparent;
+  line-height: 1.6;
+}
+@media (prefers-reduced-motion: reduce){
+  *{ animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.001ms !important; scroll-behavior:auto !important; }
+}
+
+/* === Header === */
+.site-header{
+  position:sticky; top:0; z-index:10;
+  background: rgba(255,255,255,.92); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  color:var(--primary); padding:20px 24px;
+  display:flex; align-items:center; justify-content:center;
+  border-bottom:1px solid rgba(3,60,84,.08); box-shadow: 0 2px 12px rgba(3,60,84,.04);
+}
+.top-student-back{
+  position:absolute;
+  inset-inline-start:20px;
+  top:50%;
+  transform:translateY(-50%);
+  height:42px;
+  padding:0 16px;
+  border:none;
+  border-radius:12px;
+  cursor:pointer;
+  font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  font-weight:900;
+  font-size:.95rem;
+  background:linear-gradient(180deg, #065372, #033C54);
+  color:#fff;
+  box-shadow:0 10px 26px rgba(3,60,84,.28);
+  display:none;
+  align-items:center;
+  justify-content:center;
+}
+body.student-profile-open .top-student-back{ display:inline-flex; }
+.top-student-back:hover{
+  filter:brightness(1.05);
+  transform:translateY(-50%) translateY(-1px);
+}
+.site-title{
+  margin:0; font-weight:900; letter-spacing:.2px; font-size:clamp(1.2rem,2.4vw,1.6rem);
+  text-shadow:0 1px 0 rgba(255,255,255,.6)
+}
+
+/* === Layout === */
+main{ flex:1; padding:32px 20px 40px; display:flex }
+.column{ width:min(880px, 96vw); margin:0 auto; display:flex; flex-direction:column; align-items:center; gap:24px; }
+
+/* === Panels / states === */
+.panel{ width:100%; background:#fff; border:1px solid var(--border); border-radius:20px; padding:24px 20px; box-shadow: var(--shadow-1) }
+.state{ display:none } .state.active{ display:block }
+.loading{ display:grid; place-items:center; gap:16px; padding:32px }
+.spinner{ width:44px; height:44px; border-radius:50%; border:4px solid rgba(3,60,84,.12); border-top-color:var(--primary); animation:spin 1s linear infinite; margin-inline:auto }
+@keyframes spin{ to{ transform: rotate(360deg); } }
+.msg{ font-size:1rem; text-align:center }
+.error{ color:#a11; background:#fde8e8; border:1px solid #f5c5c5; padding:16px; border-radius:16px }
+.muted{ color:var(--muted) }
+
+/* === Buttons + clickable rows === */
+.btn{
+  font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  height:56px; border:none; border-radius:16px; cursor:pointer; font-weight:800; font-size:1.02rem; letter-spacing:.2px;
+  transition: var(--transition); display: inline-flex; align-items: center; justify-content: center; padding: 0 20px;
+}
+.btn:active{ transform:translateY(0) scale(.995) }
+.btn:focus-visible{ outline:3px solid var(--focus); outline-offset:2px }
+.btn.primary{
+  background: linear-gradient(180deg, #065372, #033C54); color:#fff; box-shadow: 0 12px 28px rgba(3,60,84,.26)
+}
+.btn.primary:hover{ transform:translateY(-2px); box-shadow: 0 16px 36px rgba(3,60,84,.34); filter:brightness(1.02) }
+.btn.ghost{ background:#fff; color:#033C54; border:1px solid rgba(3,60,84,.35); box-shadow: var(--shadow-1) }
+.btn.ghost:hover{ transform:translateY(-2px); box-shadow: 0 14px 34px rgba(3,60,84,.18); border-color:rgba(3,60,84,.55) }
+.btn.danger{ background:#fff; color:#cb2b2b; border:1px solid rgba(203,43,43,.4); box-shadow: var(--shadow-1) }
+.btn.danger:hover{ transform:translateY(-2px); box-shadow: 0 16px 32px rgba(203,43,43,.18); border-color:rgba(203,43,43,.55) }
+.btn.secondary{ background:#fff; color:#6b7f9f; border:1px solid rgba(107,127,159,.4); box-shadow: var(--shadow-1) }
+.btn.secondary:hover{ transform:translateY(-2px); box-shadow: 0 16px 32px rgba(107,127,159,.18); border-color:rgba(107,127,159,.55) }
+
+.subject{
+  width:100%; background:#fff; border:1px solid var(--border); border-radius:16px; padding:18px 20px;
+  display:flex; align-items:center; justify-content:space-between; gap:12px; cursor:pointer;
+  box-shadow: var(--shadow-1); color:#0f2743; font-weight:600; font-size: 1.05rem; transition: var(--transition);
+}
+.subject:hover{
+  transform:translateY(-2px); box-shadow:0 16px 32px rgba(3,60,84,.18); border-color:rgba(3,60,84,.35); background:#fbfdff
+}
+.subject:active{ transform:translateY(0) scale(.997) }
+.classes-floating-back{
+  position:fixed;
+  right:22px;
+  top:106px;
+  z-index:24;
+  text-decoration:none;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  height:48px;
+  min-width:112px;
+  padding:0 18px;
+  border-radius:14px;
+  font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  font-weight:900;
+  font-size:1rem;
+  color:#033C54;
+  background:#fff;
+  border:1px solid rgba(3,60,84,.2);
+  box-shadow:0 14px 36px rgba(3,60,84,.22);
+  transition:var(--transition);
+}
+.classes-floating-back.show{ display:inline-flex; }
+.classes-floating-back:hover{
+  transform:translateY(-2px);
+  border-color:rgba(3,60,84,.45);
+  background:#f5fbff;
+}
+.grade-hero{
+  background:linear-gradient(120deg, #033C54 0%, #0a5f81 100%);
+  color:#fff;
+  border-color:transparent;
+  box-shadow:0 16px 34px rgba(3,60,84,.26);
+  min-height:68px;
+  border-radius:18px;
+  margin-bottom:12px;
+}
+.grade-hero span{
+  font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  font-weight:900;
+  font-size:1.18rem;
+  letter-spacing:.15px;
+}
+.grade-hero::before{
+  content:'\25C7';
+  font-size:1.05rem;
+  margin-inline-end:12px;
+  opacity:.95;
+}
+.grade-hero:hover{
+  background:linear-gradient(120deg, #044964 0%, #0a739b 100%);
+  color:#fff;
+  border-color:transparent;
+}
+.group{
+  border:1px solid var(--border);
+  border-radius:18px;
+  background:#fff;
+  box-shadow:var(--shadow-1);
+  padding:12px;
+}
+.chev{ width:22px; height:22px; flex-shrink: 0; } .chev path{ stroke:#6b7f9f; stroke-width:2.4; fill:none; stroke-linecap:round; stroke-linejoin:round }
+.group-body{ display:none; padding:8px 0 2px 0 } .group.open .group-body{ display:block; }
+.list{ display:flex; flex-direction:column; gap:12px }
+.class-option{
+  background:#f8fbff;
+  border:1px solid rgba(3,60,84,.14);
+  border-radius:14px;
+  min-height:54px;
+  font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  font-weight:900;
+  font-size:1.03rem;
+  letter-spacing:.2px;
+  color:#12395a;
+  box-shadow:none;
+}
+.class-option:hover{
+  background:#eef6ff;
+  border-color:rgba(3,60,84,.35);
+  box-shadow:0 10px 22px rgba(3,60,84,.14);
+}
+.class-option span{
+  font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  font-weight:900;
+}
+.spacer{ height:14px; }
+
+/* === School overview stats === */
+.school-overview{
+  border:1px solid var(--border);
+  border-radius:20px;
+  background:
+    radial-gradient(120% 180% at 100% -20%, rgba(3,60,84,.08), transparent 54%),
+    linear-gradient(180deg, #ffffff 0%, #f7fbff 100%);
+  box-shadow:var(--shadow-1);
+  padding:18px;
+  margin-bottom:18px;
+}
+.school-overview-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:14px;
+}
+.school-overview-title{
+  margin:0;
+  font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  font-weight:900;
+  font-size:1.05rem;
+  color:#0f2743;
+}
+.school-overview-sub{
+  margin:4px 0 0;
+  color:#5f7698;
+  font-size:.84rem;
+  font-weight:700;
+}
+.school-chip{
+  padding:7px 12px;
+  border-radius:999px;
+  border:1px solid rgba(3,60,84,.16);
+  background:#fff;
+  color:#164264;
+  font-size:.78rem;
+  font-weight:900;
+  white-space:nowrap;
+}
+.school-overview-body{
+  display:grid;
+  grid-template-columns:minmax(260px, 1fr) minmax(260px, 1fr);
+  gap:14px;
+}
+.school-kpis{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:10px;
+}
+.school-kpi{
+  background:#fff;
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:12px 14px;
+  box-shadow:0 8px 20px rgba(3,60,84,.08);
+  min-height:82px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+}
+.school-kpi-total{
+  grid-column:1 / -1;
+  background:linear-gradient(135deg, #053f58 0%, #0a5f81 100%);
+  border-color:transparent;
+}
+.school-kpi-total .school-kpi-label,
+.school-kpi-total .school-kpi-value{
+  color:#fff;
+}
+.school-kpi-label{
+  font-size:.84rem;
+  color:#527091;
+  font-weight:800;
+}
+.school-kpi-value{
+  margin-top:4px;
+  font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  font-size:1.36rem;
+  font-weight:900;
+  color:#0f2743;
+}
+.school-chart-card{
+  position:relative;
+  border:1px solid var(--border);
+  border-radius:14px;
+  background:#fff;
+  box-shadow:0 8px 20px rgba(3,60,84,.08);
+  padding:12px;
+  min-height:242px;
+}
+.school-chart-wrap{
+  position:relative;
+  height:220px;
+}
+.school-chart-empty{
+  position:absolute;
+  inset:0;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  color:#6b7f9f;
+  font-weight:700;
+}
+
+/* === Sections & Inputs === */
+.section{ background:#fff; border:1px solid var(--border); border-radius:16px; box-shadow: var(--shadow-1); padding:20px; display:flex; flex-direction:column; gap:16px; margin-bottom: 20px; }
+.section + .section{ margin-top:16px; }
+.row{ display:flex; gap:14px; flex-wrap:wrap; align-items:center }
+.field{ display:flex; flex-direction:column; gap:10px; width:100% }
+.label{ font-size:.95rem; font-weight:800; color:#0f2743 }
+.input-wrap{ display:flex; align-items:center; gap:12px; min-height:56px; padding:0 18px; background:#fff; border:1px solid var(--border); border-radius:var(--radius); box-shadow: var(--shadow-1); transition: var(--transition); }
+.input-wrap:focus-within{ border-color: rgba(3,60,84,.35); box-shadow: 0 16px 32px rgba(3,60,84,.18) }
+.input, select, textarea{ flex:1; height:52px; border:none; outline:none; background:transparent; font-size:16px; color:#0a0a0a; font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+textarea.input{ height:100px; padding-block:14px; resize:vertical }
+
+/* === Inline form container (nice card) === */
+.inline-form{ display:flex; flex-direction:column; gap:16px; padding:18px; margin-top:14px; border:1px solid var(--border); border-radius:16px; background:#fafafa; box-shadow: var(--shadow-1); }
+.inline-form .row-actions{ display:flex; gap:12px; justify-content:flex-end; margin-top:8px; }
+.ok, .err{ padding:14px; border-radius:16px; margin-top:10px; font-size:.92rem; box-shadow: var(--shadow-1); display:none }
+.ok{ color:#126a2e; background:#e6f6ea; border:1px solid #c7ebd0 } .err{ color:#a12; background:#fde8e8; border:1px solid #f5c5c5 }
+
+/* === Student list items === */
+.item{
+  padding:16px 20px; border:1px solid var(--border); border-radius:16px; background:#fff; box-shadow: var(--shadow-1);
+  font-weight:800; color:#0f2743; display:flex; align-items:center; justify-content:space-between; cursor:pointer; transition: var(--transition);
+  position: relative;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.item:hover{ transform:translateY(-2px); box-shadow:0 16px 32px rgba(3,60,84,.18); border-color:rgba(3,60,84,.35); background:#fbfdff }
+.item:active{ transform:translateY(0) scale(.997) }
+.sub{ font-size:.92rem; color:#6b7f9f; font-weight:600; margin-top: 4px; }
+.item-number{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  background: var(--primary-light);
+  color: var(--primary);
+  border-radius: 8px;
+  font-weight: 900;
+  font-size: 0.85rem;
+  margin-left: 8px;
+  padding: 0 6px;
+}
+
+/* === Sheets === */
+.sheet{ position:fixed; inset:0; z-index:50; background:var(--page); display:flex; flex-direction:column; transform: translateX(100%); transition: transform .3s cubic-bezier(.22,.7,.25,1); }
+.sheet.open{ transform: translateX(0) }
+.sheet-header{
+  background:#ffffff; border-bottom:1px solid var(--border); padding:18px 16px; display:flex; align-items:center; gap:12px;
+  position:sticky; top:0; z-index:10; box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+}
+.back-btn{
+  height:44px; padding:0 16px; border-radius:12px; border:1px solid rgba(3,60,84,.25); background:#fff; color:#033C54; font-weight:800; cursor:pointer;
+  box-shadow: var(--shadow-1); transition: var(--transition); display:inline-flex; align-items:center; justify-content:center; text-decoration:none;
+}
+.back-btn:hover { background: var(--primary-light); }
+.sheet-title{ margin:0; font-size:1.1rem; font-weight:900; color:#033C54 }
+.sheet-body{ flex:1 1 auto; overflow:auto; padding:24px; width:min(880px,94vw); margin:0 auto; display:flex; flex-direction:column; gap:16px }
+.sheet.small .sheet-body{ width:min(640px,94vw) }
+body.student-route-active main,
+body.student-route-active #classSheet{
+  display:none !important;
+}
+body.student-route-active #studentSheet{
+  position:static;
+  inset:auto;
+  transform:none !important;
+  min-height:calc(100vh - 86px);
+  display:flex;
+}
+body.student-route-active #studentSheet .sheet-header{
+  position:sticky;
+}
+
+/* === Stats === */
+.stats-grid{ display:grid; grid-template-columns: repeat(3, 1fr); gap:14px; align-items:stretch; }
+.stat-card{ padding:18px; border-radius:16px; border:1px solid var(--border); background:#fff; box-shadow: var(--shadow-1); text-align:center; display:flex; flex-direction:column; gap:8px; justify-content:center; min-height:94px; }
+.stat-title{ font-weight:800; font-size:.95rem; color:#0f2743 } .stat-value{ font-weight:900; font-size:1.4rem }
+.stat-present{ background: var(--greenBg); border-color: rgba(26,127,55,.25) } .stat-present .stat-value{ color: var(--green) }
+.stat-late{ background: var(--yellowBg); border-color: rgba(160,109,0,.25) } .stat-late .stat-value{ color: var(--yellow) }
+.stat-absent{ background: var(--redBg); border-color: rgba(180,35,24,.25) } .stat-absent .stat-value{ color: var(--red) }
+.pill{ background:var(--chip); color:#0f2743; border:1px solid var(--border); padding:6px 12px; border-radius:999px; font-size:.9rem; font-weight:800 }
+.pill.g{ color:var(--green); border-color:var(--greenBg); background:var(--greenBg) } .pill.y{ color:var(--yellow); border-color:var(--yellowBg); background:var(--yellowBg) } .pill.r{ color:var(--red); border-color:var(--redBg); background:var(--redBg) } .pill.e{ color:var(--excused); border-color:var(--excusedBg); background:var(--excusedBg) }
+.att-group{ display:flex; flex-direction:column; gap:12px }
+.att-tile{
+  padding:14px 16px; border:1px solid var(--border); border-radius:16px; background:#fff; box-shadow: var(--shadow-1);
+  display:flex; align-items:center; justify-content:space-between; cursor:pointer; transition: var(--transition);
+}
+.att-tile:hover{ transform:translateY(-2px); box-shadow:0 16px 32px rgba(3,60,84,.18); border-color:rgba(3,60,84,.35); background:#fbfdff }
+.att-left{ display:flex; flex-direction:column; gap:6px; flex: 1; } .att-title{ font-weight:800; color:#033C54; } .att-sub{ color:#6b7f9f; font-weight:700; font-size:.94rem }
+.badge{ padding:6px 10px; border-radius:999px; font-weight:800; font-size:.84rem }
+.b-late{ background:var(--yellowBg); color:var(--yellow); border:1px solid rgba(160,109,0,.25) } .b-absent{ background:var(--redBg); color:var(--red); border:1px solid rgba(180,35,24,.25) } .b-present{ background:var(--greenBg); color:var(--green); border:1px solid rgba(26,127,55,.25) } .b-excused{ background:var(--excusedBg); color:var(--excused); border:1px solid rgba(147,51,234,.25) }
+
+/* === Tabs === */
+.tabs{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; background:#fff; border:1px solid var(--border); border-radius:16px; padding:10px; box-shadow: var(--shadow-1); }
+.tab{ height:46px; padding:0 18px; border-radius:12px; border:1px solid rgba(3,60,84,.22); background:#fff; color:#033C54; font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; font-weight:900; cursor:pointer; transition: var(--transition); }
+.tab:hover{ transform:translateY(-1px); box-shadow:0 10px 26px rgba(3,60,84,.14); border-color:rgba(3,60,84,.4) } .tab.active{ background:linear-gradient(180deg, #065372, #033C54); color:#fff; border-color:transparent; box-shadow:0 14px 30px rgba(3,60,84,.26) }
+.tab-panels{ display:flex; flex-direction:column; gap:16px } .tab-panel{ display:none } .tab-panel.active{ display:flex; flex-direction:column; gap:16px }
+.card{ padding:16px; border:1px solid var(--border); border-radius:16px; background:#fff; box-shadow: var(--shadow-1); display:flex; gap:14px; justify-content:space-between; align-items:flex-start; }
+.card-title{ font-weight:800; color:#033C54; margin-bottom: 4px; } .card-sub{ color:#6b7f9f; font-weight:700; font-size:.92rem; line-height: 1.5; }
+.tag{ padding:5px 10px; border-radius:999px; background:var(--chip); border:1px solid var(--border); font-weight:800; font-size:.82rem }
+.mini{ height:38px; padding:0 14px; border-radius:10px; font-size:.92rem } .actions{ display:flex; gap:10px; flex-wrap:wrap } .divider{ height:1px; background:var(--border); width:100%; margin:6px 0 }
+.k-badge{ padding:5px 10px; border-radius:999px; font-weight:800; font-size:.82rem; border:1px solid rgba(3,60,84,.2) }
+.k-ok{ background:var(--greenBg); color:var(--green); border-color:rgba(26,127,55,.25) } .k-warn{ background:var(--yellowBg); color:var(--yellow); border-color:rgba(160,109,0,.25) } .k-danger{ background:var(--redBg); color:var(--red); border-color:rgba(180,35,24,.25) }
+.empty{ text-align:center; color:var(--muted); padding:20px; border:1px dashed var(--border); border-radius:16px; background:#fff; margin: 10px 0; }
+
+/* === Student header card (collapsible) === */
+.student-header{
+  padding:22px; border:1px solid var(--border); border-radius:16px; background:#fff; box-shadow: var(--shadow-1); cursor:pointer; text-align:center; transition: var(--transition);
+}
+.student-header:hover{ transform:translateY(-2px); box-shadow:0 16px 32px rgba(3,60,84,.18); border-color:rgba(3,60,84,.35); background:#fbfdff }
+.student-name{ margin:0; font-size:1.3rem; font-weight:900; color:#033C54 } .student-class{ margin:8px 0 0; font-weight:800; color:#6b7f9f }
+.collapse-body{ display:none } .collapse-body.open{ display:block }
+.student-desktop-layout #studentHeaderCard{
+  text-align:right;
+  background:linear-gradient(160deg, #ffffff 0%, #f3f8fe 100%);
+}
+.student-desktop-layout .sheet-header{
+  padding-inline:24px;
+}
+.student-desktop-layout #analyticsSection{
+  background:transparent;
+  border:none;
+  box-shadow:none;
+  padding:0;
+}
+.student-desktop-layout #profileTabsSection{
+  background:linear-gradient(180deg, #ffffff 0%, #f9fcff 100%);
+}
+body.student-profile-open #studentSheet .sheet-header{
+  display:none;
+}
+.analytics-shell{
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
+.analytics-card{
+  background:#fff;
+  border:1px solid var(--border);
+  border-radius:16px;
+  box-shadow:var(--shadow-1);
+  padding:18px;
+}
+.analytics-shell .warning-section{
+  margin-top:0;
+  box-shadow:none;
+  border:none;
+  background:transparent;
+  padding:0;
+}
+.analytics-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:12px;
+}
+.analytics-title{
+  margin:0;
+  font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  font-weight:900;
+  font-size:1rem;
+  color:#0f2743;
+}
+.soft-note{
+  font-size:.84rem;
+  color:#6b7f9f;
+  text-align:center;
+  margin-top:8px;
+}
+.warning-related{
+  border:1px solid rgba(3,60,84,.14);
+  border-radius:14px;
+  background:#f7fbff;
+  padding:12px;
+}
+.warning-related-title{
+  font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  font-weight:900;
+  font-size:.93rem;
+  color:#164264;
+  margin:0 0 10px 0;
+}
+.warning-hints{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
+.warning-hint{
+  padding:6px 10px;
+  border-radius:999px;
+  font-weight:800;
+  font-size:.8rem;
+  border:1px solid rgba(3,60,84,.15);
+  color:#315472;
+  background:#fff;
+}
+
+/* === Accordion groups === */
+.group > .subject::after { content: ''; width: 22px; height: 22px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7f9f' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: center; transition: transform 0.3s ease; }
+.group.open > .subject::after { transform: rotate(180deg); } .group > .subject .chev { display: none; }
+.group > .grade-hero::after { filter: brightness(0) invert(1); opacity: .95; }
+
+/* === Edit status form === */
+.status-edit-form { display: none; background: #f9f9f9; border-radius: 12px; padding: 16px; margin-top: 16px; border: 1px solid var(--border); box-shadow: var(--shadow-1); }
+.status-edit-form.active { display: flex; flex-direction: column; gap: 12px; }
+.status-options { display: flex; gap: 10px; flex-wrap: wrap; }
+.status-option { flex: 1; min-width: 100px; padding: 12px; border: 2px solid var(--border); border-radius: 8px; background: white; cursor: pointer; text-align: center; font-weight: 700; transition: var(--transition); }
+.status-option:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+.status-option.selected { border-color: var(--primary); background: var(--primary-light); color: var(--primary); }
+.status-present.selected { border-color: var(--green); background: var(--greenBg); color: var(--green); }
+.status-late.selected { border-color: var(--yellow); background: var(--yellowBg); color: var(--yellow); }
+.status-absent.selected { border-color: var(--red); background: var(--redBg); color: var(--red); }
+.status-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 10px; }
+
+/* === Performance optimizations === */
+.will-change { will-change: transform, opacity; }
+
+/* === New styles for special case features === */
+.special-case-icon {
+  width: 20px;
+  height: 20px;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+.filter-active {
+  background: var(--primary-light) !important;
+  border-color: var(--primary) !important;
+}
+
+.checkbox-field {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  cursor: pointer;
+}
+
+.checkbox-field input[type="checkbox"] {
+  transform: scale(1.3);
+  cursor: pointer;
+}
+
+/* === NEW: Reorder Modal Styles === */
+.reorder-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  display: none;
+  z-index: 100;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.reorder-modal-overlay.active {
+  display: flex;
+  opacity: 1;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.reorder-modal {
+  background: white;
+  border-radius: 24px;
+  width: 100%;
+  max-width: 500px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 32px 64px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  transform: translateY(20px) scale(0.95);
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.reorder-modal-overlay.active .reorder-modal {
+  transform: translateY(0) scale(1);
+}
+
+.reorder-modal-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border);
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-shrink: 0;
+}
+
+.reorder-modal-title {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 900;
+  color: var(--primary);
+  flex: 1;
+}
+
+.reorder-modal-close {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: white;
+  color: var(--primary);
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+}
+
+.reorder-modal-close:hover {
+  background: var(--primary-light);
+  transform: rotate(90deg);
+}
+
+.reorder-modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0;
+}
+
+.reorder-list {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.reorder-item {
+  padding: 16px 20px;
+  background: white;
+  border: 2px solid var(--border);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.reorder-item:active {
+  cursor: grabbing;
+}
+
+.reorder-item.dragging {
+  z-index: 1000;
+  opacity: 0.9;
+  transform: scale(1.02);
+  box-shadow: 0 20px 40px rgba(3, 60, 84, 0.2);
+  border-color: var(--primary);
+}
+
+.reorder-item.drag-over {
+  border-style: dashed;
+  border-color: var(--primary);
+  background: var(--primary-light);
+  transform: translateY(0);
+}
+
+.reorder-item-handle {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  cursor: grab;
+  flex-shrink: 0;
+}
+
+.reorder-item-handle::before,
+.reorder-item-handle::after {
+  content: '';
+  height: 3px;
+  background: var(--muted);
+  border-radius: 2px;
+}
+
+.reorder-item-handle::before {
+  margin-bottom: 3px;
+}
+
+.reorder-item-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+  background: var(--primary);
+  color: white;
+  border-radius: 10px;
+  font-weight: 900;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.reorder-item-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.reorder-item-name {
+  font-weight: 800;
+  color: var(--text);
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.reorder-item-details {
+  font-size: 0.85rem;
+  color: var(--muted);
+  display: flex;
+  gap: 12px;
+}
+
+.reorder-modal-footer {
+  padding: 20px 24px;
+  border-top: 1px solid var(--border);
+  background: white;
+  display: flex;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.reorder-modal-footer .btn {
+  flex: 1;
+}
+
+.reorder-instructions {
+  padding: 16px 24px;
+  background: var(--primary-light);
+  border-bottom: 1px solid var(--border);
+  font-size: 0.9rem;
+  color: var(--primary);
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.reorder-instructions-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.reorder-save-indicator {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--green);
+  color: white;
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-weight: 800;
+  box-shadow: 0 8px 24px rgba(26, 127, 55, 0.3);
+  opacity: 0;
+  transition: all 0.3s ease;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.reorder-save-indicator.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* === NEW: Modal Styles for Special Case and Excused Absence === */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(8px);
+  display: none;
+  z-index: 200;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.modal-overlay.active {
+  display: flex;
+  opacity: 1;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.modal {
+  background: white;
+  border-radius: 24px;
+  width: 100%;
+  max-width: 500px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 32px 64px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+  transform: translateY(20px) scale(0.95);
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.modal-overlay.active .modal {
+  transform: translateY(0) scale(1);
+}
+
+.modal-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border);
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-shrink: 0;
+}
+
+.modal-title {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 900;
+  color: var(--primary);
+  flex: 1;
+}
+
+.modal-close {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: white;
+  color: var(--primary);
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+}
+
+.modal-close:hover {
+  background: var(--primary-light);
+  transform: rotate(90deg);
+}
+
+.modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.modal-footer {
+  padding: 20px 24px;
+  border-top: 1px solid var(--border);
+  background: white;
+  display: flex;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.modal-footer .btn {
+  flex: 1;
+}
+
+.validation-error {
+  color: var(--red);
+  font-size: 0.85rem;
+  margin-top: -12px;
+  display: none;
+}
+
+.validation-error.show {
+  display: block;
+}
+
+/* === NEW: Warning System Styles === */
+.warning-section {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px;
+  margin-top: 16px;
+  box-shadow: var(--shadow-1);
+}
+
+.warning-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.warning-title {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--text);
+  margin: 0;
+}
+
+.warning-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.warning-stats {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.warning-stat {
+  text-align: center;
+  flex: 1;
+}
+
+.warning-stat-value {
+  font-size: 1.8rem;
+  font-weight: 900;
+  color: var(--red);
+}
+
+.warning-stat-label {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+.warning-level-badge {
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: 0.9rem;
+  text-align: center;
+  margin-top: 8px;
+}
+
+.warning-level-0 {
+  background: var(--greenBg);
+  color: var(--green);
+  border: 1px solid rgba(26, 127, 55, 0.25);
+}
+
+.warning-level-1 {
+  background: rgba(255, 193, 7, 0.15);
+  color: #b38f00;
+  border: 1px solid rgba(255, 193, 7, 0.3);
+}
+
+.warning-level-2 {
+  background: rgba(255, 152, 0, 0.15);
+  color: #cc7a00;
+  border: 1px solid rgba(255, 152, 0, 0.3);
+}
+
+.warning-level-3 {
+  background: rgba(244, 67, 54, 0.15);
+  color: #c62828;
+  border: 1px solid rgba(244, 67, 54, 0.3);
+}
+
+/* === NEW: Excused Absence Button Styles === */
+.excused-btn {
+  background: var(--excusedBg);
+  color: var(--excused);
+  border: 1px solid rgba(147, 51, 234, 0.4);
+  box-shadow: var(--shadow-1);
+}
+
+.excused-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 32px rgba(147, 51, 234, 0.18);
+  border-color: rgba(147, 51, 234, 0.55);
+}
+
+/* === Responsive adjustments === */
+@media (max-width: 768px) {
+  .site-header { padding: 16px; } main { padding: 20px 12px 30px; } .column { gap: 18px; }
+  .panel { padding: 18px 16px; border-radius: 14px; } .section { padding: 16px; }
+  .school-overview-body { grid-template-columns: 1fr; }
+  .school-overview-head { flex-direction: column; align-items: flex-start; }
+  .stats-grid { grid-template-columns: 1fr; gap: 10px; } .row { flex-direction: column; gap: 12px; }
+  .sheet-body { padding: 16px; } .tabs { justify-content: center; } .card { flex-direction: column; gap: 12px; }
+  .actions { width: 100%; justify-content: center; } .status-options { flex-direction: column; }
+  .reorder-modal, .modal { max-width: 100%; max-height: 90vh; margin: 0; border-radius: 20px 20px 0 0; }
+  .reorder-modal-overlay, .modal-overlay { padding: 0; align-items: flex-end; }
+  .reorder-modal-overlay.active .reorder-modal, .modal-overlay.active .modal { transform: translateY(0); }
+  .reorder-item { padding: 14px 16px; }
+  .warning-stats { flex-direction: column; gap: 16px; }
+  .top-student-back{ inset-inline-start:12px; height:38px; padding:0 12px; font-size:.85rem; }
+  .classes-floating-back{ right:12px; top:88px; min-width:94px; height:42px; font-size:.9rem; padding:0 12px; }
+}
+@media (max-width: 480px) {
+  .btn { height: 50px; font-size: 0.95rem; } .subject { padding: 14px 16px; } .item { padding: 14px 16px; }
+  .school-kpis { grid-template-columns: 1fr; }
+  .school-kpi-total { grid-column: auto; }
+  .stat-card { padding: 14px; min-height: 80px; } .tab { height: 40px; padding: 0 12px; font-size: 0.9rem; }
+  .reorder-item-number { min-width: 28px; height: 28px; font-size: 0.8rem; }
+  .modal-body { padding: 16px; }
+  .spacer{ height:10px; }
+}
+@media (min-width: 900px) {
+  #studentSheet .sheet-body{
+    width:min(1320px, 95vw);
+  }
+  #studentSheet.student-desktop-layout .sheet-body{
+    display:grid;
+    grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
+    grid-template-areas:
+      "profile profile"
+      "edit analytics"
+      "tabs tabs";
+    gap:20px;
+    align-items:start;
+  }
+  #studentSheet.student-desktop-layout #studentHeaderCard{
+    grid-area:profile;
+    grid-column:1 / -1;
+    position:static;
+    top:auto;
+    margin-bottom:2px;
+  }
+  #studentSheet.student-desktop-layout #studentCollapseBody{
+    grid-area:edit;
+    grid-column:1;
+    margin-bottom:0;
+  }
+  #studentSheet.student-desktop-layout #analyticsSection{
+    grid-area:analytics;
+    grid-column:2;
+    margin-bottom:0;
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:14px;
+    align-content:start;
+  }
+  #studentSheet.student-desktop-layout #overviewBlock,
+  #studentSheet.student-desktop-layout #warningBlock{
+    grid-column:1 / -1;
+  }
+  #studentSheet.student-desktop-layout #profileTabsSection{
+    grid-area:tabs;
+    grid-column:1 / -1;
+    margin-bottom:0;
+  }
+  #studentSheet.student-desktop-layout .tabs{
+    justify-content:flex-start;
+    gap:12px;
+    padding:12px;
+  }
+}
+</style>
+
+  <!-- iOS home screen icon -->
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/appicon.png" />
+  
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <meta name="theme-color" content="#033C54" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <!-- Browser tab icon (favicon) -->
+  <link rel="icon" type="image/png" sizes="64x64" href="https://framerusercontent.com/images/eepB7V11E8IMGVLttDUMaz62pPQ.png?width=64&height=64" />
+  <link rel="shortcut icon" href="https://framerusercontent.com/images/eepB7V11E8IMGVLttDUMaz62pPQ.png?width=64&height=64" />
+
+  <!-- Social / Safari preview (Open Graph & Twitter) -->
+  <meta property="og:title" content="الفصول - ثانوية أحمد البشر الرومي">
+  <meta property="og:description" content="???? ?????? ???? ????? ??????.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://framerusercontent.com/images/jRnZLlPr90qwKsuUwfIlvDS9E.png?width=1200&height=630">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="الفصول - ثانوية أحمد البشر الرومي">
+  <meta name="twitter:description" content="???? ?????? ???? ????? ??????.">
+  <meta name="twitter:image" content="https://framerusercontent.com/images/jRnZLlPr90qwKsuUwfIlvDS9E.png?width=1200&height=630">
+</head>
+<body>
+<header class="site-header">
+  <button id="studentTopBack" class="top-student-back" type="button">رجوع</button>
+  <h1 class="site-title">ثانوية أحمد البشر الرومي</h1>
+</header>
+<a id="classesFloatingBack" class="classes-floating-back" href="adminpage.html" aria-label="رجوع">رجوع</a>
+<main>
+  <div class="column">
+    <!-- Loading / gate -->
+    <div id="stateLoading" class="state active panel">
+      <div class="loading">
+        <div class="spinner"></div>
+        <div class="muted">جاري التحقق من تسجيل الدخول والصلاحيات…</div>
+      </div>
+    </div>
+    <div id="stateNotLogged" class="state panel">
+      <div class="msg error">يرجى تسجيل الدخول قبل الاستخدام.</div>
+      <p class="muted" style="text-align:center; margin:12px 0 0;">لا توجد جلسة نشطة. <a class="link-home" href="/index.html">اذهب لصفحة الدخول</a>.</p>
+    </div>
+    <div id="stateDenied" class="state panel">
+      <div class="msg error">تم رفض الوصول — هذه الصفحة مخصّصة للمشرفين فقط.</div>
+      <p class="muted" style="text-align:center; margin:12px 0 0;"><a class="link-home" href="adminpage.html">العودة للوحة الإدارة</a></p>
+    </div>
+
+    <!-- Classes chooser -->
+    <section id="stateClasses" class="state panel" aria-label="اختر الصف">
+      <div id="schoolStatsPanel" class="school-overview" aria-label="إحصائيات المدرسة">
+        <div class="school-overview-head">
+          <div>
+            <h3 class="school-overview-title">إحصائيات المدرسة</h3>
+            <p id="schoolStatsUpdated" class="school-overview-sub">جاري تحميل الإحصائيات…</p>
+          </div>
+          <span class="school-chip">الصفوف 10 - 12</span>
+        </div>
+        <div class="school-overview-body">
+          <div class="school-kpis">
+            <div class="school-kpi school-kpi-total">
+              <div class="school-kpi-label">إجمالي عدد الطلاب</div>
+              <div id="schoolTotalStudents" class="school-kpi-value">—</div>
+            </div>
+            <div class="school-kpi">
+              <div class="school-kpi-label">طلاب الصف العاشر</div>
+              <div id="schoolGrade10Count" class="school-kpi-value">—</div>
+            </div>
+            <div class="school-kpi">
+              <div class="school-kpi-label">طلاب الصف الحادي عشر</div>
+              <div id="schoolGrade11Count" class="school-kpi-value">—</div>
+            </div>
+            <div class="school-kpi">
+              <div class="school-kpi-label">طلاب الصف الثاني عشر</div>
+              <div id="schoolGrade12Count" class="school-kpi-value">—</div>
+            </div>
+          </div>
+          <div class="school-chart-card">
+            <div class="school-chart-wrap">
+              <canvas id="gradesPieChart" aria-label="توزيع الطلاب على الصفوف" role="img"></canvas>
+              <div id="gradesPieEmpty" class="school-chart-empty">لا توجد بيانات للعرض حالياً.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="group" id="g10">
+        <button class="subject grade-hero" type="button"> <span>الصف العاشر</span> </button>
+        <div class="group-body"> <div class="list" id="list10"></div> </div>
+      </div>
+      <div class="spacer"></div>
+      <div class="group" id="g11">
+        <button class="subject grade-hero" type="button"> <span>الصف الحادي عشر</span> </button>
+        <div class="group-body"> <div class="list" id="list11"></div> </div>
+      </div>
+      <div class="spacer"></div>
+      <div class="group" id="g12">
+        <button class="subject grade-hero" type="button"> <span>الصف الثاني عشر</span> </button>
+        <div class="group-body"> <div class="list" id="list12"></div> </div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<!-- CLASS PAGE -->
+<section id="classSheet" class="sheet" aria-hidden="true">
+  <div class="sheet-header">
+    <button id="closeClass" class="back-btn" aria-label="رجوع">رجوع</button>
+    <h3 id="classTitle" class="sheet-title">—</h3>
+  </div>
+  <div class="sheet-body">
+    <div class="section">
+      <div class="row" style="justify-content:space-between;">
+        <div class="label" style="margin:0;">إدارة الطلاب لفصل <span id="classNameStrong" style="font-weight:900;"></span></div>
+        <div style="display:flex; gap:12px; flex-wrap:wrap;">
+          <button id="refreshStudents" class="btn ghost" type="button" style="height:48px; padding:0 16px;">تحديث</button>
+          <button id="openAddStudent" class="btn primary" type="button" style="height:48px; padding:0 16px;">إضافة طالب</button>
+          <!-- NEW: Reorder students button -->
+          <button id="openReorderModal" class="btn secondary" type="button" style="height:48px; padding:0 16px;">ترتيب الطلاب</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add student form -->
+    <div id="addStudentForm" class="section" style="display:none;">
+      <div class="row">
+        <div class="field">
+          <div class="label">اسم الطالب</div>
+          <div class="input-wrap"><input id="stName" class="input" type="text" placeholder="الاسم الكامل" autocomplete="name"></div>
+        </div>
+        <div class="field">
+          <div class="label">الرقم المدني</div>
+          <div class="input-wrap"><input id="stCivil" class="input" type="text" inputmode="numeric" placeholder="الرقم المدني"></div>
+        </div>
+      </div>
+      
+      <!-- NEW: Special Case Checkbox in Add Form -->
+      <div class="field">
+        <label class="checkbox-field">
+          <input id="stSpecialCase" type="checkbox">
+          <span class="label" style="margin: 0; font-weight: 600;">حالة خاصة؟</span>
+        </label>
+        <div class="muted" style="font-size:.86rem; margin-top:-6px;">لن يتم إنشاء حساب دخول — فقط حفظ بيانات الطالب في Firestore.</div>
+      </div>
+      
+      <div style="display:flex; gap:12px; justify-content:flex-end;">
+        <button id="createStudentBtn" class="btn primary" type="button" style="height:48px; padding:0 16px;">حفظ الطالب</button>
+      </div>
+      <div id="asOk" class="ok"></div>
+      <div id="asErr" class="err"></div>
+    </div>
+
+    <!-- Students list -->
+    <div class="section">
+      <div class="row" style="justify-content:space-between; align-items:center; margin-bottom:6px;">
+        <div class="label" style="margin:0;">قائمة الطلاب</div>
+        <div style="display:flex; gap:12px; flex-wrap:wrap;">
+          <!-- NEW: Special Cases Filter Button -->
+          <button id="filterSpecialCases" class="btn ghost" type="button" style="height:48px; padding:0 16px;">
+            عرض الحالات الخاصة فقط
+          </button>
+        </div>
+      </div>
+      <div id="studentsList" class="list"></div>
+    </div>
+  </div>
+</section>
+
+<!-- STUDENT EDIT SHEET -->
+<section id="studentSheet" class="sheet small" aria-hidden="true">
+  <div class="sheet-header">
+    <button id="closeStudent" class="back-btn" aria-label="رجوع">رجوع</button>
+    <h3 id="studentTitle" class="sheet-title"></h3>
+  </div>
+  <div class="sheet-body">
+    <!-- Collapsible Student Header -->
+    <div id="studentHeaderCard" class="student-header">
+      <h4 id="studentHeaderName" class="student-name">—</h4>
+      <div id="studentHeaderClass" class="student-class">—</div>
+    </div>
+
+    <!-- Collapsible details (save/delete/id...) -->
+    <div id="studentCollapseBody" class="section collapse-body">
+      <div class="row">
+        <div class="field">
+          <div class="label">الاسم</div>
+          <div class="input-wrap"><input id="edSName" class="input" type="text" placeholder="الاسم"></div>
+        </div>
+        <div class="field">
+          <div class="label">الرقم المدني</div>
+          <div class="input-wrap"><input id="edSCivil" class="input" type="text" inputmode="numeric" placeholder="الرقم المدني"></div>
+        </div>
+      </div>
+      
+      <!-- NEW: Special Case Checkbox in Editor -->
+      <div class="field">
+        <label class="checkbox-field">
+          <input id="edSSpecialCase" type="checkbox">
+          <span class="label" style="margin: 0; font-weight: 600;">حالة خاصة؟</span>
+        </label>
+      </div>
+      
+      <div style="display:flex; gap:12px; justify-content:flex-end;">
+        <button id="saveStudent" class="btn primary" type="button" style="height:48px; padding:0 16px;">حفظ</button>
+        <button id="deleteStudent" class="btn danger" type="button" style="height:48px; padding:0 16px;">حذف</button>
+      </div>
+      <div id="edOk" class="ok"></div>
+      <div id="edErr" class="err"></div>
+    </div>
+
+    <!-- ===== Student Analytics ===== -->
+    <div id="analyticsSection" class="analytics-shell">
+      <div id="overviewBlock" class="analytics-card">
+        <div class="analytics-head">
+          <h4 class="analytics-title">بيانات الطالب</h4>
+        </div>
+        <div class="stats-grid" style="align-items:stretch;">
+          <div class="stat-card stat-present"> <div class="stat-title">إجمالي الحضور</div> <div id="totPresent" class="stat-value">—</div> </div>
+          <div class="stat-card stat-absent"> <div class="stat-title">إجمالي الغياب</div> <div id="totAbsent" class="stat-value">—</div> </div>
+          <div class="stat-card stat-late"> <div class="stat-title">إجمالي التأخير</div> <div id="totLate" class="stat-value">—</div> </div>
+        </div>
+      </div>
+
+      <div id="warningBlock" class="analytics-card warning-section">
+        <div class="warning-header">
+          <h4 class="warning-title">نظام التحذيرات</h4>
+        </div>
+        <div class="warning-content">
+          <div class="warning-related">
+            <h5 class="warning-related-title">ملخص التحذير</h5>
+            <div class="warning-stats">
+              <div class="warning-stat">
+                <div id="warningAbsenceCount" class="warning-stat-value">0</div>
+                <div class="warning-stat-label">عدد الغيابات بدون عذر</div>
+              </div>
+              <div class="warning-stat">
+                <div id="warningLevelBadge" class="warning-level-badge warning-level-0">لا يوجد</div>
+                <div class="warning-stat-label">مستوى التحذير الحالي</div>
+              </div>
+            </div>
+            <div class="warning-hints">
+              <span class="warning-hint">متابعة يومية</span>
+              <span class="warning-hint">تنبيه مبكر</span>
+              <span class="warning-hint">توثيق تلقائي</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="absencesBlock" class="analytics-card">
+        <div class="row" style="justify-content:space-between; align-items:center;">
+          <div class="label" style="margin:0;">الغيابات</div> <span id="absentCountPill" class="pill r">غياب: 0</span>
+        </div>
+        <div id="absencesList" class="att-group"></div>
+      </div>
+
+      <div id="latesBlock" class="analytics-card">
+        <div class="row" style="justify-content:space-between; align-items:center;">
+          <div class="label" style="margin:0;">التأخيرات</div> <span id="lateCountPill" class="pill y">تأخير: 0</span>
+        </div>
+        <div id="latesList" class="att-group"></div>
+      </div>
+    </div>
+
+    <!-- ===== Tabs ===== -->
+    <div class="section" id="profileTabsSection">
+      <div class="analytics-head">
+        <h4 class="analytics-title">السجل والإجراءات</h4>
+      </div>
+      <div class="tabs" role="tablist">
+        <button class="tab active" id="tabCommit" role="tab" aria-controls="panelCommit">تعهدات</button>
+        <button class="tab" id="tabEnroll" role="tab" aria-controls="panelEnroll">فصول</button>
+        <button class="tab" id="tabReport" role="tab" aria-controls="panelReport">تقارير</button>
+        <button class="tab" id="tabNote" role="tab" aria-controls="panelNote">ملاحظات</button>
+      </div>
+      <div class="tab-panels">
+        <!-- Commitments -->
+        <div id="panelCommit" class="tab-panel active" role="tabpanel">
+          <div class="row" style="justify-content:space-between; align-items:center;">
+            <div class="label" style="margin:0;">التعهدات</div> <button id="addCommitBtn" class="btn primary mini" type="button">تعهد جديد</button>
+          </div>
+          <!-- Quick add: Title, Reason, Date + Audience -->
+          <div id="commitQuick" class="inline-form" style="display:none;">
+            <div class="field"> <div class="label">العنوان</div> <div class="input-wrap"><input id="commitTitle" class="input" type="text" placeholder="مثال: تعهد سلوك"></div> </div>
+            <div class="field"> <div class="label">السبب</div> <div class="input-wrap"><textarea id="commitReason" class="input" placeholder="سبب التعهد"></textarea></div> </div>
+            <div class="field"> <div class="label">التاريخ</div> <div class="input-wrap"><input id="commitDue" class="input" type="date"></div> </div>
+            <div class="field"> <div class="label">الفئة المستهدفة</div> <div class="input-wrap"> <select id="commitAudience" class="input"> <option value="guardian">ولي الأمر</option> <option value="student">الطالب</option> <option value="both">الطالب + ولي الأمر</option> </select> </div> </div>
+            <div class="row-actions"> <button id="commitSave" class="btn primary" type="button">حفظ</button> <button id="commitCancel" class="btn ghost" type="button">إلغاء</button> </div>
+          </div>
+          <div id="commitList" class="list"></div> <div id="commitEmpty" class="empty" style="display:none;">لا توجد تعهدات حتى الآن.</div>
+        </div>
+
+        <!-- Enrollments -->
+        <div id="panelEnroll" class="tab-panel" role="tabpanel">
+          <div class="row" style="justify-content:space-between; align-items:center;">
+            <div class="label" style="margin:0;">سجل الفصول</div> <button id="addEnrollBtn" class="btn primary mini" type="button">إضافة قيد</button>
+          </div>
+          <!-- New simple model: Title, Reason, Length(text), From - To -->
+          <div id="enrollQuick" class="inline-form" style="display:none;">
+            <div class="field"> <div class="label">العنوان</div> <div class="input-wrap"><input id="enrollTitle" class="input" type="text" placeholder="عنوان القيد/الفصل"></div> </div>
+            <div class="field"> <div class="label">السبب</div> <div class="input-wrap"><textarea id="enrollReason" class="input" placeholder="سبب القيد"></textarea></div> </div>
+            <div class="field"> <div class="label">المدة (نص)</div> <div class="input-wrap"><input id="enrollLength" class="input" type="text" placeholder="مثال: فصل دراسي كامل"></div> </div>
+            <div class="field"> <div class="label">من</div> <div class="input-wrap"><input id="enrollFrom" class="input" type="date"></div> </div>
+            <div class="field"> <div class="label">إلى</div> <div class="input-wrap"><input id="enrollTo" class="input" type="date"></div> </div>
+            <div class="row-actions"> <button id="enrollSave" class="btn primary" type="button">حفظ</button> <button id="enrollCancel" class="btn ghost" type="button">إلغاء</button> </div>
+          </div>
+          <div id="enrollList" class="list"></div> <div id="enrollEmpty" class="empty" style="display:none;">لا توجد قيود مسجلة.</div>
+        </div>
+
+        <!-- Reports -->
+        <div id="panelReport" class="tab-panel" role="tabpanel">
+          <div class="row" style="justify-content:space-between; align-items:center;">
+            <div class="label" style="margin:0;">التقارير</div> <button id="addReportBtn" class="btn primary mini" type="button">تقرير جديد</button>
+          </div>
+          <!-- labels above inputs; dropdown includes custom; inputs: Title, Reason, Date -->
+          <div id="reportQuick" class="inline-form" style="display:none;">
+            <div class="field"> <div class="label">نوع التقرير</div> <div class="input-wrap"> <select id="reportType" class="input"> <option value="behavior">سلوك</option> <option value="academic">تحصيلي</option> <option value="incident">واقعة</option> <option value="health">صحي</option> <option value="custom">custom</option> </select> </div> </div>
+            <div class="field"> <div class="label">العنوان</div> <div class="input-wrap"><input id="reportTitle" class="input" type="text" placeholder="عنوان التقرير"></div> </div>
+            <div class="field"> <div class="label">السبب</div> <div class="input-wrap"><textarea id="reportReason" class="input" placeholder="سبب التقرير"></textarea></div> </div>
+            <div class="field"> <div class="label">التاريخ</div> <div class="input-wrap"><input id="reportDate" class="input" type="date"></div> </div>
+            <div class="row-actions"> <button id="reportSave" class="btn primary" type="button">حفظ</button> <button id="reportCancel" class="btn ghost" type="button">إلغاء</button> </div>
+          </div>
+          <div id="reportList" class="list"></div> <div id="reportEmpty" class="empty" style="display:none;">لا توجد تقارير.</div>
+        </div>
+
+        <!-- Notes -->
+        <div id="panelNote" class="tab-panel" role="tabpanel">
+          <div class="row" style="justify-content:space-between; align-items:center;">
+            <div class="label" style="margin:0;">الملاحظات</div> <button id="addNoteBtn" class="btn primary mini" type="button">ملاحظة جديدة</button>
+          </div>
+          <div id="noteQuick" class="inline-form" style="display:none;">
+            <div class="field"> <div class="label">نص الملاحظة</div> <div class="input-wrap"><input id="noteBody" class="input" type="text" placeholder="اكتب الملاحظة"></div> </div>
+            <div class="field"> <div class="label">النوع</div> <div class="input-wrap"> <select id="noteType" class="input"> <option value="general">عام</option> <option value="behavior">سلوك</option> <option value="academic">تحصيلي</option> <option value="health">صحي</option> <option value="parent-call">اتصال بولي الأمر</option> <option value="meeting">اجتماع</option> </select> </div> </div>
+            <label class="label" style="font-weight:800; display:flex; align-items:center; gap:8px;"> <input id="notePinned" type="checkbox" style="transform:scale(1.2)"> تثبيت </label>
+            <div class="row-actions"> <button id="noteSave" class="btn primary" type="button">حفظ</button> <button id="noteCancel" class="btn ghost" type="button">إلغاء</button> </div>
+          </div>
+          <div id="noteList" class="list"></div> <div id="noteEmpty" class="empty" style="display:none;">لا توجد ملاحظات.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ATTENDANCE DETAIL SHEET -->
+<section id="attDetailSheet" class="sheet small" aria-hidden="true">
+  <div class="sheet-header">
+    <button id="closeAttDetail" class="back-btn" aria-label="رجوع">رجوع</button>
+    <h3 id="attDetailTitle" class="sheet-title">تفاصيل الحالة</h3>
+    <div style="margin-right: auto; display: flex; gap: 8px;">
+      <!-- NEW: Excused Absence Button -->
+      <button id="excusedAttBtn" class="btn excused-btn" type="button">غياب بعذر</button>
+      <button id="editAttBtn" class="btn secondary" type="button">تعديل</button>
+    </div>
+  </div>
+  <div class="sheet-body">
+    <div class="section" id="attDetailBody">
+      <div class="row" style="justify-content:space-between;"> <div class="label" style="margin:0;">الحالة</div> <span id="dBadge" class="badge">—</span> </div>
+      <div class="row"><span class="label" style="min-width:110px;">التاريخ:</span><span id="dDate">—</span></div>
+      <div class="row"><span class="label" style="min-width:110px;">الحصة:</span><span id="dLesson">—</span></div>
+      <div class="row"><span class="label" style="min-width:110px;">الفصل:</span><span id="dClass">—</span></div>
+      <div class="row"><span class="label" style="min-width:110px;">أُضيفت بواسطة:</span><span id="dTeacher">—</span></div>
+      <div class="row"><span class="label" style="min-width:110px;">وقت الإضافة:</span><span id="dCreatedAt">—</span></div>
+      <div class="row"><span class="label" style="min-width:110px;">آخر تعديل:</span><span id="dUpdatedAt">—</span></div>
+      <!-- NEW: Excused Absence Reason Display -->
+      <div id="excusedReasonRow" class="row" style="display:none;">
+        <span class="label" style="min-width:110px;">سبب الغياب بعذر:</span>
+        <span id="dExcusedReason" style="flex:1; color: var(--excused); font-weight: 600;">—</span>
+      </div>
+
+      <!-- Edit Status Form -->
+      <div id="statusEditForm" class="status-edit-form">
+        <div class="label">تغيير حالة الحضور</div>
+        <div class="status-options">
+          <div class="status-option status-present" data-status="present">حضور</div>
+          <div class="status-option status-late" data-status="late">تأخير</div>
+          <div class="status-option status-absent" data-status="absent">غياب</div>
+        </div>
+        <div class="status-actions">
+          <button id="saveStatusBtn" class="btn primary" type="button">حفظ التغييرات</button>
+          <button id="cancelStatusBtn" class="btn ghost" type="button">إلغاء</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- NEW: Reorder Students Modal -->
+<div id="reorderModalOverlay" class="reorder-modal-overlay">
+  <div class="reorder-modal">
+    <div class="reorder-modal-header">
+      <h3 class="reorder-modal-title">ترتيب الطلاب</h3>
+      <button id="closeReorderModal" class="reorder-modal-close" aria-label="إغلاق">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 6L6 18M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+    <div class="reorder-instructions">
+      <svg class="reorder-instructions-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+      </svg>
+      اسحب الطلاب لترتيبهم حسب الرغبة
+    </div>
+    <div class="reorder-modal-body">
+      <div id="reorderList" class="reorder-list"></div>
+    </div>
+    <div class="reorder-modal-footer">
+      <button id="cancelReorder" class="btn ghost" type="button">إلغاء</button>
+      <button id="saveReorder" class="btn primary" type="button">حفظ الترتيب</button>
+    </div>
+  </div>
+</div>
+
+<!-- NEW: Special Case Reason Modal -->
+<div id="specialCaseModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title">سبب الحالة الخاصة</h3>
+      <button id="closeSpecialCaseModal" class="modal-close" aria-label="إغلاق">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 6L6 18M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <div class="label">السبب <span style="color: var(--red);">*</span></div>
+        <div class="input-wrap">
+          <textarea id="specialCaseReasonInput" class="input" placeholder="أدخل سبب الحالة الخاصة" rows="4"></textarea>
+        </div>
+        <div id="specialCaseReasonError" class="validation-error">السبب مطلوب</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button id="cancelSpecialCase" class="btn ghost" type="button">إغلاق</button>
+      <button id="saveSpecialCase" class="btn primary" type="button">حفظ</button>
+    </div>
+  </div>
+</div>
+
+<!-- NEW: Excused Absence Reason Modal -->
+<div id="excusedAbsenceModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title">سبب الغياب بعذر</h3>
+      <button id="closeExcusedModal" class="modal-close" aria-label="إغلاق">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 6L6 18M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <div class="label">السبب <span style="color: var(--red);">*</span></div>
+        <div class="input-wrap">
+          <textarea id="excusedReasonInput" class="input" placeholder="أدخل سبب الغياب بعذر" rows="4"></textarea>
+        </div>
+        <div id="excusedReasonError" class="validation-error">السبب مطلوب</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button id="cancelExcused" class="btn ghost" type="button">إغلاق</button>
+      <button id="saveExcused" class="btn primary" type="button">حفظ</button>
+    </div>
+  </div>
+</div>
+
+<!-- Save indicator -->
+<div id="reorderSaveIndicator" class="reorder-save-indicator">
+  تم حفظ الترتيب بنجاح
+</div>
+
+<script type="module">
+    import { firebaseConfig } from "/shared/firebase.js";
+/* ========= Firebase ========= */
+import { initializeApp, getApp, getApps } from "/shared/firebase.js";
+import { getAuth, onAuthStateChanged } from "/shared/firebase.js";
+import { initializeFirestore, collection, getDocs, query, where, orderBy, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp, writeBatch } from "/shared/firebase.js";
+
+
+
+const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+const db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true, useFetchStreams: false });
+const auth = getAuth(app);
+
+/* ========= UI refs ========= */
+const sLoading = document.getElementById('stateLoading');
+const sNotLog = document.getElementById('stateNotLogged');
+const sDenied = document.getElementById('stateDenied');
+const sClasses = document.getElementById('stateClasses');
+const classesFloatingBack = document.getElementById('classesFloatingBack');
+const list10 = document.getElementById('list10');
+const list11 = document.getElementById('list11');
+const list12 = document.getElementById('list12');
+const schoolStatsUpdated = document.getElementById('schoolStatsUpdated');
+const schoolTotalStudents = document.getElementById('schoolTotalStudents');
+const schoolGrade10Count = document.getElementById('schoolGrade10Count');
+const schoolGrade11Count = document.getElementById('schoolGrade11Count');
+const schoolGrade12Count = document.getElementById('schoolGrade12Count');
+const gradesPieChart = document.getElementById('gradesPieChart');
+const gradesPieEmpty = document.getElementById('gradesPieEmpty');
+const classSheet = document.getElementById('classSheet');
+const closeClass = document.getElementById('closeClass');
+const classTitle = document.getElementById('classTitle');
+const classNameStrong = document.getElementById('classNameStrong');
+const refreshStudents = document.getElementById('refreshStudents');
+const openAddStudent = document.getElementById('openAddStudent');
+const addStudentForm = document.getElementById('addStudentForm');
+const stName = document.getElementById('stName');
+const stCivil = document.getElementById('stCivil');
+const createStudentBtn = document.getElementById('createStudentBtn');
+const asOk = document.getElementById('asOk');
+const asErr = document.getElementById('asErr');
+const studentsList = document.getElementById('studentsList');
+const studentSheet = document.getElementById('studentSheet');
+const closeStudent = document.getElementById('closeStudent');
+const studentTitle = document.getElementById('studentTitle');
+const studentTopBack = document.getElementById('studentTopBack');
+// Collapsible header refs
+const studentHeaderCard = document.getElementById('studentHeaderCard');
+const studentHeaderName = document.getElementById('studentHeaderName');
+const studentHeaderClass = document.getElementById('studentHeaderClass');
+const studentCollapseBody= document.getElementById('studentCollapseBody');
+// Hidden edit refs
+const edSName = document.getElementById('edSName');
+const edSCivil = document.getElementById('edSCivil');
+const saveStudent = document.getElementById('saveStudent');
+const deleteStudent = document.getElementById('deleteStudent');
+const edOk = document.getElementById('edOk');
+const edErr = document.getElementById('edErr');
+// Analytics
+const totPresent = document.getElementById('totPresent');
+const totAbsent = document.getElementById('totAbsent');
+const totLate = document.getElementById('totLate');
+const absencesList = document.getElementById('absencesList');
+const latesList = document.getElementById('latesList');
+const absentCountPill = document.getElementById('absentCountPill');
+const lateCountPill = document.getElementById('lateCountPill');
+// Tabs
+const tabCommit = document.getElementById('tabCommit');
+const tabEnroll = document.getElementById('tabEnroll');
+const tabReport = document.getElementById('tabReport');
+const tabNote = document.getElementById('tabNote');
+const panelCommit = document.getElementById('panelCommit');
+const panelEnroll = document.getElementById('panelEnroll');
+const panelReport = document.getElementById('panelReport');
+const panelNote = document.getElementById('panelNote');
+// Commitments refs
+const addCommitBtn = document.getElementById('addCommitBtn');
+const commitQuick = document.getElementById('commitQuick');
+const commitTitle = document.getElementById('commitTitle');
+const commitReason= document.getElementById('commitReason');
+const commitDue = document.getElementById('commitDue');
+const commitAudience = document.getElementById('commitAudience');
+const commitSave = document.getElementById('commitSave');
+const commitCancel = document.getElementById('commitCancel');
+const commitList = document.getElementById('commitList');
+const commitEmpty = document.getElementById('commitEmpty');
+// Enrollments refs
+const addEnrollBtn = document.getElementById('addEnrollBtn');
+const enrollQuick = document.getElementById('enrollQuick');
+const enrollTitle = document.getElementById('enrollTitle');
+const enrollReason = document.getElementById('enrollReason');
+const enrollLength = document.getElementById('enrollLength');
+const enrollFrom = document.getElementById('enrollFrom');
+const enrollTo = document.getElementById('enrollTo');
+const enrollSave = document.getElementById('enrollSave');
+const enrollCancel = document.getElementById('enrollCancel');
+const enrollList = document.getElementById('enrollList');
+const enrollEmpty = document.getElementById('enrollEmpty');
+// Reports refs
+const addReportBtn = document.getElementById('addReportBtn');
+const reportQuick = document.getElementById('reportQuick');
+const reportType = document.getElementById('reportType');
+const reportTitle = document.getElementById('reportTitle');
+const reportReason = document.getElementById('reportReason');
+const reportDate = document.getElementById('reportDate');
+const reportSave = document.getElementById('reportSave');
+const reportCancel = document.getElementById('reportCancel');
+const reportList = document.getElementById('reportList');
+const reportEmpty = document.getElementById('reportEmpty');
+// Notes refs
+const addNoteBtn = document.getElementById('addNoteBtn');
+const noteQuick = document.getElementById('noteQuick');
+const noteBody = document.getElementById('noteBody');
+const noteType = document.getElementById('noteType');
+const notePinned = document.getElementById('notePinned');
+const noteSave = document.getElementById('noteSave');
+const noteCancel = document.getElementById('noteCancel');
+const noteList = document.getElementById('noteList');
+const noteEmpty = document.getElementById('noteEmpty');
+// Detail sheet
+const attDetailSheet = document.getElementById('attDetailSheet');
+const closeAttDetail = document.getElementById('closeAttDetail');
+const editAttBtn = document.getElementById('editAttBtn');
+const attDetailTitle = document.getElementById('attDetailTitle');
+const dBadge = document.getElementById('dBadge');
+const dDate = document.getElementById('dDate');
+const dLesson = document.getElementById('dLesson');
+const dClass = document.getElementById('dClass');
+const dTeacher = document.getElementById('dTeacher');
+const dCreatedAt = document.getElementById('dCreatedAt');
+const dUpdatedAt = document.getElementById('dUpdatedAt');
+// Edit status form
+const statusEditForm = document.getElementById('statusEditForm');
+const statusOptions = document.querySelectorAll('.status-option');
+const saveStatusBtn = document.getElementById('saveStatusBtn');
+const cancelStatusBtn = document.getElementById('cancelStatusBtn');
+
+// NEW: Special case UI references
+const stSpecialCase = document.getElementById('stSpecialCase');
+const edSSpecialCase = document.getElementById('edSSpecialCase');
+const filterSpecialCases = document.getElementById('filterSpecialCases');
+
+// NEW: Reorder modal references
+const openReorderModalBtn = document.getElementById('openReorderModal');
+const reorderModalOverlay = document.getElementById('reorderModalOverlay');
+const closeReorderModalBtn = document.getElementById('closeReorderModal');
+const cancelReorderBtn = document.getElementById('cancelReorder');
+const saveReorderBtn = document.getElementById('saveReorder');
+const reorderList = document.getElementById('reorderList');
+const reorderSaveIndicator = document.getElementById('reorderSaveIndicator');
+
+// NEW: Warning system references
+const warningAbsenceCount = document.getElementById('warningAbsenceCount');
+const warningLevelBadge = document.getElementById('warningLevelBadge');
+
+// NEW: Excused absence references
+const excusedAttBtn = document.getElementById('excusedAttBtn');
+const excusedReasonRow = document.getElementById('excusedReasonRow');
+const dExcusedReason = document.getElementById('dExcusedReason');
+
+// NEW: Modal references
+const specialCaseModal = document.getElementById('specialCaseModal');
+const closeSpecialCaseModal = document.getElementById('closeSpecialCaseModal');
+const cancelSpecialCase = document.getElementById('cancelSpecialCase');
+const saveSpecialCase = document.getElementById('saveSpecialCase');
+const specialCaseReasonInput = document.getElementById('specialCaseReasonInput');
+const specialCaseReasonError = document.getElementById('specialCaseReasonError');
+
+const excusedAbsenceModal = document.getElementById('excusedAbsenceModal');
+const closeExcusedModal = document.getElementById('closeExcusedModal');
+const cancelExcused = document.getElementById('cancelExcused');
+const saveExcused = document.getElementById('saveExcused');
+const excusedReasonInput = document.getElementById('excusedReasonInput');
+const excusedReasonError = document.getElementById('excusedReasonError');
+let schoolPieChart = null;
+
+/* ========= Helpers ========= */
+function setClassesBackVisible(visible){
+  classesFloatingBack?.classList.toggle('show', !!visible);
+}
+
+function syncClassesBackVisibility(){
+  const mainVisible = sClasses.classList.contains('active');
+  const hasOpenSheet = classSheet.classList.contains('open') || studentSheet.classList.contains('open') || attDetailSheet.classList.contains('open');
+  setClassesBackVisible(mainVisible && !hasOpenSheet);
+}
+
+function show(el){
+  [sLoading, sNotLog, sDenied, sClasses].forEach(x=>x.classList.remove('active'));
+  el.classList.add('active');
+  syncClassesBackVisibility();
+}
+
+function openSheet(el){
+  el.classList.add('open');
+  el.setAttribute('aria-hidden','false');
+  syncClassesBackVisibility();
+}
+
+function closeSheet(el){
+  el.classList.remove('open');
+  el.setAttribute('aria-hidden','true');
+  syncClassesBackVisibility();
+}
+const toArabicDigits = (str) => (str||"").toString().replace(/\d/g, d => '٠١٢٣٤٥٦٧٨٩'[d]);
+
+const fmtDate = (d)=> new Intl.DateTimeFormat('ar-KW', { dateStyle:'medium', timeZone:'Asia/Kuwait' }).format(d);
+const fmtDT = (d)=> new Intl.DateTimeFormat('ar-KW', { dateStyle:'medium', timeStyle:'short', timeZone:'Asia/Kuwait' }).format(d);
+function tsToDate(v){ if(!v) return null; if(v.toDate) return v.toDate(); if(v.seconds) return new Date(v.seconds*1000); return null; }
+const slugifyClass = (s)=> (s||'').replace(/\s+/g,'').replace(/\//g,'-');
+const STUDENT_ROUTE_PARAM = 'student';
+const CLASS_ROUTE_PARAM = 'class';
+const DESKTOP_LAYOUT_QUERY = '(min-width: 900px)';
+
+function getGradeBucket(className){
+  const cls = (className || '').toString().trim();
+  if(/^10\b/.test(cls)) return '10';
+  if(/^11\b/.test(cls)) return '11';
+  if(/^12\b/.test(cls)) return '12';
+  return null;
+}
+
+function renderSchoolPieChart(gradeCounts){
+  const data = [gradeCounts['10'], gradeCounts['11'], gradeCounts['12']];
+  const totalForChart = data.reduce((sum, val)=> sum + val, 0);
+
+  if(totalForChart <= 0){
+    gradesPieChart.style.display = 'none';
+    gradesPieEmpty.style.display = 'flex';
+    if(schoolPieChart){
+      schoolPieChart.destroy();
+      schoolPieChart = null;
+    }
+    return;
+  }
+
+  gradesPieChart.style.display = 'block';
+  gradesPieEmpty.style.display = 'none';
+
+  if(schoolPieChart) schoolPieChart.destroy();
+  schoolPieChart = new Chart(gradesPieChart.getContext('2d'), {
+    type: 'pie',
+    data: {
+      labels: ['الصف العاشر', 'الصف الحادي عشر', 'الصف الثاني عشر'],
+      datasets: [{
+        data,
+        backgroundColor: ['#0a5f81', '#1f8eb5', '#7bc4db'],
+        borderColor: '#ffffff',
+        borderWidth: 3,
+        hoverOffset: 8
+      }]
+    },
+    options: {
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: {
+            usePointStyle: true,
+            padding: 14,
+            font: {
+              family: '"Noto Kufi Arabic", sans-serif',
+              size: 12,
+              weight: '700'
+            }
+          }
+        },
+        tooltip: {
+          callbacks: {
+            label: (ctx)=>{
+              const value = ctx.parsed || 0;
+              const ratio = totalForChart ? Math.round((value / totalForChart) * 100) : 0;
+              return `${ctx.label}: ${toArabicDigits(value)} (${toArabicDigits(ratio)}%)`;
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+async function refreshSchoolStats(){
+  schoolStatsUpdated.textContent = 'جاري تحميل الإحصائيات…';
+  try{
+    const snap = await getDocs(collection(db, 'students'));
+    const gradeCounts = { '10': 0, '11': 0, '12': 0 };
+    let totalStudents = 0;
+
+    snap.forEach((d)=>{
+      const row = d.data() || {};
+      totalStudents += 1;
+      const grade = getGradeBucket(row.class);
+      if(grade) gradeCounts[grade] += 1;
+    });
+
+    schoolTotalStudents.textContent = toArabicDigits(totalStudents);
+    schoolGrade10Count.textContent = toArabicDigits(gradeCounts['10']);
+    schoolGrade11Count.textContent = toArabicDigits(gradeCounts['11']);
+    schoolGrade12Count.textContent = toArabicDigits(gradeCounts['12']);
+    schoolStatsUpdated.textContent = `آخر تحديث: ${fmtDT(new Date())}`;
+    renderSchoolPieChart(gradeCounts);
+  }catch(e){
+    console.error('[refreshSchoolStats]', e);
+    schoolTotalStudents.textContent = '—';
+    schoolGrade10Count.textContent = '—';
+    schoolGrade11Count.textContent = '—';
+    schoolGrade12Count.textContent = '—';
+    schoolStatsUpdated.textContent = 'تعذّر تحميل الإحصائيات.';
+    gradesPieChart.style.display = 'none';
+    gradesPieEmpty.style.display = 'flex';
+  }
+}
+
+function updateStudentDesktopLayout(){
+  const isDesktop = window.matchMedia(DESKTOP_LAYOUT_QUERY).matches;
+  studentSheet.classList.toggle('student-desktop-layout', isDesktop);
+}
+
+function syncStudentProfileChrome(){
+  const profileOpen = studentSheet.classList.contains('open') || !!getRouteStudentId();
+  document.body.classList.toggle('student-profile-open', profileOpen);
+}
+
+function getRouteStudentId(){
+  const hashMatch = window.location.hash.match(/^#\/?students\/([^/?#]+)/);
+  if(hashMatch){
+    return decodeURIComponent(hashMatch[1]);
+  }
+  return new URLSearchParams(window.location.search).get(STUDENT_ROUTE_PARAM);
+}
+
+function getRouteClassName(){
+  return new URLSearchParams(window.location.search).get(CLASS_ROUTE_PARAM);
+}
+
+function buildStudentUrl(studentId, className){
+  const next = new URL(window.location.href);
+  next.searchParams.delete(STUDENT_ROUTE_PARAM);
+  if(className) next.searchParams.set(CLASS_ROUTE_PARAM, className);
+  else next.searchParams.delete(CLASS_ROUTE_PARAM);
+  next.hash = studentId ? `/students/${encodeURIComponent(studentId)}` : '';
+  return `${next.pathname}${next.search}${next.hash}`;
+}
+
+function syncLayoutWithRoute(){
+  document.body.classList.toggle('student-route-active', !!getRouteStudentId());
+  syncStudentProfileChrome();
+}
+
+function setStudentRoute(studentId, className, { replace=false } = {}){
+  const nextUrl = buildStudentUrl(studentId, className);
+  const method = replace ? 'replaceState' : 'pushState';
+  history[method]({ view: studentId ? 'student' : 'classes', studentId: studentId || null }, '', nextUrl);
+  syncLayoutWithRoute();
+}
+
+function clearStudentRoute({ replace=false } = {}){
+  setStudentRoute(null, null, { replace });
+}
+
+async function applyStudentRoute(){
+  const routeStudentId = getRouteStudentId();
+  const routeClassName = getRouteClassName();
+  syncLayoutWithRoute();
+  if(!routeStudentId){
+    closeSheet(studentSheet);
+    syncStudentProfileChrome();
+    return;
+  }
+  if(routeClassName){
+    selectedClass = routeClassName;
+  }
+  await openStudentEditor(routeStudentId, { syncRoute:false });
+  syncStudentProfileChrome();
+}
+
+// Performance optimization: Debounce function
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
+window.addEventListener('resize', debounce(updateStudentDesktopLayout, 120));
+
+// NEW: Global variable for filter state
+let showOnlySpecialCases = false;
+
+// NEW: Long press detection
+let pressTimer = null;
+let isLongPress = false;
+const LONG_PRESS_DURATION = 500; // 0.5 seconds
+
+// NEW: Variables for modal state
+let specialCaseModalContext = { studentId: null, isEdit: false, originalChecked: false };
+let excusedModalContext = { studentId: null, attendanceId: null };
+
+/* ========= NEW: Modal Functions ========= */
+function openModal(modal) {
+  modal.classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal(modal) {
+  modal.classList.remove('active');
+  document.body.style.overflow = '';
+}
+
+function resetModalInputs() {
+  specialCaseReasonInput.value = '';
+  specialCaseReasonError.classList.remove('show');
+  excusedReasonInput.value = '';
+  excusedReasonError.classList.remove('show');
+}
+
+/* ========= Special Case Modal Handlers ========= */
+// Open special case modal when checkbox is toggled ON
+stSpecialCase.addEventListener('change', async function() {
+  if (this.checked) {
+    specialCaseModalContext = { 
+      studentId: null, 
+      isEdit: false, 
+      originalChecked: true,
+      callback: () => {
+        // This will be called when saving the modal
+      }
+    };
+    openModal(specialCaseModal);
+  }
+});
+
+edSSpecialCase.addEventListener('change', async function() {
+  const studentId = currentStudent.id;
+  if (!studentId) return;
+  
+  if (this.checked) {
+    // Load existing reason if available
+    const studentRef = doc(db, 'students', studentId);
+    const studentSnap = await getDoc(studentRef);
+    const studentData = studentSnap.data();
+    
+    specialCaseModalContext = {
+      studentId: studentId,
+      isEdit: true,
+      originalChecked: true,
+      existingReason: studentData?.specialCaseReason || ''
+    };
+    
+    specialCaseReasonInput.value = studentData?.specialCaseReason || '';
+    openModal(specialCaseModal);
+  } else {
+    // Turn off special case - clear reason
+    try {
+      await updateDoc(doc(db, 'students', studentId), {
+        specialCase: false,
+        specialCaseReason: null,
+        specialCaseUpdatedAt: serverTimestamp(),
+        specialCaseUpdatedBy: auth.currentUser.uid
+      });
+      
+      // Refresh student data
+      if (selectedClass) await loadStudents(selectedClass);
+    } catch (error) {
+      console.error('[turnOffSpecialCase]', error);
+      alert('حدث خطأ أثناء إلغاء الحالة الخاصة');
+    }
+  }
+});
+
+// Close modal handlers
+closeSpecialCaseModal.addEventListener('click', () => {
+  closeModal(specialCaseModal);
+  resetModalInputs();
+  // Revert checkbox state if modal was cancelled
+  if (specialCaseModalContext.isEdit) {
+    edSSpecialCase.checked = false;
+  } else {
+    stSpecialCase.checked = false;
+  }
+});
+
+cancelSpecialCase.addEventListener('click', () => {
+  closeModal(specialCaseModal);
+  resetModalInputs();
+  // Revert checkbox state if modal was cancelled
+  if (specialCaseModalContext.isEdit) {
+    edSSpecialCase.checked = false;
+  } else {
+    stSpecialCase.checked = false;
+  }
+});
+
+// Save special case reason
+saveSpecialCase.addEventListener('click', async () => {
+  const reason = specialCaseReasonInput.value.trim();
+  
+  if (!reason) {
+    specialCaseReasonError.classList.add('show');
+    return;
+  }
+  
+  specialCaseReasonError.classList.remove('show');
+  
+  try {
+    if (specialCaseModalContext.isEdit && specialCaseModalContext.studentId) {
+      // Update existing student
+      await updateDoc(doc(db, 'students', specialCaseModalContext.studentId), {
+        specialCase: true,
+        specialCaseReason: reason,
+        specialCaseUpdatedAt: serverTimestamp(),
+        specialCaseUpdatedBy: auth.currentUser.uid
+      });
+      
+      // Refresh student data
+      if (selectedClass) await loadStudents(selectedClass);
+    } else {
+      // For new student, just store the reason temporarily
+      // It will be saved when the student is created
+      specialCaseModalContext.tempReason = reason;
+    }
+    
+    closeModal(specialCaseModal);
+    resetModalInputs();
+  } catch (error) {
+    console.error('[saveSpecialCase]', error);
+    alert('حدث خطأ أثناء حفظ السبب');
+  }
+});
+
+/* ========= Excused Absence Modal Handlers ========= */
+excusedAttBtn.addEventListener('click', () => {
+  if (!currentAttendanceRecord || !currentStudent.id) return;
+  
+  excusedModalContext = {
+    studentId: currentStudent.id,
+    attendanceId: currentAttendanceRecord.id,
+    existingReason: currentAttendanceRecord.reasonText || ''
+  };
+  
+  excusedReasonInput.value = currentAttendanceRecord.reasonText || '';
+  openModal(excusedAbsenceModal);
+});
+
+closeExcusedModal.addEventListener('click', () => {
+  closeModal(excusedAbsenceModal);
+  resetModalInputs();
+});
+
+cancelExcused.addEventListener('click', () => {
+  closeModal(excusedAbsenceModal);
+  resetModalInputs();
+});
+
+saveExcused.addEventListener('click', async () => {
+  const reason = excusedReasonInput.value.trim();
+  
+  if (!reason) {
+    excusedReasonError.classList.add('show');
+    return;
+  }
+  
+  excusedReasonError.classList.remove('show');
+  
+  try {
+    await updateDoc(doc(db, 'students', excusedModalContext.studentId, 'attendance', excusedModalContext.attendanceId), {
+      hasReason: true,
+      reasonText: reason,
+      excusedAt: serverTimestamp(),
+      excusedBy: auth.currentUser.uid
+    });
+    
+    // Update local record
+    currentAttendanceRecord.hasReason = true;
+    currentAttendanceRecord.reasonText = reason;
+    
+    // Refresh attendance data and warning system
+    await loadStudentAttendance(excusedModalContext.studentId);
+    
+    // Update detail view
+    dExcusedReason.textContent = reason;
+    excusedReasonRow.style.display = 'flex';
+    dBadge.className = 'badge b-excused';
+    dBadge.textContent = 'غياب بعذر';
+    
+    closeModal(excusedAbsenceModal);
+    resetModalInputs();
+    
+    // Show success message
+    const successMsg = document.createElement('div');
+    successMsg.className = 'ok';
+    successMsg.textContent = 'تم حفظ الغياب بعذر بنجاح';
+    successMsg.style.display = 'block';
+    attDetailBody.appendChild(successMsg);
+    setTimeout(() => { successMsg.style.display = 'none'; }, 3000);
+    
+  } catch (error) {
+    console.error('[saveExcused]', error);
+    alert('حدث خطأ أثناء حفظ الغياب بعذر');
+  }
+});
+
+/* ========= Auth + role ========= */
+onAuthStateChanged(auth, async (user)=>{
+  if(!user){ show(sNotLog); return; }
+  try{
+    const tRef = doc(db, 'teachers', user.uid);
+    const snap = await getDoc(tRef);
+    const data = snap.exists()? snap.data(): {};
+    if((data?.role||'').toString().toLowerCase()!=='admin'){ show(sDenied); return; }
+    show(sClasses);
+    await refreshSchoolStats();
+    await applyStudentRoute();
+  }catch(e){ console.error(e); show(sDenied); }
+});
+
+/* ========= Class options (grouped) ========= */
+const CLASS_OPTIONS_RAW = [
+  "10 / 1","10 / 2","10 / 3","10 / 4","10 / 5","10 / 6","10 / 7",
+  "11 / 1 ع","11 / 2 ع","11 / 3 ع","11 / 4 ع","11 / 5 ع","11 / 1 د",
+  "12 / 1 ع","12 / 2 ع","12 / 3 ع","12 / 4 ع","12 / 5 ع","12 / 1 د"
+];
+
+function sorted(list){
+  const parse = (s)=>{ const m = s.match(/^(\d+)\s*\/\s*(\d+)(?:\s*(.*))?$/); return m? {g:+m[1], s:+m[2], suf:(m[3]||'').trim()} : {g:999,s:999,suf:""} };
+  return [...list].sort((A,B)=>{ const a=parse(A), b=parse(B); if(a.g!==b.g) return a.g-b.g; if(a.s!==b.s) return a.s-b.s; return a.suf.localeCompare(b.suf,'ar'); });
+}
+
+const GROUP_10 = sorted(CLASS_OPTIONS_RAW.filter(x=>/^10\b/.test(x)));
+const GROUP_11 = sorted(CLASS_OPTIONS_RAW.filter(x=>/^11\b/.test(x)));
+const GROUP_12 = sorted(CLASS_OPTIONS_RAW.filter(x=>/^12\b/.test(x)));
+
+function makeClassButton(val){
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'subject class-option';
+  btn.innerHTML = `<span>${toArabicDigits(val)}</span>`;
+  btn.addEventListener('click', ()=> openClass(val));
+  return btn;
+}
+
+function renderGroups(){
+  list10.innerHTML=''; list11.innerHTML=''; list12.innerHTML='';
+  GROUP_10.forEach(v => list10.appendChild(makeClassButton(v)));
+  GROUP_11.forEach(v => list11.appendChild(makeClassButton(v)));
+  GROUP_12.forEach(v => list12.appendChild(makeClassButton(v)));
+  // accordion toggles
+  document.querySelectorAll('.group > .subject').forEach(head=>{
+    head.addEventListener('click', (e)=>{ const g = e.currentTarget.parentElement; g.classList.toggle('open'); });
+  });
+}
+renderGroups();
+updateStudentDesktopLayout();
+syncStudentProfileChrome();
+
+/* ========= Class page ========= */
+let selectedClass = null;
+let currentClassStudents = []; // Store students for the current class
+
+function openClass(className){
+  selectedClass = className;
+  classTitle.textContent = toArabicDigits(className);
+  classNameStrong.textContent = toArabicDigits(className);
+  addStudentForm.style.display = 'none';
+  asOk.style.display='none'; asErr.style.display='none';
+  openSheet(classSheet);
+  loadStudents(className);
+}
+
+closeClass.addEventListener('click', ()=> closeSheet(classSheet));
+document.addEventListener('keydown', (e)=>{
+  if(e.key!=='Escape') return;
+  closeSheet(attDetailSheet);
+  if(studentSheet.classList.contains('open') || getRouteStudentId()){
+    closeStudentView();
+    syncStudentProfileChrome();
+    return;
+  }
+  closeSheet(classSheet);
+  syncStudentProfileChrome();
+});
+
+window.addEventListener('popstate', ()=>{ applyStudentRoute(); });
+
+openAddStudent.addEventListener('click', ()=>{
+  addStudentForm.style.display = addStudentForm.style.display==='none' ? 'block' : 'none';
+  asOk.style.display='none'; asErr.style.display='none';
+  if(addStudentForm.style.display==='block'){ stName.focus(); }
+});
+
+refreshStudents.addEventListener('click', ()=>{ if(selectedClass) loadStudents(selectedClass); });
+
+// UPDATED: loadStudents function with studentNumber-based ordering
+async function loadStudents(className){
+  studentsList.innerHTML='<div class="loading"><div class="spinner"></div><div class="muted">جاري تحميل بيانات الطلاب...</div></div>';
+  try{
+    const qy = query(collection(db,'students'), where('class','==', className));
+    const snap = await getDocs(qy);
+    const arr = [];
+    snap.forEach(d=> arr.push({ id:d.id, ...d.data() }));
+    
+    // Check if any students are missing studentNumber
+    const studentsMissingNumber = arr.filter(st => st.studentNumber === undefined || st.studentNumber === null);
+    
+    // If there are students missing studentNumber, assign them numbers
+    if (studentsMissingNumber.length > 0) {
+      // Find the maximum studentNumber in the class
+      const maxStudentNumber = arr.reduce((max, st) => {
+        const num = st.studentNumber;
+        if (typeof num === 'number' && !isNaN(num) && num > max) {
+          return num;
+        }
+        return max;
+      }, 0);
+      
+      // Assign numbers to missing students
+      const batch = writeBatch(db);
+      let currentNumber = maxStudentNumber + 1;
+      
+      studentsMissingNumber.forEach(st => {
+        batch.update(doc(db, 'students', st.id), { 
+          studentNumber: currentNumber,
+          updatedAt: serverTimestamp()
+        });
+        st.studentNumber = currentNumber;
+        currentNumber++;
+      });
+      
+      await batch.commit();
+    }
+    
+    // Sort by studentNumber ascending (treat missing as very large)
+    arr.sort((a, b) => {
+      const aNum = (typeof a.studentNumber === 'number' && !isNaN(a.studentNumber)) ? a.studentNumber : 99999;
+      const bNum = (typeof b.studentNumber === 'number' && !isNaN(b.studentNumber)) ? b.studentNumber : 99999;
+      
+      if (aNum !== bNum) return aNum - bNum;
+      
+      // Tie-breaker: use createdAt or name
+      const aDate = a.createdAt ? (a.createdAt.toDate ? a.createdAt.toDate().getTime() : a.createdAt) : 0;
+      const bDate = b.createdAt ? (b.createdAt.toDate ? b.createdAt.toDate().getTime() : b.createdAt) : 0;
+      if (aDate !== bDate) return aDate - bDate;
+      
+      // Final tie-breaker: name (simple string comparison)
+      return (a.name || '').localeCompare(b.name || '');
+    });
+    
+    // Store students for reordering
+    currentClassStudents = arr;
+    
+    // Apply filter if active
+    const filteredArr = showOnlySpecialCases 
+      ? arr.filter(st => st.specialCase === true)
+      : arr;
+    
+    if(filteredArr.length===0){
+      const empty=document.createElement('div');
+      empty.className='item';
+      empty.textContent = showOnlySpecialCases 
+        ? 'لا توجد حالات خاصة.' 
+        : 'لا يوجد طلاب بعد.';
+      studentsList.innerHTML = '';
+      studentsList.appendChild(empty);
+      return;
+    }
+    
+    // Use document fragment for better performance
+    const fragment = document.createDocumentFragment();
+    filteredArr.forEach((st, index)=>{
+      const el=document.createElement('div');
+      el.className='item will-change';
+      el.setAttribute('data-id', st.id);
+      el.setAttribute('data-index', index);
+      
+      // Setup long press detection
+      setupLongPress(el, st.id);
+      
+      // NEW: Add special case icon if needed
+      const specialCaseIcon = st.specialCase 
+        ? `<img src="https://framerusercontent.com/images/1WGQfyxwD42xkLmxrJ71sDcY.png?width=266&height=267" class="special-case-icon" alt="حالة خاصة">`
+        : '';
+      
+      // Use the actual studentNumber from Firestore, not index+1
+      const studentNumber = (typeof st.studentNumber === 'number' && !isNaN(st.studentNumber)) ? st.studentNumber : (index + 1);
+      
+      el.innerHTML = `
+        <div>
+          <div>${specialCaseIcon} ${st.name || '—'} <span class="item-number">${toArabicDigits(studentNumber)}</span></div>
+          <div class="sub">${st.civilid ? ('الرقم المدني: '+ toArabicDigits(st.civilid)) : ''}</div>
+        </div>
+        <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+      `;
+      el.addEventListener('click', (e) => {
+        // Prevent opening editor if it was a long press
+        if (!isLongPress) {
+          openStudentEditor(st.id);
+        }
+        isLongPress = false;
+      });
+      fragment.appendChild(el);
+    });
+    studentsList.innerHTML = '';
+    studentsList.appendChild(fragment);
+  }catch(e){
+    console.error('[loadStudents]', e);
+    const err=document.createElement('div');
+    err.className='item';
+    err.textContent='تعذّر تحميل القائمة.';
+    studentsList.innerHTML = '';
+    studentsList.appendChild(err);
+  }
+}
+
+// NEW: Toggle filter function
+filterSpecialCases.addEventListener('click', ()=>{
+  showOnlySpecialCases = !showOnlySpecialCases;
+  filterSpecialCases.textContent = showOnlySpecialCases 
+    ? 'عرض كل الطلاب' 
+    : 'عرض الحالات الخاصة فقط';
+  
+  filterSpecialCases.classList.toggle('filter-active', showOnlySpecialCases);
+  
+  if(selectedClass) loadStudents(selectedClass);
+});
+
+// UPDATED: Add student function with studentNumber assignment
+createStudentBtn.addEventListener('click', async ()=>{
+  asOk.style.display='none';
+  asErr.style.display='none';
+  try{
+    const name = (stName.value||'').trim();
+    const civilid = (stCivil.value||'').trim();
+    const cls = selectedClass;
+    const specialCase = stSpecialCase.checked;
+    
+    if(!cls) throw new Error('لم يتم تحديد فصل.');
+    if(!name) throw new Error('أدخل اسم الطالب.');
+    
+    // Calculate the next studentNumber
+    const maxStudentNumber = currentClassStudents.reduce((max, st) => {
+      const num = st.studentNumber;
+      if (typeof num === 'number' && !isNaN(num) && num > max) {
+        return num;
+      }
+      return max;
+    }, 0);
+    
+    const nextStudentNumber = maxStudentNumber + 1;
+    
+    const ref = doc(collection(db,'students'));
+    
+    const studentData = { 
+      uid: ref.id, 
+      name, 
+      civilid, 
+      class: cls, 
+      specialCase,
+      studentNumber: nextStudentNumber,
+      createdAt: serverTimestamp() 
+    };
+    
+    // Add special case reason if available
+    if (specialCase && specialCaseModalContext.tempReason) {
+      studentData.specialCaseReason = specialCaseModalContext.tempReason;
+      studentData.specialCaseUpdatedAt = serverTimestamp();
+      studentData.specialCaseUpdatedBy = auth.currentUser.uid;
+    }
+    
+    await setDoc(ref, studentData, { merge:true });
+    
+    asOk.textContent='تم إضافة الطالب.';
+    asOk.style.display='block';
+    stName.value='';
+    stCivil.value='';
+    stSpecialCase.checked = false;
+    specialCaseModalContext.tempReason = null; // Clear temp reason
+    
+    // Reload students to update sorting
+    await loadStudents(cls);
+    await refreshSchoolStats();
+  }catch(e){
+    asErr.textContent = e?.message || 'تعذّر الإضافة.';
+    asErr.style.display='block';
+  }
+});
+
+/* ========= NEW: Reorder Interface ========= */
+
+// Open reorder modal
+openReorderModalBtn.addEventListener('click', openReorderInterface);
+
+function openReorderInterface() {
+  if (!selectedClass || currentClassStudents.length === 0) return;
+  
+  // Sort students by studentNumber for the modal
+  const sortedStudents = [...currentClassStudents].sort((a, b) => {
+    const aNum = (typeof a.studentNumber === 'number' && !isNaN(a.studentNumber)) ? a.studentNumber : 99999;
+    const bNum = (typeof b.studentNumber === 'number' && !isNaN(b.studentNumber)) ? b.studentNumber : 99999;
+    return aNum - bNum;
+  });
+  
+  // Populate reorder list
+  reorderList.innerHTML = '';
+  const fragment = document.createDocumentFragment();
+  
+  sortedStudents.forEach((student, index) => {
+    const item = document.createElement('div');
+    item.className = 'reorder-item';
+    item.setAttribute('data-id', student.id);
+    item.setAttribute('draggable', 'true');
+    
+    const studentNumber = student.studentNumber || (index + 1);
+    
+    item.innerHTML = `
+      <div class="reorder-item-handle"></div>
+      <div class="reorder-item-number">${toArabicDigits(studentNumber)}</div>
+      <div class="reorder-item-content">
+        <div class="reorder-item-name">${student.name || '—'}</div>
+        <div class="reorder-item-details">
+          ${student.civilid ? `الرقم المدني: ${toArabicDigits(student.civilid)}` : ''}
+          ${student.specialCase ? '<span style="color: var(--yellow);">(حالة خاصة)</span>' : ''}
+        </div>
+      </div>
+    `;
+    
+    // Add drag and drop events
+    item.addEventListener('dragstart', handleDragStart);
+    item.addEventListener('dragover', handleDragOver);
+    item.addEventListener('dragenter', handleDragEnter);
+    item.addEventListener('dragleave', handleDragLeave);
+    item.addEventListener('drop', handleDrop);
+    item.addEventListener('dragend', handleDragEnd);
+    
+    fragment.appendChild(item);
+  });
+  
+  reorderList.appendChild(fragment);
+  reorderModalOverlay.classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+
+// Close reorder modal
+closeReorderModalBtn.addEventListener('click', closeReorderModal);
+cancelReorderBtn.addEventListener('click', closeReorderModal);
+reorderModalOverlay.addEventListener('click', (e) => {
+  if (e.target === reorderModalOverlay) {
+    closeReorderModal();
+  }
+});
+
+function closeReorderModal() {
+  reorderModalOverlay.classList.remove('active');
+  document.body.style.overflow = '';
+}
+
+// Drag and drop variables
+let draggedItem = null;
+let dragOverItem = null;
+
+function handleDragStart(e) {
+  draggedItem = this;
+  this.classList.add('dragging');
+  
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/html', this.innerHTML);
+  
+  setTimeout(() => {
+    this.style.opacity = '0.4';
+  }, 0);
+}
+
+function handleDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  
+  if (draggedItem !== this) {
+    dragOverItem = this;
+  }
+}
+
+function handleDragEnter(e) {
+  e.preventDefault();
+  if (draggedItem !== this) {
+    this.classList.add('drag-over');
+  }
+}
+
+function handleDragLeave(e) {
+  this.classList.remove('drag-over');
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  
+  if (draggedItem !== this) {
+    this.classList.remove('drag-over');
+    
+    const items = Array.from(reorderList.children);
+    const draggedIndex = items.indexOf(draggedItem);
+    const dropIndex = items.indexOf(this);
+    
+    if (draggedIndex < dropIndex) {
+      this.parentNode.insertBefore(draggedItem, this.nextSibling);
+    } else {
+      this.parentNode.insertBefore(draggedItem, this);
+    }
+    
+    updateReorderNumbers();
+  }
+}
+
+function handleDragEnd(e) {
+  const items = Array.from(reorderList.children);
+  items.forEach(item => {
+    item.classList.remove('dragging');
+    item.classList.remove('drag-over');
+    item.style.opacity = '';
+  });
+  
+  draggedItem = null;
+  dragOverItem = null;
+}
+
+// Update numbers in reorder list
+function updateReorderNumbers() {
+  const items = Array.from(reorderList.children);
+  items.forEach((item, index) => {
+    const numberElement = item.querySelector('.reorder-item-number');
+    if (numberElement) {
+      numberElement.textContent = toArabicDigits(index + 1);
+    }
+  });
+}
+
+// Save reorder changes - UPDATED to save all students with new studentNumbers
+saveReorderBtn.addEventListener('click', async () => {
+  try {
+    saveReorderBtn.textContent = 'جاري الحفظ...';
+    saveReorderBtn.disabled = true;
+    
+    const items = Array.from(reorderList.children);
+    const batch = writeBatch(db);
+    
+    // Update each student's studentNumber based on new order (1..n)
+    items.forEach((item, index) => {
+      const studentId = item.getAttribute('data-id');
+      const studentRef = doc(db, 'students', studentId);
+      const studentNumber = index + 1;
+      
+      batch.update(studentRef, {
+        studentNumber: studentNumber,
+        updatedAt: serverTimestamp()
+      });
+    });
+    
+    await batch.commit();
+    await loadStudents(selectedClass);
+    showSaveIndicator();
+    closeReorderModal();
+    
+  } catch (error) {
+    console.error('[saveReorder]', error);
+    alert('حدث خطأ أثناء حفظ الترتيب. يرجى المحاولة مرة أخرى.');
+  } finally {
+    saveReorderBtn.textContent = 'حفظ الترتيب';
+    saveReorderBtn.disabled = false;
+  }
+});
+
+// Show save indicator
+function showSaveIndicator() {
+  reorderSaveIndicator.classList.add('show');
+  setTimeout(() => {
+    reorderSaveIndicator.classList.remove('show');
+  }, 2000);
+}
+
+// NEW: Function to setup long press detection
+function setupLongPress(element, studentId) {
+  element.addEventListener('mousedown', startPress);
+  element.addEventListener('touchstart', startPress);
+  element.addEventListener('mouseup', cancelPress);
+  element.addEventListener('mouseleave', cancelPress);
+  element.addEventListener('touchend', cancelPress);
+  element.addEventListener('touchcancel', cancelPress);
+  
+  function startPress(e) {
+    isLongPress = false;
+    pressTimer = setTimeout(() => {
+      isLongPress = true;
+      openReorderInterface();
+    }, LONG_PRESS_DURATION);
+    
+    if (e.type === 'mousedown' && e.button === 2) {
+      e.preventDefault();
+    }
+  }
+  
+  function cancelPress() {
+    clearTimeout(pressTimer);
+  }
+}
+
+/* ========= Student editor ========= */
+let currentStudent = { id:null, data:null };
+let currentStudentAttendance = [];
+let currentAttendanceRecord = null;
+const teacherNameCache = new Map();
+
+// MODIFIED: openStudentEditor function to load specialCase value
+async function openStudentEditor(id, { syncRoute=true } = {}){
+  edOk.style.display='none';
+  edErr.style.display='none';
+  updateStudentDesktopLayout();
+  try{
+    const ref = doc(db,'students', id);
+    const s = await getDoc(ref);
+    if(!s.exists()){ alert('السجل غير موجود.'); return; }
+    const d = s.data();
+    currentStudent = { id, data:d };
+    
+    studentTitle.textContent = '';
+    studentHeaderName.textContent = d.name || '—';
+    studentHeaderClass.textContent = d.class ? `الفصل: ${toArabicDigits(d.class)}` : '—';
+    
+    edSName.value = d.name || '';
+    edSCivil.value = d.civilid || '';
+    edSSpecialCase.checked = d.specialCase || false;
+    
+    openSheet(studentSheet);
+    syncStudentProfileChrome();
+    if(syncRoute){
+      setStudentRoute(id, selectedClass || d.class || null);
+    }
+    await loadStudentAttendance(id);
+    await Promise.all([
+      loadCommitments(id),
+      loadEnrollments(id),
+      loadReports(id),
+      loadNotes(id)
+    ]);
+  }catch(e){
+    console.error('[openStudentEditor]', e);
+    alert('تعذّر فتح صفحة الطالب.');
+  }
+}
+
+studentHeaderCard.addEventListener('click', ()=>{ studentCollapseBody.classList.toggle('open'); });
+
+function closeStudentView(){
+  if(getRouteStudentId()){
+    clearStudentRoute();
+    closeSheet(studentSheet);
+    syncStudentProfileChrome();
+    if(selectedClass){
+      openSheet(classSheet);
+      loadStudents(selectedClass);
+    }
+    return;
+  }
+  closeSheet(studentSheet);
+  syncStudentProfileChrome();
+}
+
+closeStudent.addEventListener('click', closeStudentView);
+studentTopBack.addEventListener('click', closeStudentView);
+
+// MODIFIED: saveStudent function to update specialCase field and trigger re-sorting
+saveStudent.addEventListener('click', async ()=>{
+  edOk.style.display='none';
+  edErr.style.display='none';
+  try{
+    const { id } = currentStudent;
+    if(!id) throw new Error('لم يتم اختيار طالب.');
+    const name = (edSName.value||'').trim();
+    const civilid = (edSCivil.value||'').trim();
+    const specialCase = edSSpecialCase.checked;
+    
+    if(!name) throw new Error('أدخل الاسم.');
+    
+    const updateData = { 
+      name, 
+      civilid, 
+      specialCase,
+      updatedAt: serverTimestamp() 
+    };
+    
+    // If special case is being turned off, clear reason
+    if (!specialCase && currentStudent.data?.specialCase) {
+      updateData.specialCaseReason = null;
+      updateData.specialCaseUpdatedAt = serverTimestamp();
+      updateData.specialCaseUpdatedBy = auth.currentUser.uid;
+    }
+    
+    await updateDoc(doc(db,'students', id), updateData);
+    
+    studentHeaderName.textContent = name;
+    edOk.textContent = 'تم حفظ التعديلات.';
+    edOk.style.display='block';
+    setTimeout(()=>{ edOk.style.display='none'; }, 900);
+    
+    // Update the student list with proper studentNumber sorting
+    if(selectedClass) await loadStudents(selectedClass);
+  }catch(e){
+    edErr.textContent = e?.message || 'تعذّر الحفظ.';
+    edErr.style.display='block';
+  }
+});
+
+deleteStudent.addEventListener('click', async ()=>{
+  edOk.style.display='none';
+  edErr.style.display='none';
+  try{
+    const { id } = currentStudent;
+    if(!id) return;
+    if(!confirm('حذف سجل الطالب؟')) return;
+    await deleteDoc(doc(db,'students', id));
+    edOk.textContent='تم الحذف.';
+    edOk.style.display='block';
+    setTimeout(()=>{ edOk.style.display='none'; closeStudentView(); }, 700);
+    if(selectedClass) await loadStudents(selectedClass);
+    await refreshSchoolStats();
+  }catch(e){
+    edErr.textContent = e?.message || 'تعذّر الحذف.';
+    edErr.style.display='block';
+  }
+});
+
+/* ========= Attendance analytics for a student ========= */
+async function loadStudentAttendance(studentId){
+  absencesList.innerHTML = '<div class="loading"><div class="spinner"></div><div class="muted">جاري تحميل بيانات الحضور...</div></div>';
+  latesList.innerHTML = '';
+  totPresent.textContent = '—'; totAbsent.textContent = '—'; totLate.textContent = '—';
+  absentCountPill.textContent = 'غياب: 0'; lateCountPill.textContent = 'تأخير: 0';
+  warningAbsenceCount.textContent = '0';
+  warningLevelBadge.textContent = 'لا يوجد';
+  warningLevelBadge.className = 'warning-level-badge warning-level-0';
+  
+  try{
+    const subSnap = await getDocs(collection(db,'students', studentId, 'attendance'));
+    const rows = [];
+    subSnap.forEach(d=> rows.push({ id:d.id, ...d.data() }));
+    rows.sort((a,b)=>{ if(a.date===b.date) return (b.lessonIndex||0) - (a.lessonIndex||0); return a.date < b.date ? 1 : -1; });
+    currentStudentAttendance = rows;
+    
+    // Calculate totals based on new rules
+    const present = rows.filter(r=> r.status==='present').length;
+    const late = rows.filter(r=> r.status==='late').length;
+    
+    // Count only absences without reason for totals and warnings
+    const absencesWithoutReason = rows.filter(r=> r.status==='absent' && r.hasReason !== true);
+    const absent = absencesWithoutReason.length;
+    
+    // Count all absences for display
+    const allAbsences = rows.filter(r=> r.status==='absent');
+    
+    totPresent.textContent = toArabicDigits(present);
+    totLate.textContent = toArabicDigits(late);
+    totAbsent.textContent = toArabicDigits(absent);
+    absentCountPill.textContent = `غياب: ${toArabicDigits(allAbsences.length)}`;
+    lateCountPill.textContent = `تأخير: ${toArabicDigits(late)}`;
+    
+    // Calculate warning level
+    const warningAbsencesCount = absent;
+    warningAbsenceCount.textContent = toArabicDigits(warningAbsencesCount);
+    
+    let warningLevel = 0;
+    let warningText = 'لا يوجد';
+    
+    if (warningAbsencesCount >= 15) {
+      warningLevel = 3;
+      warningText = 'تحذير 3';
+    } else if (warningAbsencesCount >= 10) {
+      warningLevel = 2;
+      warningText = 'تحذير 2';
+    } else if (warningAbsencesCount >= 5) {
+      warningLevel = 1;
+      warningText = 'تحذير 1';
+    }
+    
+    warningLevelBadge.textContent = warningText;
+    warningLevelBadge.className = `warning-level-badge warning-level-${warningLevel}`;
+    
+    const absencesFragment = document.createDocumentFragment();
+    const latesFragment = document.createDocumentFragment();
+    
+    // Create attendance tiles for all absences (both excused and non-excused)
+    allAbsences.forEach(r=> absencesFragment.appendChild(makeAttTile(r)));
+    rows.filter(r=> r.status==='late').forEach(r=> latesFragment.appendChild(makeAttTile(r)));
+    
+    absencesList.innerHTML = ''; latesList.innerHTML = '';
+    absencesList.appendChild(absencesFragment); latesList.appendChild(latesFragment);
+    
+    if(allAbsences.length===0){
+      const empty=document.createElement('div'); empty.className='muted'; empty.textContent='لا توجد حالات غياب.'; absencesList.appendChild(empty);
+    }
+    if(late===0){
+      const empty=document.createElement('div'); empty.className='muted'; empty.textContent='لا توجد حالات تأخير.'; latesList.appendChild(empty);
+    }
+  }catch(e){
+    console.error('[loadStudentAttendance]', e);
+    const err=document.createElement('div'); err.className='error'; err.textContent='تعذّر تحميل بيانات الحضور.'; absencesList.innerHTML = ''; absencesList.appendChild(err);
+  }
+}
+
+// MODIFIED: makeAttTile function to handle excused absences
+function makeAttTile(r){
+  const div = document.createElement('div');
+  div.className='att-tile will-change';
+  
+  let badgeClass = 'b-absent';
+  let badgeText = 'غياب';
+  
+  if (r.hasReason === true) {
+    badgeClass = 'b-excused';
+    badgeText = 'غياب بعذر';
+  } else if (r.status==='late') {
+    badgeClass = 'b-late';
+    badgeText = 'تأخير';
+  }
+  
+  const title = badgeText + ' — ' + (r.lessonLabel || ('حصة '+(r.lessonIndex||'')));
+  const sub = `${r.class || '—'} • ${toArabicDigits(r.date || '')}`;
+  div.innerHTML = `
+    <div class="att-left">
+      <div class="att-title">${title}</div>
+      <div class="att-sub">${sub}</div>
+    </div>
+    <span class="badge ${badgeClass}">${badgeText}</span>
+  `;
+  div.addEventListener('click', ()=> openAttDetail(r));
+  return div;
+}
+
+// MODIFIED: openAttDetail function to show excused absence details
+async function openAttDetail(r){
+  currentAttendanceRecord = r;
+  attDetailTitle.textContent = r.status==='late' ? 'تفاصيل التأخير' : 'تفاصيل الغياب';
+  
+  // Set badge based on excused status
+  if (r.hasReason === true) {
+    dBadge.className = 'badge b-excused';
+    dBadge.textContent = 'غياب بعذر';
+    excusedReasonRow.style.display = 'flex';
+    dExcusedReason.textContent = r.reasonText || '—';
+  } else {
+    dBadge.className = 'badge ' + (r.status==='late' ? 'b-late':'b-absent');
+    dBadge.textContent = r.status==='late' ? 'تأخير' : 'غياب';
+    excusedReasonRow.style.display = 'none';
+  }
+  
+  dDate.textContent = toArabicDigits(r.date || '—');
+  dLesson.textContent = r.lessonLabel || ('حصة '+ (r.lessonIndex || '—'));
+  dClass.textContent = r.class || '—';
+  
+  const uid = r.updatedBy || r.createdBy;
+  dTeacher.textContent = '—';
+  if(uid){
+    if(teacherNameCache.has(uid)){
+      dTeacher.textContent = teacherNameCache.get(uid);
+    }else{
+      try{ const t = await getDoc(doc(db,'teachers', uid)); const name = t.exists() ? (t.data().name || uid) : uid; teacherNameCache.set(uid, name); dTeacher.textContent = name; }
+      catch{ dTeacher.textContent = uid; }
+    }
+  }
+  
+  const cAt = tsToDate(r.createdAt); const uAt = tsToDate(r.updatedAt);
+  dCreatedAt.textContent = cAt ? fmtDT(cAt) : '—';
+  dUpdatedAt.textContent = uAt ? fmtDT(uAt) : (cAt ? fmtDT(cAt) : '—');
+  
+  statusEditForm.classList.remove('active');
+  statusOptions.forEach(opt => opt.classList.remove('selected'));
+  statusOptions.forEach(opt => { if(opt.dataset.status === r.status) { opt.classList.add('selected'); } });
+  
+  // Show/hide excused button based on attendance status
+  if (r.status === 'absent') {
+    excusedAttBtn.style.display = 'block';
+  } else {
+    excusedAttBtn.style.display = 'none';
+  }
+  
+  openSheet(attDetailSheet);
+}
+
+closeAttDetail.addEventListener('click', ()=> { 
+  closeSheet(attDetailSheet); 
+  statusEditForm.classList.remove('active');
+  excusedReasonRow.style.display = 'none';
+});
+
+editAttBtn.addEventListener('click', () => { statusEditForm.classList.toggle('active'); });
+
+statusOptions.forEach(option => {
+  option.addEventListener('click', () => {
+    statusOptions.forEach(opt => opt.classList.remove('selected'));
+    option.classList.add('selected');
+  });
+});
+
+cancelStatusBtn.addEventListener('click', () => {
+  statusEditForm.classList.remove('active');
+  statusOptions.forEach(opt => opt.classList.remove('selected'));
+  statusOptions.forEach(opt => { if(opt.dataset.status === currentAttendanceRecord.status) { opt.classList.add('selected'); } });
+});
+
+// MODIFIED: saveStatusBtn to handle status changes that might affect excused status
+saveStatusBtn.addEventListener('click', async () => {
+  if (!currentAttendanceRecord || !currentStudent.id) return;
+  const selectedOption = document.querySelector('.status-option.selected');
+  if (!selectedOption) { alert('يرجى اختيار حالة جديدة'); return; }
+  const newStatus = selectedOption.dataset.status;
+  if (newStatus === currentAttendanceRecord.status) { statusEditForm.classList.remove('active'); return; }
+  
+  try {
+    const updateData = { 
+      status: newStatus, 
+      updatedBy: auth.currentUser.uid, 
+      updatedAt: serverTimestamp() 
+    };
+    
+    // If changing from absent to something else, clear excused status
+    if (currentAttendanceRecord.status === 'absent' && newStatus !== 'absent') {
+      updateData.hasReason = false;
+      updateData.reasonText = null;
+    }
+    
+    await updateDoc(doc(db, 'students', currentStudent.id, 'attendance', currentAttendanceRecord.id), updateData);
+    
+    // Update badge based on new status
+    if (newStatus === 'absent' && currentAttendanceRecord.hasReason === true) {
+      dBadge.className = 'badge b-excused';
+      dBadge.textContent = 'غياب بعذر';
+      excusedReasonRow.style.display = 'flex';
+    } else {
+      dBadge.className = 'badge ' + (newStatus==='late' ? 'b-late': newStatus==='absent' ? 'b-absent' : 'b-present');
+      dBadge.textContent = newStatus==='late' ? 'تأخير' : newStatus==='absent' ? 'غياب' : 'حضور';
+      excusedReasonRow.style.display = 'none';
+    }
+    
+    const uAt = new Date(); dUpdatedAt.textContent = fmtDT(uAt);
+    
+    await loadStudentAttendance(currentStudent.id);
+    statusEditForm.classList.remove('active');
+    
+    const successMsg = document.createElement('div'); successMsg.className = 'ok'; successMsg.textContent = 'تم تحديث حالة الحضور بنجاح'; successMsg.style.display = 'block';
+    attDetailBody.appendChild(successMsg); setTimeout(() => { successMsg.style.display = 'none'; }, 3000);
+  } catch (error) {
+    console.error('Error updating attendance status:', error); alert('تعذر تحديث حالة الحضور. يرجى المحاولة مرة أخرى.');
+  }
+});
+
+/* ========= Tabs ========= */
+function activateTab(btn, panel){
+  [tabCommit,tabEnroll,tabReport,tabNote].forEach(b=> b.classList.remove('active'));
+  [panelCommit,panelEnroll,panelReport,panelNote].forEach(p=> p.classList.remove('active'));
+  btn.classList.add('active'); panel.classList.add('active');
+}
+tabCommit.addEventListener('click', ()=> activateTab(tabCommit, panelCommit));
+tabEnroll.addEventListener('click', ()=> activateTab(tabEnroll, panelEnroll));
+tabReport.addEventListener('click', ()=> activateTab(tabReport, panelReport));
+tabNote.addEventListener('click', ()=> activateTab(tabNote, panelNote));
+
+/* ========= Helpers ========= */
+const getMe = ()=> (auth.currentUser? auth.currentUser.uid : 'system');
+function tag(text){ return `<span class="tag">${text}</span>`; }
+function badgeForStatus(status){
+  switch((status||'').toLowerCase()){
+    case 'signed': return `<span class="k-badge k-ok">مُوقّع</span>`;
+    case 'acknowledged': return `<span class="k-badge k-ok">مُقَرّ</span>`;
+    case 'sent': return `<span class="k-badge k-warn">مُرسَل</span>`;
+    case 'revoked': return `<span class="k-badge k-danger">ملغى</span>`;
+    default: return `<span class="k-badge">مسودة</span>`;
+  }
+}
+
+/* ========= Commitments CRUD ========= */
+addCommitBtn.addEventListener('click', ()=>{ commitQuick.style.display = commitQuick.style.display==='none' ? 'flex' : 'none'; if(commitQuick.style.display==='flex'){ document.getElementById('commitTitle').focus(); } });
+commitCancel.addEventListener('click', ()=> commitQuick.style.display='none');
+
+async function loadCommitments(sid){
+  commitList.innerHTML = '<div class="loading"><div class="spinner"></div><div class="muted">جاري تحميل التعهدات...</div></div>';
+  commitEmpty.style.display = 'none';
+  try{
+    const qy = query(collection(db,'students', sid, 'commitments'), orderBy('createdAt','desc'));
+    const snap = await getDocs(qy);
+    if(snap.empty){ commitList.innerHTML = ''; commitEmpty.style.display = 'block'; return; }
+    const fragment = document.createDocumentFragment();
+    snap.forEach(d=>{ const c = d.data(); c.id = d.id; fragment.appendChild(renderCommitCard(sid, c)); });
+    commitList.innerHTML = ''; commitList.appendChild(fragment);
+  }catch(e){ console.error('[loadCommitments]', e); commitList.innerHTML = `<div class="error">تعذّر تحميل التعهدات.</div>`; }
+}
+
+function renderCommitCard(sid, c){
+  const wrap = document.createElement('div'); wrap.className = 'card will-change';
+  const dueText = c.dueDate ? ` • التاريخ: ${toArabicDigits(c.dueDate)}` : '';
+  const aud = c.audience==='both'?'الطالب + ولي الأمر': (c.audience==='student'?'الطالب':'ولي الأمر');
+  wrap.innerHTML = `
+    <div style="flex:1; min-width:220px;">
+      <div class="card-title">${c.title || '—'}</div>
+      <div class="card-sub">${badgeForStatus(c.status)} ${dueText} • ${tag(aud)}</div>
+      ${c.body ? `<div class="card-sub" style="margin-top:4px;">${c.body}</div>` : ''}
+    </div>
+    <div class="actions">
+      <select class="input" data-act="status" style="min-width:140px;">
+        <option value="draft" ${c.status==='draft'?'selected':''}>مسودة</option>
+        <option value="sent" ${c.status==='sent'?'selected':''}>مُرسَل</option>
+        <option value="acknowledged" ${c.status==='acknowledged'?'selected':''}>مُقَرّ</option>
+        <option value="signed" ${c.status==='signed'?'selected':''}>مُوقّع</option>
+        <option value="revoked" ${c.status==='revoked'?'selected':''}>ملغى</option>
+      </select>
+      <button class="btn ghost mini" data-act="save">حفظ</button>
+      <button class="btn danger mini" data-act="del">حذف</button>
+    </div>
+  `;
+  const sel = wrap.querySelector('select[data-act="status"]'); const save = wrap.querySelector('button[data-act="save"]'); const del = wrap.querySelector('button[data-act="del"]');
+  save.addEventListener('click', async ()=>{
+    try{ await updateDoc(doc(db,'students', sid, 'commitments', c.id), { status: sel.value, updatedBy: getMe(), updatedAt: serverTimestamp() });
+      wrap.querySelector('.card-sub').innerHTML = `${badgeForStatus(sel.value)} ${dueText} • ${tag(aud)}`;
+    }catch(e){ alert('تعذّر الحفظ'); }
+  });
+  del.addEventListener('click', async ()=>{
+    if(!confirm('حذف التعهد؟')) return;
+    try{ await deleteDoc(doc(db,'students', sid, 'commitments', c.id)); wrap.remove(); if(!commitList.children.length){ commitEmpty.style.display='block'; } }
+    catch(e){ alert('تعذّر الحذف'); }
+  });
+  return wrap;
+}
+
+commitSave.addEventListener('click', async ()=>{
+  if(!currentStudent.id) return;
+  const title = (commitTitle.value||'').trim(); const reason = (commitReason.value||'').trim(); const due = (commitDue.value||'').trim(); const audience = commitAudience.value || 'guardian';
+  if(!title){ alert('أدخل العنوان'); return; }
+  try{
+    const ref = doc(collection(db,'students', currentStudent.id, 'commitments'));
+    await setDoc(ref, {
+      title, body: reason || '', status: 'sent', audience, class: currentStudent.data?.class || selectedClass || '', dueDate: due || null,
+      createdBy: getMe(), updatedBy: getMe(), createdAt: serverTimestamp(), updatedAt: serverTimestamp()
+    });
+    commitTitle.value=''; commitReason.value=''; commitDue.value=''; commitAudience.value='guardian'; commitQuick.style.display='none';
+    await loadCommitments(currentStudent.id);
+  }catch(e){ console.error(e); alert('تعذّر الحفظ'); }
+});
+
+/* ========= Enrollments CRUD ========= */
+addEnrollBtn.addEventListener('click', ()=>{ enrollQuick.style.display = enrollQuick.style.display==='none' ? 'flex' : 'none'; if(enrollQuick.style.display==='flex'){ document.getElementById('enrollTitle').focus(); } });
+enrollCancel.addEventListener('click', ()=> enrollQuick.style.display='none');
+
+async function loadEnrollments(sid){
+  enrollList.innerHTML = '<div class="loading"><div class="spinner"></div><div class="muted">جاري تحميل قيود الفصول...</div></div>';
+  enrollEmpty.style.display = 'none';
+  try{
+    const snap = await getDocs(collection(db,'students', sid, 'enrollments'));
+    const rows = []; snap.forEach(d=> rows.push({ id:d.id, ...d.data() }));
+    rows.sort((a,b)=> (a.from||'') < (b.from||'') ? 1 : -1);
+    if(rows.length===0){ enrollList.innerHTML = ''; enrollEmpty.style.display='block'; return; }
+    const fragment = document.createDocumentFragment(); rows.forEach(r=> fragment.appendChild(renderEnrollCard(sid, r)));
+    enrollList.innerHTML = ''; enrollList.appendChild(fragment);
+  }catch(e){ console.error('[loadEnrollments]', e); enrollList.innerHTML = `<div class="error">تعذّر تحميل قيود الفصول.</div>`; }
+}
+
+function renderEnrollCard(sid, r){
+  const wrap = document.createElement('div'); wrap.className = 'card will-change';
+  const dates = (r.from? `من ${toArabicDigits(r.from)}`:'') + (r.to? ` حتى ${toArabicDigits(r.to)}`:'');
+  wrap.innerHTML = `
+    <div style="flex:1; min-width:220px;">
+      <div class="card-title">${r.title || '—'}</div>
+      <div class="card-sub">${dates}</div>
+      ${r.lengthText ? `<div class="card-sub" style="margin-top:4px;">المدة: ${r.lengthText}</div>`:''}
+      ${r.reason ? `<div class="card-sub" style="margin-top:4px;">${r.reason}</div>`:''}
+    </div>
+    <div class="actions">
+      <button class="btn danger mini" data-act="del">حذف</button>
+    </div>
+  `;
+  wrap.querySelector('[data-act="del"]').addEventListener('click', async ()=>{
+    if(!confirm('حذف القيد؟')) return;
+    try{ await deleteDoc(doc(db,'students', sid, 'enrollments', r.id)); wrap.remove(); if(!enrollList.children.length){ enrollEmpty.style.display='block'; } }
+    catch(e){ alert('تعذّر الحذف'); }
+  });
+  return wrap;
+}
+
+enrollSave.addEventListener('click', async ()=>{
+  if(!currentStudent.id) return;
+  const title = (enrollTitle.value||'').trim(); const reason= (enrollReason.value||'').trim(); const lengthText = (enrollLength.value||'').trim(); const from = (enrollFrom.value||'').trim(); const to = (enrollTo.value||'').trim();
+  if(!title){ alert('أدخل العنوان'); return; }
+  try{
+    const ref = doc(collection(db,'students', currentStudent.id, 'enrollments'));
+    await setDoc(ref, {
+      title, reason, lengthText, from: from||null, to: to||null, class: currentStudent.data?.class || selectedClass || '',
+      createdBy: getMe(), updatedBy: getMe(), createdAt: serverTimestamp(), updatedAt: serverTimestamp()
+    });
+    enrollTitle.value=''; enrollReason.value=''; enrollLength.value=''; enrollFrom.value=''; enrollTo.value=''; enrollQuick.style.display='none';
+    await loadEnrollments(currentStudent.id);
+  }catch(e){ console.error(e); alert('تعذّر الحفظ'); }
+});
+
+/* ========= Reports CRUD ========= */
+addReportBtn.addEventListener('click', ()=>{ reportQuick.style.display = reportQuick.style.display==='none' ? 'flex' : 'none'; if(reportQuick.style.display==='flex'){ document.getElementById('reportTitle').focus(); } });
+reportCancel.addEventListener('click', ()=> reportQuick.style.display='none');
+
+async function loadReports(sid){
+  reportList.innerHTML = '<div class="loading"><div class="spinner"></div><div class="muted">جاري تحميل التقارير...</div></div>';
+  reportEmpty.style.display = 'none';
+  try{
+    const qy = query(collection(db,'students', sid, 'reports'), orderBy('date','desc'));
+    const snap = await getDocs(qy);
+    if(snap.empty){ reportList.innerHTML = ''; reportEmpty.style.display='block'; return; }
+    const fragment = document.createDocumentFragment(); snap.forEach(d=>{ const r = d.data(); r.id = d.id; fragment.appendChild(renderReportCard(sid, r)); });
+    reportList.innerHTML = ''; reportList.appendChild(fragment);
+  }catch(e){ console.error('[loadReports]', e); reportList.innerHTML = `<div class="error">تعذّر تحميل التقارير.</div>`; }
+}
+
+function renderReportCard(sid, r){
+  const wrap = document.createElement('div'); wrap.className = 'card will-change';
+  const typeLabelMap = { behavior:'سلوك', academic:'تحصيلي', incident:'واقعة', health:'صحي', custom:'custom' };
+  wrap.innerHTML = `
+    <div style="flex:1; min-width:220px;">
+      <div class="card-title">${r.title || '—'}</div>
+      <div class="card-sub">${tag(typeLabelMap[r.type] || r.type || '—')} • ${toArabicDigits(r.date || '')}</div>
+      ${r.reason ? `<div class="card-sub" style="margin-top:4px;">${r.reason}</div>`:''}
+    </div>
+    <div class="actions">
+      <button class="btn danger mini" data-act="del">حذف</button>
+    </div>
+  `;
+  wrap.querySelector('[data-act="del"]').addEventListener('click', async ()=>{
+    if(!confirm('حذف التقرير؟')) return;
+    try{ await deleteDoc(doc(db,'students', sid, 'reports', r.id)); wrap.remove(); if(!reportList.children.length){ reportEmpty.style.display='block'; } }
+    catch(e){ alert('تعذّر الحذف'); }
+  });
+  return wrap;
+}
+
+reportSave.addEventListener('click', async ()=>{
+  if(!currentStudent.id) return;
+  const type = reportType.value || 'behavior'; const title = (reportTitle.value||'').trim(); const reason= (reportReason.value||'').trim(); const date = (reportDate.value||'').trim();
+  if(!title || !date){ alert('أكمل الحقول'); return; }
+  try{
+    const ref = doc(collection(db,'students', currentStudent.id, 'reports'));
+    await setDoc(ref, {
+      type, title, reason, date, class: currentStudent.data?.class || selectedClass || '',
+      createdBy: getMe(), updatedBy: getMe(), createdAt: serverTimestamp(), updatedAt: serverTimestamp()
+    });
+    reportTitle.value=''; reportReason.value=''; reportDate.value=''; reportType.value='behavior'; reportQuick.style.display='none';
+    await loadReports(currentStudent.id);
+  }catch(e){ console.error(e); alert('تعذّر الحفظ'); }
+});
+
+/* ========= Notes CRUD ========= */
+addNoteBtn.addEventListener('click', ()=>{ noteQuick.style.display = noteQuick.style.display==='none' ? 'flex' : 'none'; if(noteQuick.style.display==='flex'){ document.getElementById('noteBody').focus(); } });
+noteCancel.addEventListener('click', ()=> noteQuick.style.display='none');
+
+async function loadNotes(sid){
+  noteList.innerHTML = '<div class="loading"><div class="spinner"></div><div class="muted">جاري تحميل الملاحظات...</div></div>';
+  noteEmpty.style.display = 'none';
+  try{
+    const snap = await getDocs(collection(db,'students', sid, 'notes'));
+    const rows = []; snap.forEach(d=> rows.push({ id:d.id, ...d.data() }));
+    rows.sort((a,b)=>{ if(!!b.pinned - !!a.pinned !== 0) return (b.pinned?1:0)-(a.pinned?1:0); const at = tsToDate(a.createdAt)?.getTime() || 0; const bt = tsToDate(b.createdAt)?.getTime() || 0; return bt - at; });
+    if(rows.length===0){ noteList.innerHTML = ''; noteEmpty.style.display='block'; return; }
+    const fragment = document.createDocumentFragment(); rows.forEach(n=> fragment.appendChild(renderNoteCard(sid, n)));
+    noteList.innerHTML = ''; noteList.appendChild(fragment);
+  }catch(e){ console.error('[loadNotes]', e); noteList.innerHTML = `<div class="error">تعذّر تحميل الملاحظات.</div>`; }
+}
+
+function renderNoteCard(sid, n){
+  const wrap = document.createElement('div'); wrap.className = 'card will-change';
+  const tMap = { general:'عام', behavior:'سلوك', academic:'تحصيلي', health:'صحي', 'parent-call':'اتصال بولي الأمر', meeting:'اجتماع' };
+  const pinBadge = n.pinned ? `<span class="k-badge k-warn">مثبّت</span>` : '';
+  const when = tsToDate(n.createdAt) ? fmtDT(tsToDate(n.createdAt)) : '';
+  wrap.innerHTML = `
+    <div style="flex:1; min-width:220px;">
+      <div class="card-title">${n.body || '—'}</div>
+      <div class="card-sub">${tag(tMap[n.type] || n.type || '—')} ${pinBadge} ${when? ` • ${when}`:''}</div>
+    </div>
+    <div class="actions">
+      <button class="btn ghost mini" data-act="togglePin">${n.pinned?'إلغاء التثبيت':'تثبيت'}</button>
+      <button class="btn danger mini" data-act="del">حذف</button>
+    </div>
+  `;
+  const pinBtn = wrap.querySelector('button[data-act="togglePin"]'); const delBtn = wrap.querySelector('button[data-act="del"]');
+  pinBtn.addEventListener('click', async ()=>{
+    try{ await updateDoc(doc(db,'students', sid, 'notes', n.id), { pinned: !n.pinned, updatedBy:getMe(), updatedAt: serverTimestamp() });
+      n.pinned = !n.pinned; pinBtn.textContent = n.pinned? 'إلغاء التثبيت' : 'تثبيت';
+      const sub = wrap.querySelector('.card-sub'); const t = (tMap[n.type] || n.type || '—'); const pinBadge2 = n.pinned ? `<span class="k-badge k-warn">مثبّت</span>` : '';
+      sub.innerHTML = `${tag(t)} ${pinBadge2} ${when? ` • ${when}`:''}`;
+    }catch(e){ alert('تعذّر التحديث'); }
+  });
+  delBtn.addEventListener('click', async ()=>{
+    if(!confirm('حذف الملاحظة؟')) return;
+    try{ await deleteDoc(doc(db,'students', sid, 'notes', n.id)); wrap.remove(); if(!noteList.children.length){ noteEmpty.style.display='block'; } }
+    catch(e){ alert('تعذّر الحذف'); }
+  });
+  return wrap;
+}
+
+noteSave.addEventListener('click', async ()=>{
+  if(!currentStudent.id) return;
+  const body = (noteBody.value||'').trim(); const type = noteType.value || 'general'; const pinned = !!notePinned.checked;
+  if(!body){ alert('أدخل نص الملاحظة'); return; }
+  try{
+    const ref = doc(collection(db,'students', currentStudent.id, 'notes'));
+    await setDoc(ref, {
+      body, type, pinned, visibility: 'teachers', class: currentStudent.data?.class || selectedClass || '',
+      createdBy: getMe(), updatedBy: getMe(), createdAt: serverTimestamp(), updatedAt: serverTimestamp()
+    });
+    noteBody.value=''; notePinned.checked=false; noteType.value='general'; noteQuick.style.display='none';
+    await loadNotes(currentStudent.id);
+  }catch(e){ console.error(e); alert('تعذّر الحفظ'); }
+});
+</script>
+
+  <script src="/shared/hub-title-link.js" defer></script>
+<script src="/name-glow.js" defer></script>
+</body>
+</html>

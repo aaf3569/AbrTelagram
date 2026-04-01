@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; img-src 'self' data: blob: https://framerusercontent.com; font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; connect-src 'self' https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com https://firebaseinstallations.googleapis.com https://www.googleapis.com https://www.gstatic.com https://*.gstatic.com https://*.firebaseio.com wss://*.firebaseio.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; manifest-src 'self'; upgrade-insecure-requests; block-all-mixed-content">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  <title>تسجيل الدخول - ثانوية أحمد البشر الرومي</title>
+
+  <!-- Font & Icons -->
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- iOS home screen icon -->
+  <link rel="apple-touch-icon" sizes="180x180" href="./images/appicon.png" />
+  
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <meta name="theme-color" content="#033C54" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <!-- Browser tab icon (favicon) -->
+  <link rel="icon" type="image/png" sizes="64x64" href="https://framerusercontent.com/images/eepB7V11E8IMGVLttDUMaz62pPQ.png?width=64&height=64" />
+  <link rel="shortcut icon" href="https://framerusercontent.com/images/eepB7V11E8IMGVLttDUMaz62pPQ.png?width=64&height=64" />
+
+  <!-- Social / Safari preview (Open Graph & Twitter) -->
+  <meta property="og:title" content="تسجيل الدخول - ثانوية أحمد البشر الرومي">
+  <meta property="og:description" content="منصة تسجيل الدخول لمعلمي ثانوية أحمد البشر الرومي.">
+  <meta property="og:type" content="website">
+  <!-- <meta property="og:url" content="https://your-domain.com/login.html"> -->
+  <meta property="og:image" content="https://framerusercontent.com/images/jRnZLlPr90qwKsuUwfIlvDS9E.png?width=1200&height=630">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="تسجيل الدخول - ثانوية أحمد البشر الرومي">
+  <meta name="twitter:description" content="منصة تسجيل الدخول لمعلمي ثانوية أحمد البشر الرومي.">
+  <meta name="twitter:image" content="https://framerusercontent.com/images/jRnZLlPr90qwKsuUwfIlvDS9E.png?width=1200&height=630">
+
+  <link rel="stylesheet" href="./shared/base.css" />
+  <style>
+    :root {
+      --primary: #033C54;
+      --primary-light: #065372;
+      --primary-lighter: #E8F4FC;
+      --secondary: #2e8bc0;
+      --accent: #0a5f80;
+      --bg: #f9fbfd;
+      --card: #ffffff;
+      --text: #0f172a;
+      --text-light: #4a6572;
+      --muted: #64748b;
+      --border: #e1e8f0;
+      --focus: rgba(3, 60, 84, 0.15);
+      --success: #0f8a4b;
+      --error: #b91c1c;
+      --shadow-sm: 0 2px 8px rgba(3, 60, 84, 0.08);
+      --shadow-md: 0 6px 16px rgba(3, 60, 84, 0.12);
+      --shadow-lg: 0 15px 35px rgba(3, 60, 84, 0.18);
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --radius-xl: 24px;
+      --transition: all 0.16s ease;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      height: 100%;
+      font-family: "Noto Kufi Arabic", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #f3f9fd 0%, #e6f2fa 100%);
+      overflow-x: hidden;
+    }
+
+    /* Header */
+    .site-header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      padding: 1rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: var(--shadow-sm);
+      border-bottom: 1px solid rgba(3, 60, 84, 0.08);
+    }
+
+    .site-title {
+      margin: 0;
+      font-weight: 900;
+      font-size: clamp(1.25rem, 4vw, 1.7rem);
+      color: var(--primary);
+      text-align: center;
+      line-height: 1.4;
+    }
+
+    /* Main Content */
+    .main-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 2rem 1rem;
+      width: 100%;
+    }
+
+    /* Login Card */
+    .login-card {
+      width: 100%;
+      max-width: 440px;
+      background: var(--card);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-lg);
+      overflow: hidden;
+      transform: translateY(0);
+      transition: transform 0.4s ease, box-shadow 0.4s ease;
+      margin-bottom: 2rem;
+      border: 1px solid rgba(3, 60, 84, 0.05);
+    }
+
+    .login-card:hover {
+      transform: translateY(-5px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .card-header {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+      color: white;
+      padding: 1.75rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+    }
+
+    .card-header h2 {
+      margin: 0;
+      font-size: 1.4rem;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+    }
+
+    .card-body {
+      padding: 2rem 2rem 1.5rem;
+    }
+
+    /* Form Elements */
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
+
+    .form-label {
+      display: block;
+      margin-bottom: 0.75rem;
+      font-weight: 700;
+      color: var(--text);
+      font-size: 1rem;
+    }
+
+    .input-container {
+      position: relative;
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      border: 1.5px solid var(--border);
+      background: white;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+    }
+
+    .input-container:focus-within {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--focus);
+    }
+
+    .input-icon {
+      width: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      font-size: 1rem;
+      flex-shrink: 0;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 1rem 1rem;
+      border: none;
+      background: transparent;
+      color: var(--text);
+      font-size: 1rem;
+      outline: none;
+      caret-color: var(--primary);
+      padding-left: 0.5rem;
+    }
+
+    .form-input::placeholder {
+      color: var(--muted);
+      opacity: 0.7;
+    }
+
+    .password-toggle {
+      width: 50px;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      transition: var(--transition);
+      flex-shrink: 0;
+    }
+
+    .password-toggle:hover {
+      color: var(--primary);
+      background: var(--primary-lighter);
+    }
+
+    .btn-login {
+      width: 100%;
+      padding: 1rem;
+      border: none;
+      border-radius: var(--radius-md);
+      background: linear-gradient(to right, var(--primary), var(--accent));
+      color: white;
+      font-family: "Noto Kufi Arabic", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+      font-weight: 700;
+      font-size: 1.05rem;
+      cursor: pointer;
+      transition: var(--transition);
+      box-shadow: 0 4px 12px rgba(3, 60, 84, 0.25);
+      position: relative;
+      overflow: hidden;
+      margin-top: 1.5rem;
+    }
+
+    .btn-login::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+      transition: 0.5s;
+    }
+
+    .btn-login:hover {
+      box-shadow: 0 6px 16px rgba(3, 60, 84, 0.35);
+      transform: translateY(-2px);
+    }
+
+    .btn-login:hover::before {
+      left: 100%;
+    }
+
+    .btn-login:active {
+      transform: translateY(0);
+    }
+
+    .remember-me {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      user-select: none;
+      cursor: pointer;
+      color: var(--text);
+      transition: var(--transition);
+      padding: 0.75rem 0.5rem;
+      border-radius: var(--radius-sm);
+      width: fit-content;
+      margin-top: 0.5rem;
+    }
+
+    .remember-me:hover {
+      background: var(--primary-lighter);
+    }
+
+    .checkmark {
+      width: 22px;
+      height: 22px;
+      border-radius: 6px;
+      border: 2px solid var(--primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: transparent;
+      font-size: 14px;
+      transition: var(--transition);
+      flex-shrink: 0;
+    }
+
+    .remember-me.active .checkmark {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+
+    .message {
+      min-height: 0;
+      font-size: 0.95rem;
+      text-align: center;
+      padding: 0.75rem;
+      border-radius: var(--radius-sm);
+      transition: var(--transition);
+      margin-top: 1rem;
+      opacity: 0;
+      transform: translateY(-10px);
+      height: 0;
+      overflow: hidden;
+    }
+
+    .message.show {
+      opacity: 1;
+      transform: translateY(0);
+      height: auto;
+      min-height: 3rem;
+    }
+
+    .message.error {
+      color: var(--error);
+      background: rgba(185, 28, 28, 0.08);
+      border: 1px solid rgba(185, 28, 28, 0.2);
+    }
+
+    .message.success {
+      color: var(--success);
+      background: rgba(15, 138, 75, 0.08);
+      border: 1px solid rgba(15, 138, 75, 0.2);
+    }
+
+    /* ===========================
+       Loading Overlay
+       =========================== */
+    .loader-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      background: linear-gradient(135deg, #dff6ff 0%, #eaf6fb 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      padding: 5vh 1rem;
+      opacity: 0;
+      visibility: hidden;
+      overflow: hidden;
+      transition: opacity 0.5s ease;
+    }
+
+    .loader-overlay.show {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .loader-main {
+      transition: transform 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+      transform: translateY(0);
+      transform-origin: center;
+    }
+
+    .loader-overlay.spinner-visible .loader-main {
+      transform: translateY(-30px);
+    }
+
+    .loader-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      max-width: 90vw;
+      text-align: center;
+      transform: scale(var(--loader-scale, 1));
+      transform-origin: center;
+    }
+
+    .loader-logo-container {
+      width: 200px;
+      height: 200px;
+      margin-bottom: 24px;
+      background: rgba(255, 255, 255, 0.4);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border-radius: 26px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow:
+        0 8px 24px rgba(0, 0, 0, 0.1),
+        0 2px 6px rgba(0, 0, 0, 0.06);
+      animation: fadeUp 0.6s ease-out;
+    }
+
+    .loader-logo {
+      width: 85%;
+      height: 85%;
+      object-fit: contain;
+    }
+
+    .loader-heading {
+      font-family: "Noto Kufi Arabic", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      color: #0c2d48;
+      font-weight: 700;
+      font-size: 26px;
+      line-height: 1.5;
+      letter-spacing: -0.5px;
+      word-spacing: 4px;
+      direction: rtl;
+    }
+
+    .loader-word {
+      opacity: 0;
+      transform: translateY(20px);
+      animation: fadeWord 0.5s ease forwards;
+      margin: 0 3px;
+      white-space: nowrap;
+    }
+
+    .loader-subtitle {
+      height: 3px;
+      width: 60%;
+      border-radius: 2px;
+      background: linear-gradient(90deg, #0c2d48, #2e8bc0, #0c2d48);
+      margin-top: 14px;
+      transform: scaleX(0);
+      transform-origin: center;
+      animation: growLine 0.8s 0.8s ease forwards;
+    }
+
+    .loader-welcome {
+      font-family: "Noto Kufi Arabic", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+      font-weight: 700;
+      color: #4a6572;
+      font-size: 16px;
+      margin-top: 22px;
+      opacity: 0;
+      transform: translateY(15px);
+      transition: opacity 0.6s ease 1.2s, transform 0.6s ease 1.2s;
+      direction: rtl;
+      text-align: center;
+      max-width: 90%;
+      letter-spacing: -0.2px;
+    }
+
+    .loader-welcome.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .bar-spinner {
+      width: 70px;
+      height: 70px;
+      position: absolute;
+      bottom: var(--spinner-bottom, 80px);
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+
+    .loader-overlay.spinner-visible .bar-spinner {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .spinner-bar-rotate {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      transform: rotate(calc(var(--i) * 30deg));
+    }
+
+    .spinner-bar {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      width: 4px;
+      height: 18px;
+      border-radius: 4px;
+      transform: translateX(-50%);
+      background: linear-gradient(to bottom, #0c2d48, #2e8bc0);
+      box-shadow: 0 0 8px rgba(0, 50, 100, 0.3);
+      animation: barPulse 1.2s infinite ease-in-out;
+      animation-delay: calc(var(--i) * 0.07s);
+    }
+
+    /* Animations */
+    @keyframes barPulse {
+      0%, 100% { opacity: 0.2; }
+      50% { opacity: 1; }
+    }
+
+    @keyframes fadeWord {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes growLine {
+      to { transform: scaleX(1); }
+    }
+
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(10px) scale(0.9);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 640px) {
+      .card-header {
+        padding: 1.5rem 1.25rem;
+      }
+
+      .card-body {
+        padding: 1.5rem 1.25rem;
+      }
+
+      .site-header {
+        padding: 1rem;
+      }
+
+      .login-card {
+        max-width: 100%;
+      }
+
+      .loader-content {
+        padding: 1.25rem;
+      }
+
+      .loader-welcome { font-size: 16px; }
+    }
+
+    @media (max-width: 480px) {
+      .loader-overlay {
+        padding-top: 12vh;
+        padding-bottom: 10vh;
+      }
+    }
+
+    /* Performance optimizations */
+    .will-change {
+      will-change: transform, opacity;
+    }
+
+    /* Reduced motion for accessibility */
+    @media (prefers-reduced-motion: reduce) {
+      * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="site-header">
+    <h1 class="site-title">ثانوية أحمد البشر الرومي</h1>
+  </header>
+
+  <!-- Main Content -->
+  <main class="main-container">
+    <div class="login-card">
+      <div class="card-header">
+        <h2>تسجيل الدخول</h2>
+      </div>
+
+      <div class="card-body">
+        <div class="form-group">
+          <label for="loginEmail" class="form-label">رقم البطاقة المدنية</label>
+          <div class="input-container">
+            <div class="input-icon">
+              <i class="fas fa-id-card"></i>
+            </div>
+            <input
+              type="text"
+              id="loginEmail"
+              class="form-input"
+              placeholder="مثال: 123456"
+              autocomplete="off"
+              inputmode="numeric"
+              pattern="[0-9]*"
+            >
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="loginPassword" class="form-label">كلمة المرور</label>
+          <div class="input-container">
+            <input type="password" id="loginPassword" class="form-input" placeholder="••••••••" autocomplete="current-password">
+            <button type="button" class="password-toggle" id="togglePassword">
+              <i class="fas fa-eye"></i>
+            </button>
+          </div>
+        </div>
+
+        <div id="rememberToggle" class="remember-me" role="checkbox" aria-checked="false" tabindex="0">
+          <div class="checkmark">✓</div>
+          <div>تذكرني</div>
+        </div>
+
+        <button id="loginBtn" class="btn-login">دخول</button>
+
+        <div id="msg" class="message"></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Loading Overlay -->
+  <div id="loader" class="loader-overlay" aria-hidden="true">
+    <div class="loader-main">
+      <div class="loader-content">
+        <div class="loader-logo-container">
+          <img class="loader-logo" src="https://framerusercontent.com/images/aI1iHN9wVHJ3PyWbMpHkgJYWsqE.png" alt="شعار المدرسة">
+        </div>
+
+        <h2 id="loaderTitle" class="loader-heading" aria-label="ثانوية أحمد البشر الرومي"></h2>
+        <div class="loader-subtitle"></div>
+        <div id="loaderWelcome" class="loader-welcome"></div>
+      </div>
+    </div>
+
+    <div id="barSpinner" class="bar-spinner" aria-hidden="true">
+      <div class="spinner-bar-rotate" style="--i:0"><div class="spinner-bar" style="--i:0"></div></div>
+      <div class="spinner-bar-rotate" style="--i:1"><div class="spinner-bar" style="--i:1"></div></div>
+      <div class="spinner-bar-rotate" style="--i:2"><div class="spinner-bar" style="--i:2"></div></div>
+      <div class="spinner-bar-rotate" style="--i:3"><div class="spinner-bar" style="--i:3"></div></div>
+      <div class="spinner-bar-rotate" style="--i:4"><div class="spinner-bar" style="--i:4"></div></div>
+      <div class="spinner-bar-rotate" style="--i:5"><div class="spinner-bar" style="--i:5"></div></div>
+      <div class="spinner-bar-rotate" style="--i:6"><div class="spinner-bar" style="--i:6"></div></div>
+      <div class="spinner-bar-rotate" style="--i:7"><div class="spinner-bar" style="--i:7"></div></div>
+      <div class="spinner-bar-rotate" style="--i:8"><div class="spinner-bar" style="--i:8"></div></div>
+      <div class="spinner-bar-rotate" style="--i:9"><div class="spinner-bar" style="--i:9"></div></div>
+      <div class="spinner-bar-rotate" style="--i:10"><div class="spinner-bar" style="--i:10"></div></div>
+      <div class="spinner-bar-rotate" style="--i:11"><div class="spinner-bar" style="--i:11"></div></div>
+      </div>
+  </div>
+
+  <script type="module">
+    import { firebaseConfig } from "./shared/firebase.js";
+    // ===== Firebase SDKs (ES modules over CDN)
+    import { initializeApp } from "./shared/firebase.js";
+    import {
+      getAuth,
+      browserLocalPersistence,
+      browserSessionPersistence,
+      setPersistence,
+      signInWithEmailAndPassword,
+      onAuthStateChanged,
+      signOut
+    } from "./shared/firebase.js";
+    import {
+      getFirestore,
+      doc,
+      getDoc
+    } from "./shared/firebase.js";
+
+    // ===== Config
+    
+
+    // ===== Init
+    const app  = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db   = getFirestore(app);
+
+    // ===== UI refs
+    const emailEl = document.getElementById('loginEmail'); // now holds civil id number
+    const passEl  = document.getElementById('loginPassword');
+    const loginBtn = document.getElementById('loginBtn');
+    const msgEl = document.getElementById('msg');
+    const togglePasswordBtn = document.getElementById('togglePassword');
+    const eyeIcon = togglePasswordBtn.querySelector('i');
+    const loader = document.getElementById('loader');
+    const loaderTitle = document.getElementById('loaderTitle');
+    const loaderWelcome = document.getElementById('loaderWelcome');
+    function normalizeRole(value) {
+      return (value || '').toString().trim().toLowerCase();
+    }
+
+    function isTruthyFlag(value) {
+      return value === true || value === 'true' || value === 1 || value === '1';
+    }
+
+    function getRouteForProfile(profile) {
+      const role = normalizeRole(profile?.role);
+      const isSupervisor = isTruthyFlag(profile?.isSupervisor);
+      if (role === 'admin') return './admins/adminpage.html';
+      if (role === 'head') return './depHead/dptlead.html';
+      if (role === 'user' && isSupervisor) return './supervisors/supervisor.html';
+      if (role === 'user') return './Teachers/user.html';
+      return null;
+    }
+
+    // Force numeric only for civil id input (works with paste too)
+    function enforceDigitsOnly(inputEl) {
+      inputEl.addEventListener('input', () => {
+        const cleaned = inputEl.value.replace(/\D+/g, '');
+        if (inputEl.value !== cleaned) inputEl.value = cleaned;
+      });
+    }
+    enforceDigitsOnly(emailEl);
+
+    // Build the real email used for Firebase auth
+    function buildTeacherEmailFromCivilId(civilId) {
+      const digits = (civilId || '').toString().replace(/\D+/g, '');
+      return `t${digits}@gmail.com`;
+    }
+
+    // Remember me toggle
+    const rememberToggle = document.getElementById('rememberToggle');
+    let remember = false;
+
+    function setRememberUI(state) {
+      remember = state;
+      rememberToggle.classList.toggle('active', state);
+      rememberToggle.setAttribute('aria-checked', state ? 'true' : 'false');
+    }
+
+    rememberToggle.addEventListener('click', () => setRememberUI(!remember));
+    rememberToggle.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        setRememberUI(!remember);
+      }
+    });
+
+    // Prefill from localStorage if previously remembered
+    try {
+      const saved = JSON.parse(localStorage.getItem('rememberLogin') || 'null');
+      if (saved && saved.civilId) {
+        emailEl.value = saved.civilId;
+        setRememberUI(true);
+        if (saved.password) {
+          localStorage.setItem('rememberLogin', JSON.stringify({ civilId: saved.civilId }));
+        }
+      } else if (saved && saved.password) {
+        localStorage.removeItem('rememberLogin');
+      }
+    } catch (e) {
+      console.error("Error loading saved credentials:", e);
+    }
+
+    // Password visibility toggle
+    let passwordVisible = false;
+    function togglePasswordVisibility() {
+      passwordVisible = !passwordVisible;
+      passEl.type = passwordVisible ? 'text' : 'password';
+      eyeIcon.className = passwordVisible ? 'fas fa-eye-slash' : 'fas fa-eye';
+
+      togglePasswordBtn.classList.add('will-change');
+      setTimeout(() => {
+        togglePasswordBtn.classList.remove('will-change');
+      }, 300);
+    }
+
+    togglePasswordBtn.addEventListener('click', togglePasswordVisibility);
+
+    // Helpers
+    function showMsg(text, isSuccess = false) {
+      if (text) {
+        msgEl.textContent = text;
+        msgEl.className = 'message ' + (isSuccess ? 'success' : 'error') + ' show';
+
+        setTimeout(() => {
+          msgEl.textContent = '';
+          msgEl.className = 'message';
+        }, 5000);
+      } else {
+        msgEl.textContent = '';
+        msgEl.className = 'message';
+      }
+    }
+
+    function validate() {
+      const civilId = emailEl.value.trim();
+      const pass = passEl.value;
+
+      if (!civilId) return 'يرجى إدخال رقم البطاقة المدنية';
+      if (!pass) return 'يرجى إدخال كلمة المرور';
+
+      // Ensure digits only
+      const digitsOnly = civilId.replace(/\D+/g, '');
+      if (!digitsOnly) return 'يرجى إدخال رقم البطاقة المدنية بشكل صحيح';
+      if (digitsOnly.length !== civilId.length) return 'يرجى إدخال أرقام فقط';
+
+      return null;
+    }
+
+    // Loader overlay animation
+    const loaderTitleText = 'ثانوية أحمد البشر الرومي';
+    let spinnerTimer = null;
+    let loaderShownAtMs = null;
+    const REDIRECT_DELAY_MS = 3000;
+    let isLoginAttemptInProgress = false;
+    let redirectScheduled = false;
+
+    function setupLoaderHeading() {
+      const words = loaderTitleText.split(/\s+/).filter(Boolean);
+      loaderTitle.innerHTML = words
+        .map((word, idx) => `<span class="loader-word" style="animation-delay:${(idx * 0.08 + 0.2).toFixed(2)}s">${word}</span>`)
+        .join('');
+    }
+
+    function updateLoaderScale() {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      const isPhone = width < 480;
+      const baseScale = Math.min(width / 375, height / 700);
+      const scale = Math.min(1, Math.max(0.75, baseScale));
+      loader.style.setProperty('--loader-scale', String(scale));
+      loader.style.setProperty('--spinner-bottom', isPhone ? '7vh' : `${Math.round(80 * scale)}px`);
+    }
+
+    setupLoaderHeading();
+    updateLoaderScale();
+    window.addEventListener('resize', updateLoaderScale);
+
+    function setLoaderWelcomeName(name) {
+      const safeName = (name || '').toString().trim();
+      loaderWelcome.textContent = safeName ? `مرحباً، ${safeName}` : 'مرحباً';
+    }
+
+    function showLoader(name) {
+      setLoaderWelcomeName(name);
+      loaderWelcome.classList.add('show');
+      loader.classList.add('show');
+      loader.classList.remove('spinner-visible');
+      document.body.style.overflow = 'hidden';
+      if (!loaderShownAtMs) loaderShownAtMs = Date.now();
+
+      if (spinnerTimer) clearTimeout(spinnerTimer);
+      spinnerTimer = setTimeout(() => {
+        loader.classList.add('spinner-visible');
+      }, 1200);
+    }
+
+    function hideLoader() {
+      loader.classList.remove('show');
+      loader.classList.remove('spinner-visible');
+      loaderWelcome.classList.remove('show');
+      if (spinnerTimer) {
+        clearTimeout(spinnerTimer);
+        spinnerTimer = null;
+      }
+      loaderShownAtMs = null;
+      document.body.style.overflow = '';
+    }
+
+    function getStoredAuthInfo() {
+      try {
+        const raw = sessionStorage.getItem('auth');
+        return raw ? JSON.parse(raw) : null;
+      } catch (e) {
+        console.error("Stored auth parse error:", e);
+        return null;
+      }
+    }
+
+    const bootstrapAuth = getStoredAuthInfo();
+    if (bootstrapAuth?.loggedIn) {
+      showLoader(bootstrapAuth.name || '');
+    }
+
+    async function getUserProfile(uid) {
+      const profile = { name: null, subject: null, role: null, isSupervisor: false };
+      if (!uid) return profile;
+
+      try {
+        const ref = doc(db, 'teachers', uid);
+        const snap = await getDoc(ref);
+        if (snap.exists()) {
+          const d = snap.data();
+          profile.name = d.name ?? null;
+          profile.subject = d.subject ?? null;
+          profile.role = d.role ?? null;
+          profile.isSupervisor = d.isSupervisor ?? false;
+        }
+      } catch (e) {
+        console.error("Profile lookup error:", e);
+      }
+
+      return profile;
+    }
+
+    function getFriendlyAuthError(error) {
+      const code = error?.code || '';
+      const invalidCodes = new Set([
+        'auth/invalid-credential',
+        'auth/wrong-password',
+        'auth/user-not-found',
+        'auth/invalid-email',
+        'auth/missing-password'
+      ]);
+
+      if (invalidCodes.has(code)) return 'رقم البطاقة المدنية أو كلمة المرور غير صحيحة.';
+      if (code === 'auth/too-many-requests') return 'تم تجاوز عدد المحاولات المسموح. حاول مرة أخرى بعد قليل.';
+      if (code === 'app/unauthorized-profile') return 'هذا الحساب لا يملك صلاحية الوصول للمنصة.';
+      if (code === 'auth/network-request-failed') return 'لا يوجد اتصال جيد بالإنترنت. يرجى المحاولة مرة أخرى.';
+      return 'تعذر تسجيل الدخول حالياً. يرجى المحاولة مرة أخرى.';
+    }
+
+    function redirectToProfileRoute(profile) {
+      const route = getRouteForProfile(profile);
+      if (!route) {
+        sessionStorage.removeItem('auth');
+        hideLoader();
+        showMsg(getFriendlyAuthError({ code: 'app/unauthorized-profile' }));
+        signOut(auth).catch(() => {});
+        return;
+      }
+      window.location.href = route;
+    }
+
+    function startLoaderThenRedirect(profile) {
+      if (redirectScheduled) return;
+      redirectScheduled = true;
+
+      const safeProfile = profile || {};
+      showLoader(safeProfile.name);
+
+      setTimeout(() => {
+        redirectToProfileRoute(safeProfile);
+      }, REDIRECT_DELAY_MS);
+    }
+
+    function scheduleRedirectWithElapsed(profile, startedAtMs) {
+      if (redirectScheduled) return;
+      redirectScheduled = true;
+
+      const safeProfile = profile || {};
+      const elapsedMs = Date.now() - (startedAtMs || Date.now());
+      const remainingMs = Math.max(0, REDIRECT_DELAY_MS - elapsedMs);
+
+      setTimeout(() => {
+        redirectToProfileRoute(safeProfile);
+      }, remainingMs);
+    }
+
+
+    // Login flow
+    loginBtn.addEventListener('click', async () => {
+      showMsg('');
+
+      const err = validate();
+      if (err) {
+        showMsg(err);
+        return;
+      }
+
+      const civilId = emailEl.value.trim();
+      const password = passEl.value;
+
+      // Convert civil id to the hidden email format for Firebase Auth
+      const email = buildTeacherEmailFromCivilId(civilId);
+      isLoginAttemptInProgress = true;
+
+      try {
+        loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري تسجيل الدخول';
+        loginBtn.disabled = true;
+        await setPersistence(auth, remember ? browserLocalPersistence : browserSessionPersistence);
+
+        const cred = await signInWithEmailAndPassword(auth, email, password);
+
+        const uid = cred.user.uid;
+        const profile = await getUserProfile(uid);
+        const route = getRouteForProfile(profile);
+        if (!route) {
+          await signOut(auth);
+          throw { code: 'app/unauthorized-profile' };
+        }
+
+        const authInfo = {
+          loggedIn: true,
+          uid,
+          name: profile.name,
+          role: profile.role,
+          isSupervisor: profile.isSupervisor,
+          route,
+          ts: Date.now()
+        };
+        sessionStorage.setItem('auth', JSON.stringify(authInfo));
+
+        if (remember) {
+          localStorage.setItem('rememberLogin', JSON.stringify({ civilId }));
+        } else {
+          localStorage.removeItem('rememberLogin');
+        }
+
+        startLoaderThenRedirect(profile);
+
+        showMsg('تم تسجيل الدخول بنجاح', true);
+      } catch (e) {
+        console.error("Login error:", e);
+        passEl.value = '';
+        showMsg(getFriendlyAuthError(e));
+      } finally {
+        loginBtn.innerHTML = 'دخول';
+        isLoginAttemptInProgress = false;
+        loginBtn.disabled = false;
+      }
+    });
+
+    onAuthStateChanged(auth, async (user) => {
+      if (isLoginAttemptInProgress || redirectScheduled) return;
+
+      if (!user) {
+        if (loader.classList.contains('show')) {
+          hideLoader();
+        }
+        return;
+      }
+
+      const flowStartedAt = loaderShownAtMs || Date.now();
+      const storedAuth = getStoredAuthInfo();
+      if (!loader.classList.contains('show')) {
+        showLoader(storedAuth?.name || '');
+      }
+
+      const profile = await getUserProfile(user.uid);
+      const route = getRouteForProfile(profile);
+      if (!route) {
+        sessionStorage.removeItem('auth');
+        hideLoader();
+        showMsg(getFriendlyAuthError({ code: 'app/unauthorized-profile' }));
+        await signOut(auth).catch(() => {});
+        return;
+      }
+
+      const authInfo = {
+        loggedIn: true,
+        uid: user.uid,
+        name: profile.name,
+        role: profile.role,
+        isSupervisor: profile.isSupervisor,
+        route,
+        ts: Date.now()
+      };
+      sessionStorage.setItem('auth', JSON.stringify(authInfo));
+      setLoaderWelcomeName(profile.name || storedAuth?.name || '');
+
+      scheduleRedirectWithElapsed(profile, flowStartedAt);
+    });
+
+    document.querySelectorAll('.form-input').forEach(input => {
+      input.addEventListener('focus', () => {
+        input.parentElement.classList.add('will-change');
+      });
+
+      input.addEventListener('blur', () => {
+        input.parentElement.classList.remove('will-change');
+      });
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !loginBtn.disabled) {
+        loginBtn.click();
+      }
+    });
+  </script>
+  <script src="./name-glow.js" defer></script>
+</body>
+</html>
+
+
+
+

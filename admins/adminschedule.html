@@ -1,0 +1,2993 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.gstatic.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; manifest-src 'self'; upgrade-insecure-requests; block-all-mixed-content">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  <title>إدارة الجدول الأسبوعي - ثانوية أحمد البشر الرومي</title>
+
+  <!-- Noto Kufi Arabic -->
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+
+  <link rel="stylesheet" href="/shared/base.css" />
+  <style>
+    :root{
+      --primary:#0b4f6c;
+      --primary-2:#166088;
+      --primary-3:#1f7ea9;
+
+      --page:#f6fafc;
+      --card:#ffffff;
+      --text:#0e2233;
+      --muted:#5d7387;
+
+      --border:#dce8f1;
+      --radius:16px;
+      --shadow: 0 6px 18px rgba(11,79,108,.08);
+      --shadow-strong: 0 16px 36px rgba(6,27,40,.16);
+
+      --focus:#79b3c8;
+      --danger:#b42318;
+      --ok:#126a2e;
+
+      --colW: 148px;
+      --headerText:#ffffff;
+
+      --glass: rgba(255,255,255,.86);
+      --glass2: rgba(255,255,255,.95);
+      --stickyTop: 80px;
+    }
+
+    *{ 
+      box-sizing:border-box;
+      font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif !important;
+    }
+    html,body{ height:100%; margin:0; padding:0; }
+
+    body{
+      background:
+        radial-gradient(1100px 540px at 90% -25%, rgba(31,126,169,.14), transparent 62%),
+        radial-gradient(900px 520px at -20% 110%, rgba(22,96,136,.10), transparent 62%),
+        linear-gradient(180deg, rgba(22,96,136,.06), transparent 38%),
+        var(--page);
+      color:var(--text);
+      font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      min-height:100vh;
+      display:flex;
+      flex-direction:column;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* Font enforcement for all text elements */
+    button, input, select, textarea, option,
+    .modal, .modal-card, .pop-title, .pop-desc,
+    .th, .td, .cell-btn, .btn, .badge, .chip,
+    .site-title, label, .hint, .status, .muted {
+      font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif !important;
+    }
+
+    /* Header */
+    .site-header{
+      position:sticky;
+      top:0;
+      z-index:30;
+      background: var(--glass);
+      backdrop-filter: blur(8px);
+      border-bottom:1px solid rgba(11,79,108,.10);
+      box-shadow: 0 2px 12px rgba(11,79,108,.06);
+      padding:12px 16px;
+    }
+    .titlebar{
+      width:min(1280px, 95vw);
+      margin:0 auto;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+    .site-title{
+      margin:0;
+      font-weight:950;
+      letter-spacing:.1px;
+      font-size:clamp(1.05rem, 2.1vw, 1.28rem);
+      color:var(--primary);
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+    .site-title .dot{
+      width:10px; height:10px; border-radius:999px;
+      background: linear-gradient(180deg, var(--primary-2), var(--primary));
+      box-shadow: 0 8px 18px rgba(3,60,84,.22);
+      flex:0 0 auto;
+    }
+
+    .top-info{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+      justify-content:flex-start;
+    }
+
+    .badge{
+      padding:8px 11px;
+      border-radius:999px;
+      background: rgba(240,248,252,.95);
+      border:1px solid var(--border);
+      color:var(--primary);
+      font-weight:900;
+      font-size:12px;
+      white-space:nowrap;
+    }
+
+    .save{
+      height:44px;
+      padding:0 16px;
+      border-radius:12px;
+      border:1px solid rgba(11,79,108,.22);
+      background: linear-gradient(180deg, var(--primary-2), var(--primary));
+      color:#fff;
+      font-weight:950;
+      cursor:pointer;
+      box-shadow: 0 8px 18px rgba(11,79,108,.20);
+      transition: transform .08s ease, box-shadow .12s ease, opacity .12s ease;
+    }
+    .save:hover{ box-shadow: 0 10px 24px rgba(11,79,108,.22); }
+    .save:active{ transform: scale(.99); }
+    .save[disabled]{ opacity:.55; cursor:not-allowed; box-shadow:none; transform:none; }
+    .new-schedule-btn{
+      height:44px;
+      padding:0 14px;
+      border-radius:12px;
+      border:1px solid rgba(11,79,108,.20);
+      background:#fff;
+      color:var(--primary);
+      font-weight:950;
+      cursor:pointer;
+      transition: transform .08s ease, box-shadow .12s ease;
+    }
+    .new-schedule-btn:hover{ box-shadow: 0 8px 18px rgba(11,79,108,.12); }
+    .new-schedule-btn:active{ transform:scale(.99); }
+
+    main{ flex:1; padding:20px 16px; }
+    .board{
+      width:min(1280px, 95vw);
+      margin:0 auto;
+      display:flex;
+      flex-direction:column;
+      gap:14px;
+    }
+
+    .card{
+      background: var(--glass2);
+      border:1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding:16px;
+      overflow:visible;
+    }
+
+    .controls{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:flex-end;
+      justify-content:space-between;
+    }
+    #customSchedules{
+      margin-top:24px;
+      display:grid;
+      gap:16px;
+    }
+    .custom-schedule-item{
+      display:block;
+      background:#fff;
+      border:1px solid var(--border);
+      border-radius:14px;
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .custom-toggle-btn{
+      height:46px;
+      width:100%;
+      border:none;
+      background:#fff;
+      color:var(--primary);
+      font-weight:950;
+      cursor:pointer;
+      text-align:right;
+      padding:0 16px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:8px;
+    }
+    .custom-toggle-btn .arrow{
+      transition: transform .14s ease;
+      font-size:11px;
+    }
+    .custom-schedule-item.collapsed .custom-toggle-btn .arrow{
+      transform: rotate(-90deg);
+    }
+    .custom-schedule-body{
+      display:block;
+      border-top:1px solid var(--border);
+      padding:12px;
+    }
+    .custom-schedule-item.collapsed .custom-schedule-body{
+      display:none;
+    }
+    .custom-head{
+      background: linear-gradient(180deg, rgba(31,126,169,.14), rgba(11,79,108,.07));
+      border:1px solid rgba(11,79,108,.14);
+      border-radius:14px;
+      padding:12px;
+      display:flex;
+      flex-wrap:wrap;
+      align-items:center;
+      gap:10px;
+    }
+    .custom-head .title{
+      min-width:170px;
+    }
+    .custom-name-trigger{
+      border:none;
+      background:transparent;
+      color:var(--primary);
+      font-weight:950;
+      font-size:16px;
+      cursor:pointer;
+      text-align:right;
+      padding:0;
+    }
+    .custom-name-edit{
+      max-width:280px;
+    }
+    .custom-day-wrap{
+      position:relative;
+      min-width:190px;
+    }
+    .custom-day-select{
+      width:100%;
+      appearance:none;
+      height:42px;
+      border:1px solid rgba(11,79,108,.20);
+      border-radius:10px;
+      background:#fff;
+      color:var(--text);
+      font-weight:900;
+      padding:0 36px 0 10px;
+    }
+    .custom-day-wrap::after{
+      content:"▾";
+      position:absolute;
+      left:12px;
+      top:50%;
+      transform:translateY(-50%);
+      color:var(--primary);
+      pointer-events:none;
+      font-size:12px;
+      font-weight:900;
+    }
+    .custom-controls{
+      justify-content:flex-start;
+      align-items:flex-end;
+      gap:10px;
+    }
+    .checkbox-inline{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      font-size:13px;
+      font-weight:900;
+      color:var(--primary);
+    }
+    .custom-toolbar{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      align-items:center;
+      margin-top:12px;
+      width:100%;
+      justify-content:flex-end;
+    }
+    .custom-hidden{
+      display:none !important;
+    }
+
+    .inputs{
+      display:flex;
+      gap:12px;
+      flex-wrap:wrap;
+      align-items:flex-end;
+    }
+
+    .pill{ display:grid; gap:6px; min-width:170px; }
+    label{ font-size:12px; color:var(--muted); font-weight:800; }
+
+    .input{
+      height:44px;
+      border:1px solid var(--border);
+      border-radius:12px;
+      padding:0 12px;
+      background:#fff;
+      outline:none;
+      font-weight:900;
+      color:var(--text);
+      box-shadow: none;
+      transition: box-shadow .12s ease, border-color .12s ease;
+    }
+    .input:focus{
+      border-color: rgba(121,179,200,.9);
+      box-shadow: 0 0 0 3px rgba(121,179,200,.22);
+    }
+
+    .muted{ color:var(--muted); font-weight:700; }
+    .hint{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+      color:var(--muted);
+      font-size:12px;
+      font-weight:800;
+    }
+    .hint .chip{
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid var(--border);
+      background:#fff;
+      color:var(--primary);
+      font-weight:950;
+      font-size:12px;
+      white-space:nowrap;
+    }
+    .break-selectors{
+      display:flex;
+      align-items:flex-end;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .break-pill{
+      min-width:180px;
+    }
+    .break-input{
+      min-width:180px;
+      font-size:13px;
+      font-weight:900;
+    }
+
+    /* Grid */
+    .grid-wrap{
+      max-width:100%;
+      overflow-x:auto;
+      overflow-y:visible;
+      border-radius: 14px;
+      -webkit-overflow-scrolling: touch;
+    }
+    .grid{
+      direction: ltr;
+      display:grid;
+      grid-template-columns: repeat(7, minmax(var(--colW),1fr)) minmax(var(--colW),1fr);
+      gap:8px;
+      align-items:stretch;
+      min-width: calc(var(--colW) * 8 + 7*8px);
+      padding: 2px;
+    }
+
+    @media (max-width: 1024px){
+      .grid-wrap{ overflow-x:auto; overflow-y:visible; }
+      .grid{ padding-bottom: 10px; }
+    }
+
+    /* Headers */
+    .th{
+      display:flex;
+      flex-direction:column;
+      direction: rtl;
+      align-items:center;
+      justify-content:center;
+      background: linear-gradient(180deg, var(--primary-3), var(--primary-2));
+      border:1px solid rgba(11,79,108,.22);
+      border-radius:12px;
+      padding:9px;
+      text-align:center;
+      font-weight:950;
+      color:var(--headerText);
+      box-shadow: 0 6px 14px rgba(11,79,108,.18);
+      position:relative;
+      top:auto;
+      z-index:2;
+      cursor:pointer;
+      transition:transform .08s ease, box-shadow .12s ease;
+    }
+    .th > div{
+      width:100%;
+      text-align:center;
+    }
+    .th.day-header{
+      font-size:16px;
+      letter-spacing:.2px;
+      position:relative;
+      top:auto;
+      z-index:1;
+      cursor:default;
+    }
+    .th .lesson-word{
+      font-size:13px;
+      font-weight:800;
+      opacity:.95;
+      line-height:1.1;
+    }
+    .th .lesson-name{
+      font-size:16px;
+      font-weight:950;
+      margin-top:2px;
+      line-height:1.2;
+    }
+    .th:hover{
+      transform:translateY(-1px);
+      box-shadow: 0 8px 18px rgba(11,79,108,.20);
+    }
+    .th:active{
+      transform:translateY(0);
+    }
+    .th .time-display{
+      font-size:13px;
+      font-weight:800;
+      opacity:.95;
+      margin-top:5px;
+      direction:ltr;
+      text-align:center;
+    }
+    /* Cells */
+    .td{
+      background:#fff;
+      direction: rtl;
+      border:1px solid var(--border);
+      border-radius:12px;
+      padding:8px;
+      display:grid;
+      align-items:center;
+      justify-items:center;
+      text-align:center;
+      min-height:64px;
+      position:relative;
+      box-shadow: 0 4px 10px rgba(11,79,108,.06);
+    }
+    .td.day-col{
+      background: linear-gradient(180deg, rgba(238,245,251,.85), #fff);
+      border-style:solid;
+    }
+
+    .cell-btn{
+      width:100%;
+      height:42px;
+      padding:0 12px;
+      border-radius:12px;
+      border:1px solid #d3e2ee;
+      background:#fff;
+      font-weight:950;
+      cursor:pointer;
+      color:#6b7f9f;
+      max-width:100%;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+      transition: transform .08s ease, box-shadow .12s ease, border-color .12s ease;
+      position:relative;
+    }
+    .cell-btn:hover{
+      border-color:#8eb0cf;
+      box-shadow:0 8px 16px rgba(11,79,108,.10);
+    }
+    .cell-btn:active{ transform:scale(.99); }
+    .cell-btn:focus{
+      outline:none;
+      box-shadow: 0 0 0 3px rgba(121,179,200,.22);
+      border-color: rgba(121,179,200,.9);
+    }
+    .cell-btn.filled{
+      border-style:solid;
+      color:#0f172a;
+      background: linear-gradient(180deg, rgba(238,245,251,.65), #fff);
+    }
+    .cell-btn.loading{
+      opacity:.75;
+      cursor:wait;
+    }
+
+    .status{
+      margin-top:10px;
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      font-weight:800;
+    }
+    .status .ok{ color: var(--ok); }
+    .status .err{ color: #a11; }
+    .status .warn{ color: #8a5a00; }
+
+    /* Overlay + Modal */
+    .overlay{
+      position:fixed; inset:0;
+      background:rgba(0,0,0,.40);
+      backdrop-filter: blur(4px);
+      z-index:60;
+      display:none;
+    }
+    .overlay.show{ display:block; }
+    .schedule-card{
+      position:relative;
+      min-height:390px;
+      overflow:hidden;
+    }
+    .schedule-content{
+      transition: opacity .24s ease;
+    }
+    .schedule-card.loading .schedule-content{
+      opacity:0;
+      pointer-events:none;
+    }
+    .container-loader{
+      position:absolute;
+      inset:0;
+      display:none;
+      place-items:center;
+      background: linear-gradient(135deg, #dff6ff, #eaf6fb);
+      border-radius: inherit;
+      z-index:4;
+    }
+    .container-loader.show{ display:grid; }
+    .loader-shell{
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap:10px;
+      width:min(380px, 92%);
+      text-align:center;
+      padding:16px;
+    }
+    .loader-logo-wrap{
+      width:150px;
+      height:150px;
+      border-radius:22px;
+      background:rgba(255,255,255,.45);
+      backdrop-filter: blur(10px);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      box-shadow:0 8px 24px rgba(0,0,0,.1), 0 2px 6px rgba(0,0,0,.06);
+    }
+    .loader-logo{
+      width:84%;
+      height:84%;
+      object-fit:contain;
+    }
+    .loader-school{
+      font-weight:900;
+      font-size:28px;
+      color:#0c2d48;
+      line-height:1.4;
+      text-align:center;
+    }
+    .loader-line{
+      height:4px;
+      width:min(240px, 70%);
+      border-radius:2px;
+      background:linear-gradient(90deg, #0c2d48, #2e8bc0, #0c2d48);
+    }
+    .loader-text{
+      color:#36586b;
+      font-weight:900;
+      font-size:14px;
+      margin-top:2px;
+    }
+    .loader-spinner-bars{
+      width:48px;
+      height:48px;
+      margin-top:14px;
+      border-radius:50%;
+      border:5px solid rgba(12,45,72,.12);
+      border-top-color:#2e8bc0;
+      border-right-color:#0c2d48;
+      animation: loaderSpin .75s linear infinite;
+    }
+    @keyframes loaderSpin{
+      to { transform: rotate(360deg); }
+    }
+    .loader-line{
+      animation: loaderLinePulse 1.6s ease-in-out infinite;
+    }
+    @keyframes loaderLinePulse{
+      0%,100%{ opacity:.45; transform:scaleX(.7); }
+      50%{ opacity:1; transform:scaleX(1); }
+    }
+
+    /* ===== Floating save bar ===== */
+    .floating-save-bar{
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      padding: 16px 24px;
+      background: rgba(3,60,84,0.97);
+      backdrop-filter: blur(12px);
+      box-shadow: 0 -4px 32px rgba(3,60,84,.35);
+      transform: translateY(100%);
+      transition: transform .28s cubic-bezier(.4,0,.2,1);
+    }
+    .floating-save-bar.visible{
+      transform: translateY(0);
+    }
+    .floating-save-label{
+      color: rgba(255,255,255,.85);
+      font-size: 1rem;
+      font-weight: 600;
+      direction: rtl;
+    }
+    .floating-save-btn{
+      height: 54px;
+      padding: 0 36px;
+      border-radius: 14px;
+      border: none;
+      background: linear-gradient(135deg, #1de9b6, #00b8d4);
+      color: #003147;
+      font-size: 1.15rem;
+      font-weight: 900;
+      cursor: pointer;
+      box-shadow: 0 6px 24px rgba(0,184,212,.45);
+      transition: transform .1s ease, box-shadow .15s ease;
+      letter-spacing: .01em;
+    }
+    .floating-save-btn:hover{
+      transform: scale(1.04);
+      box-shadow: 0 8px 30px rgba(0,184,212,.6);
+    }
+    .floating-save-btn:active{ transform: scale(.98); }
+
+    /* ===== Unsaved changes modal ===== */
+    .unsaved-modal{
+      position: fixed;
+      inset: 0;
+      z-index: 300;
+      display: none;
+      place-items: center;
+      background: rgba(0,0,0,.45);
+      backdrop-filter: blur(6px);
+      padding: 16px;
+    }
+    .unsaved-modal.show{ display: grid; }
+    .unsaved-modal-box{
+      width: min(400px, 94vw);
+      background: #fff;
+      border-radius: 20px;
+      padding: 36px 28px 28px;
+      text-align: center;
+      box-shadow: 0 24px 80px rgba(0,0,0,.22);
+      direction: rtl;
+    }
+    .unsaved-modal-icon{ font-size: 2.8rem; margin-bottom: 14px; }
+    .unsaved-modal-msg{
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #1a1a2e;
+      margin: 0 0 8px;
+      line-height: 1.6;
+    }
+    .unsaved-modal-sub{
+      font-size: .92rem;
+      color: #666;
+      margin: 0 0 28px;
+    }
+    .unsaved-modal-actions{
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .unsaved-btn-leave{
+      padding: 12px 24px;
+      border-radius: 12px;
+      border: 1px solid #ddd;
+      background: #f5f5f5;
+      color: #555;
+      font-size: .95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .15s;
+    }
+    .unsaved-btn-leave:hover{ background: #ebebeb; }
+    .unsaved-btn-stay{
+      padding: 12px 28px;
+      border-radius: 12px;
+      border: none;
+      background: linear-gradient(135deg, var(--primary-2,#0b7ca6), var(--primary,#033c54));
+      color: #fff;
+      font-size: .95rem;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(3,60,84,.25);
+      transition: opacity .15s;
+    }
+    .unsaved-btn-stay:hover{ opacity: .9; }
+
+    .success-modal{
+      position:fixed;
+      inset:0;
+      z-index:95;
+      display:none;
+      place-items:center;
+      background:rgba(255,255,255,.55);
+      backdrop-filter: blur(8px);
+      padding:16px;
+    }
+    .success-modal.show{ display:grid; }
+    .success-card{
+      width:min(340px, 92vw);
+      background:#fff;
+      border:1px solid var(--border);
+      border-radius:18px;
+      box-shadow: var(--shadow-strong);
+      padding:18px;
+      display:grid;
+      justify-items:center;
+      gap:12px;
+      position:relative;
+    }
+    .success-close{
+      position:absolute;
+      top:8px;
+      left:8px;
+      width:32px;
+      height:32px;
+      border-radius:999px;
+      border:1px solid var(--border);
+      background:#fff;
+      color:#64748b;
+      font-weight:900;
+      cursor:pointer;
+    }
+    .success-check{
+      width:96px;
+      height:96px;
+      display:grid;
+      place-items:center;
+    }
+    .success-check svg{
+      width:96px;
+      height:96px;
+      overflow:visible;
+    }
+    .success-check circle{
+      fill:none;
+      stroke:#16a34a;
+      stroke-width:6;
+      stroke-dasharray:220;
+      stroke-dashoffset:220;
+      transform-origin:50% 50%;
+      animation: ringDraw 1.2s ease-in-out infinite;
+    }
+    .success-check path{
+      fill:none;
+      stroke:#16a34a;
+      stroke-width:7;
+      stroke-linecap:round;
+      stroke-linejoin:round;
+      stroke-dasharray:70;
+      stroke-dashoffset:70;
+      animation: checkDraw 1.2s ease-in-out infinite;
+    }
+    .success-text{
+      font-weight:900;
+      color:#166534;
+      font-size:15px;
+    }
+    @keyframes ringDraw{
+      0%{ stroke-dashoffset:220; opacity:.5; }
+      30%{ stroke-dashoffset:0; opacity:1; }
+      70%{ stroke-dashoffset:0; opacity:1; }
+      100%{ stroke-dashoffset:220; opacity:.5; }
+    }
+    @keyframes checkDraw{
+      0%{ stroke-dashoffset:70; opacity:0; }
+      25%{ stroke-dashoffset:70; opacity:0; }
+      45%{ stroke-dashoffset:0; opacity:1; }
+      70%{ stroke-dashoffset:0; opacity:1; }
+      100%{ stroke-dashoffset:70; opacity:0; }
+    }
+
+    .modal{
+      position:fixed; inset:0;
+      z-index:70;
+      display:none;
+      place-items:center;
+      padding:16px;
+      font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+    .modal.show{ display:grid; }
+
+    .modal-card{
+      width:min(720px, 96vw);
+      background:#fff;
+      border:1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: var(--shadow-strong);
+      padding:20px;
+      animation:pop .16s ease-out;
+    }
+    @keyframes pop { from{ transform:scale(.98); opacity:0 } to{ transform:scale(1); opacity:1 } }
+
+    .pop-title{
+      font-weight:950;
+      color:var(--primary);
+      margin-bottom:14px;
+      font-size:16px;
+      text-align:right;
+    }
+
+    .row{ display:grid; grid-template-columns: 1fr; gap:14px; }
+
+    .themed-select, .notes-input{
+      border:1px solid var(--border);
+      border-radius:12px;
+      padding:0 12px;
+      outline:none;
+      background:#fff;
+      transition: box-shadow .12s ease, border-color .12s ease;
+      font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+    .themed-select{
+      height:44px;
+      font-weight:950;
+      font-size:14px;
+    }
+    .notes-input{
+      min-height:92px;
+      padding:10px 12px;
+      resize:vertical;
+      font-weight:700;
+      line-height:1.7;
+    }
+    .themed-select:focus, .notes-input:focus{
+      border-color: rgba(121,179,200,.9);
+      box-shadow: 0 0 0 4px rgba(121,179,200,.20);
+    }
+
+    .pop-desc{ color:var(--muted); font-size:12px; font-weight:800; }
+
+    .pop-actions{
+      display:flex;
+      gap:10px;
+      justify-content:flex-end;
+      margin-top:16px;
+      flex-wrap:wrap;
+    }
+    .btn{
+      height:40px;
+      padding:0 14px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      background:#fff;
+      font-weight:950;
+      cursor:pointer;
+      transition: transform .08s ease, box-shadow .12s ease, opacity .12s ease;
+      font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+    .btn:hover{ box-shadow:0 8px 16px rgba(11,79,108,.10); }
+    .btn:active{ transform:scale(.99); }
+    .btn[disabled]{ opacity:.6; cursor:not-allowed; box-shadow:none; transform:none; }
+
+    .btn.primary{
+      background: linear-gradient(180deg, var(--primary-2), var(--primary));
+      color:#fff;
+      border-color: rgba(3,60,84,.20);
+    }
+    .btn.danger{
+      border-color: rgba(180,35,24,.25);
+      color: var(--danger);
+      background:#fff;
+    }
+
+    /* Time inputs */
+    .time-inputs{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:12px;
+      margin:16px 0;
+    }
+    .time-input-group{
+      display:grid;
+      gap:6px;
+    }
+    .time-input-group label{
+      font-size:13px;
+      font-weight:900;
+      color:var(--primary);
+    }
+    .time-input{
+      height:44px;
+      border:1px solid var(--border);
+      border-radius:12px;
+      padding:0 12px;
+      background:#fff;
+      outline:none;
+      font-weight:900;
+      color:var(--text);
+      box-shadow: 0 6px 16px rgba(3,60,84,.06);
+      transition: box-shadow .12s ease, border-color .12s ease;
+      font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      font-size:14px;
+    }
+    .time-input:focus{
+      border-color: rgba(121,179,200,.9);
+      box-shadow: 0 0 0 4px rgba(121,179,200,.20), 0 10px 24px rgba(3,60,84,.08);
+    }
+
+    @keyframes pulse {
+      0%{ box-shadow: 0 0 0 6px rgba(3,60,84,.10), 0 10px 20px rgba(3,60,84,.18) }
+      50%{ box-shadow:0 0 0 10px rgba(3,60,84,.06), 0 8px 16px rgba(3,60,84,.14) }
+      100%{ box-shadow: 0 0 0 6px rgba(3,60,84,.10), 0 10px 20px rgba(3,60,84,.18) }
+    }
+
+    .skeleton{
+      width:100%;
+      height:12px;
+      border-radius:999px;
+      background: linear-gradient(90deg, rgba(3,60,84,.06), rgba(3,60,84,.12), rgba(3,60,84,.06));
+      background-size: 200% 100%;
+      animation: shimmer 1.2s ease-in-out infinite;
+    }
+    @keyframes shimmer{
+      0%{ background-position: 0% 0%; }
+      100%{ background-position: 200% 0%; }
+    }
+
+    /* Mobile tweaks */
+    @media (max-width: 520px){
+      :root{ --colW: 130px; }
+      .pill{ min-width:140px; }
+      .break-pill, .break-input{ min-width: 100%; }
+      .break-selectors{ width:100%; }
+      .site-header{ padding:12px 12px; }
+      main{ padding:12px; }
+      .card{ padding:12px; }
+      .time-inputs{ grid-template-columns:1fr; }
+      .loader-logo-wrap{ width:118px; height:118px; border-radius:18px; }
+      .loader-school{ font-size:22px; }
+      .loader-spinner-bars{ margin-top:8px; }
+    }
+  </style>
+
+  <!-- iOS home screen icon -->
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/appicon.png" />
+  
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <meta name="theme-color" content="#033C54" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <!-- Browser tab icon (favicon) -->
+  <link rel="icon" type="image/png" sizes="64x64" href="https://framerusercontent.com/images/eepB7V11E8IMGVLttDUMaz62pPQ.png?width=64&height=64" />
+  <link rel="shortcut icon" href="https://framerusercontent.com/images/eepB7V11E8IMGVLttDUMaz62pPQ.png?width=64&height=64" />
+
+  <!-- Social / Safari preview (Open Graph & Twitter) -->
+  <meta property="og:title" content="إدارة الجدول الأسبوعي - ثانوية أحمد البشر الرومي">
+  <meta property="og:description" content="???? ?????? ???? ????? ??????.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://framerusercontent.com/images/jRnZLlPr90qwKsuUwfIlvDS9E.png?width=1200&height=630">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="إدارة الجدول الأسبوعي - ثانوية أحمد البشر الرومي">
+  <meta name="twitter:description" content="???? ?????? ???? ????? ??????.">
+  <meta name="twitter:image" content="https://framerusercontent.com/images/jRnZLlPr90qwKsuUwfIlvDS9E.png?width=1200&height=630">
+</head>
+<body>
+  <header class="site-header">
+    <div class="titlebar">
+      <h1 class="site-title"><span class="dot"></span>إدارة الجدول الأسبوعي</h1>
+      <div class="top-info">
+        <button id="backToAdminBtn" class="new-schedule-btn" type="button">← رجوع</button>
+        <span id="weekLabel" class="badge">—</span>
+        
+        <button id="newScheduleBtn" class="new-schedule-btn" type="button">+ إضافة جدول</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="board">
+      <div class="card">
+        <div class="controls">
+          <div class="inputs">
+            <div class="pill">
+              <label>الصف</label>
+              <select id="gradeSel" class="input"></select>
+            </div>
+            <div class="pill">
+              <label>الفصل</label>
+              <select id="classSel" class="input"></select>
+            </div>
+          </div>
+
+          <div class="hint">
+            <span class="chip">٧ حصص ثابت</span>
+            <div class="break-selectors">
+              <div class="pill break-pill">
+                <label for="breakAfterLesson1">الفرصة الأولى</label>
+                <select id="breakAfterLesson1" class="input break-input"></select>
+              </div>
+              <div class="pill break-pill">
+                <label for="breakAfterLesson2">الفرصة الثانية</label>
+                <select id="breakAfterLesson2" class="input break-input"></select>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="scheduleCard" class="card schedule-card">
+        <div class="schedule-content">
+          <div class="grid-wrap">
+            <div id="grid" class="grid"></div>
+          </div>
+          <div id="status" class="status"></div>
+        </div>
+        <div id="containerLoader" class="container-loader" aria-hidden="true">
+          <div class="loader-shell">
+            <div class="loader-logo-wrap">
+              <img class="loader-logo" src="https://framerusercontent.com/images/aI1iHN9wVHJ3PyWbMpHkgJYWsqE.png" alt="School Logo">
+            </div>
+            <div class="loader-school">ثانوية أحمد البشر الرومي</div>
+            <div class="loader-line"></div>
+            <div id="loaderText" class="loader-text">جاري تحميل البيانات...</div>
+            <div class="loader-spinner-bars" aria-hidden="true">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="customSchedules"></div>
+    </div>
+  </main>
+
+  <div id="overlay" class="overlay"></div>
+
+  <!-- Central Modal for editing schedule cell -->
+  <div id="modal" class="modal" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div id="modalTitle" class="pop-title">—</div>
+      <div class="row">
+        <select id="comboAssign" class="themed-select">
+          <option value="">(اختياري) تغيير المادة | المعلم</option>
+        </select>
+        <textarea id="notesInput" class="notes-input" placeholder="ملاحظات للحصة (اختياري)"></textarea>
+        <div class="pop-desc">اليوم ثابت حسب الصف، ويمكنك تعديل الحصة فقط يدويًا.</div>
+      </div>
+      <div class="pop-actions">
+        <button id="clearBtn" class="btn danger" type="button">تفريغ الحصة</button>
+        <button id="cancelBtn" class="btn" type="button">إلغاء</button>
+        <button id="okBtn" class="btn primary" type="button">تم</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal for editing lesson times -->
+  <div id="timeModal" class="modal" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="timeModalTitle">
+      <div id="timeModalTitle" class="pop-title">—</div>
+      <div class="time-inputs">
+        <div class="time-input-group">
+          <label for="startTimeInput">وقت بداية الحصة</label>
+          <input type="time" id="startTimeInput" class="time-input" min="06:00" max="14:30" step="300">
+        </div>
+        <div class="time-input-group">
+          <label for="endTimeInput">وقت نهاية الحصة</label>
+          <input type="time" id="endTimeInput" class="time-input" min="06:00" max="14:30" step="300">
+        </div>
+      </div>
+      <div class="pop-desc">يتم تطبيق الأوقات على جميع الجداول الأسبوعية.</div>
+      <div class="pop-actions">
+        <button id="timeRemoveLessonBtn" class="btn danger custom-hidden" type="button">حذف الحصة</button>
+        <button id="timeCancelBtn" class="btn" type="button">إلغاء</button>
+        <button id="timeSaveBtn" class="btn primary" type="button">حفظ الوقت</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal for creating a custom schedule -->
+  <div id="createScheduleModal" class="modal" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="createScheduleTitle">
+      <div id="createScheduleTitle" class="pop-title">إضافة جدول جديد (لكل الفصول)</div>
+      <div class="row">
+        <input id="newScheduleNameInput" class="input" placeholder="اسم الجدول (مثال: مناوبة الخميس)">
+        <select id="newScheduleDaySel" class="themed-select">
+          <option value="">اختر اليوم (إجباري)</option>
+        </select>
+      </div>
+      <div class="pop-actions">
+        <button id="createScheduleCancelBtn" class="btn" type="button">إلغاء</button>
+        <button id="createScheduleConfirmBtn" class="btn primary" type="button">إنشاء</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="saveSuccessModal" class="success-modal" aria-hidden="true">
+    <div class="success-card">
+      <button id="successCloseBtn" type="button" class="success-close">×</button>
+      <div class="success-check">
+        <svg viewBox="0 0 100 100" aria-hidden="true">
+          <circle cx="50" cy="50" r="35"></circle>
+          <path d="M32 52 L45 65 L70 40"></path>
+        </svg>
+      </div>
+      <div class="success-text">تم الحفظ بنجاح</div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { firebaseConfig } from "/shared/firebase.js";
+    /* ========= Firebase ========= */
+    import { initializeApp, getApp, getApps } from "/shared/firebase.js";
+    import { getAuth, onAuthStateChanged, setPersistence, browserLocalPersistence } from "/shared/firebase.js";
+    import {
+      initializeFirestore,
+      collection, getDocs, query, where,
+      doc, getDoc, setDoc,
+      writeBatch,
+      serverTimestamp
+    } from "/shared/firebase.js";
+
+    
+
+    const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+    const db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true, useFetchStreams:false });
+    const auth = getAuth(app);
+
+    /* ========= Constants ========= */
+    const DAYS_AR = ["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس"]; // Sun→Thu
+    const LESSONS_AR = ["الحصة الأولى","الحصة الثانية","الحصة الثالثة","الحصة الرابعة","الحصة الخامسة","الحصة السادسة","الحصة السابعة"];
+    const FIXED_LESSON_COUNT = 7;
+
+    const GRADES = ["10","11","12"];
+    const CLASSES_BY_GRADE = {
+      "10": ["10 / 1","10 / 2","10 / 3","10 / 4","10 / 5","10 / 6","10 / 7"],
+      "11": ["11 / 1 ع","11 / 2 ع","11 / 3 ع","11 / 4 ع","11 / 5 ع","11 / 1 د"],
+      "12": ["12 / 1 ع","12 / 2 ع","12 / 3 ع","12 / 4 ع","12 / 5 ع","12 / 1 د"],
+    };
+    const ALL_CLASS_KEYS = GRADES.flatMap(g => CLASSES_BY_GRADE[g] || []);
+
+    // Default lesson times (fallback if Firestore document doesn't exist)
+    const DEFAULT_LESSON_TIMES = [
+      { start: "07:55", end: "08:40" },
+      { start: "08:45", end: "09:30" },
+      { start: "09:35", end: "10:20" },
+      { start: "10:35", end: "11:20" },
+      { start: "11:25", end: "12:10" },
+      { start: "12:25", end: "13:10" },
+      { start: "13:15", end: "13:55" }
+    ];
+
+    /* ========= Elements ========= */
+    const gradeSel = document.getElementById('gradeSel');
+    const classSel = document.getElementById('classSel');
+    const breakAfterLesson1Sel = document.getElementById('breakAfterLesson1');
+    const breakAfterLesson2Sel = document.getElementById('breakAfterLesson2');
+    const grid = document.getElementById('grid');
+    const saveBtn = document.getElementById('saveBtn');
+    const floatingSaveBar = document.getElementById('floatingSaveBar');
+    const unsavedModal = document.getElementById('unsavedModal');
+    const unsavedLeaveBtn = document.getElementById('unsavedLeaveBtn');
+    const unsavedStayBtn = document.getElementById('unsavedStayBtn');
+    const newScheduleBtn = document.getElementById('newScheduleBtn');
+    const backToAdminBtn = document.getElementById('backToAdminBtn');
+    const statusEl = document.getElementById('status');
+    const weekLabel = document.getElementById('weekLabel');
+    const customSchedulesWrap = document.getElementById('customSchedules');
+    const scheduleCard = document.getElementById('scheduleCard');
+    const containerLoader = document.getElementById('containerLoader');
+    const overlay = document.getElementById('overlay');
+    const loaderText = document.getElementById('loaderText');
+    const saveSuccessModal = document.getElementById('saveSuccessModal');
+    const successCloseBtn = document.getElementById('successCloseBtn');
+    const siteHeader = document.querySelector('.site-header');
+
+    // Schedule modal refs
+    const modal = document.getElementById('modal');
+    const modalTitle = document.getElementById('modalTitle');
+    const comboAssign = document.getElementById('comboAssign');
+    const notesInput = document.getElementById('notesInput');
+    const okBtn = document.getElementById('okBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const clearBtn = document.getElementById('clearBtn');
+
+    // Time modal refs
+    const timeModal = document.getElementById('timeModal');
+    const timeModalTitle = document.getElementById('timeModalTitle');
+    const startTimeInput = document.getElementById('startTimeInput');
+    const endTimeInput = document.getElementById('endTimeInput');
+    const timeModalDesc = timeModal.querySelector('.pop-desc');
+    const timeCancelBtn = document.getElementById('timeCancelBtn');
+    const timeSaveBtn = document.getElementById('timeSaveBtn');
+    const timeRemoveLessonBtn = document.getElementById('timeRemoveLessonBtn');
+
+    // Create custom schedule modal refs
+    const createScheduleModal = document.getElementById('createScheduleModal');
+    const newScheduleNameInput = document.getElementById('newScheduleNameInput');
+    const newScheduleDaySel = document.getElementById('newScheduleDaySel');
+    const createScheduleCancelBtn = document.getElementById('createScheduleCancelBtn');
+    const createScheduleConfirmBtn = document.getElementById('createScheduleConfirmBtn');
+
+    /* ========= State ========= */
+    let selectedGrade = '10';
+    let selectedClassKey = '10 / 1';
+    let weekDates = []; // ISO strings (Sun→Thu)
+
+    // key `${date}#${i}` → { subject, teacherUid, teacherName, notes }
+    let gridValues = {};
+
+    // key `${date}#${i}` → existing doc data { id, ...data }
+    let existingMap = new Map();
+
+    // key `${date}#${i}` → button element (for fast updates, no full rerender)
+    const btnRefs = new Map();
+
+    // keys explicitly cleared by user
+    const clearedSet = new Set();
+
+    let dirty = false;
+    let loading = false;
+
+    // Assignment modal context
+    let assignmentCtx = null;
+
+    // Teachers cache
+    const teachersCache = new Map(); // classKey -> { at: number, list: [] }
+    const TEACHERS_TTL_MS = 10 * 60 * 1000;
+
+    // Lesson times cache
+    let lessonTimes = [...DEFAULT_LESSON_TIMES];
+    let currentTimeEditCtx = null;
+    let opportunityBreaks = { firstAfter: null, secondAfter: null };
+
+    // Custom day schedules state
+    const customSchedules = [];
+    const AR_ADD_LESSON = "\u0627\u0636\u0627\u0641\u0629 \u062d\u0635\u0629";
+    const AR_REMOVE_LESSON = "\u062d\u0630\u0641 \u062d\u0635\u0629";
+
+    function syncStickyTop(){
+      const h = Math.ceil(siteHeader?.getBoundingClientRect().height || 72);
+      document.documentElement.style.setProperty('--stickyTop', `${h + 8}px`);
+    }
+    window.addEventListener('resize', syncStickyTop, { passive:true });
+    /* ===== Unsaved-changes modal helpers ===== */
+    let _unsavedCallback = null;
+    function showUnsavedModal(onLeave){
+      _unsavedCallback = onLeave;
+      unsavedModal?.classList.add('show');
+      unsavedModal?.setAttribute('aria-hidden','false');
+    }
+    function hideUnsavedModal(){
+      unsavedModal?.classList.remove('show');
+      unsavedModal?.setAttribute('aria-hidden','true');
+      _unsavedCallback = null;
+    }
+    unsavedLeaveBtn?.addEventListener('click', ()=>{
+      const cb = _unsavedCallback;
+      hideUnsavedModal();
+      if(cb) cb();
+    });
+    unsavedStayBtn?.addEventListener('click', ()=>{
+      hideUnsavedModal();
+    });
+
+    backToAdminBtn?.addEventListener('click', () => {
+      if(dirty){
+        showUnsavedModal(()=>{ window.location.href = '/admins/adminpage.html'; });
+      } else {
+        window.location.href = '/admins/adminpage.html';
+      }
+    });
+
+    /* ===== Warn on browser back / close ===== */
+    window.addEventListener('beforeunload', (e)=>{
+      if(dirty){
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    });
+
+    /* ========= Helpers (fast + stable dates) ========= */
+    const pad2 = (n)=> String(n).padStart(2,'0');
+
+    const toISO = (d)=>{
+      const y = d.getUTCFullYear();
+      const m = pad2(d.getUTCMonth()+1);
+      const dd = pad2(d.getUTCDate());
+      return `${y}-${m}-${dd}`;
+    };
+
+    const isoToUTCDate = (iso)=>{
+      const [y,m,d] = iso.split('-').map(Number);
+      return new Date(Date.UTC(y, (m||1)-1, d||1));
+    };
+
+    const kuwaitTodayISO = ()=>{
+      const fmt = new Intl.DateTimeFormat('en-CA', { timeZone:'Asia/Kuwait', year:'numeric', month:'2-digit', day:'2-digit' });
+      return fmt.format(new Date());
+    };
+
+    const addDaysISO = (iso,n)=>{
+      const base = isoToUTCDate(iso);
+      base.setUTCDate(base.getUTCDate() + n);
+      return toISO(base);
+    };
+
+    // start of week Sunday for Kuwait day-of-week based on local date
+    const startOfWeekSunday = (iso)=>{
+      const d = isoToUTCDate(iso);
+      const weekday = d.getUTCDay(); // 0..6
+      const s = new Date(d);
+      s.setUTCDate(d.getUTCDate() - weekday);
+      return toISO(s);
+    };
+
+    const parseClassKey = (label)=>{
+      const m = label.match(/^(\d+)\s*\/\s*(\d+)(?:\s*(.+))?$/);
+      if(!m) return {grade:NaN, section:NaN, track:""};
+      return { grade:Number(m[1]), section:Number(m[2]), track:(m[3]||"").trim() };
+    };
+    const composeClassKey = (grade, section, track = "")=>{
+      const g = String(grade ?? '').trim();
+      const s = String(section ?? '').trim();
+      const t = String(track ?? '').trim();
+      if(!g || !s) return "";
+      return t ? `${g} / ${s} ${t}` : `${g} / ${s}`;
+    };
+
+    const trackKeyOf = (track)=> (track && track.trim()) ? track.trim() : "_";
+
+    const docIdFor = (date, classKey, lessonNumber)=>{
+      const {grade, section, track} = parseClassKey(classKey);
+      const trackSafe = trackKeyOf(track); // always non-empty
+      return `${date}-${grade}-${section}-${encodeURIComponent(trackSafe)}-L${lessonNumber}`;
+    };
+    const safeDocKey = (v)=> encodeURIComponent((v || '').toString().trim());
+    const customDocIdFor = (classKey, scheduleId)=> `${safeDocKey(classKey)}__${safeDocKey(scheduleId)}`;
+
+    const customScheduleId = () => `cs-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
+    const dayOptionsHTML = () => DAYS_AR.map((d, i)=>`<option value="${i}">${d}</option>`).join('');
+    const gradeFromClassKey = (classKey)=>{
+      const p = parseClassKey(classKey);
+      const g = String(p.grade || '');
+      return GRADES.includes(g) ? g : GRADES[0];
+    };
+    const defaultLessonTimeAt = (idx)=> lessonTimes[idx] ? { ...lessonTimes[idx] } : { start:"00:00", end:"00:00" };
+
+    const setDirty = (v)=>{
+      dirty = v;
+      saveBtn.disabled = loading;
+      floatingSaveBar?.classList.toggle('visible', !!(dirty && !loading));
+    };
+
+    const setLoading = (v, text = "جاري تحميل البيانات...")=>{
+      loading = v;
+      saveBtn.disabled = v;
+      if(dirty) floatingSaveBar?.classList.toggle('visible', !v);
+      grid.classList.toggle('is-loading', v);
+      if(loaderText) loaderText.textContent = text;
+      scheduleCard?.classList.toggle('loading', !!v);
+      containerLoader?.classList.toggle('show', !!v);
+    };
+
+    function openSaveSuccessModal(){
+      saveSuccessModal.classList.add('show');
+    }
+    function closeSaveSuccessModal(){
+      saveSuccessModal.classList.remove('show');
+    }
+    successCloseBtn.addEventListener('click', closeSaveSuccessModal);
+
+    function setStatusHTML(html){
+      statusEl.innerHTML = html || "";
+    }
+
+    function addStatusLine(type, text){
+      const cls = type === "ok" ? "ok" : type === "warn" ? "warn" : "err";
+      const div = document.createElement('div');
+      div.className = cls;
+      div.textContent = text;
+      statusEl.appendChild(div);
+    }
+
+    function renderSelectors(){
+      gradeSel.innerHTML = GRADES.map(g=>`<option value="${g}">${g}</option>`).join('');
+      gradeSel.value = selectedGrade;
+
+      classSel.innerHTML = (CLASSES_BY_GRADE[selectedGrade]||[]).map(c=>`<option value="${c}">${c}</option>`).join('');
+      classSel.value = selectedClassKey;
+    }
+
+    function normalizeLessonNumber(value){
+      const n = Number(value);
+      if(!Number.isFinite(n)) return null;
+      if(n < 1 || n > FIXED_LESSON_COUNT) return null;
+      return Math.floor(n);
+    }
+
+    function parseBreakSelectValue(value){
+      if(value === '' || value == null) return null;
+      return normalizeLessonNumber(value);
+    }
+
+    function buildBreakSelectOptions(selected){
+      const selectedNum = normalizeLessonNumber(selected);
+      const options = ['<option value="">غير محددة</option>'];
+      for(let lesson=1; lesson<=FIXED_LESSON_COUNT; lesson++){
+        const selectedAttr = selectedNum === lesson ? ' selected' : '';
+        options.push(`<option value="${lesson}"${selectedAttr}>بعد ${lessonLabel(lesson)}</option>`);
+      }
+      return options.join('');
+    }
+
+    function setBreakSelectValue(selectEl, lesson){
+      if(!selectEl) return;
+      const normalized = normalizeLessonNumber(lesson);
+      selectEl.value = normalized ? String(normalized) : '';
+    }
+
+    function renderOpportunitySelectors(){
+      if(!breakAfterLesson1Sel || !breakAfterLesson2Sel) return;
+      breakAfterLesson1Sel.innerHTML = buildBreakSelectOptions(opportunityBreaks.firstAfter);
+      breakAfterLesson2Sel.innerHTML = buildBreakSelectOptions(opportunityBreaks.secondAfter);
+      setBreakSelectValue(breakAfterLesson1Sel, opportunityBreaks.firstAfter);
+      setBreakSelectValue(breakAfterLesson2Sel, opportunityBreaks.secondAfter);
+    }
+
+    function normalizeOpportunityBreaks(raw = {}){
+      const firstRaw = raw.firstAfter ?? raw.opportunity1After ?? raw.opportunityOneAfter;
+      const secondRaw = raw.secondAfter ?? raw.opportunity2After ?? raw.opportunityTwoAfter;
+      return {
+        firstAfter: normalizeLessonNumber(firstRaw),
+        secondAfter: normalizeLessonNumber(secondRaw)
+      };
+    }
+
+    async function fetchOpportunityBreaks(){
+      try{
+        const docRef = doc(db, 'settings', 'lessonTimes');
+        const snap = await getDoc(docRef);
+        if(!snap.exists()){
+          opportunityBreaks = { firstAfter: null, secondAfter: null };
+          renderOpportunitySelectors();
+          return;
+        }
+        const data = snap.data() || {};
+        opportunityBreaks = normalizeOpportunityBreaks(data.opportunityBreaks || data);
+        renderOpportunitySelectors();
+      }catch(error){
+        console.error('Error fetching school breaks:', error);
+        opportunityBreaks = { firstAfter: null, secondAfter: null };
+        renderOpportunitySelectors();
+      }
+    }
+
+    async function saveOpportunityBreaks(){
+      try{
+        const payload = {
+          opportunityBreaks: {
+            firstAfter: normalizeLessonNumber(opportunityBreaks.firstAfter),
+            secondAfter: normalizeLessonNumber(opportunityBreaks.secondAfter)
+          },
+          updatedAt: serverTimestamp()
+        };
+        await setDoc(doc(db, 'settings', 'lessonTimes'), payload, { merge: true });
+        addStatusLine("ok", "تم حفظ إعدادات الفرص.");
+      }catch(error){
+        console.error('Error saving school breaks:', error);
+        addStatusLine("err", "تعذّر حفظ إعدادات الفرص.");
+      }
+    }
+
+    async function handleBreakSelectChange(changedKey){
+      opportunityBreaks = {
+        firstAfter: parseBreakSelectValue(breakAfterLesson1Sel?.value),
+        secondAfter: parseBreakSelectValue(breakAfterLesson2Sel?.value)
+      };
+
+      if(
+        opportunityBreaks.firstAfter &&
+        opportunityBreaks.secondAfter &&
+        opportunityBreaks.firstAfter === opportunityBreaks.secondAfter
+      ){
+        if(changedKey === 'first'){
+          opportunityBreaks.firstAfter = null;
+        }else{
+          opportunityBreaks.secondAfter = null;
+        }
+        renderOpportunitySelectors();
+        addStatusLine("warn", "لا يمكن وضع الفرصتين بعد نفس الحصة.");
+        return;
+      }
+
+      renderOpportunitySelectors();
+      await saveOpportunityBreaks();
+    }
+
+    /* ======= Lesson Times Functions ======= */
+    async function fetchLessonTimes(){
+      try {
+        const docRef = doc(db, 'settings', 'lessonTimes');
+        const docSnap = await getDoc(docRef);
+        
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          if (Array.isArray(data.times) && data.times.length === 7) {
+            lessonTimes = data.times.map(t => ({
+              start: t.start || "00:00",
+              end: t.end || "00:00"
+            }));
+          }
+        } else {
+          // Create default document if doesn't exist
+          await setDoc(docRef, {
+            times: DEFAULT_LESSON_TIMES,
+            updatedAt: serverTimestamp()
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching lesson times:", error);
+        // Keep default times
+      }
+    }
+
+    function formatLessonTime(index) {
+      if (index < 0 || index >= 7) return "";
+      const time = lessonTimes[index];
+      if (!time) return "";
+      return `${time.start} - ${time.end}`;
+    }
+
+    async function saveLessonTime(index, startTime, endTime) {
+      if (index < 0 || index >= 7) return false;
+      
+      try {
+        // Validate times
+        if (!startTime || !endTime) {
+          addStatusLine("err", "يجب تحديد وقت البداية والنهاية");
+          return false;
+        }
+        
+        // Convert to Date objects for comparison
+        const [startHours, startMinutes] = startTime.split(':').map(Number);
+        const [endHours, endMinutes] = endTime.split(':').map(Number);
+        
+        const startDate = new Date();
+        startDate.setHours(startHours, startMinutes, 0, 0);
+        
+        const endDate = new Date();
+        endDate.setHours(endHours, endMinutes, 0, 0);
+        
+        if (endDate <= startDate) {
+          addStatusLine("err", "وقت النهاية يجب أن يكون بعد وقت البداية");
+          return false;
+        }
+        
+        // Update local cache
+        lessonTimes[index] = { start: startTime, end: endTime };
+        
+        // Update Firestore
+        const docRef = doc(db, 'settings', 'lessonTimes');
+        await setDoc(docRef, {
+          times: lessonTimes,
+          updatedAt: serverTimestamp()
+        }, { merge: true });
+        
+        // Update grid header
+        updateLessonTimeHeader(index);
+        
+        addStatusLine("ok", `تم تحديث وقت ${LESSONS_AR[index]} بنجاح`);
+        return true;
+      } catch (error) {
+        console.error("Error saving lesson time:", error);
+        addStatusLine("err", "فشل في حفظ الوقت");
+        return false;
+      }
+    }
+
+    function updateLessonTimeHeader(index) {
+      // Update the specific lesson header
+      const headerIndex = index + 1; // +1 because first column is day header
+      const headerElement = grid.children[headerIndex];
+      if (headerElement && headerElement.classList.contains('th')) {
+        const timeDisplay = headerElement.querySelector('.time-display');
+        if (timeDisplay) {
+          timeDisplay.textContent = formatLessonTime(index);
+        }
+      }
+    }
+
+    function openMainTimeEditor(index) {
+      if (index < 0 || index >= FIXED_LESSON_COUNT) return;
+      currentTimeEditCtx = { kind:'main', lessonIndex:index };
+      const lessonName = LESSONS_AR[index] || `الحصة #${index + 1}`;
+      timeModalTitle.textContent = `تعديل وقت ${lessonName}`;
+      timeModalDesc.textContent = "يتم تطبيق الأوقات على جميع الجداول الأسبوعية.";
+      timeRemoveLessonBtn.classList.add('custom-hidden');
+
+      const currentTime = lessonTimes[index] || defaultLessonTimeAt(index);
+      startTimeInput.value = currentTime.start;
+      endTimeInput.value = currentTime.end;
+
+      overlay.classList.add('show');
+      timeModal.classList.add('show');
+      startTimeInput.focus();
+    }
+
+    function findCustomScheduleById(id){
+      return customSchedules.find(s => s.id === id) || null;
+    }
+
+    function openCustomTimeEditor(scheduleId, lessonIndex){
+      const schedule = findCustomScheduleById(scheduleId);
+      if(!schedule) return;
+      if(lessonIndex < 0 || lessonIndex >= schedule.lessonCount) return;
+
+      currentTimeEditCtx = { kind:'custom', scheduleId, lessonIndex };
+      const lessonName = lessonLabel(lessonIndex + 1);
+      timeModalTitle.textContent = `تعديل وقت ${lessonName} - ${schedule.name || 'جدول إضافي'}`;
+      timeModalDesc.textContent = "يمكنك تعديل وقت هذه الحصة لهذا الجدول فقط، أو حذف الحصة من نفس النافذة.";
+      timeRemoveLessonBtn.classList.toggle('custom-hidden', schedule.lessonCount <= 1);
+
+      const t = schedule.times?.[lessonIndex] || defaultLessonTimeAt(lessonIndex);
+      startTimeInput.value = t.start || "00:00";
+      endTimeInput.value = t.end || "00:00";
+
+      overlay.classList.add('show');
+      timeModal.classList.add('show');
+      startTimeInput.focus();
+    }
+
+    function closeTimeModal() {
+      overlay.classList.remove('show');
+      timeModal.classList.remove('show');
+      currentTimeEditCtx = null;
+      startTimeInput.value = "";
+      endTimeInput.value = "";
+      timeRemoveLessonBtn.classList.add('custom-hidden');
+      timeModalDesc.textContent = "يتم تطبيق الأوقات على جميع الجداول الأسبوعية.";
+    }
+
+    /* ======= Grid rendering (once), then patch per cell ======= */
+    function renderHeaders(){
+      for(let i=FIXED_LESSON_COUNT - 1; i>=0; i--){
+        const h = document.createElement('div');
+        h.className='th';
+        h.innerHTML = `
+          <div class="lesson-word">الحصة</div>
+          <div class="lesson-name">${lessonNameOnly(i + 1)}</div>
+          <div class="time-display">${formatLessonTime(i)}</div>
+        `;
+        h.addEventListener('click', () => openMainTimeEditor(i));
+        grid.appendChild(h);
+      }
+
+      // DAY header (rightmost column)
+      const dayH = document.createElement('div');
+      dayH.className = 'th day-header';
+      dayH.textContent = 'اليوم';
+      grid.appendChild(dayH);
+    }
+
+    function cellText(val){
+      if(!val) return '—';
+      const subj = (val.subject||'').trim();
+      const tn = (val.teacherName||'').trim();
+      if(!subj && !tn) return '—';
+      if(subj && tn) return `${subj} | ${tn}`;
+      return subj || tn || '—';
+    }
+
+    function patchCellButton(key){
+      const btn = btnRefs.get(key);
+      if(!btn) return;
+      const val = gridValues[key] || {subject:'', teacherUid:'', teacherName:'', notes:''};
+      const filled = !!((val.subject||'').trim() && (val.teacherUid||'').trim());
+      btn.classList.toggle('filled', filled);
+      btn.textContent = cellText(val);
+      btn.title = 'انقر لتعديل المادة والمعلم والملاحظات';
+    }
+
+    function renderRows(){
+      btnRefs.clear();
+
+      for(let r=0;r<5;r++){
+        const iso = weekDates[r];
+
+        // lessons
+        for(let i=FIXED_LESSON_COUNT; i>=1; i--){
+          const key = `${iso}#${i}`;
+          const val = gridValues[key] || {subject:'', teacherUid:'', teacherName:'', notes:''};
+
+          const cell = document.createElement('div');
+          cell.className='td';
+
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className='cell-btn';
+          btn.textContent = cellText(val);
+          btn.title = 'انقر لتعديل المادة والمعلم والملاحظات';
+          btn.addEventListener('click', ()=> openMainCellEditor(iso, i));
+          cell.appendChild(btn);
+
+          btnRefs.set(key, btn);
+          patchCellButton(key);
+
+          grid.appendChild(cell);
+        }
+
+        // day cell (rightmost column)
+        const dayCell = document.createElement('div');
+        dayCell.className = 'td day-col';
+        dayCell.innerHTML = `<div style="font-weight:950; color:var(--primary)">${DAYS_AR[r]}</div><div class="muted" style="font-size:11px; margin-top:4px">${iso}</div>`;
+        grid.appendChild(dayCell);
+      }
+    }
+
+    function renderGridFull(){
+      grid.innerHTML = "";
+      const frag = document.createDocumentFragment();
+      grid.appendChild(frag);
+      renderHeaders();
+      renderRows();
+    }
+
+    /* ======= Teachers list (fast) ======= */
+    async function getTeachersForClass(classKey){
+      const cached = teachersCache.get(classKey);
+      if(cached && (Date.now() - cached.at) < TEACHERS_TTL_MS) return cached.list;
+
+      // Fast query using array-contains
+      const qs = query(collection(db,'teachers'), where('classes','array-contains', classKey));
+      const snap = await getDocs(qs);
+
+      const out = [];
+      snap.forEach(d=>{
+        const t = d.data() || {};
+        out.push({
+          uid: t.uid || d.id,
+          name: t.name || t.email || t.uid || d.id,
+          isSupervisor: !!t.isSupervisor,
+          subject: t.subject || ''
+        });
+      });
+
+      out.sort((a,b)=>{
+        const aS = a.isSupervisor ? 1 : 0;
+        const bS = b.isSupervisor ? 1 : 0;
+        if(aS !== bS) return bS - aS;
+        return (a.name||"").localeCompare((b.name||""), 'ar');
+      });
+
+      teachersCache.set(classKey, { at: Date.now(), list: out });
+      return out;
+    }
+
+    async function warmTeachersCache(){
+      try{
+        await getTeachersForClass(selectedClassKey);
+      }catch(e){
+        // ignore
+      }
+    }
+
+    /* ======= Modal handling ======= */
+    function closeModal(){
+      overlay.classList.remove('show');
+      modal.classList.remove('show');
+      comboAssign.innerHTML = `<option value="">(اختياري) تغيير المادة | المعلم</option>`;
+      notesInput.value = '';
+      assignmentCtx = null;
+    }
+
+    async function openAssignmentEditor({ title, classKey, current, onApply, onClear }){
+      if(loading) return;
+      assignmentCtx = { onApply, onClear };
+      modalTitle.textContent = title;
+
+      comboAssign.innerHTML = `<option value="">(اختياري) تغيير المادة | المعلم</option>`;
+      notesInput.value = current.notes || '';
+
+      overlay.classList.add('show');
+      modal.classList.add('show');
+
+      try{
+        comboAssign.disabled = true;
+        comboAssign.classList.add('loading');
+
+        const teacherOpts = await getTeachersForClass(classKey || selectedClassKey);
+
+        teacherOpts.forEach(t=>{
+          const subj = (t.subject || '—').trim();
+          const text = `${subj} | ${t.name}${t.isSupervisor ? ' ⭐' : ''}`;
+          const val = JSON.stringify({ subject: subj, teacherUid: t.uid, teacherName: t.name });
+          const opt = document.createElement('option');
+          opt.value = val;
+          opt.textContent = text;
+          comboAssign.appendChild(opt);
+        });
+
+        if(current.teacherUid){
+          const idx = Array.from(comboAssign.options).findIndex(o=>{
+            try{
+              const v = JSON.parse(o.value || '{}');
+              return v.teacherUid === current.teacherUid;
+            }catch{
+              return false;
+            }
+          });
+          if(idx >= 0) comboAssign.selectedIndex = idx;
+        }
+      } finally{
+        comboAssign.disabled = false;
+        comboAssign.classList.remove('loading');
+      }
+    }
+
+    async function openMainCellEditor(isoDate, lessonIdx){
+      const key = `${isoDate}#${lessonIdx}`;
+      const current = gridValues[key] || {subject:'', teacherUid:'', teacherName:'', notes:''};
+      const dayIdx = weekDates.indexOf(isoDate);
+      const title = `‏${DAYS_AR[dayIdx]||''} • ${isoDate} • ${LESSONS_AR[lessonIdx-1]||('الحصة #'+lessonIdx)}`;
+
+      await openAssignmentEditor({
+        title,
+        classKey: selectedClassKey,
+        current,
+        onApply(next){
+          gridValues[key] = next;
+          clearedSet.delete(key);
+          setDirty(true);
+          patchCellButton(key);
+        },
+        onClear(){
+          clearedSet.add(key);
+          gridValues[key] = {subject:'', teacherUid:'', teacherName:'', notes:''};
+          setDirty(true);
+          patchCellButton(key);
+        }
+      });
+    }
+
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) {
+        closeModal();
+        closeTimeModal();
+        closeCreateScheduleModal();
+      }
+    });
+
+    cancelBtn.addEventListener('click', closeModal);
+    timeCancelBtn.addEventListener('click', closeTimeModal);
+
+    clearBtn.addEventListener('click', ()=>{
+      if(!assignmentCtx) return;
+      assignmentCtx.onClear?.();
+      closeModal();
+    });
+
+    okBtn.addEventListener('click', ()=>{
+      if(!assignmentCtx) return closeModal();
+
+      const picked = comboAssign.value;
+      let next = {subject:'', teacherUid:'', teacherName:'', notes:''};
+
+      if(picked){
+        try{
+          const v = JSON.parse(picked);
+          next.subject = (v.subject || '').trim();
+          next.teacherUid = (v.teacherUid || '').trim();
+          next.teacherName = (v.teacherName || '').trim();
+        }catch{
+          // ignore
+        }
+      }
+
+      next.notes = (notesInput.value || '').trim();
+      assignmentCtx.onApply?.(next);
+
+      closeModal();
+    });
+
+    timeSaveBtn.addEventListener('click', async () => {
+      if (!currentTimeEditCtx) return;
+
+      const startTime = startTimeInput.value;
+      const endTime = endTimeInput.value;
+
+      if (!startTime || !endTime) {
+        addStatusLine("err", "يجب تحديد وقت البداية والنهاية");
+        return;
+      }
+
+      timeSaveBtn.disabled = true;
+      let success = false;
+
+      if(currentTimeEditCtx.kind === 'main'){
+        success = await saveLessonTime(currentTimeEditCtx.lessonIndex, startTime, endTime);
+        if(success){
+          // Custom cards display global lesson times for shared lessons.
+          renderCustomSchedules();
+        }
+      }else{
+        const schedule = findCustomScheduleById(currentTimeEditCtx.scheduleId);
+        if(schedule){
+          schedule.times[currentTimeEditCtx.lessonIndex] = { start:startTime, end:endTime };
+          renderCustomSchedules();
+          success = true;
+        }
+      }
+
+      timeSaveBtn.disabled = false;
+      if (success) closeTimeModal();
+    });
+
+    timeRemoveLessonBtn.addEventListener('click', ()=>{
+      if(!currentTimeEditCtx || currentTimeEditCtx.kind !== 'custom') return;
+      const schedule = findCustomScheduleById(currentTimeEditCtx.scheduleId);
+      if(!schedule || schedule.lessonCount <= 1) return;
+
+      const idx = currentTimeEditCtx.lessonIndex;
+      schedule.values.splice(idx, 1);
+      schedule.times.splice(idx, 1);
+      schedule.lessonCount -= 1;
+      ensureCustomLessons(schedule);
+      ensureCustomTimes(schedule);
+      renderCustomSchedules();
+      closeTimeModal();
+    });
+
+    function lessonLabel(index){
+      return LESSONS_AR[index - 1] || `الحصة #${index}`;
+    }
+    function lessonNameOnly(index){
+      const full = lessonLabel(index);
+      if(full.startsWith('الحصة ')) return full.replace(/^الحصة\s+/, '');
+      return `#${index}`;
+    }
+
+    function normalizeLesson(v){
+      return {
+        subject: (v?.subject || '').toString(),
+        teacherUid: (v?.teacherUid || '').toString(),
+        teacherName: (v?.teacherName || '').toString(),
+        notes: (v?.notes || '').toString()
+      };
+    }
+
+    function buildMainDayLessonSeed(dayIndex, lessonCount = FIXED_LESSON_COUNT){
+      const iso = weekDates[dayIndex];
+      const out = [];
+      for(let i=1; i<=lessonCount; i++){
+        const key = `${iso}#${i}`;
+        out.push(normalizeLesson(gridValues[key] || {}));
+      }
+      return out;
+    }
+    function buildEmptyLessonSeed(lessonCount = FIXED_LESSON_COUNT){
+      return Array.from({ length: lessonCount }, () => normalizeLesson({}));
+    }
+
+    async function fetchDayLessonsSeedByClass(iso){
+      const byClass = new Map();
+      const qDay = query(collection(db, 'schedules'), where('date', '==', iso));
+      const snap = await getDocs(qDay);
+
+      snap.forEach((d)=>{
+        const x = d.data() || {};
+        const li = Number((x.lesson || '').toString());
+        if(!(li >= 1 && li <= FIXED_LESSON_COUNT)) return;
+
+        const classKeyRaw = (x.classKey || '').toString().trim();
+        const classKey = classKeyRaw || composeClassKey(x.grade, x.section, x.track || "");
+        if(!classKey) return;
+
+        if(!byClass.has(classKey)){
+          byClass.set(classKey, buildEmptyLessonSeed(FIXED_LESSON_COUNT));
+        }
+
+        byClass.get(classKey)[li - 1] = normalizeLesson({
+          subject: x.subject || "",
+          teacherUid: x.teacherUid || "",
+          teacherName: x.teacherName || "",
+          notes: x.notes || ""
+        });
+      });
+
+      return byClass;
+    }
+
+    async function createSchoolWideCustomSchedule({ name, dayIndex }){
+      const safeName = (name || '').trim() || 'جدول إضافي';
+      if(!Number.isInteger(dayIndex) || dayIndex < 0 || dayIndex >= DAYS_AR.length){
+        throw new Error('invalid-day-index');
+      }
+
+      const dayIso = weekDates[dayIndex];
+      const scheduleId = customScheduleId();
+      const lessonsByClass = await fetchDayLessonsSeedByClass(dayIso);
+      const selectedClassLessons = buildMainDayLessonSeed(dayIndex, FIXED_LESSON_COUNT);
+      const batch = writeBatch(db);
+
+      for(const classKey of ALL_CLASS_KEYS){
+        const { grade, section, track } = parseClassKey(classKey);
+        const trackKey = trackKeyOf(track);
+        const lessonsSeed = classKey === selectedClassKey
+          ? selectedClassLessons
+          : (lessonsByClass.get(classKey) || buildEmptyLessonSeed(FIXED_LESSON_COUNT));
+        const lessons = lessonsSeed
+          .slice(0, FIXED_LESSON_COUNT)
+          .map(v => normalizeLesson(v));
+        const times = buildMainTimesSeed(FIXED_LESSON_COUNT).map((t, idx)=>({
+          start: (t?.start || defaultLessonTimeAt(idx).start).toString(),
+          end: (t?.end || defaultLessonTimeAt(idx).end).toString()
+        }));
+
+        const payload = {
+          id: scheduleId,
+          name: safeName,
+          classKey,
+          grade: String(grade),
+          section: String(section),
+          track: track || "",
+          trackKey,
+          dayIndex,
+          day: DAYS_AR[dayIndex] || "",
+          enabled: false,
+          lessonCount: FIXED_LESSON_COUNT,
+          lessons,
+          times,
+          updatedAt: serverTimestamp(),
+          createdAt: serverTimestamp()
+        };
+
+        const docId = customDocIdFor(classKey, scheduleId);
+        batch.set(doc(db, 'customDaySchedules', docId), payload, { merge: true });
+      }
+
+      await batch.commit();
+      await fetchCustomSchedules();
+      setStatusHTML(`<div class="ok">تم إنشاء الجدول (${safeName}) ليوم ${DAYS_AR[dayIndex]} لجميع فصول المدرسة.</div>`);
+    }
+
+    function buildMainTimesSeed(lessonCount = FIXED_LESSON_COUNT){
+      const out = [];
+      for(let i=0; i<lessonCount; i++){
+        out.push(defaultLessonTimeAt(i));
+      }
+      return out;
+    }
+
+    function ensureCustomLessons(schedule){
+      while(schedule.values.length < schedule.lessonCount){
+        schedule.values.push(normalizeLesson({}));
+      }
+      if(schedule.values.length > schedule.lessonCount){
+        schedule.values.length = schedule.lessonCount;
+      }
+    }
+
+    function ensureCustomTimes(schedule){
+      if(!Array.isArray(schedule.times)) schedule.times = [];
+      while(schedule.times.length < schedule.lessonCount){
+        schedule.times.push(defaultLessonTimeAt(schedule.times.length));
+      }
+      if(schedule.times.length > schedule.lessonCount){
+        schedule.times.length = schedule.lessonCount;
+      }
+      schedule.times = schedule.times.map((t, idx)=>({
+        start: (t?.start || defaultLessonTimeAt(idx).start).toString(),
+        end: (t?.end || defaultLessonTimeAt(idx).end).toString()
+      }));
+    }
+
+    function makeCustomSchedule(seed = {}){
+      const schedule = {
+        id: seed.id || customScheduleId(),
+        docId: seed.docId || '',
+        name: (seed.name || 'جدول إضافي').toString(),
+        classKey: seed.classKey || selectedClassKey,
+        dayIndex: Number.isInteger(seed.dayIndex) ? seed.dayIndex : '',
+        enabled: !!seed.enabled,
+        collapsed: !!seed.collapsed,
+        lessonCount: Math.max(1, Number(seed.lessonCount) || 7),
+        values: Array.isArray(seed.values) ? seed.values.map(normalizeLesson) : [],
+        times: Array.isArray(seed.times) ? seed.times : []
+      };
+      ensureCustomLessons(schedule);
+      ensureCustomTimes(schedule);
+      return schedule;
+    }
+
+    function renderCustomGrid(schedule, host, statusNode){
+      host.innerHTML = '';
+      const g = document.createElement('div');
+      g.className = 'grid';
+      g.style.gridTemplateColumns = `repeat(${schedule.lessonCount}, minmax(var(--colW),1fr)) minmax(var(--colW),1fr)`;
+      g.style.minWidth = `calc(var(--colW) * ${schedule.lessonCount + 1} + ${schedule.lessonCount} * 10px)`;
+
+      for(let i=schedule.lessonCount; i>=1; i--){
+        const h = document.createElement('div');
+        h.className = 'th';
+        const timeIndex = i - 1;
+        const t = timeIndex < FIXED_LESSON_COUNT
+          ? defaultLessonTimeAt(timeIndex)
+          : (schedule.times[timeIndex] || defaultLessonTimeAt(timeIndex));
+        h.innerHTML = `
+          <div class="lesson-word">الحصة</div>
+          <div class="lesson-name">${lessonNameOnly(i)}</div>
+          <div class="time-display">${t.start} - ${t.end}</div>
+        `;
+        if(timeIndex < FIXED_LESSON_COUNT){
+          h.addEventListener('click', ()=> openMainTimeEditor(timeIndex));
+        }else{
+          h.addEventListener('click', ()=> openCustomTimeEditor(schedule.id, timeIndex));
+        }
+        g.appendChild(h);
+      }
+
+      const dayH = document.createElement('div');
+      dayH.className = 'th day-header';
+      dayH.textContent = 'اليوم';
+      g.appendChild(dayH);
+
+      for(let i=schedule.lessonCount; i>=1; i--){
+        const cell = document.createElement('div');
+        cell.className = 'td';
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'cell-btn';
+        btn.textContent = cellText(schedule.values[i - 1]);
+        const filled = !!((schedule.values[i - 1]?.subject || '').trim() && (schedule.values[i - 1]?.teacherUid || '').trim());
+        btn.classList.toggle('filled', filled);
+        btn.addEventListener('click', async ()=>{
+          const dayNameLocal = Number.isInteger(schedule.dayIndex) ? DAYS_AR[schedule.dayIndex] : '—';
+          await openAssignmentEditor({
+            title: `${dayNameLocal} • ${lessonLabel(i)}`,
+            classKey: schedule.classKey,
+            current: normalizeLesson(schedule.values[i - 1]),
+            onApply(next){
+              schedule.values[i - 1] = normalizeLesson(next);
+              renderCustomGrid(schedule, host, statusNode);
+            },
+            onClear(){
+              schedule.values[i - 1] = normalizeLesson({});
+              renderCustomGrid(schedule, host, statusNode);
+            }
+          });
+        });
+        cell.appendChild(btn);
+        g.appendChild(cell);
+      }
+
+      const dayCell = document.createElement('div');
+      dayCell.className = 'td day-col';
+      const dayName = Number.isInteger(schedule.dayIndex) ? DAYS_AR[schedule.dayIndex] : '—';
+      dayCell.innerHTML = `<div style="font-weight:950; color:var(--primary)">${dayName}</div>`;
+      g.appendChild(dayCell);
+
+      host.appendChild(g);
+    }
+
+    async function saveCustomSchedule(schedule, statusNode){
+      statusNode.innerHTML = '';
+
+      if(!Number.isInteger(schedule.dayIndex)){
+        statusNode.innerHTML = `<div class="err">اختيار اليوم إجباري لهذا الجدول.</div>`;
+        return;
+      }
+      if(!schedule.classKey){
+        statusNode.innerHTML = `<div class="err">اختر الصف والفصل قبل الحفظ.</div>`;
+        return;
+      }
+
+      try{
+        const {grade, section, track} = parseClassKey(schedule.classKey);
+        const trackKey = trackKeyOf(track);
+        const payload = {
+          id: schedule.id,
+          name: schedule.name || 'جدول إضافي',
+          classKey: schedule.classKey,
+          grade: String(grade),
+          section: String(section),
+          track: track || "",
+          trackKey,
+          dayIndex: schedule.dayIndex,
+          day: DAYS_AR[schedule.dayIndex] || "",
+          enabled: !!schedule.enabled,
+          lessonCount: schedule.lessonCount,
+          lessons: schedule.values.slice(0, schedule.lessonCount).map(v => normalizeLesson(v)),
+          times: Array.from({ length: schedule.lessonCount }, (_, idx) => {
+            const t = idx < FIXED_LESSON_COUNT
+              ? defaultLessonTimeAt(idx)
+              : (schedule.times[idx] || defaultLessonTimeAt(idx));
+            return {
+              start: (t?.start || defaultLessonTimeAt(idx).start).toString(),
+              end: (t?.end || defaultLessonTimeAt(idx).end).toString()
+            };
+          }),
+          updatedAt: serverTimestamp()
+        };
+
+        const docId = customDocIdFor(schedule.classKey, schedule.id);
+        await setDoc(doc(db, 'customDaySchedules', docId), {
+          ...payload,
+          createdAt: serverTimestamp()
+        }, { merge: true });
+        schedule.docId = docId;
+
+        statusNode.innerHTML = `<div class="ok">تم حفظ الجدول الخاص بنجاح.</div>`;
+      }catch(e){
+        console.error('[saveCustomSchedule]', e);
+        statusNode.innerHTML = `<div class="err">تعذّر حفظ الجدول الخاص.</div>`;
+      }
+    }
+
+    async function deleteCustomSchedule(schedule, cardEl){
+      const confirmed = window.confirm('هل أنت متأكد من حذف هذا الجدول من جميع الفصول؟');
+      if(!confirmed) return;
+
+      try{
+        const qAll = query(collection(db, 'customDaySchedules'), where('id', '==', schedule.id));
+        const snap = await getDocs(qAll);
+
+        if(!snap.empty){
+          const batch = writeBatch(db);
+          snap.forEach((d)=>{
+            batch.set(d.ref, {
+              deletedAt: serverTimestamp(),
+              enabled: false,
+              updatedAt: serverTimestamp()
+            }, { merge: true });
+          });
+          await batch.commit();
+        }else{
+          // Fallback for older rows without indexed id match
+          const fallbackBatch = writeBatch(db);
+          ALL_CLASS_KEYS.forEach((classKey)=>{
+            const docId = customDocIdFor(classKey, schedule.id);
+            fallbackBatch.set(doc(db, 'customDaySchedules', docId), {
+              deletedAt: serverTimestamp(),
+              enabled: false,
+              updatedAt: serverTimestamp()
+            }, { merge: true });
+          });
+          await fallbackBatch.commit();
+        }
+
+        const idx = customSchedules.findIndex(x => x.id === schedule.id);
+        if(idx >= 0) customSchedules.splice(idx, 1);
+        cardEl.remove();
+        setStatusHTML(`<div class="ok">تم حذف الجدول من جميع الفصول.</div>`);
+      }catch(e){
+        console.error('[deleteCustomSchedule]', e);
+        setStatusHTML(`<div class="err">تعذّر حذف الجدول من جميع الفصول.</div>`);
+      }
+    }
+
+    function renderCustomScheduleCard(schedule){
+      const item = document.createElement('div');
+      item.className = `custom-schedule-item${schedule.collapsed ? ' collapsed' : ''}`;
+
+      const gradeValue = gradeFromClassKey(schedule.classKey);
+      const classOptions = (CLASSES_BY_GRADE[gradeValue] || []).map(c=>`<option value="${c}">${c}</option>`).join('');
+
+      item.innerHTML = `
+        <button type="button" class="custom-toggle-btn">
+          <span class="toggle-title">${schedule.name || 'جدول إضافي'}</span>
+          <span class="arrow">▾</span>
+        </button>
+        <div class="custom-schedule-body">
+            <div class="custom-head">
+              <div class="title">
+                <button type="button" class="custom-name-trigger">${schedule.name || 'جدول إضافي'}</button>
+                <input class="input custom-name-edit custom-hidden" value="${(schedule.name || 'جدول إضافي').replace(/"/g,'&quot;')}">
+              </div>
+              <div class="custom-day-wrap">
+                <select class="custom-day-select">
+                  <option value="">اختر اليوم (إجباري)</option>
+                  ${dayOptionsHTML()}
+                </select>
+              </div>
+              <label class="checkbox-inline">
+                <input type="checkbox" class="custom-enabled">
+                تفعيل أسبوعي
+              </label>
+            </div>
+
+            <div class="controls custom-controls" style="margin-top:10px">
+              <div class="pill">
+                <label>الصف</label>
+                <select class="input custom-grade-select">
+                  ${GRADES.map(g=>`<option value="${g}">${g}</option>`).join('')}
+                </select>
+              </div>
+              <div class="pill">
+                <label>الفصل</label>
+                <select class="input custom-class-select">${classOptions}</select>
+              </div>
+            </div>
+
+            <div class="custom-toolbar" style="margin-top:18px">
+              <button type="button" class="btn custom-add">${AR_ADD_LESSON}</button>
+              <button type="button" class="btn custom-remove">${AR_REMOVE_LESSON}</button>
+              <button type="button" class="btn primary custom-save">حفظ هذا الجدول</button>
+              <button type="button" class="btn danger custom-delete">حذف الجدول</button>
+            </div>
+
+            <div class="grid-wrap" style="margin-top:10px">
+              <div class="custom-grid-host"></div>
+            </div>
+            <div class="status custom-status"></div>
+        </div>
+      `;
+
+      const toggleBtn = item.querySelector('.custom-toggle-btn');
+      const toggleTitle = item.querySelector('.toggle-title');
+      const nameTrigger = item.querySelector('.custom-name-trigger');
+      const nameEdit = item.querySelector('.custom-name-edit');
+      const daySel = item.querySelector('.custom-day-select');
+      const enabledCb = item.querySelector('.custom-enabled');
+      const gradeSelLocal = item.querySelector('.custom-grade-select');
+      const classSelLocal = item.querySelector('.custom-class-select');
+      const addBtn = item.querySelector('.custom-add');
+      const remBtn = item.querySelector('.custom-remove');
+      const saveBtnLocal = item.querySelector('.custom-save');
+      const deleteBtn = item.querySelector('.custom-delete');
+      const gridHost = item.querySelector('.custom-grid-host');
+      const statusNode = item.querySelector('.custom-status');
+
+      toggleBtn.addEventListener('click', ()=>{
+        schedule.collapsed = !schedule.collapsed;
+        item.classList.toggle('collapsed', schedule.collapsed);
+      });
+
+      const applyName = ()=>{
+        schedule.name = (nameEdit.value || '').trim() || 'جدول إضافي';
+        toggleTitle.textContent = schedule.name;
+        nameTrigger.textContent = schedule.name;
+        nameTrigger.classList.remove('custom-hidden');
+        nameEdit.classList.add('custom-hidden');
+      };
+      nameTrigger.addEventListener('click', ()=>{
+        nameEdit.value = schedule.name || 'جدول إضافي';
+        nameTrigger.classList.add('custom-hidden');
+        nameEdit.classList.remove('custom-hidden');
+        nameEdit.focus();
+        nameEdit.select();
+      });
+      nameEdit.addEventListener('keydown', (e)=>{
+        if(e.key === 'Enter'){
+          e.preventDefault();
+          applyName();
+        }
+      });
+      nameEdit.addEventListener('blur', applyName);
+
+      daySel.value = Number.isInteger(schedule.dayIndex) ? String(schedule.dayIndex) : '';
+      daySel.addEventListener('change', ()=>{
+        const v = daySel.value;
+        schedule.dayIndex = v === '' ? '' : Number(v);
+        renderCustomGrid(schedule, gridHost, statusNode);
+      });
+
+      enabledCb.checked = schedule.enabled;
+      enabledCb.addEventListener('change', ()=>{
+        schedule.enabled = !!enabledCb.checked;
+      });
+
+      gradeSelLocal.value = gradeValue;
+      classSelLocal.value = (CLASSES_BY_GRADE[gradeValue] || []).includes(schedule.classKey)
+        ? schedule.classKey
+        : ((CLASSES_BY_GRADE[gradeValue] || [])[0] || '');
+      schedule.classKey = classSelLocal.value || schedule.classKey;
+
+      gradeSelLocal.addEventListener('change', ()=>{
+        const g = gradeSelLocal.value;
+        classSelLocal.innerHTML = (CLASSES_BY_GRADE[g] || []).map(c=>`<option value="${c}">${c}</option>`).join('');
+        classSelLocal.value = (CLASSES_BY_GRADE[g] || [])[0] || '';
+        schedule.classKey = classSelLocal.value;
+      });
+      classSelLocal.addEventListener('change', ()=>{
+        schedule.classKey = classSelLocal.value;
+      });
+
+      addBtn.addEventListener('click', ()=>{
+        schedule.lessonCount += 1;
+        ensureCustomLessons(schedule);
+        ensureCustomTimes(schedule);
+        renderCustomGrid(schedule, gridHost, statusNode);
+      });
+      remBtn.addEventListener('click', ()=>{
+        if(schedule.lessonCount <= 1) return;
+        schedule.lessonCount -= 1;
+        ensureCustomLessons(schedule);
+        ensureCustomTimes(schedule);
+        renderCustomGrid(schedule, gridHost, statusNode);
+      });
+
+      saveBtnLocal.addEventListener('click', ()=> saveCustomSchedule(schedule, statusNode));
+      deleteBtn.addEventListener('click', ()=> deleteCustomSchedule(schedule, item));
+
+      renderCustomGrid(schedule, gridHost, statusNode);
+      customSchedulesWrap.appendChild(item);
+    }
+
+    function renderCustomSchedules(){
+      customSchedulesWrap.innerHTML = '';
+      customSchedules.forEach(renderCustomScheduleCard);
+    }
+
+    async function fetchCustomSchedules(){
+      customSchedules.length = 0;
+      customSchedulesWrap.innerHTML = '';
+      try{
+        const qCustom = query(collection(db, 'customDaySchedules'), where('classKey', '==', selectedClassKey));
+        const snap = await getDocs(qCustom);
+        snap.forEach(d=>{
+          const x = d.data() || {};
+          if(x.deletedAt) return;
+          customSchedules.push(makeCustomSchedule({
+            id: x.id || d.id,
+            docId: d.id,
+            name: x.name || 'جدول إضافي',
+            classKey: x.classKey || selectedClassKey,
+            dayIndex: Number.isInteger(x.dayIndex) ? x.dayIndex : '',
+            enabled: !!x.enabled,
+            lessonCount: Number(x.lessonCount) || (Array.isArray(x.lessons) ? x.lessons.length : 7),
+            values: Array.isArray(x.lessons) ? x.lessons : [],
+            times: Array.isArray(x.times) ? x.times : []
+          }));
+        });
+      }catch(e){
+        console.error('[fetchCustomSchedules]', e);
+      }
+      renderCustomSchedules();
+    }
+
+    function openCreateScheduleModal(){
+      newScheduleNameInput.value = '';
+      newScheduleDaySel.innerHTML = `<option value="">اختر اليوم (إجباري)</option>${dayOptionsHTML()}`;
+      newScheduleDaySel.value = '';
+      overlay.classList.add('show');
+      createScheduleModal.classList.add('show');
+      newScheduleNameInput.focus();
+    }
+
+    function closeCreateScheduleModal(){
+      createScheduleModal.classList.remove('show');
+      if(!modal.classList.contains('show') && !timeModal.classList.contains('show')){
+        overlay.classList.remove('show');
+      }
+    }
+
+    function addNewCustomSchedule(seed = {}){
+      customSchedules.push(makeCustomSchedule({
+        name: seed.name || 'جدول إضافي',
+        dayIndex: Number.isInteger(seed.dayIndex) ? seed.dayIndex : '',
+        classKey: seed.classKey || selectedClassKey,
+        lessonCount: Number(seed.lessonCount) || FIXED_LESSON_COUNT,
+        values: Array.isArray(seed.values) ? seed.values : [],
+        times: Array.isArray(seed.times) ? seed.times : []
+      }));
+      renderCustomSchedules();
+    }
+
+    newScheduleBtn.addEventListener('click', openCreateScheduleModal);
+    createScheduleCancelBtn.addEventListener('click', closeCreateScheduleModal);
+    createScheduleConfirmBtn.addEventListener('click', async ()=>{
+      const name = (newScheduleNameInput.value || '').trim() || 'جدول إضافي';
+      const v = newScheduleDaySel.value;
+      if(v === ''){
+        alert('اختر اليوم قبل إنشاء الجدول.');
+        newScheduleDaySel.focus();
+        return;
+      }
+      const dayIndex = Number(v);
+
+      createScheduleConfirmBtn.disabled = true;
+      setLoading(true, "جاري إنشاء الجدول لجميع فصول المدرسة...");
+      try{
+        await createSchoolWideCustomSchedule({ name, dayIndex });
+        closeCreateScheduleModal();
+      }catch(e){
+        console.error('[createSchoolWideCustomSchedule]', e);
+        setStatusHTML(`<div class="err">تعذّر إنشاء الجدول لجميع الفصول: ${(e && e.message) ? e.message : e}</div>`);
+      }finally{
+        createScheduleConfirmBtn.disabled = false;
+        setLoading(false);
+      }
+    });
+
+    /* ======= Dirty state safety for grade/class selectors ======= */
+    let previousGrade = selectedGrade;
+    let previousClass = selectedClassKey;
+
+    gradeSel.addEventListener('change', async (e)=>{
+      if (dirty) {
+        const confirmChange = window.confirm("هناك تغييرات غير محفوظة. إذا غيرت الصف ستفقد هذه التغييرات. هل تريد المتابعة؟");
+        if (!confirmChange) {
+          gradeSel.value = previousGrade;
+          return;
+        }
+      }
+      
+      setLoading(true, "جاري تحميل بيانات الصف...");
+      previousGrade = e.target.value;
+      selectedGrade = e.target.value;
+      selectedClassKey = (CLASSES_BY_GRADE[selectedGrade] && CLASSES_BY_GRADE[selectedGrade][0]) ? CLASSES_BY_GRADE[selectedGrade][0] : selectedClassKey;
+      renderSelectors();
+      initWeek();
+      renderGridFull();
+      await warmTeachersCache();
+      await fetchExisting();
+      await fetchCustomSchedules();
+      setDirty(false);
+    });
+
+    classSel.addEventListener('change', async (e)=>{
+      if (dirty) {
+        const confirmChange = window.confirm("هناك تغييرات غير محفوظة. إذا غيرت الفصل ستفقد هذه التغييرات. هل تريد المتابعة؟");
+        if (!confirmChange) {
+          classSel.value = previousClass;
+          return;
+        }
+      }
+      
+      setLoading(true, "جاري تحميل بيانات الفصل...");
+      previousClass = e.target.value;
+      selectedClassKey = e.target.value;
+      initWeek();
+      renderGridFull();
+      await warmTeachersCache();
+      await fetchExisting();
+      await fetchCustomSchedules();
+      setDirty(false);
+    });
+
+    /* ======= Escape key handler ======= */
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        if (modal.classList.contains('show')) {
+          closeModal();
+        } else if (timeModal.classList.contains('show')) {
+          closeTimeModal();
+        } else if (createScheduleModal.classList.contains('show')) {
+          closeCreateScheduleModal();
+        }
+      }
+    });
+
+    /* ======= Load existing schedules ======= */
+    async function fetchExisting(){
+      setLoading(true, "جاري تحميل بيانات الجدول...");
+      setStatusHTML("");
+      try{
+        existingMap = new Map();
+        gridValues = {};
+        clearedSet.clear();
+
+        const {grade, section, track} = parseClassKey(selectedClassKey);
+        const trackKey = trackKeyOf(track);
+
+        // Fire all 5 day queries in parallel
+        const daySnaps = await Promise.all(weekDates.map(iso =>
+          getDocs(query(
+            collection(db,'schedules'),
+            where('date','==', iso),
+            where('grade','==', String(grade)),
+            where('section','==', String(section))
+          ))
+        ));
+
+        daySnaps.forEach((snap, r) => {
+          const iso = weekDates[r];
+          snap.forEach(d=>{
+            const x = d.data() || {};
+            const li = Number((x.lesson || '').toString());
+            if(!(li >= 1 && li <= FIXED_LESSON_COUNT)) return;
+
+            const xClassKey = (x.classKey || '').toString();
+            const xTrack = (x.track || '').toString();
+            const xTrackKey = (x.trackKey || '').toString();
+
+            const matchByClassKey = xClassKey && xClassKey === selectedClassKey;
+            const matchByTrack =
+              (track === "" && (xTrack === "" || xTrack === "_" || xTrackKey === "_" || !("track" in x))) ||
+              (track !== "" && (xTrack === track || xTrackKey === trackKey));
+
+            if(!matchByClassKey && !matchByTrack) return;
+
+            const key = `${iso}#${li}`;
+            existingMap.set(key, { id: d.id, ...x });
+            gridValues[key] = {
+              subject: (x.subject || '').toString(),
+              teacherUid: (x.teacherUid || '').toString(),
+              teacherName: (x.teacherName || '').toString(),
+              notes: (x.notes || '').toString()
+            };
+          });
+
+          for(let l=1;l<=FIXED_LESSON_COUNT;l++){
+            const k = `${iso}#${l}`;
+            if(!gridValues[k]) gridValues[k] = {subject:'', teacherUid:'', teacherName:'', notes:''};
+          }
+        });
+
+        // If current week is completely empty, auto-inherit from the most recent week that has data
+        const hasAnyLesson = Object.values(gridValues).some(v => v.subject);
+        if(!hasAnyLesson){
+          await inheritFromPreviousWeek(grade, section, track, trackKey);
+        } else {
+          renderGridFull();
+          setDirty(false);
+          setStatusHTML(`<div class="muted">تم التحميل. يمكنك التعديل ثم الضغط على حفظ.</div>`);
+        }
+      }catch(e){
+        console.error("[fetchExisting]", e);
+        setStatusHTML(`<div class="err">تعذّر تحميل البيانات: ${(e && e.message) ? e.message : e}</div>`);
+      } finally{
+        setLoading(false);
+      }
+    }
+
+    /* ======= Auto-inherit schedule from previous weeks ======= */
+    async function inheritFromPreviousWeek(grade, section, track, trackKey){
+      for(let w = 1; w <= 8; w++){
+        const prevDates = [0,1,2,3,4].map(i => addDaysISO(weekDates[0], -(w * 7) + i));
+        let inherited = false;
+
+        // Fire all 5 day queries in parallel
+        const prevSnaps = await Promise.all(prevDates.map(prevIso =>
+          getDocs(query(
+            collection(db,'schedules'),
+            where('date','==', prevIso),
+            where('grade','==', String(grade)),
+            where('section','==', String(section))
+          ))
+        ));
+
+        prevSnaps.forEach((snap, r) => {
+          snap.forEach(d => {
+            const x = d.data() || {};
+            const li = Number((x.lesson || '').toString());
+            if(!(li >= 1 && li <= FIXED_LESSON_COUNT)) return;
+
+            const xClassKey = (x.classKey || '').toString();
+            const xTrack = (x.track || '').toString();
+            const xTrackKey = (x.trackKey || '').toString();
+            const matchByClassKey = xClassKey && xClassKey === selectedClassKey;
+            const matchByTrack =
+              (track === "" && (xTrack === "" || xTrack === "_" || xTrackKey === "_" || !("track" in x))) ||
+              (track !== "" && (xTrack === track || xTrackKey === trackKey));
+            if(!matchByClassKey && !matchByTrack) return;
+
+            if(!(x.subject || '').toString().trim()) return;
+
+            const currentIso = weekDates[r];
+            const key = `${currentIso}#${li}`;
+            gridValues[key] = {
+              subject: (x.subject || '').toString(),
+              teacherUid: (x.teacherUid || '').toString(),
+              teacherName: (x.teacherName || '').toString(),
+              notes: (x.notes || '').toString()
+            };
+            inherited = true;
+          });
+        });
+
+        if(inherited){
+          // Auto-save silently — write all inherited slots to Firebase for this week
+          try{
+            const batch = writeBatch(db);
+            for(let r2 = 0; r2 < 5; r2++){
+              const iso2 = weekDates[r2];
+              for(let l2 = 1; l2 <= FIXED_LESSON_COUNT; l2++){
+                const k2 = `${iso2}#${l2}`;
+                const v = gridValues[k2];
+                if(!v || !v.subject || !v.teacherUid) continue;
+                const id2 = docIdFor(iso2, selectedClassKey, l2);
+                const ref2 = doc(db, 'schedules', id2);
+                const payload2 = {
+                  date: iso2,
+                  day: DAYS_AR[r2],
+                  classKey: selectedClassKey,
+                  grade: String(grade),
+                  section: String(section),
+                  track: track || "",
+                  trackKey: trackKey,
+                  lesson: String(l2),
+                  subject: v.subject.trim(),
+                  teacherUid: v.teacherUid.trim(),
+                  teacherName: (v.teacherName || '').trim(),
+                  notes: (v.notes || '').trim(),
+                  createdAt: serverTimestamp(),
+                  updatedAt: serverTimestamp()
+                };
+                batch.set(ref2, payload2, { merge: true });
+                // Update existingMap so the grid reflects saved state
+                existingMap.set(k2, { id: id2, ...payload2 });
+              }
+            }
+            await batch.commit();
+          }catch(saveErr){
+            console.error("[inheritFromPreviousWeek auto-save]", saveErr);
+          }
+          renderGridFull();
+          setDirty(false);
+          setStatusHTML(`<div class="muted">تم التحميل. يمكنك التعديل ثم الضغط على حفظ.</div>`);
+          return;
+        }
+      }
+
+      // No previous data found at all
+      renderGridFull();
+      setDirty(false);
+      setStatusHTML(`<div class="muted">تم التحميل. يمكنك التعديل ثم الضغط على حفظ.</div>`);
+    }
+
+    /* ======= Conflict prefetch ======= */
+    async function buildWeekConflictMap(){
+      const conflictMap = new Map();
+
+      for(const iso of weekDates){
+        const qDay = query(collection(db,'schedules'), where('date','==', iso));
+        const snap = await getDocs(qDay);
+        snap.forEach(d=>{
+          const x = d.data() || {};
+          const li = Number((x.lesson || '').toString());
+          const tUid = (x.teacherUid || '').toString();
+          if(!(li >= 1 && li <= FIXED_LESSON_COUNT)) return;
+          if(!tUid) return;
+          const k = `${iso}#${li}#${tUid}`;
+          conflictMap.set(k, (x.classKey || '').toString() || `${x.grade||''}-${x.section||''}-${x.track||''}`);
+        });
+      }
+
+      return conflictMap;
+    }
+
+    /* ======= Save ======= */
+    async function saveAll(){
+      if(loading) return;
+      setLoading(true, "جاري حفظ التغييرات...");
+      setStatusHTML("");
+
+      try{
+        const {grade, section, track} = parseClassKey(selectedClassKey);
+        const trackKey = trackKeyOf(track);
+
+        addStatusLine("warn", "جاري تجهيز الحفظ...");
+
+        const conflictMap = await buildWeekConflictMap();
+
+        const batch = writeBatch(db);
+        let writeCount = 0;
+        let conflictCount = 0;
+
+        for(let r=0;r<5;r++){
+          const iso = weekDates[r];
+          for(let i=1;i<=FIXED_LESSON_COUNT;i++){
+            const key = `${iso}#${i}`;
+            const edited = gridValues[key] || {subject:'', teacherUid:'', teacherName:'', notes:''};
+            const exists = existingMap.get(key);
+
+            const subj = (edited.subject || '').trim();
+            const tUid = (edited.teacherUid || '').trim();
+
+            const isFilled = !!(subj && tUid);
+
+            if(clearedSet.has(key)){
+              if(exists){
+                const ref = doc(db, 'schedules', exists.id);
+                batch.set(ref, {
+                  date: iso,
+                  day: DAYS_AR[r],
+                  classKey: selectedClassKey,
+                  grade: String(grade),
+                  section: String(section),
+                  track: track || "",
+                  trackKey: trackKey,
+                  lesson: String(i),
+                  subject: "",
+                  teacherUid: "",
+                  teacherName: "",
+                  notes: "",
+                  clearedAt: serverTimestamp(),
+                  updatedAt: serverTimestamp()
+                }, { merge: true });
+                writeCount++;
+              }
+              continue;
+            }
+
+            if(!isFilled){
+              continue;
+            }
+
+            const ck = `${iso}#${i}#${tUid}`;
+            const otherWhere = conflictMap.get(ck);
+            if(otherWhere && otherWhere !== selectedClassKey){
+              conflictCount++;
+              addStatusLine("err", `تعارض: ${(edited.teacherName||tUid)} لديه حصة أخرى (${otherWhere}) في ${iso} الحصة #${i}`);
+              continue;
+            }
+
+            const payload = {
+              date: iso,
+              day: DAYS_AR[r],
+              classKey: selectedClassKey,
+              grade: String(grade),
+              section: String(section),
+              track: track || "",
+              trackKey: trackKey,
+              lesson: String(i),
+
+              subject: subj,
+              teacherUid: tUid,
+              teacherName: (edited.teacherName || '').trim(),
+              notes: (edited.notes || '').trim(),
+
+              updatedAt: serverTimestamp()
+            };
+
+            if(exists){
+              const ref = doc(db, 'schedules', exists.id);
+              batch.set(ref, payload, { merge: true });
+            }else{
+              const id = docIdFor(iso, selectedClassKey, i);
+              const ref = doc(db, 'schedules', id);
+              batch.set(ref, { ...payload, createdAt: serverTimestamp() }, { merge: true });
+            }
+            writeCount++;
+          }
+        }
+
+        if(conflictCount > 0){
+          addStatusLine("warn", "تم إيقاف الحفظ لبعض الخانات بسبب التعارض. عدّل التعارض ثم احفظ مرة أخرى.");
+        }
+
+        if(writeCount === 0){
+          addStatusLine("warn", "لا يوجد تغييرات قابلة للحفظ.");
+          setDirty(false);
+          return;
+        }
+
+        addStatusLine("warn", "جاري حفظ التغييرات...");
+        await batch.commit();
+
+        await fetchExisting();
+        setStatusHTML(`<div class="ok">تم الحفظ بنجاح.</div>`);
+        openSaveSuccessModal();
+      }catch(e){
+        console.error("[saveAll]", e);
+        setStatusHTML(`<div class="err">تعذّر الحفظ: ${(e && e.message) ? e.message : e}</div>`);
+      } finally{
+        setDirty(false);
+        setLoading(false);
+      }
+    }
+
+    saveBtn.addEventListener('click', saveAll);
+    breakAfterLesson1Sel?.addEventListener('change', ()=> handleBreakSelectChange('first'));
+    breakAfterLesson2Sel?.addEventListener('change', ()=> handleBreakSelectChange('second'));
+
+    function initWeek(){
+      const base = kuwaitTodayISO();
+      const start = startOfWeekSunday(base);
+      weekDates = [0,1,2,3,4].map(i => addDaysISO(start, i));
+      weekLabel.textContent = `${weekDates[0]} → ${weekDates[4]}`;
+      syncStickyTop();
+    }
+
+    /* ========= Secure Admin Gate ========= */
+    onAuthStateChanged(auth, async (user) => {
+      try {
+        await setPersistence(auth, browserLocalPersistence);
+        if (!user) { location.href = "/index.html"; return; }
+
+        const profRef = doc(db, "teachers", user.uid);
+        const profSnap = await getDoc(profRef);
+
+        const profileData = profSnap.exists() ? (profSnap.data() || {}) : {};
+        const role = (profileData.role || "").toString().toLowerCase();
+        const allowScheduleEdit = !!(profileData.permissions && profileData.permissions.allowEditSchedule);
+
+        if (role !== "admin" && !allowScheduleEdit) {
+          document.body.innerHTML = `
+            <div style="display:grid; place-items:center; min-height:100vh; padding:20px; text-align:center; font-family:'Noto Kufi Arabic',system-ui">
+              <div style="background:#fff; border:1px solid ${getComputedStyle(document.documentElement).getPropertyValue('--border')}; border-radius:18px; box-shadow: 0 18px 52px rgba(2,6,23,.16); padding:24px; max-width:560px">
+                <div style="font-size:1.2rem; font-weight:950; color:#a11; margin-bottom:10px">تم رفض الوصول</div>
+                <div style="color:#6b7f9f; font-weight:800; margin-bottom:16px">هذه الصفحة مخصّصة للإدارة أو للمستخدمين المصرح لهم بالتعديل.</div>
+                <button style="height:44px; padding:0 16px; border-radius:12px; border:1px solid #e4ecf7; background:#fff; font-weight:950; cursor:pointer"
+                  onclick="location.href='index.html'">العودة لصفحة الدخول</button>
+              </div>
+            </div>`;
+          return;
+        }
+
+        selectedGrade = '10';
+        selectedClassKey = '10 / 1';
+        previousGrade = selectedGrade;
+        previousClass = selectedClassKey;
+        renderSelectors();
+        renderOpportunitySelectors();
+        initWeek();
+        
+        // Load lesson times first, then render grid
+        await fetchLessonTimes();
+        await fetchOpportunityBreaks();
+        renderGridFull();
+        
+        await warmTeachersCache();
+        await fetchExisting();
+        await fetchCustomSchedules();
+      } catch (e) {
+        console.error("[adminGate]", e);
+        document.body.innerHTML = `
+          <div style="display:grid; place-items:center; min-height:100vh; padding:20px; text-align:center; font-family:'Noto Kufi Arabic',system-ui">
+            <div style="background:#fff; border:1px solid #e4ecf7; border-radius:18px; box-shadow: 0 18px 52px rgba(2,6,23,.16); padding:24px; max-width:560px">
+              <div style="font-size:1.2rem; font-weight:950; color:#a11; margin-bottom:10px">تعذّر التحقق من الصلاحيات</div>
+              <div style="color:#6b7f9f; font-weight:800; margin-bottom:16px">يرجى إعادة تسجيل الدخول ثم المحاولة.</div>
+              <button style="height:44px; padding:0 16px; border-radius:12px; border:1px solid #e4ecf7; background:#fff; font-weight:950; cursor:pointer"
+                onclick="location.href='index.html'">العودة لصفحة الدخول</button>
+            </div>
+          </div>`;
+      }
+    });
+  </script>
+
+  <!-- Floating save bar -->
+  <div id="floatingSaveBar" class="floating-save-bar" aria-hidden="true">
+    <span class="floating-save-label">لديك تغييرات غير محفوظة</span>
+    <button id="saveBtn" class="floating-save-btn" type="button">💾 حفظ الجدول</button>
+  </div>
+
+  <!-- Unsaved changes warning modal -->
+  <div id="unsavedModal" class="unsaved-modal" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="unsaved-modal-box">
+      <div class="unsaved-modal-icon">⚠️</div>
+      <p class="unsaved-modal-msg">لم تقم بحفظ التغييرات على الجدول، وأي تعديلات أجريتها لن يتم حفظها.</p>
+      <p class="unsaved-modal-sub">هل تريد المغادرة بدون حفظ؟</p>
+      <div class="unsaved-modal-actions">
+        <button id="unsavedLeaveBtn" class="unsaved-btn-leave">مغادرة بدون حفظ</button>
+        <button id="unsavedStayBtn" class="unsaved-btn-stay">البقاء وحفظ</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/shared/hub-title-link.js" defer></script>
+<script src="/name-glow.js" defer></script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+

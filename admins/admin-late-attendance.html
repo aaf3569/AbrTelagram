@@ -1,0 +1,1798 @@
+﻿<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.gstatic.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; manifest-src 'self'; upgrade-insecure-requests; block-all-mixed-content">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  <title>ØªØ£Ø®Ù‘Ø± Ø§Ù„Ù…Ø¹Ù„Ù…ÙŠÙ† ÙÙŠ Ø§Ù„ØºÙŠØ§Ø¨ - Ø«Ø§Ù†ÙˆÙŠØ© Ø£Ø­Ù…Ø¯ Ø§Ù„Ø¨Ø´Ø± Ø§Ù„Ø±ÙˆÙ…ÙŠ</title>
+
+  <!-- Noto Kufi Arabic -->
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+
+  <link rel="stylesheet" href="/shared/base.css" />
+  <style>
+    :root {
+      --primary: #022b42;
+      --primary-2: #044563;
+      --primary-light: rgba(2, 43, 66, 0.08);
+      --page: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #0f172a;
+      --text-light: #475569;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --border-light: #f1f5f9;
+      --radius: 16px;
+      --radius-sm: 12px;
+      --shadow-1: 0 4px 12px rgba(2, 43, 66, 0.08);
+      --shadow-2: 0 10px 25px rgba(2, 43, 66, 0.12);
+      --headerText: #ffffff;
+      --focus: #79b3c8;
+      --success: #10b981;
+      --danger: #dc2626;
+      --danger-bg: #fef2f2;
+      --transition: all 0.16s ease;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      background:
+        radial-gradient(1200px 600px at 80% -20%, rgba(2, 43, 66, 0.05), transparent 60%),
+        radial-gradient(900px 500px at -10% 120%, rgba(2, 43, 66, 0.04), transparent 60%),
+        var(--page);
+      color: var(--text);
+      font-family: "Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      line-height: 1.6;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* Header */
+    .site-header {
+      position: sticky; top: 0; z-index: 20;
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(2, 43, 66, 0.08);
+      box-shadow: 0 2px 10px rgba(2, 43, 66, 0.06);
+      padding: 16px 20px;
+    }
+    .header-container {
+      max-width: 1200px; margin: 0 auto;
+      display: flex; justify-content: space-between; align-items: center; gap: 16px;
+      flex-wrap: wrap;
+    }
+    .site-title {
+      font-weight: 900;
+      font-size: clamp(1.2rem, 2.5vw, 1.6rem);
+      color: var(--primary);
+      display: flex; align-items: center; gap: 10px;
+    }
+    .site-title i { font-size: 1.4em; }
+
+    .top-right {
+      display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+    }
+
+    .badge {
+      padding: 6px 14px;
+      border-radius: 999px;
+      background: var(--primary-light);
+      border: 1px solid var(--border);
+      color: var(--primary);
+      font-weight: 800;
+      font-size: 12px;
+      display: flex; align-items: center; gap: 6px;
+    }
+
+    .link-btn {
+      height: 40px; padding: 0 16px;
+      border-radius: 999px;
+      border: 1px solid rgba(2, 43, 66, 0.2);
+      background: var(--card-bg);
+      color: var(--primary);
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: var(--shadow-1);
+      transition: var(--transition);
+      display: flex; align-items: center; gap: 8px;
+      font-size: 0.85rem;
+      text-decoration: none;
+    }
+    .link-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-2);
+      border-color: rgba(2, 43, 66, 0.4);
+    }
+
+    main { flex: 1; padding: 20px; }
+    .board { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-1);
+      padding: 20px;
+      transition: var(--transition);
+    }
+    .card:hover { box-shadow: var(--shadow-2); }
+
+    .muted { color: var(--muted); font-size: 0.9rem; }
+
+    /* Filters */
+    .filters-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+    .filters-row-title {
+      font-weight: 800;
+      color: var(--text-light);
+      display: flex; align-items: center; gap: 6px;
+      font-size: 0.95rem;
+    }
+
+    .pill-btn {
+      height: 38px;
+      padding: 0 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(2, 43, 66, 0.18);
+      background: var(--card-bg);
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 0.85rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: var(--transition);
+      box-shadow: 0 2px 6px rgba(2, 43, 66, 0.05);
+    }
+    .pill-btn:hover {
+      border-color: rgba(2, 43, 66, 0.35);
+      box-shadow: 0 4px 12px rgba(2, 43, 66, 0.1);
+      transform: translateY(-1px);
+    }
+    .pill-btn.active {
+      background: linear-gradient(135deg, var(--primary-2), var(--primary));
+      color: var(--headerText);
+      border-color: var(--primary);
+      box-shadow: 0 6px 16px rgba(2, 43, 66, 0.25);
+    }
+
+    .lesson-filter {
+      display: flex; align-items: center; gap: 8px;
+      flex-wrap: wrap;
+      margin-inline-start: auto;
+    }
+
+    .select {
+      height: 38px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--card-bg);
+      padding: 0 12px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text);
+      font-family: "Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      outline: none;
+      box-shadow: 0 2px 6px rgba(2, 43, 66, 0.04);
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    .select:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(2, 43, 66, 0.12);
+    }
+
+    /* Status */
+    .status-message {
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      background: var(--primary-light);
+      color: var(--primary);
+      font-weight: 600;
+      margin-bottom: 12px;
+      display: none;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.9rem;
+    }
+
+    /* List */
+    .late-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .late-card {
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-light);
+      background: #ffffff;
+      padding: 14px 14px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      box-shadow: 0 2px 6px rgba(2, 43, 66, 0.05);
+      transition: var(--transition);
+    }
+    .late-card:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 14px rgba(2, 43, 66, 0.12);
+      border-color: var(--border);
+    }
+
+    .late-main-line {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 6px;
+    }
+    .late-teacher {
+      font-weight: 800;
+      color: var(--primary);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .late-teacher i { color: #eab308; }
+
+    .late-lesson-text {
+      font-weight: 700;
+      font-size: 0.9rem;
+      color: var(--text-light);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .late-sub {
+      font-size: 0.8rem;
+      color: var(--muted);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+    .late-sub i { font-size: 0.85rem; }
+
+    .late-date {
+      font-weight: 700;
+    }
+
+    .late-meta {
+      font-size: 0.78rem;
+      color: var(--muted);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+    }
+    .dot {
+      width: 4px; height: 4px;
+      border-radius: 999px;
+      background: var(--border);
+      display: inline-block;
+    }
+
+    .reason-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      border-radius: 999px;
+      padding: 2px 8px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      background: #fee2e2;
+      color: #b91c1c;
+      border: 1px solid #fecaca;
+      margin-right: 6px;
+    }
+
+    .reason-pill.late {
+      background: #fef3c7;
+      color: #92400e;
+      border-color: #fde68a;
+    }
+
+    .empty-state {
+      border-radius: var(--radius-sm);
+      border: 1px dashed var(--border);
+      background: #f9fafb;
+      padding: 20px;
+      text-align: center;
+      color: var(--muted);
+      display: grid;
+      place-items: center;
+      gap: 8px;
+      font-size: 0.9rem;
+    }
+    .empty-state i {
+      font-size: 1.8rem;
+      color: var(--border);
+    }
+
+    /* Access denied */
+    .full-center {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      text-align: center;
+    }
+
+    @media (max-width: 768px) {
+      .site-header { padding: 14px 16px; }
+      main { padding: 16px; }
+      .card { padding: 16px; }
+      .filters-row {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .lesson-filter { margin-inline-start: 0; }
+    }
+    @media (max-width: 480px) {
+      .link-btn span { display: none; }
+      .link-btn { width: 40px; justify-content: center; padding: 0; }
+      .site-title { font-size: 1.1rem; }
+    }
+  </style>
+
+  <!-- iOS home screen icon -->
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/appicon.png" />
+  
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <meta name="theme-color" content="#033C54" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <!-- Browser tab icon (favicon) -->
+  <link rel="icon" type="image/png" sizes="64x64" href="https://framerusercontent.com/images/eepB7V11E8IMGVLttDUMaz62pPQ.png?width=64&height=64" />
+  <link rel="shortcut icon" href="https://framerusercontent.com/images/eepB7V11E8IMGVLttDUMaz62pPQ.png?width=64&height=64" />
+
+  <!-- Social / Safari preview (Open Graph & Twitter) -->
+  <meta property="og:title" content="ØªØ£Ø®Ù‘Ø± Ø§Ù„Ù…Ø¹Ù„Ù…ÙŠÙ† ÙÙŠ Ø§Ù„ØºÙŠØ§Ø¨ - Ø«Ø§Ù†ÙˆÙŠØ© Ø£Ø­Ù…Ø¯ Ø§Ù„Ø¨Ø´Ø± Ø§Ù„Ø±ÙˆÙ…ÙŠ">
+  <meta property="og:description" content="???? ?????? ???? ????? ??????.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://framerusercontent.com/images/jRnZLlPr90qwKsuUwfIlvDS9E.png?width=1200&height=630">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="ØªØ£Ø®Ù‘Ø± Ø§Ù„Ù…Ø¹Ù„Ù…ÙŠÙ† ÙÙŠ Ø§Ù„ØºÙŠØ§Ø¨ - Ø«Ø§Ù†ÙˆÙŠØ© Ø£Ø­Ù…Ø¯ Ø§Ù„Ø¨Ø´Ø± Ø§Ù„Ø±ÙˆÙ…ÙŠ">
+  <meta name="twitter:description" content="???? ?????? ???? ????? ??????.">
+  <meta name="twitter:image" content="https://framerusercontent.com/images/jRnZLlPr90qwKsuUwfIlvDS9E.png?width=1200&height=630">
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-container">
+      <h1 class="site-title">
+        <i class="fas fa-clock-rotate-left"></i>
+        ØªØ£Ø®Ù‘Ø± Ø§Ù„Ù…Ø¹Ù„Ù…ÙŠÙ† ÙÙŠ ØªØ³Ø¬ÙŠÙ„ Ø§Ù„ØºÙŠØ§Ø¨
+      </h1>
+      <div class="top-right">
+        <span class="badge">
+          <i class="fas fa-user-shield"></i>
+          Ù„ÙˆØ­Ø© Ø®Ø§ØµØ© Ù„Ù„Ø¥Ø¯Ø§Ø±Ø© ÙÙ‚Ø·
+        </span>
+        <!-- Link back to teacher schedule page (adjust filename if needed) -->
+        <a href="/Teachers/teacherschedule.html" class="link-btn">
+          <i class="fas fa-calendar-alt"></i>
+          <span>Ø¬Ø¯ÙˆÙ„ Ø§Ù„Ù…Ø¹Ù„Ù‘Ù…</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="board">
+      <div class="card">
+        <div id="status" class="status-message">
+          <i class="fas fa-circle-notch fa-spin"></i>
+          <span>Ø¬Ø§Ø±ÙŠ ØªØ­Ù…ÙŠÙ„ Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„ØªØ£Ø®Ù‘Ø±...</span>
+        </div>
+
+        <div class="filters-row">
+          <div class="filters-row-title">
+            <i class="fas fa-sliders-h"></i>
+            <span>Ø§Ù„ØªØ±ØªÙŠØ¨</span>
+          </div>
+
+          <button id="btnSortRecent" class="pill-btn active" type="button">
+            <i class="fas fa-sort-amount-down"></i>
+            <span>Ø§Ù„Ø£Ø­Ø¯Ø« Ø£ÙˆÙ„Ø§Ù‹</span>
+          </button>
+
+          <button id="btnSortOldest" class="pill-btn" type="button">
+            <i class="fas fa-sort-amount-up"></i>
+            <span>Ø§Ù„Ø£Ù‚Ø¯Ù… Ø£ÙˆÙ„Ø§Ù‹</span>
+          </button>
+
+          <button id="btnSortLesson" class="pill-btn" type="button">
+            <i class="fas fa-list-ol"></i>
+            <span>Ø­Ø³Ø¨ Ø±Ù‚Ù… Ø§Ù„Ø­ØµØ© (1 â†’ 7)</span>
+          </button>
+
+          <div class="lesson-filter">
+            <span class="filters-row-title" style="margin-inline-end: 4px;">
+              <i class="far fa-clock"></i>
+              <span>ÙÙ„ØªØ±Ø© Ø¨Ø§Ù„Ø­ØµØ©</span>
+            </span>
+            <select id="lessonFilter" class="select">
+              <option value="all">ÙƒÙ„ Ø§Ù„Ø­ØµØµ</option>
+              <option value="1">Ø§Ù„Ø­ØµØ© Ø§Ù„Ø£ÙˆÙ„Ù‰</option>
+              <option value="2">Ø§Ù„Ø­ØµØ© Ø§Ù„Ø«Ø§Ù†ÙŠØ©</option>
+              <option value="3">Ø§Ù„Ø­ØµØ© Ø§Ù„Ø«Ø§Ù„Ø«Ø©</option>
+              <option value="4">Ø§Ù„Ø­ØµØ© Ø§Ù„Ø±Ø§Ø¨Ø¹Ø©</option>
+              <option value="5">Ø§Ù„Ø­ØµØ© Ø§Ù„Ø®Ø§Ù…Ø³Ø©</option>
+              <option value="6">Ø§Ù„Ø­ØµØ© Ø§Ù„Ø³Ø§Ø¯Ø³Ø©</option>
+              <option value="7">Ø§Ù„Ø­ØµØ© Ø§Ù„Ø³Ø§Ø¨Ø¹Ø©</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="lateList" class="late-list"></div>
+      </div>
+    </div>
+  </main>
+
+  <script type="module">
+    import { firebaseConfig } from "/shared/firebase.js";
+    /* ========= Firebase ========= */
+    import { initializeApp, getApp, getApps } from "/shared/firebase.js";
+    import { getAuth, onAuthStateChanged, signOut } from "/shared/firebase.js";
+    import {
+        initializeFirestore,
+        doc,
+        getDoc,
+        collection,
+        getDocs,
+        query,
+        where,
+        setDoc,
+        serverTimestamp,
+        writeBatch
+    } from "/shared/firebase.js";
+    import { showActionPopup } from "/shared/action-popup.js";
+
+    
+
+    const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+    const db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true, useFetchStreams: false });
+    const auth = getAuth(app);
+
+    /* ========= Static Class Options ========= */
+    const CLASS_OPTIONS_RAW = [
+        "10 / 1","10 / 2","10 / 3","10 / 4","10 / 5","10 / 6","10 / 7",
+        "11 / 1 Ø¹","11 / 2 Ø¹","11 / 3 Ø¹","11 / 4 Ø¹","11 / 5 Ø¹","11 / 1 Ø¯",
+        "12 / 1 Ø¹","12 / 2 Ø¹","12 / 3 Ø¹","12 / 4 Ø¹","12 / 5 Ø¹","12 / 1 Ø¯"
+    ];
+
+    /* ========= UI refs ========= */
+    const sLoading = document.getElementById('stateLoading');
+    const sNotLog = document.getElementById('stateNotLogged');
+    const sDenied = document.getElementById('stateDenied');
+    const sDash = document.getElementById('stateDashboard');
+    const displayName = document.getElementById('displayName');
+    const createdAtText = document.getElementById('createdAtText');
+    const classesButtons = document.getElementById('classesButtons');
+    const moreBtn = document.getElementById('moreBtn');
+    const moreSheet = document.getElementById('moreSheet');
+    const closeMore = document.getElementById('closeMore');
+    const g10List = document.getElementById('g10List');
+    const g11List = document.getElementById('g11List');
+    const g12List = document.getElementById('g12List');
+    const logoutBtn = document.getElementById('logoutBtn');
+    // NEW REF
+    const teacherScheduleBtn = document.getElementById('teacherScheduleBtn');
+    // LOG
+    const logBtn = document.getElementById('logBtn');
+    const logSheet = document.getElementById('logSheet');
+    const closeLog = document.getElementById('closeLog');
+    const logList = document.getElementById('logList');
+    const logDetailSheet = document.getElementById('logDetailSheet');
+    const closeLogDetail = document.getElementById('closeLogDetail');
+    const detailTitle = document.getElementById('detailTitle');
+    const detailClass = document.getElementById('detailClass');
+    const detailMeta = document.getElementById('detailMeta');
+    const editWindowHint = document.getElementById('editWindowHint');
+    const detailList = document.getElementById('detailList');
+    const saveDetail = document.getElementById('saveDetail');
+    const detailLockMsg = document.getElementById('detailLockMsg');
+    const dCountPresent = document.getElementById('dCountPresent');
+    const dCountLate = document.getElementById('dCountLate');
+    const dCountAbsent = document.getElementById('dCountAbsent');
+    // Class sheet
+    const classSheet = document.getElementById('classSheet');
+    const closeClass = document.getElementById('closeClass');
+    const classHeroName = document.getElementById('classHeroName');
+    const studentSearch = document.getElementById('studentSearch');
+    const studentsList = document.getElementById('studentsList');
+    // Attendance create
+    const attSheet = document.getElementById('attSheet');
+    const closeAtt = document.getElementById('closeAtt');
+    const attClassName = document.getElementById('attClassName');
+    const lessonSelect = document.getElementById('lessonSelect');
+    const lessonHint = document.getElementById('lessonHint');
+    const attList = document.getElementById('attList');
+    const countPresent = document.getElementById('countPresent');
+    const countLate = document.getElementById('countLate');
+    const countAbsent = document.getElementById('countAbsent');
+    const absentDetails = document.getElementById('absentDetails');
+    const absentNames = document.getElementById('absentNames');
+    const submitAtt = document.getElementById('submitAtt');
+    // Confirm / error / toast
+    const confirmModal = document.getElementById('confirmModal');
+    const confirmTitle = document.getElementById('confirmTitle');
+    const confirmAbsentList = document.getElementById('confirmAbsentList');
+    const confirmLateList = document.getElementById('confirmLateList');
+    const filterAbsent = document.getElementById('filterAbsent');
+    const filterLate = document.getElementById('filterLate');
+    const confirmCancel = document.getElementById('confirmCancel');
+    const confirmSave = document.getElementById('confirmSave');
+    const errorModal = document.getElementById('errorModal');
+    const errorBody = document.getElementById('errorBody');
+    const errorOk = document.getElementById('errorOk');
+    const toast = document.getElementById('toast');
+    const toastTitle = document.getElementById('toastTitle');
+    const toastSub = document.getElementById('toastSub');
+    const toastClose = document.getElementById('toastClose');
+
+    /* ========= Firestore Optimization Variables ========= */
+    let cachedTakenLessons = null;
+    let lastClassCached = null;
+    let lastDateCached = null;
+
+    /* ========= Scroll lock helpers ========= */
+    let __scrollY = 0;
+    function lockBodyScroll() {
+        if (document.documentElement.classList.contains('no-scroll')) return;
+        __scrollY = window.scrollY || document.documentElement.scrollTop || 0;
+        document.documentElement.classList.add('no-scroll');
+        document.body.classList.add('no-scroll');
+        document.body.style.top = `-${__scrollY}px`;
+    }
+    function unlockBodyScroll() {
+        if (!document.documentElement.classList.contains('no-scroll')) return;
+        document.documentElement.classList.remove('no-scroll');
+        document.body.classList.remove('no-scroll');
+        document.body.style.top = '';
+        window.scrollTo(0, __scrollY);
+    }
+
+    /* ========= Helpers ========= */
+    const show = (el)=>{ [sLoading, sNotLog, sDenied, sDash].forEach(x=>x.classList.remove('active')); el.classList.add('active'); };
+    const openSheet = (el)=>{ 
+        el.classList.add('open'); 
+        el.setAttribute('aria-hidden','false'); 
+        lockBodyScroll();
+        document.querySelector('main')?.setAttribute('inert','');
+        document.querySelector('.site-header')?.setAttribute('inert','');
+    };
+    const closeSheet = (el)=>{ 
+        el.classList.remove('open'); 
+        el.setAttribute('aria-hidden','true'); 
+        const anyOpen = document.querySelector('.sheet.open, .modal.open');
+        if (!anyOpen) {
+            unlockBodyScroll();
+            document.querySelector('main')?.removeAttribute('inert');
+            document.querySelector('.site-header')?.removeAttribute('inert');
+        }
+    };
+    const openModal = (el)=>{ 
+        el.classList.add('open'); 
+        el.setAttribute('aria-hidden','false'); 
+        lockBodyScroll();
+        document.querySelector('main')?.setAttribute('inert','');
+        document.querySelector('.site-header')?.setAttribute('inert','');
+    };
+    const closeModal = (el)=>{ 
+        el.classList.remove('open'); 
+        el.setAttribute('aria-hidden','true'); 
+        const anyOpen = document.querySelector('.sheet.open, .modal.open');
+        if (!anyOpen) {
+            unlockBodyScroll();
+            document.querySelector('main')?.removeAttribute('inert');
+            document.querySelector('.site-header')?.removeAttribute('inert');
+        }
+    };
+
+    const fmtDate = (d)=> new Intl.DateTimeFormat('ar-KW', { dateStyle:'medium' }).format(d);
+    const TZ = 'Asia/Kuwait';
+
+    // REAL lesson times (Kuwait) with your schedule
+    // 1: 07:55â€“08:40, 2: 08:45â€“09:30, 3: 09:35â€“10:20,
+    // 4: 10:35â€“11:20, 5: 11:25â€“12:10, 6: 12:25â€“13:10, 7: 13:15â€“13:55
+    const LESSONS = [
+        { index: 1, label: 'Ø§Ù„Ø­ØµØ© Ø§Ù„Ø£ÙˆÙ„Ù‰',  startMinutes: 7*60 + 55, endMinutes: 8*60 + 40 },
+        { index: 2, label: 'Ø§Ù„Ø­ØµØ© Ø§Ù„Ø«Ø§Ù†ÙŠØ©', startMinutes: 8*60 + 45, endMinutes: 9*60 + 30 },
+        { index: 3, label: 'Ø§Ù„Ø­ØµØ© Ø§Ù„Ø«Ø§Ù„Ø«Ø©', startMinutes: 9*60 + 35, endMinutes:10*60 + 20 },
+        { index: 4, label: 'Ø§Ù„Ø­ØµØ© Ø§Ù„Ø±Ø§Ø¨Ø¹Ø©', startMinutes:10*60 + 35, endMinutes:11*60 + 20 },
+        { index: 5, label: 'Ø§Ù„Ø­ØµØ© Ø§Ù„Ø®Ø§Ù…Ø³Ø©', startMinutes:11*60 + 25, endMinutes:12*60 + 10 },
+        { index: 6, label: 'Ø§Ù„Ø­ØµØ© Ø§Ù„Ø³Ø§Ø¯Ø³Ø©', startMinutes:12*60 + 25, endMinutes:13*60 + 10 },
+        { index: 7, label: 'Ø§Ù„Ø­ØµØ© Ø§Ù„Ø³Ø§Ø¨Ø¹Ø©', startMinutes:13*60 + 15, endMinutes:13*60 + 55 },
+    ];
+
+    // External API endpoint for late logs (REPLACE with your real URL)
+    const LATE_API_ENDPOINT = 'https://example.com/attendance-late';
+
+    function minToStr(m){
+        const h=Math.floor(m/60), mm=m%60;
+        const hh=(h<10?'0':'')+h, m2=(mm<10?'0':'')+mm;
+        return `${hh}:${m2}`;
+    }
+
+    function dateInTZ(timeZone){
+        const parts = new Intl.DateTimeFormat('en-CA',{
+            timeZone,
+            year:'numeric',
+            month:'2-digit',
+            day:'2-digit'
+        }).formatToParts(new Date());
+        const y = parts.find(p=>p.type==='year').value;
+        const m = parts.find(p=>p.type==='month').value;
+        const d = parts.find(p=>p.type==='day').value;
+        return `${y}-${m}-${d}`;
+    }
+
+    function getMinutesNowInTZ(timeZone){
+        const parts = new Intl.DateTimeFormat('en-GB',{
+            timeZone,
+            hour:'2-digit',
+            minute:'2-digit',
+            hour12:false
+        }).formatToParts(new Date());
+        const h = parseInt(parts.find(p=>p.type==='hour').value,10);
+        const m = parseInt(parts.find(p=>p.type==='minute').value,10);
+        return h*60 + m;
+    }
+
+    function isLessonLate(lessonIndex, timeZone){
+        const lesson = LESSONS.find(l => l.index === lessonIndex);
+        if (!lesson) return false;
+        const nowMin = getMinutesNowInTZ(timeZone);
+        const threshold = lesson.endMinutes + 5; // +5 minutes grace
+        return nowMin > threshold;
+    }
+
+    function nowDateTimeStringInTZ(timeZone){
+        const parts = new Intl.DateTimeFormat('en-CA',{
+            timeZone,
+            year:'numeric',
+            month:'2-digit',
+            day:'2-digit',
+            hour:'2-digit',
+            minute:'2-digit',
+            hour12:false
+        }).formatToParts(new Date());
+        const get = type => parts.find(p=>p.type===type).value;
+        const y = get('year');
+        const m = get('month');
+        const d = get('day');
+        const hh = get('hour');
+        const mm = get('minute');
+        return `${y}-${m}-${d} ${hh}:${mm}`;
+    }
+
+    function sanitizeId(s){
+        return String(s).replace(/[^\w\-]+/g,'_');
+    }
+
+    /* ========= Gate ========= */
+    show(sLoading);
+    let currentUserData = null;
+
+    onAuthStateChanged(auth, async (user)=>{
+        if(!user){
+            show(sNotLog);
+            return;
+        }
+        try{
+            const tRef = doc(db, 'teachers', user.uid);
+            const snap = await getDoc(tRef);
+            if(!snap.exists()){
+                show(sDenied);
+                return;
+            }
+            const data = snap.data() || {};
+            currentUserData = data;
+            const role = (data.role || '').toString().toLowerCase();
+            const allowMorningLate = data?.permissions?.allowMorningLate === true;
+            if(role !== 'admin' && !allowMorningLate){
+                show(sDenied);
+                return;
+            }
+            displayName.textContent = data?.name || (user.email ? user.email.split('@')[0] : 'Ù…Ø³ØªØ®Ø¯Ù…');
+            let created=null;
+            if (data?.createdAt?.toDate) created=data.createdAt.toDate();
+            else if (user.metadata?.creationTime) created=new Date(user.metadata.creationTime);
+            createdAtText.textContent = created ? `Ø§Ù†Ø¶Ù…Ù…Øª ÙÙŠ: ${fmtDate(created)}` : '';
+            renderClassButtons(data?.classes || []);
+            renderMoreLists(CLASS_OPTIONS_RAW);
+            setTimeout(() => {
+                document.querySelectorAll('.lazy-load').forEach(el => el.classList.add('loaded'));
+            }, 100);
+            show(sDash);
+        }catch(e){
+            console.error(e);
+            show(sDenied);
+        }
+    });
+
+    /* ========= Class buttons ========= */
+    function renderClassButtons(classesArr){
+        classesButtons.innerHTML = '';
+        const clean = Array.isArray(classesArr) ? classesArr.filter(Boolean) : [];
+        if(clean.length === 0){
+            const empty = document.createElement('div');
+            empty.className = 'error';
+            empty.textContent = 'Ù„Ø§ ØªÙˆØ¬Ø¯ ÙØµÙˆÙ„ Ù…Ø±Ø¨ÙˆØ·Ø© Ø¨Ø­Ø³Ø§Ø¨Ùƒ.';
+            classesButtons.appendChild(empty);
+            return;
+        }
+        const uniqueSorted = Array.from(new Set(clean)).sort((a,b)=> a.localeCompare(b, 'ar-KW', {sensitivity:'base', numeric:true}));
+        uniqueSorted.forEach(cls=>{
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'btn class-btn';
+            btn.textContent = cls;
+            btn.addEventListener('click', ()=> openClassView(cls));
+            classesButtons.appendChild(btn);
+        });
+    }
+
+    /* ========= MORE ========= */
+    moreBtn.addEventListener('click', ()=> openSheet(moreSheet));
+    closeMore.addEventListener('click', ()=> closeSheet(moreSheet));
+
+    function getGradeForClass(name=''){
+        const m = String(name).match(/\b(10|11|12)\b/);
+        return m ? parseInt(m[1],10) : null;
+    }
+
+    function renderMoreLists(raw){
+        g10List.innerHTML = '';
+        g11List.innerHTML = '';
+        g12List.innerHTML = '';
+        const byGrade = {10:[],11:[],12:[]};
+        raw.forEach(n=>{
+            const g = getGradeForClass(n);
+            if(g===10) byGrade[10].push(n);
+            else if(g===11) byGrade[11].push(n);
+            else if(g===12) byGrade[12].push(n);
+        });
+        const fill = (el, arr)=>{
+            const list = Array.from(new Set(arr)).sort((a,b)=> a.localeCompare(b, 'ar-KW', {sensitivity:'base', numeric:true}));
+            if(list.length===0){
+                const empty = document.createElement('div');
+                empty.className = 'error';
+                empty.textContent = 'Ù„Ø§ ÙŠÙˆØ¬Ø¯ ÙØµÙˆÙ„.';
+                el.appendChild(empty);
+                return;
+            }
+            list.forEach(cls=>{
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'btn mini class-btn';
+                btn.textContent = cls;
+                btn.addEventListener('click', ()=>{
+                    closeSheet(moreSheet);
+                    openClassView(cls);
+                });
+                el.appendChild(btn);
+            });
+        };
+        fill(g10List, byGrade[10]);
+        fill(g11List, byGrade[11]);
+        fill(g12List, byGrade[12]);
+    }
+
+    /* ========= Class view ========= */
+    let currentClass = null;
+    let cachedStudents = [];
+
+    async function openClassView(cls){
+        currentClass = cls;
+        classHeroName.textContent = cls;
+        studentsList.innerHTML = '';
+        studentSearch.value = '';
+        openSheet(classSheet);
+        await loadStudentsForClass(cls);
+    }
+
+    closeClass.addEventListener('click', ()=> closeSheet(classSheet));
+
+    studentSearch.addEventListener('input', ()=>{
+        const q = studentSearch.value.trim();
+        renderStudentsGrid(filterStudents(cachedStudents, q));
+    });
+
+    function filterStudents(list, query){
+        if(!query) return list;
+        const q = query.toLowerCase();
+        return list.filter(s => (s.name||'').toLowerCase().includes(q));
+    }
+
+    async function tryQueryStudents(path, cls){
+        try{
+            const parts = path.split('/');
+            if(parts.length === 1){
+                const colRef = collection(db, parts[0]);
+                const qRef = query(colRef, where('class', '==', cls));
+                const snap = await getDocs(qRef);
+                if(snap.empty) return [];
+                const out = [];
+                snap.forEach(d=>{
+                    const s = d.data() || {};
+                    out.push({
+                        name: s.name || s.fullName || d.id,
+                        uid: d.id,
+                        class: s.class || s.className || '',
+                        specialCase: s.specialCase || false
+                    });
+                });
+                return out;
+            }else if(parts.length === 2){
+                const mDoc = doc(db, parts[0], parts[1]);
+                const mSnap = await getDoc(mDoc);
+                if (mSnap.exists() && mSnap.data()) {
+                    const data = mSnap.data();
+                    const arr = Object.values(data || {}).filter(Boolean);
+                    return arr
+                        .filter(s => (s.class || s.className) === cls)
+                        .map(s => ({
+                            name: s.name || s.fullName || '',
+                            uid: s.uid || '',
+                            class: s.class || s.className || '',
+                            specialCase: s.specialCase || false
+                        }));
+                }
+                return [];
+            }
+            return [];
+        }catch(e){
+            console.warn('[tryQueryStudents]', path, e?.message);
+            return [];
+        }
+    }
+
+    async function loadStudentsForClass(cls){
+        studentsList.innerHTML = '';
+        cachedStudents = [];
+        const loadingEl = document.createElement('div');
+        loadingEl.className = 'loading';
+        loadingEl.innerHTML = '<div class="spinner"></div><div class="muted">Ø¬Ø§Ø±ÙŠ ØªØ­Ù…ÙŠÙ„ Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ø·Ù„Ø§Ø¨...</div>';
+        studentsList.appendChild(loadingEl);
+        let students = await tryQueryStudents('students', cls);
+        if(students.length === 0){
+            const nested = await tryQueryStudents('students/uids', cls);
+            if(nested.length > 0) students = nested;
+        }
+        students.sort((a,b)=> (a.name||'').localeCompare((b.name||''), 'ar-KW', { sensitivity:'base' }));
+        cachedStudents = students;
+        renderStudentsGrid(students);
+    }
+
+    function renderStudentsGrid(list){
+        studentsList.innerHTML = '';
+        if(list.length === 0){
+            const empty = document.createElement('div');
+            empty.className = 'error';
+            empty.textContent = 'Ù„Ø§ ÙŠÙˆØ¬Ø¯ Ø·Ù„Ø§Ø¨ ÙÙŠ Ù‡Ø°Ø§ Ø§Ù„ÙØµÙ„.';
+            studentsList.appendChild(empty);
+            return;
+        }
+        list.forEach(s=>{
+            const el = document.createElement('div');
+            el.className = 'student-item';
+            el.setAttribute('role','button');
+            el.setAttribute('tabindex','0');
+            el.title='ÙØªØ­ ØµÙØ­Ø© Ø§Ù„Ø·Ø§Ù„Ø¨';
+
+            const contentContainer = document.createElement('div');
+            contentContainer.className = 'student-item-content';
+
+            if (s.specialCase) {
+                const icon = document.createElement('img');
+                icon.src = 'https://cdn-icons-png.freepik.com/256/8984/8984792.png?semt=ais_white_label';
+                icon.alt = 'Ø®Ø§Øµ';
+                icon.className = 'special-case-icon';
+                contentContainer.appendChild(icon);
+            }
+
+            const nameSpan = document.createElement('span');
+            nameSpan.textContent = s.name || 'â€”';
+            contentContainer.appendChild(nameSpan);
+
+            el.appendChild(contentContainer);
+
+            const stuId = s.uid || '';
+            const stuName = s.name || '';
+            const stuClass = (typeof currentClass === 'string' && currentClass) ? currentClass : (s.class || '');
+            const href = `/Teachers/studentprofile.html?id=${encodeURIComponent(stuId)}&name=${encodeURIComponent(stuName)}&class=${encodeURIComponent(stuClass)}`;
+            el.addEventListener('click', ()=> { location.href = href; });
+            el.addEventListener('keydown', (ev)=>{ if(ev.key==='Enter'||ev.key===' '){ ev.preventDefault(); location.href=href; }});
+            studentsList.appendChild(el);
+        });
+    }
+
+    /* ========= Attendance (Create) ========= */
+    document.getElementById('attendBtn').addEventListener('click', ()=> openAttendanceSheet());
+    closeAtt.addEventListener('click', ()=> closeSheet(attSheet));
+
+    let attStatuses = {}; // uid -> 'present'|'late'|'absent'
+    let attStudentList = []; // [{uid,name}]
+    let pendingSave = null; // cache for confirm modal
+
+    function setAttendanceControlsEnabled(enabled) {
+        document.querySelectorAll('.seg button').forEach(b => b.disabled = !enabled);
+        if (submitAtt) submitAtt.disabled = !enabled;
+    }
+
+    function openAttendanceSheet(){
+        if(!currentClass){
+            return;
+        }
+        cachedTakenLessons = null; // Invalidate cache when opening
+        attClassName.textContent = currentClass;
+        buildLessons();
+        attStudentList = (cachedStudents || []).slice().sort((a,b)=> (a.name||'').localeCompare((b.name||''), 'ar-KW', {sensitivity:'base'}));
+        attStatuses = {};
+        renderAttendanceList(attStudentList);
+        recalcStats();
+        openSheet(attSheet);
+    }
+
+    async function buildLessons(){
+        if(!currentClass) return;
+
+        // Convert LESSONS to intervals with minutes
+        const intervals = LESSONS.map(l => ({
+            index: l.index,
+            label: l.label,
+            start: l.startMinutes,
+            end: l.endMinutes
+        }));
+
+        const currentDate = dateInTZ(TZ);
+        const now = Date.now();
+        if (!cachedTakenLessons || lastClassCached !== currentClass || lastDateCached !== currentDate || (now - (cachedTakenLessons.timestamp || 0) > 30000)) {
+            const availableLessons = await filterTakenLessons(intervals);
+            cachedTakenLessons = { lessons: availableLessons, timestamp: now };
+            lastClassCached = currentClass;
+            lastDateCached = currentDate;
+        }
+
+        // Build the select with a placeholder (no auto-selection)
+        lessonSelect.innerHTML = '';
+        const ph = document.createElement('option');
+        ph.value = '';
+        ph.textContent = 'Ø§Ø®ØªØ± Ø§Ù„Ø­ØµØ©';
+        ph.disabled = true;
+        ph.selected = true;
+        ph.hidden = true;
+        lessonSelect.appendChild(ph);
+
+        cachedTakenLessons.lessons.forEach(iv=>{
+            const o = document.createElement('option');
+            o.value = String(iv.index);
+            const startStr = minToStr(iv.start);
+            const endStr = minToStr(iv.end);
+            o.textContent = `${iv.label} â€” ${startStr} â€“ ${endStr}`;
+            lessonSelect.appendChild(o);
+        });
+
+        updateLessonHint(cachedTakenLessons.lessons);
+        setAttendanceControlsEnabled(false);   // block UI until a lesson is selected
+        setTimeout(()=>lessonSelect.focus(), 0);
+
+        lessonSelect.onchange = ()=>{
+            const hasSelection = !!lessonSelect.value;
+            setAttendanceControlsEnabled(hasSelection);
+            updateLessonHint(cachedTakenLessons.lessons);
+        };
+
+        if (cachedTakenLessons.lessons.length === 0) {
+            lessonHint.textContent = 'Ù„Ø§ ØªÙˆØ¬Ø¯ Ø­ØµØµ Ù…ØªØ§Ø­Ø© Ù„Ù„ØªØ³Ø¬ÙŠÙ„ Ø§Ù„ÙŠÙˆÙ….';
+            setAttendanceControlsEnabled(false);
+        }
+    }
+
+    // Query all attendance for this class/date (global â€” not per-teacher), and exclude those lessons
+    async function filterTakenLessons(intervals) {
+        if (!currentClass) return intervals;
+        const dateKW = dateInTZ(TZ);
+        try {
+            const [legacySnap, modernSnap] = await Promise.all([
+                getDocs(query(
+                    collection(db, 'attendance'),
+                    where('class', '==', currentClass),
+                    where('date', '==', dateKW)
+                )),
+                getDocs(query(
+                    collection(db, 'attendanceSessions'),
+                    where('classKey', '==', currentClass),
+                    where('date', '==', dateKW)
+                ))
+            ]);
+            const takenLessonIndices = [];
+            legacySnap.forEach(docSnap => {
+                const data = docSnap.data();
+                if (data.lessonIndex) takenLessonIndices.push(data.lessonIndex);
+            });
+            modernSnap.forEach(docSnap => {
+                const data = docSnap.data();
+                if (data.lesson) takenLessonIndices.push(data.lesson);
+                else if (data.lessonIndex) takenLessonIndices.push(data.lessonIndex);
+            });
+            const takenSet = new Set(takenLessonIndices);
+            return intervals.filter(iv => !takenSet.has(iv.index));
+        } catch (error) {
+            console.error('Error filtering taken lessons:', error);
+            return intervals;
+        }
+    }
+
+    function updateLessonHint(intervals){
+        const val = parseInt(lessonSelect.value || '0', 10);
+        const iv = intervals.find(x=>x.index===val);
+        lessonHint.textContent = iv
+            ? `${iv.label} â€” ${minToStr(iv.start)} â€“ ${minToStr(iv.end)} (Ø§Ø®ØªÙŠØ§Ø± ÙŠØ¯ÙˆÙŠ)`
+            : 'ÙŠØ±Ø¬Ù‰ Ø§Ø®ØªÙŠØ§Ø± Ø§Ù„Ø­ØµØ©.';
+    }
+
+    function renderAttendanceList(list){
+        attList.innerHTML = '';
+        if(list.length===0){
+            const empty = document.createElement('div');
+            empty.className = 'error';
+            empty.textContent = 'Ù„Ø§ ÙŠÙˆØ¬Ø¯ Ø·Ù„Ø§Ø¨.';
+            attList.appendChild(empty);
+            return;
+        }
+        list.forEach(s=>{
+            const card = document.createElement('div');
+            card.className = 'att-card';
+            const name = document.createElement('div');
+            name.className = 'att-name';
+
+            if (s.specialCase) {
+                const icon = document.createElement('img');
+                icon.src = 'https://cdn-icons-png.freepik.com/256/8984/8984792.png?semt=ais_white_label';
+                icon.alt = 'Ø®Ø§Øµ';
+                icon.className = 'special-case-icon';
+                name.appendChild(icon);
+            }
+
+            const nameText = document.createTextNode(s.name || 'â€”');
+            name.appendChild(nameText);
+
+            const seg = document.createElement('div');
+            seg.className = 'seg';
+            const bPres = document.createElement('button');
+            bPres.className = 'present';
+            bPres.textContent = 'Ø­Ø¶ÙˆØ±';
+            const sep1 = document.createElement('div');
+            sep1.className = 'sep';
+            const bLate = document.createElement('button');
+            bLate.className = 'late';
+            bLate.textContent = 'ØªØ£Ø®ÙŠØ±';
+            const sep2 = document.createElement('div');
+            sep2.className = 'sep';
+            const bAbs = document.createElement('button');
+            bAbs.className = 'absent';
+            bAbs.textContent = 'ØºÙŠØ§Ø¨';
+
+            // default = Ø­Ø¶ÙˆØ±
+            attStatuses[s.uid || s.name] = 'present';
+            bPres.classList.add('active');
+            card.classList.remove('tint-late','tint-absent');
+
+            bPres.onclick = ()=> setStatus(s, 'present', bPres, bLate, bAbs, card);
+            bLate.onclick = ()=> setStatus(s, 'late', bPres, bLate, bAbs, card);
+            bAbs.onclick = ()=> setStatus(s, 'absent', bPres, bLate, bAbs, card);
+
+            seg.appendChild(bPres);
+            seg.appendChild(sep1);
+            seg.appendChild(bLate);
+            seg.appendChild(sep2);
+            seg.appendChild(bAbs);
+            card.appendChild(name);
+            card.appendChild(seg);
+            attList.appendChild(card);
+        });
+
+        // initially disabled; will be enabled after lesson selection
+        setAttendanceControlsEnabled(false);
+        recalcStats();
+    }
+
+    function setStatus(student, status, btnP, btnL, btnA, card){
+        const key = student.uid || student.name;
+        attStatuses[key] = status;
+        btnP.classList.toggle('active', status==='present');
+        btnL.classList.toggle('active', status==='late');
+        btnA.classList.toggle('active', status==='absent');
+        if(card){
+            card.classList.remove('tint-late','tint-absent');
+            if(status==='late') card.classList.add('tint-late');
+            if(status==='absent') card.classList.add('tint-absent');
+        }
+        recalcStats();
+    }
+
+    function recalcStats(){
+        const vals = Object.values(attStatuses);
+        const present = vals.filter(v=>v==='present').length;
+        const late = vals.filter(v=>v==='late').length;
+        const absent = vals.filter(v=>v==='absent').length;
+        countPresent.textContent = `Ø­Ø¶ÙˆØ±: ${present}`;
+        countLate.textContent = `ØªØ£Ø®ÙŠØ±: ${late}`;
+        countAbsent.textContent = `ØºÙŠØ§Ø¨: ${absent}`;
+        const namesAbsent = attStudentList
+            .filter(s=> attStatuses[s.uid || s.name] === 'absent')
+            .map(s=> s.name)
+            .join('ØŒ ');
+        absentNames.textContent = namesAbsent || 'â€”';
+        if(!namesAbsent){
+            absentDetails.open = false;
+        }
+    }
+
+    // Filter buttons in confirm modal
+    filterAbsent.addEventListener('click', () => {
+        filterAbsent.classList.add('active');
+        filterLate.classList.remove('active');
+        confirmAbsentList.style.display = 'block';
+        confirmLateList.style.display = 'none';
+    });
+    filterLate.addEventListener('click', () => {
+        filterLate.classList.add('active');
+        filterAbsent.classList.remove('active');
+        confirmAbsentList.style.display = 'none';
+        confirmLateList.style.display = 'block';
+    });
+
+    /* ===== Submit attendance with Confirm Modal ===== */
+    submitAtt.addEventListener('click', ()=>{
+        if(!currentClass){
+            openError('ØªØ¹Ø°Ù‘Ø± Ø§Ù„Ø­ÙØ¸','Ø§Ø®ØªØ± ÙØµÙ„Ù‹Ø§ Ø£ÙˆÙ„Ø§Ù‹.');
+            return;
+        }
+        if (lessonSelect.options.length === 0) {
+            openError('ØªØ¹Ø°Ù‘Ø± Ø§Ù„Ø­ÙØ¸', 'Ù„Ø§ ØªÙˆØ¬Ø¯ Ø­ØµØµ Ù…ØªØ§Ø­Ø© Ù„Ù„ØªØ³Ø¬ÙŠÙ„ Ø§Ù„ÙŠÙˆÙ….');
+            return;
+        }
+        if (!lessonSelect.value) {
+            openError('ØªØ¹Ø°Ù‘Ø± Ø§Ù„Ø­ÙØ¸', 'ÙŠØ±Ø¬Ù‰ Ø§Ø®ØªÙŠØ§Ø± Ø§Ù„Ø­ØµØ© Ø£ÙˆÙ„Ø§Ù‹.');
+            return;
+        }
+
+        // Build arrays preview (only count if UID exists)
+        const present = [], late = [], absent = [];
+        const absNames = [], lateNames = [];
+
+        attStudentList.forEach(s=>{
+            const key = s.uid || s.name;
+            const st = attStatuses[key];
+            const hasUid = !!s.uid;
+            if(st==='present') {
+                if (hasUid) present.push(s.uid);
+            } else if(st==='late') {
+                if (hasUid) late.push(s.uid);
+                lateNames.push(s.name);
+            } else if(st==='absent'){
+                if (hasUid) absent.push(s.uid);
+                absNames.push(s.name);
+            }
+        });
+
+        // Update modal title with lesson name
+        const lessonLabel = lessonSelect.options[lessonSelect.selectedIndex]?.textContent?.split(' â€” ')?.[0] || '';
+        confirmTitle.textContent = `ØªØ£ÙƒÙŠØ¯ Ø­ÙØ¸ Ø§Ù„ØªÙ‚Ø±ÙŠØ± | ${lessonLabel}`;
+
+        // Fill modal lists
+        confirmAbsentList.innerHTML = '';
+        confirmLateList.innerHTML = '';
+
+        if(absNames.length){
+            absNames.forEach(n=>{
+                const li = document.createElement('li');
+                li.textContent = n;
+                confirmAbsentList.appendChild(li);
+            });
+        }else{
+            const li = document.createElement('li');
+            li.textContent = 'Ù„Ø§ ÙŠÙˆØ¬Ø¯ Ø·Ù„Ø§Ø¨ ØºØ§Ø¦Ø¨ÙˆÙ†.';
+            confirmAbsentList.appendChild(li);
+        }
+
+        if(lateNames.length){
+            lateNames.forEach(n=>{
+                const li = document.createElement('li');
+                li.textContent = n;
+                confirmLateList.appendChild(li);
+            });
+        }else{
+            const li = document.createElement('li');
+            li.textContent = 'Ù„Ø§ ÙŠÙˆØ¬Ø¯ Ø·Ù„Ø§Ø¨ Ù…ØªØ£Ø®Ø±ÙˆÙ†.';
+            confirmLateList.appendChild(li);
+        }
+
+        // Default to absent tab
+        filterAbsent.click();
+
+        const dateKW = dateInTZ(TZ);
+        const lessonIndex = parseInt(lessonSelect.value,10);
+        const lessonLabel2 = lessonLabel;
+        pendingSave = { present, late, absent, dateKW, lessonIndex, lessonLabel: lessonLabel2 };
+        openModal(confirmModal);
+        // focus primary for a11y
+        setTimeout(()=>confirmSave.focus(), 0);
+    });
+
+    confirmCancel.addEventListener('click', ()=> closeModal(confirmModal));
+
+    confirmSave.addEventListener('click', async ()=>{
+        let latePayload = null; // for API
+        try{
+            if(!auth.currentUser){
+                openError('ØªØ¹Ø°Ù‘Ø± Ø§Ù„Ø­ÙØ¸','ÙŠØ±Ø¬Ù‰ ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯Ø®ÙˆÙ„.');
+                return;
+            }
+            if(!currentClass || !pendingSave){
+                closeModal(confirmModal);
+                return;
+            }
+            const uid = auth.currentUser.uid;
+            const { present, late, absent, dateKW, lessonIndex, lessonLabel } = pendingSave;
+            const total = present.length + late.length + absent.length;
+
+            // check if this submission is LATE (Ø¨Ø¹Ø¯ Ù†Ù‡Ø§ÙŠØ© Ø§Ù„Ø­ØµØ© + Ù¥ Ø¯Ù‚Ø§Ø¦Ù‚)
+            const isLateFlag = isLessonLate(lessonIndex, TZ);
+
+            // Unique per teacher to avoid collisions
+            const sessionId = `${dateKW}__${sanitizeId(currentClass)}__L${lessonIndex}__T${uid}`;
+            const sessionRef = doc(db, 'attendance', sessionId);
+
+            // Pre-check
+            const existing = await getDoc(sessionRef);
+            if (existing.exists()) {
+                closeModal(confirmModal);
+                openError('ØªØ¹Ø°Ù‘Ø± Ø§Ù„Ø­ÙØ¸', 'ØªÙ… ØªØ³Ø¬ÙŠÙ„ ØºÙŠØ§Ø¨ Ù‡Ø°Ù‡ Ø§Ù„Ø­ØµÙ‘Ø© Ù…Ø³Ø¨Ù‚Ù‹Ø§.');
+                pendingSave = null;
+                return;
+            }
+
+            const batch = writeBatch(db);
+
+            // main attendance session
+            batch.set(sessionRef, {
+                class: currentClass,
+                date: dateKW,
+                lessonIndex,
+                lessonLabel,
+                present,
+                late,
+                absent,
+                counts: { present: present.length, late: late.length, absent: absent.length, total },
+                createdAt: serverTimestamp(),
+                createdBy: uid
+            });
+
+            // If late -> also log to attendanceLate collection
+            if (isLateFlag) {
+                const lateRef = doc(collection(db, 'attendanceLate'));
+                const teacherName = (currentUserData && currentUserData.name)
+                    ? currentUserData.name
+                    : (auth.currentUser.email ? auth.currentUser.email.split('@')[0] : 'Ù…Ø¹Ù„Ù…');
+                latePayload = {
+                    teacherUid: uid,
+                    teacherName,
+                    date: dateKW,
+                    lesson: lessonIndex,
+                    classKey: currentClass,
+                    reason: 'late', // "Ù†Ø³ÙŠ / ØªØ£Ø®Ø±" (took attendance after the lesson)
+                    createdAt: nowDateTimeStringInTZ(TZ)
+                };
+                batch.set(lateRef, latePayload);
+            }
+
+            // per-student fan-out
+            const all = [
+                ...present.map(u=>({u,status:'present'})),
+                ...late.map(u=>({u,status:'late'})),
+                ...absent.map(u=>({u,status:'absent'}))
+            ];
+            const nameByUid = {};
+            attStudentList.forEach(s=>{ nameByUid[s.uid] = s.name; });
+            all.forEach(({u,status})=>{
+                if(!u) return;
+                const subRef = doc(db, 'students', u, 'attendance', sessionId);
+                batch.set(subRef, {
+                    sessionId,
+                    class: currentClass,
+                    date: dateKW,
+                    lessonIndex,
+                    lessonLabel,
+                    status,
+                    createdAt: serverTimestamp(),
+                    createdBy: uid,
+                    sessionPath: sessionRef.path,
+                    studentName: nameByUid[u] || null
+                });
+            });
+
+            await batch.commit();
+
+            // After Firestore succeeds, send to external API (if configured) â€“ non-blocking
+            if (latePayload && LATE_API_ENDPOINT) {
+                try{
+                    await fetch(LATE_API_ENDPOINT, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(latePayload)
+                    });
+                }catch(apiErr){
+                    console.error('[attendanceLate API] error:', apiErr);
+                }
+            }
+
+            cachedTakenLessons = null; // bust lesson cache
+            closeModal(confirmModal);
+            goHomeAndToast(`ØªÙ… ØªØ³Ø¬ÙŠÙ„ Ø§Ù„ØºÙŠØ§Ø¨ Ø¨Ù†Ø¬Ø§Ø­`, `Ù„Ù„Ø­ØµØ©: ${lessonLabel || ('Ø­ØµØ© '+lessonIndex)}`);
+        }catch(e){
+            console.error(e);
+            closeModal(confirmModal);
+            openError('ØªØ¹Ø°Ù‘Ø± Ø§Ù„Ø­ÙØ¸', 'ØªÙ… ØªØ³Ø¬ÙŠÙ„ ØºÙŠØ§Ø¨ Ù‡Ø°Ù‡ Ø§Ù„Ø­ØµÙ‘Ø© Ù…Ø³Ø¨Ù‚Ù‹Ø§ Ø£Ùˆ Ù„Ø§ ØªÙ…Ù„Ùƒ Ø§Ù„ØµÙ„Ø§Ø­ÙŠØ©.');
+        }finally{
+            pendingSave = null;
+        }
+    });
+
+    function goHomeAndToast(title, sub){
+        closeSheet(attSheet);
+        closeSheet(classSheet);
+        show(sDash);
+        toastTitle.textContent = title || 'ØªÙ…';
+        toastSub.textContent = sub || '';
+        toast.classList.remove('hidden');
+    }
+
+    toastClose.addEventListener('click', ()=> toast.classList.add('hidden'));
+
+    document.addEventListener('keydown', (e)=>{
+        if(e.key==='Escape') {
+            toast.classList.add('hidden');
+            // close topmost sheet if any
+            const openSheets = [...document.querySelectorAll('.sheet.open')];
+            if (openSheets.length) {
+                e.preventDefault();
+                closeSheet(openSheets.at(-1));
+            }
+            closeModal(confirmModal);
+            closeModal(errorModal);
+        }
+    });
+
+    confirmModal.querySelector('.overlay').addEventListener('click', ()=> closeModal(confirmModal));
+    errorModal.querySelector('.overlay').addEventListener('click', ()=> closeModal(errorModal));
+    errorOk.addEventListener('click', ()=> closeModal(errorModal));
+
+    function openError(title, body){
+        document.getElementById('errorTitle').textContent = title || 'Ø®Ø·Ø£';
+        errorBody.textContent = body || 'Ø­Ø¯Ø« Ø®Ø·Ø£ ØºÙŠØ± Ù…ØªÙˆÙ‚Ø¹.';
+        openModal(errorModal);
+    }
+
+    /* ========= Attendance LOG ========= */
+    logBtn.addEventListener('click', async ()=>{
+        await loadMyAttendanceLog();
+        openSheet(logSheet);
+    });
+    closeLog.addEventListener('click', ()=> closeSheet(logSheet));
+
+    async function loadMyAttendanceLog(){
+        logList.innerHTML = '';
+        if(!auth.currentUser){
+            return;
+        }
+        if(!currentClass){
+            const m = document.createElement('div');
+            m.className = 'error';
+            m.textContent = 'Ø§Ø®ØªØ± ÙØµÙ„Ø§Ù‹ Ù…Ù† Ø§Ù„Ù„ÙˆØ­Ø© Ø£Ùˆ Ù…Ù† "Ø£ÙØ®Ø±Ù‰" Ù„Ø¹Ø±Ø¶ Ø³Ø¬Ù„Ùƒ.';
+            logList.appendChild(m);
+            return;
+        }
+
+        const loadingEl = document.createElement('div');
+        loadingEl.className = 'loading';
+        loadingEl.innerHTML = '<div class="spinner"></div><div class="muted">Ø¬Ø§Ø±ÙŠ ØªØ­Ù…ÙŠÙ„ Ø³Ø¬Ù„ Ø§Ù„ØºÙŠØ§Ø¨Ø§Øª...</div>';
+        logList.appendChild(loadingEl);
+
+        const [legacySnap, modernSnap] = await Promise.all([
+            getDocs(query(
+                collection(db, 'attendance'),
+                where('class', '==', currentClass)
+            )),
+            getDocs(query(
+                collection(db, 'attendanceSessions'),
+                where('classKey', '==', currentClass)
+            ))
+        ]);
+
+        if(legacySnap.empty && modernSnap.empty){
+            logList.innerHTML = '';
+            const empty = document.createElement('div');
+            empty.className = 'error';
+            empty.textContent = 'Ù„Ø§ ØªÙˆØ¬Ø¯ ØªÙ‚Ø§Ø±ÙŠØ± Ù…Ø³Ø¬Ù„Ø© Ù„Ù‡Ø°Ø§ Ø§Ù„ÙØµÙ„.';
+            logList.appendChild(empty);
+            return;
+        }
+
+        const items = [];
+        legacySnap.forEach(d=>{
+            const data = d.data() || {};
+            items.push({ id: d.id, source: 'attendance', ...data });
+        });
+        modernSnap.forEach(d=>{
+            const data = d.data() || {};
+            items.push({
+                id: d.id,
+                source: 'attendanceSessions',
+                class: data.classKey || currentClass,
+                lessonIndex: data.lesson || data.lessonIndex || 0,
+                lessonLabel: data.lessonLabel || null,
+                ...data
+            });
+        });
+
+        items.sort((a,b)=>{
+            if(a.date === b.date) return (b.lessonIndex||0) - (a.lessonIndex||0);
+            return a.date < b.date ? 1 : -1;
+        });
+
+        logList.innerHTML = '';
+        items.forEach(item=>{
+            const div = document.createElement('div');
+            const canEdit = canEditByTime(item.createdAt);
+            div.className = 'log-item';
+            div.innerHTML = `
+                <h4 class="log-title">${item.class || 'â€”'}</h4>
+                <div class="log-sub">Ø§Ù„ØªØ§Ø±ÙŠØ®: ${item.date || 'â€”'} â€” ${item.lessonLabel || ('Ø­ØµØ© '+(item.lessonIndex||''))}</div>
+                <div class="${canEdit ? 'ok':'warn'}">${canEdit ? 'Ù…ØªØ§Ø­ Ù„Ù„ØªØ¹Ø¯ÙŠÙ„ Ø®Ù„Ø§Ù„ 45 Ø¯Ù‚ÙŠÙ‚Ø©' : 'Ø§Ù†ØªÙ‡Øª Ù…Ù‡Ù„Ø© Ø§Ù„ØªØ¹Ø¯ÙŠÙ„'}</div>
+            `;
+            div.addEventListener('click', ()=> openLogDetail(item.id, item.source || 'attendance'));
+            logList.appendChild(div);
+        });
+    }
+    function canEditByTime(createdAtField){
+        if(!createdAtField) return false;
+        let created = null;
+        if (createdAtField?.toDate) created = createdAtField.toDate();
+        else if (createdAtField?.seconds) created = new Date(createdAtField.seconds*1000);
+        if(!created) return false;
+        const now = new Date();
+        return (now - created) <= 45*60*1000; // 45 minutes
+    }
+
+    /* ========= Attendance DETAIL / EDIT ========= */
+    closeLogDetail.addEventListener('click', ()=> closeSheet(logDetailSheet));
+    let detailSession = null; // {id,data}
+    let dStatuses = {}; // uid -> status
+    let dStudents = []; // [{uid,name}]
+
+    async function fetchStudentsByClass(cls){
+        let list = await tryQueryStudents('students', cls);
+        if(list.length === 0){
+            const nested = await tryQueryStudents('students/uids', cls);
+            if(nested.length > 0) list = nested;
+        }
+        list.sort((a,b)=> (a.name||'').localeCompare((b.name||''), 'ar-KW', { sensitivity:'base' }));
+        return list;
+    }
+
+    async function openLogDetail(sessionId, source = 'attendance'){
+        let data = null;
+
+        if (source === 'attendanceSessions') {
+            const sRef = doc(db, 'attendanceSessions', sessionId);
+            const sSnap = await getDoc(sRef);
+            if(!sSnap.exists()){
+                openError('ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯','Ø§Ù„ØªÙ‚Ø±ÙŠØ± ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯.');
+                return;
+            }
+            data = sSnap.data() || {};
+            data.class = data.classKey || data.class || currentClass;
+            data.lessonIndex = data.lesson || data.lessonIndex || 0;
+        } else {
+            const sRef = doc(db, 'attendance', sessionId);
+            const sSnap = await getDoc(sRef);
+            if(!sSnap.exists()){
+                openError('ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯','Ø§Ù„ØªÙ‚Ø±ÙŠØ± ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯.');
+                return;
+            }
+            data = sSnap.data() || {};
+            data.class = data.class || currentClass;
+            data.lessonIndex = data.lessonIndex || data.lesson || 0;
+        }
+
+        detailSession = { id: sessionId, data, source };
+        detailTitle.textContent = 'ØªØ¹Ø¯ÙŠÙ„ Ø§Ù„ØªÙ‚Ø±ÙŠØ±';
+        detailClass.textContent = data.class || 'â€”';
+        detailMeta.textContent = `Ø§Ù„ØªØ§Ø±ÙŠØ®: ${data.date || 'â€”'} â€” ${data.lessonLabel || ('Ø­ØµØ© '+(data.lessonIndex||''))}`;
+
+        dStudents = await fetchStudentsByClass(data.class);
+        const nameByUid = {};
+        dStudents.forEach(s=> nameByUid[s.uid] = s.name);
+        dStatuses = {};
+
+        if (source === 'attendanceSessions') {
+            const recordsSnap = await getDocs(collection(db, 'attendanceSessions', sessionId, 'attendanceRecords'));
+            recordsSnap.forEach(docSnap => {
+                const rec = docSnap.data() || {};
+                const uid = docSnap.id;
+                const st = (rec.status || '').toString();
+                if (uid && (st === 'present' || st === 'late' || st === 'absent')) {
+                    dStatuses[uid] = st;
+                    if (!nameByUid[uid] && rec.studentName) nameByUid[uid] = rec.studentName;
+                }
+            });
+        } else {
+            (data.present||[]).forEach(u=> dStatuses[u]='present');
+            (data.late||[]).forEach(u=> dStatuses[u]='late');
+            (data.absent||[]).forEach(u=> dStatuses[u]='absent');
+        }
+
+        // Ensure all class students appear even if no record exists yet.
+        dStudents.forEach(s => {
+            if (!dStatuses[s.uid]) dStatuses[s.uid] = 'present';
+            if (!nameByUid[s.uid]) nameByUid[s.uid] = s.name;
+        });
+
+        // Include any record UIDs not currently in class query.
+        const existing = new Set(dStudents.map(s => s.uid));
+        Object.keys(dStatuses).forEach(uid => {
+            if (!existing.has(uid)) {
+                dStudents.push({ uid, name: nameByUid[uid] || uid });
+            }
+        });
+
+        renderDetailList(dStudents, nameByUid);
+        const canEdit = canEditByTime(data.createdAt);
+        saveDetail.disabled = !canEdit;
+        detailLockMsg.style.display = canEdit ? 'none' : 'block';
+        editWindowHint.textContent = canEdit ? 'Ù…ØªØ§Ø­ Ù„Ù„ØªØ¹Ø¯ÙŠÙ„ Ø­ØªÙ‰ 45 Ø¯Ù‚ÙŠÙ‚Ø© Ù…Ù† Ø§Ù„Ø¥Ù†Ø´Ø§Ø¡' : 'ØºÙŠØ± Ù…ØªØ§Ø­ Ù„Ù„ØªØ¹Ø¯ÙŠÙ„';
+        openSheet(logDetailSheet);
+    }
+    function renderDetailList(students, nameByUid){
+        detailList.innerHTML = '';
+        if(students.length===0){
+            const empty = document.createElement('div');
+            empty.className = 'error';
+            empty.textContent = 'Ù„Ø§ ÙŠÙˆØ¬Ø¯ Ø·Ù„Ø§Ø¨.';
+            detailList.appendChild(empty);
+            return;
+        }
+        students.forEach(s=>{
+            const card = document.createElement('div');
+            card.className = 'att-card';
+            const name = document.createElement('div');
+            name.className = 'att-name';
+
+            if (s.specialCase) {
+                const icon = document.createElement('img');
+                icon.src = 'https://cdn-icons-png.freepik.com/256/8984/8984792.png?semt=ais_white_label';
+                icon.alt = 'Ø®Ø§Øµ';
+                icon.className = 'special-case-icon';
+                name.appendChild(icon);
+            }
+
+            const nameText = document.createTextNode(s.name || 'â€”');
+            name.appendChild(nameText);
+
+            const seg = document.createElement('div');
+            seg.className = 'seg';
+            const bPres = document.createElement('button');
+            bPres.className = 'present';
+            bPres.textContent = 'Ø­Ø¶ÙˆØ±';
+            const sep1 = document.createElement('div');
+            sep1.className = 'sep';
+            const bLate = document.createElement('button');
+            bLate.className = 'late';
+            bLate.textContent = 'ØªØ£Ø®ÙŠØ±';
+            const sep2 = document.createElement('div');
+            sep2.className = 'sep';
+            const bAbs = document.createElement('button');
+            bAbs.className = 'absent';
+            bAbs.textContent = 'ØºÙŠØ§Ø¨';
+            const key = s.uid;
+            const cur = dStatuses[key] || 'present';
+            if(cur==='present') bPres.classList.add('active');
+            if(cur==='late') bLate.classList.add('active');
+            if(cur==='absent') bAbs.classList.add('active');
+            bPres.onclick = ()=> setDStatus(key,'present', bPres,bLate,bAbs);
+            bLate.onclick = ()=> setDStatus(key,'late', bPres,bLate,bAbs);
+            bAbs.onclick = ()=> setDStatus(key,'absent', bPres,bLate,bAbs);
+            seg.appendChild(bPres);
+            seg.appendChild(sep1);
+            seg.appendChild(bLate);
+            seg.appendChild(sep2);
+            seg.appendChild(bAbs);
+            card.appendChild(name);
+            card.appendChild(seg);
+            detailList.appendChild(card);
+        });
+        recalcDetailStats();
+    }
+
+    function setDStatus(uid, status, btnP, btnL, btnA){
+        dStatuses[uid] = status;
+        btnP.classList.toggle('active', status==='present');
+        btnL.classList.toggle('active', status==='late');
+        btnA.classList.toggle('active', status==='absent');
+        recalcDetailStats();
+    }
+
+    function recalcDetailStats(){
+        const vals = Object.values(dStatuses);
+        const present = vals.filter(v=>v==='present').length;
+        const late = vals.filter(v=>v==='late').length;
+        const absent = vals.filter(v=>v==='absent').length;
+        dCountPresent.textContent = `Ø­Ø¶ÙˆØ±: ${present}`;
+        dCountLate.textContent = `ØªØ£Ø®ÙŠØ±: ${late}`;
+        dCountAbsent.textContent = `ØºÙŠØ§Ø¨: ${absent}`;
+    }
+
+    saveDetail.addEventListener('click', async ()=>{
+        try{
+            if(!auth.currentUser){
+                openError('ØªØ¹Ø°Ù‘Ø± Ø§Ù„Ø­ÙØ¸','ÙŠØ±Ø¬Ù‰ ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯Ø®ÙˆÙ„.');
+                return;
+            }
+            if(!detailSession){
+                openError('ØªØ¹Ø°Ù‘Ø± Ø§Ù„Ø­ÙØ¸','Ù„Ø§ ÙŠÙˆØ¬Ø¯ ØªÙ‚Ø±ÙŠØ± Ù…ÙØªÙˆØ­.');
+                return;
+            }
+            const canEdit = canEditByTime(detailSession.data.createdAt);
+            if(!canEdit){
+                openError('ØªØ¹Ø°Ù‘Ø± Ø§Ù„Ø­ÙØ¸','Ø§Ù†ØªÙ‡Øª Ù…Ù‡Ù„Ø© Ø§Ù„ØªØ¹Ø¯ÙŠÙ„ (45 Ø¯Ù‚ÙŠÙ‚Ø©).');
+                return;
+            }
+
+            const present=[], late=[], absent=[];
+            Object.entries(dStatuses).forEach(([uid,st])=>{
+                if(!uid) return;
+                if(st==='present') present.push(uid);
+                else if(st==='late') late.push(uid);
+                else if(st==='absent') absent.push(uid);
+            });
+
+            const data = detailSession.data;
+            const source = detailSession.source || 'attendance';
+            const lessonIndex = data.lessonIndex || data.lesson || 0;
+            const lessonLabel = data.lessonLabel || ('Ø­ØµØ© ' + lessonIndex);
+            const classKey = data.class || data.classKey || currentClass || '';
+            const dateVal = data.date || dateInTZ(TZ);
+
+            const all = [
+                ...present.map(u=>({u,status:'present'})),
+                ...late.map(u=>({u,status:'late'})),
+                ...absent.map(u=>({u,status:'absent'}))
+            ];
+            const nameByUid = {};
+            dStudents.forEach(s=> nameByUid[s.uid] = s.name);
+
+            const batch = writeBatch(db);
+
+            if (source === 'attendanceSessions') {
+                const sessionRef = doc(db, 'attendanceSessions', detailSession.id);
+                batch.set(sessionRef, {
+                    classKey,
+                    date: dateVal,
+                    lesson: lessonIndex,
+                    lessonLabel,
+                    counts: { present: present.length, late: late.length, absent: absent.length, total: present.length+late.length+absent.length },
+                    updatedAt: serverTimestamp(),
+                    updatedBy: auth.currentUser.uid
+                }, { merge: true });
+
+                all.forEach(({u,status})=>{
+                    if(!u) return;
+                    const recRef = doc(db, 'attendanceSessions', detailSession.id, 'attendanceRecords', u);
+                    batch.set(recRef, {
+                        status,
+                        updatedAt: serverTimestamp(),
+                        updatedBy: auth.currentUser.uid,
+                        studentName: nameByUid[u] || null
+                    }, { merge: true });
+
+                    const subRef = doc(db, 'students', u, 'attendance', detailSession.id);
+                    batch.set(subRef, {
+                        sessionId: detailSession.id,
+                        class: classKey,
+                        date: dateVal,
+                        lessonIndex,
+                        lessonLabel,
+                        status,
+                        updatedAt: serverTimestamp(),
+                        updatedBy: auth.currentUser.uid,
+                        sessionPath: sessionRef.path,
+                        studentName: nameByUid[u] || null
+                    }, { merge: true });
+                });
+            } else {
+                const sessionRef = doc(db, 'attendance', detailSession.id);
+                batch.set(sessionRef, {
+                    present,
+                    late,
+                    absent,
+                    counts: { present: present.length, late: late.length, absent: absent.length, total: present.length+late.length+absent.length }
+                }, { merge: true });
+
+                all.forEach(({u,status})=>{
+                    if(!u) return;
+                    const subRef = doc(db, 'students', u, 'attendance', detailSession.id);
+                    batch.set(subRef, {
+                        sessionId: detailSession.id,
+                        class: classKey,
+                        date: dateVal,
+                        lessonIndex,
+                        lessonLabel,
+                        status,
+                        updatedAt: serverTimestamp(),
+                        updatedBy: auth.currentUser.uid,
+                        sessionPath: sessionRef.path,
+                        studentName: nameByUid[u] || null
+                    }, { merge: true });
+                });
+            }
+
+            await batch.commit();
+            cachedTakenLessons = null; // bust cache
+            goHomeAndToast('ØªÙ… Ø­ÙØ¸ Ø§Ù„ØªØ¹Ø¯ÙŠÙ„Ø§Øª', `Ù„Ù„Ø­ØµØ©: ${lessonLabel}`);
+        }catch(e){
+            console.error(e);
+            openError('ØªØ¹Ø°Ù‘Ø± Ø§Ù„Ø­ÙØ¸','ØªØ­Ù‚Ù‚ Ù…Ù† Ø§Ù„ØµÙ„Ø§Ø­ÙŠØ§Øª Ø£Ùˆ Ø§Ù„Ø´Ø¨ÙƒØ©.');
+        }
+    });
+    /* ========= Logout ========= */
+    logoutBtn.addEventListener('click', async ()=>{
+        const isConfirmed = await showActionPopup({
+            title: 'تسجيل الخروج',
+            message: 'هل تريد تسجيل الخروج الآن؟',
+            confirmText: 'نعم، تسجيل الخروج',
+            cancelText: 'إلغاء',
+            icon: '↩'
+        });
+        if(!isConfirmed) return;
+        await signOut(auth);
+        location.href='/index.html';
+    });
+
+    /* ========= NEW: Teacher Schedule Redirect ========= */
+    if (teacherScheduleBtn) {
+        teacherScheduleBtn.addEventListener('click', ()=> {
+            location.href = '/Teachers/teacherschedule.html';
+        });
+    }
+</script>
+<script src="/shared/hub-title-link.js" defer></script>
+<script src="/name-glow.js" defer></script>
+</body>
+</html>
+
+

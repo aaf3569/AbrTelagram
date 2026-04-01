@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.gstatic.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; manifest-src 'self'; upgrade-insecure-requests; block-all-mixed-content">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  <title>تسجيل المتأخرين | طابور الصباح</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+
+  <link rel="stylesheet" href="/shared/base.css" />
+  <style>
+    :root{
+      --primary:#033C54;
+      --primary-2:#065372;
+      --page:#f6f8fb;
+      --text:#0f172a;
+      --muted:#6b7f9f;
+      --border:#e6edf7;
+      --shadow-1:0 8px 22px rgba(3,60,84,.14);
+      --shadow-2:0 18px 44px rgba(2,6,23,.14);
+      --radius:16px;
+      --danger:#b42318;
+      --dangerBg:rgba(180,35,24,.10);
+      --transition: all 0.16s ease;
+    }
+
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%}
+    body{
+      background:
+        radial-gradient(1200px 600px at 80% -20%, rgba(3,60,84,.08), transparent 60%),
+        radial-gradient(900px 500px at -10% 120%, rgba(3,60,84,.06), transparent 60%),
+        var(--page);
+      color:var(--text);
+      font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      min-height:100vh;
+      -webkit-tap-highlight-color:transparent;
+    }
+
+    html.no-scroll, body.no-scroll{
+      position:fixed;
+      overflow:hidden;
+      width:100%;
+      inset:0;
+      overscroll-behavior:none;
+    }
+
+    .site-header{
+      position:sticky;top:0;z-index:50;
+      background:rgba(255,255,255,.92);
+      backdrop-filter:blur(10px);
+      border-bottom:1px solid rgba(3,60,84,.10);
+      box-shadow:0 2px 15px rgba(3,60,84,.08);
+      padding:16px 18px;
+      display:flex;align-items:center;justify-content:center;
+    }
+    .site-title{
+      font-weight:900;
+      color:var(--primary);
+      font-size:clamp(1.1rem,2.6vw,1.5rem);
+      letter-spacing:.2px;
+    }
+
+    main{padding:18px 14px 34px}
+    .wrap{width:min(1100px,100%);margin:0 auto;display:flex;flex-direction:column;gap:14px}
+
+    .panel{
+      background:#fff;
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow-1);
+      padding:18px 16px;
+    }
+
+    .state{display:none}
+    .state.active{display:block}
+
+    .loading{
+      display:flex;flex-direction:column;align-items:center;gap:12px;
+      padding:22px 14px;
+    }
+    .spinner{
+      width:46px;height:46px;border-radius:50%;
+      border:4px solid rgba(3,60,84,.14);
+      border-top-color:var(--primary);
+      animation:spin 1s linear infinite;
+    }
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    .error{
+      color:var(--danger);
+      background:var(--dangerBg);
+      border:1px solid rgba(180,35,24,.18);
+      padding:14px 12px;
+      border-radius:14px;
+      text-align:center;
+      font-weight:900;
+    }
+
+    .top-controls{
+      display:grid;
+      grid-template-columns:1fr;
+      gap:12px;
+    }
+    @media(min-width:720px){
+      .top-controls{grid-template-columns:1fr 1fr}
+    }
+
+    .select-wrap{position:relative;width:100%}
+    .select{
+      appearance:none;
+      width:100%;
+      min-height:54px;
+      border-radius:16px;
+      border:1px solid rgba(3,60,84,.14);
+      background:linear-gradient(145deg,var(--primary),var(--primary-2));
+      color:#fff;
+      font-weight:900;
+      padding:12px 14px;
+      padding-inline-end:44px;
+      cursor:pointer;
+      box-shadow:0 14px 32px rgba(3,60,84,.22);
+      transition:var(--transition);
+      font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+    .select:hover{transform:translateY(-2px);box-shadow:0 18px 40px rgba(3,60,84,.30)}
+    .select:disabled{opacity:.6;cursor:not-allowed;transform:none;box-shadow:var(--shadow-1)}
+    .select-wrap::after{
+      content:"";
+      position:absolute;top:50%;transform:translateY(-50%);
+      inset-inline-start:14px;
+      width:22px;height:22px;pointer-events:none;opacity:.95;
+      background:url('data:image/svg+xml;utf8,<svg fill="%23ffffff" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>') no-repeat center / 20px 20px;
+      filter:drop-shadow(0 1px 0 rgba(0,0,0,.15));
+    }
+
+    .search-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .input-wrap{
+      flex:1 1 320px;
+      display:flex;align-items:center;
+      min-height:54px;
+      padding:0 14px;
+      border-radius:16px;
+      border:1px solid var(--border);
+      background:#fff;
+      box-shadow:var(--shadow-1);
+      transition:var(--transition);
+    }
+    .input-wrap:focus-within{
+      border-color:rgba(3,60,84,.35);
+      box-shadow:0 0 0 3px rgba(3,60,84,.10), var(--shadow-1);
+    }
+    .input{
+      width:100%;
+      border:none;outline:none;background:transparent;
+      font-size:16px;
+      color:var(--text);
+      font-weight:800;
+      font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+    .input::placeholder{color:var(--muted);font-weight:800}
+
+    .meta{
+      display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;
+      padding:12px 12px;
+      border:1px dashed rgba(3,60,84,.22);
+      border-radius:16px;
+      background:rgba(3,60,84,.06);
+      font-weight:900;
+      color:var(--primary);
+    }
+    .meta span{color:var(--muted);font-weight:900}
+
+    .table-wrap{
+      width:100%;
+      overflow:auto;
+      border-radius:16px;
+      border:1px solid var(--border);
+      box-shadow:var(--shadow-1);
+      background:#fff;
+    }
+
+    table{
+      width:100%;
+      border-collapse:separate;
+      border-spacing:0;
+      min-width:620px;
+    }
+    thead th{
+      position:sticky;top:0;z-index:1;
+      background:#fff;
+      border-bottom:1px solid var(--border);
+      color:var(--primary);
+      font-weight:1000;
+      padding:12px 12px;
+      text-align:right;
+      white-space:nowrap;
+    }
+
+    tbody td{
+      border-bottom:1px solid rgba(230,237,247,.85);
+      padding:12px 12px;
+      font-weight:900;
+      color:var(--text);
+      vertical-align:middle;
+      white-space:nowrap;
+    }
+    tbody tr:hover td{background:rgba(3,60,84,.04)}
+
+    /* Force button column to be visually LEFT even in RTL */
+    .btncol, .btncol th{
+      text-align:left !important;
+      direction:ltr;
+      width:140px;
+    }
+
+    .late-btn{
+      border:none;
+      border-radius:14px;
+      padding:10px 14px;
+      cursor:pointer;
+      font-weight:1000;
+      background:linear-gradient(145deg, #b42318, #8f1f14);
+      color:#fff;
+      box-shadow:0 12px 28px rgba(180,35,24,.22);
+      transition:var(--transition);
+      font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+    .late-btn:hover{transform:translateY(-2px);box-shadow:0 16px 34px rgba(180,35,24,.26)}
+    .late-btn:disabled{opacity:.6;cursor:not-allowed;transform:none;box-shadow:var(--shadow-1)}
+
+    .muted{color:var(--muted);font-weight:900}
+
+    .modal{position:fixed;inset:0;z-index:200;display:none}
+    .modal.open{display:grid;place-items:center}
+    .overlay{
+      position:absolute;inset:0;
+      background:rgba(15,23,42,.35);
+      backdrop-filter:blur(6px);
+      -webkit-backdrop-filter:blur(6px);
+    }
+    .card{
+      position:relative;z-index:1;
+      width:min(560px,92vw);
+      background:#fff;
+      border:1px solid var(--border);
+      border-radius:20px;
+      box-shadow:0 24px 60px rgba(3,60,84,.28);
+      padding:18px 16px;
+    }
+    .card h3{
+      margin:0 0 8px;
+      color:var(--primary);
+      font-weight:1000;
+      font-size:1.15rem;
+    }
+    .card p{
+      margin:0 0 12px;
+      color:var(--muted);
+      font-weight:900;
+      line-height:1.8;
+    }
+    .row{
+      display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-start;margin-top:12px;
+    }
+    .btn{
+      border:none;
+      border-radius:14px;
+      padding:12px 16px;
+      cursor:pointer;
+      font-weight:1000;
+      transition:var(--transition);
+      font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      min-height:48px;
+    }
+    .btn.cancel{
+      background:#fff;
+      border:1px solid rgba(3,60,84,.22);
+      color:var(--primary);
+      box-shadow:var(--shadow-1);
+    }
+    .btn.cancel:hover{transform:translateY(-2px);box-shadow:0 18px 40px rgba(3,60,84,.14)}
+    .btn.primary{
+      background:linear-gradient(145deg,var(--primary-2),var(--primary));
+      color:#fff;
+      box-shadow:0 14px 32px rgba(3,60,84,.22);
+    }
+    .btn.primary:hover{transform:translateY(-2px);box-shadow:0 18px 40px rgba(3,60,84,.26)}
+
+    .toast{
+      position:fixed;inset-inline:0;bottom:18px;z-index:300;
+      display:flex;justify-content:center;
+      pointer-events:none;
+    }
+    .toast.hidden{display:none}
+    .toast .inner{
+      pointer-events:auto;
+      width:min(680px,92vw);
+      background:#fff;
+      border:1px solid var(--border);
+      border-radius:16px;
+      box-shadow:0 20px 50px rgba(3,60,84,.22);
+      padding:12px 14px;
+      display:flex;flex-direction:column;gap:6px;
+    }
+    .toast .title{font-weight:1000;color:#1a7f37}
+    .toast .sub{font-weight:900;color:var(--text)}
+    .toast .close{
+      align-self:flex-end;
+      border:1px solid var(--border);
+      background:#fff;
+      border-radius:12px;
+      padding:6px 10px;
+      cursor:pointer;
+      font-weight:1000;
+      color:var(--primary);
+    }
+  </style>
+
+  <!-- iOS home screen icon -->
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/appicon.png" />
+  
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <meta name="theme-color" content="#033C54" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <!-- Browser tab icon (favicon) -->
+  <link rel="icon" type="image/png" sizes="64x64" href="https://framerusercontent.com/images/eepB7V11E8IMGVLttDUMaz62pPQ.png?width=64&height=64" />
+  <link rel="shortcut icon" href="https://framerusercontent.com/images/eepB7V11E8IMGVLttDUMaz62pPQ.png?width=64&height=64" />
+
+  <!-- Social / Safari preview (Open Graph & Twitter) -->
+  <meta property="og:title" content="تسجيل المتأخرين | طابور الصباح">
+  <meta property="og:description" content="???? ?????? ???? ????? ??????.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://framerusercontent.com/images/jRnZLlPr90qwKsuUwfIlvDS9E.png?width=1200&height=630">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="تسجيل المتأخرين | طابور الصباح">
+  <meta name="twitter:description" content="???? ?????? ???? ????? ??????.">
+  <meta name="twitter:image" content="https://framerusercontent.com/images/jRnZLlPr90qwKsuUwfIlvDS9E.png?width=1200&height=630">
+</head>
+
+<body>
+  <header class="site-header">
+    <h1 class="site-title">تسجيل المتأخرين | طابور الصباح</h1>
+  </header>
+
+  <main>
+    <div class="wrap">
+
+      <section id="stateLoading" class="panel state active">
+        <div class="loading">
+          <div class="spinner"></div>
+          <div class="muted">جاري التحقق من تسجيل الدخول والصلاحيات…</div>
+        </div>
+      </section>
+
+      <section id="stateDenied" class="panel state">
+        <div class="error">تم رفض الوصول. هذه الصفحة للمصرح لهم فقط.</div>
+      </section>
+
+      <section id="stateApp" class="state" aria-label="Late App">
+        <div class="panel">
+          <div class="top-controls">
+            <div class="select-wrap">
+              <select id="gradeSelect" class="select" aria-label="الصف">
+                <option value="" selected disabled hidden>اختر الصف</option>
+                <option value="10">الصف العاشر</option>
+                <option value="11">الصف الحادي عشر</option>
+                <option value="12">الصف الثاني عشر</option>
+              </select>
+            </div>
+
+            <div class="select-wrap">
+              <select id="sectionSelect" class="select" aria-label="الفصل" disabled>
+                <option value="" selected disabled hidden>اختر الفصل</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="meta">
+            <div>الفصل: <span id="classLabel">—</span></div>
+            <div>التاريخ: <span id="todayLabel">—</span></div>
+            <div>الوقت: <span id="timeLabel">—</span></div>
+          </div>
+
+          <div class="search-row" style="margin-top:12px;">
+            <div class="input-wrap">
+              <input id="searchInput" class="input" type="text" placeholder="ابحث باسم الطالب…">
+            </div>
+          </div>
+
+          <div style="height:12px"></div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th class="btncol">إجراء</th>
+                  <th>اسم الطالب</th>
+                  <th>الرقم</th>
+                </tr>
+              </thead>
+              <tbody id="tableBody">
+                <tr><td colspan="3" class="muted" style="padding:16px;">اختر الصف والفصل لعرض الطلاب.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- Confirm Modal -->
+  <div id="confirmModal" class="modal" aria-hidden="true">
+    <div class="overlay"></div>
+    <div class="card" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+      <h3 id="confirmTitle">تأكيد</h3>
+      <p id="confirmText">—</p>
+      <div class="row">
+        <button id="btnNo" class="btn cancel" type="button">لا</button>
+        <button id="btnYes" class="btn primary" type="button">نعم</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="toast hidden" aria-live="polite">
+    <div class="inner">
+      <div class="title" id="toastTitle">تم</div>
+      <div class="sub" id="toastSub">—</div>
+      <button class="close" id="toastClose" type="button">إغلاق</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import { firebaseConfig } from "/shared/firebase.js";
+    import { initializeApp, getApp, getApps } from "/shared/firebase.js";
+    import { getAuth, onAuthStateChanged } from "/shared/firebase.js";
+    import {
+      initializeFirestore,
+      doc,
+      getDoc,
+      getDocs,
+      collection,
+      query,
+      where,
+      serverTimestamp,
+      setDoc
+    } from "/shared/firebase.js";
+
+    
+
+    const TZ = "Asia/Kuwait";
+
+    const CLASS_OPTIONS_RAW = [
+      "10 / 1","10 / 2","10 / 3","10 / 4","10 / 5","10 / 6","10 / 7",
+      "11 / 1 ع","11 / 2 ع","11 / 3 ع","11 / 4 ع","11 / 5 ع","11 / 1 د",
+      "12 / 1 ع","12 / 2 ع","12 / 3 ع","12 / 4 ع","12 / 5 ع","12 / 1 د"
+    ];
+
+    const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+    const db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true, useFetchStreams: false });
+    const auth = getAuth(app);
+
+    const sLoading = document.getElementById("stateLoading");
+    const sDenied = document.getElementById("stateDenied");
+    const sApp = document.getElementById("stateApp");
+
+    const gradeSelect = document.getElementById("gradeSelect");
+    const sectionSelect = document.getElementById("sectionSelect");
+
+    const classLabel = document.getElementById("classLabel");
+    const todayLabel = document.getElementById("todayLabel");
+    const timeLabel = document.getElementById("timeLabel");
+
+    const searchInput = document.getElementById("searchInput");
+    const tableBody = document.getElementById("tableBody");
+
+    const confirmModal = document.getElementById("confirmModal");
+    const confirmText = document.getElementById("confirmText");
+    const btnNo = document.getElementById("btnNo");
+    const btnYes = document.getElementById("btnYes");
+
+    const toast = document.getElementById("toast");
+    const toastTitle = document.getElementById("toastTitle");
+    const toastSub = document.getElementById("toastSub");
+    const toastClose = document.getElementById("toastClose");
+
+    let currentUserData = null;
+    let currentClassKey = "";
+    let cachedStudents = [];
+    let pendingStudent = null;
+
+    let __scrollY = 0;
+    function lockBodyScroll(){
+      if (document.documentElement.classList.contains("no-scroll")) return;
+      __scrollY = window.scrollY || document.documentElement.scrollTop || 0;
+      document.documentElement.classList.add("no-scroll");
+      document.body.classList.add("no-scroll");
+      document.body.style.top = `-${__scrollY}px`;
+    }
+    function unlockBodyScroll(){
+      if (!document.documentElement.classList.contains("no-scroll")) return;
+      document.documentElement.classList.remove("no-scroll");
+      document.body.classList.remove("no-scroll");
+      document.body.style.top = "";
+      window.scrollTo(0, __scrollY);
+    }
+
+    function openModal(){
+      confirmModal.classList.add("open");
+      confirmModal.setAttribute("aria-hidden","false");
+      lockBodyScroll();
+    }
+    function closeModal(){
+      confirmModal.classList.remove("open");
+      confirmModal.setAttribute("aria-hidden","true");
+      unlockBodyScroll();
+    }
+
+    function showToast(title, sub){
+      toastTitle.textContent = title || "تم";
+      toastSub.textContent = sub || "";
+      toast.classList.remove("hidden");
+    }
+
+    toastClose.addEventListener("click", ()=> toast.classList.add("hidden"));
+    confirmModal.querySelector(".overlay").addEventListener("click", closeModal);
+    btnNo.addEventListener("click", closeModal);
+
+    function dateInTZ(){
+      const parts = new Intl.DateTimeFormat("en-CA",{
+        timeZone: TZ,
+        year:"numeric",
+        month:"2-digit",
+        day:"2-digit"
+      }).formatToParts(new Date());
+      const y = parts.find(p=>p.type==="year").value;
+      const m = parts.find(p=>p.type==="month").value;
+      const d = parts.find(p=>p.type==="day").value;
+      return `${y}-${m}-${d}`;
+    }
+
+    function timeInTZ(){
+      const parts = new Intl.DateTimeFormat("en-GB",{
+        timeZone: TZ,
+        hour:"2-digit",
+        minute:"2-digit",
+        hour12:false
+      }).formatToParts(new Date());
+      const hh = parts.find(p=>p.type==="hour").value;
+      const mm = parts.find(p=>p.type==="minute").value;
+      return `${hh}:${mm}`;
+    }
+
+    function dayNameAr(){
+      return new Intl.DateTimeFormat("ar-KW", { timeZone: TZ, weekday:"long" }).format(new Date());
+    }
+
+    function fmtTodayAr(){
+      return new Intl.DateTimeFormat("ar-KW", { timeZone: TZ, dateStyle:"full" }).format(new Date());
+    }
+
+    function sanitizeId(s){
+      return String(s).replace(/[^\w\-]+/g, "_");
+    }
+
+    function normalizeArabic(text){
+      if(!text || typeof text !== "string") return "";
+      let t = text.normalize("NFD");
+      t = t.replace(/[\u064B-\u065F\u0670]/g, "");
+      t = t.replace(/\u0640/g, "");
+      t = t.replace(/[إأآٱ]/g, "ا");
+      t = t.replace(/\s+/g, " ").trim();
+      t = t.normalize("NFC");
+      return t;
+    }
+
+    function getGradeForClass(name=""){
+      const m = String(name).match(/\b(10|11|12)\b/);
+      return m ? parseInt(m[1],10) : null;
+    }
+
+    function getSectionsForGrade(grade){
+      const g = Number(grade);
+      const list = CLASS_OPTIONS_RAW.filter(c => getGradeForClass(c) === g);
+      const unique = Array.from(new Set(list));
+      unique.sort((a,b)=> a.localeCompare(b, "ar-KW", { sensitivity:"base", numeric:true }));
+      return unique;
+    }
+
+    function setState(state){
+      sLoading.classList.remove("active");
+      sDenied.classList.remove("active");
+      sApp.classList.remove("active");
+      state.classList.add("active");
+    }
+
+    function setMeta(){
+      todayLabel.textContent = fmtTodayAr();
+      timeLabel.textContent = timeInTZ();
+      classLabel.textContent = currentClassKey || "—";
+    }
+
+    setMeta();
+    setInterval(setMeta, 15000);
+
+    onAuthStateChanged(auth, async (user)=>{
+      if(!user){
+        setState(sDenied);
+        return;
+      }
+      try{
+        const tRef = doc(db, "teachers", user.uid);
+        const snap = await getDoc(tRef);
+        if(!snap.exists()){
+          setState(sDenied);
+          return;
+        }
+        currentUserData = snap.data() || {};
+        const role = String(currentUserData.role || "").toLowerCase();
+        const allowMorningLate = currentUserData?.permissions?.allowMorningLate === true;
+
+        if(role !== "admin" && !allowMorningLate){
+          setState(sDenied);
+          return;
+        }
+
+        setState(sApp);
+      }catch(e){
+        console.error(e);
+        setState(sDenied);
+      }
+    });
+
+    gradeSelect.addEventListener("change", ()=>{
+      const g = gradeSelect.value;
+      sectionSelect.innerHTML = `<option value="" selected disabled hidden>اختر الفصل</option>`;
+      sectionSelect.disabled = !g;
+
+      if(!g){
+        currentClassKey = "";
+        cachedStudents = [];
+        renderTable([]);
+        setMeta();
+        return;
+      }
+
+      const sections = getSectionsForGrade(g);
+      sections.forEach(cls=>{
+        const opt = document.createElement("option");
+        opt.value = cls;
+        opt.textContent = cls;
+        sectionSelect.appendChild(opt);
+      });
+
+      currentClassKey = "";
+      cachedStudents = [];
+      renderTable([]);
+      setMeta();
+    });
+
+    sectionSelect.addEventListener("change", async ()=>{
+      const cls = sectionSelect.value;
+      currentClassKey = cls || "";
+      setMeta();
+
+      if(!cls){
+        cachedStudents = [];
+        renderTable([]);
+        return;
+      }
+
+      tableBody.innerHTML = `<tr><td colspan="3" class="muted" style="padding:16px;">جاري تحميل الطلاب…</td></tr>`;
+      cachedStudents = await loadStudentsForClass(cls);
+      renderTable(cachedStudents);
+    });
+
+    searchInput.addEventListener("input", ()=>{
+      const q = normalizeArabic(searchInput.value.trim());
+      if(!q){
+        renderTable(cachedStudents);
+        return;
+      }
+      const filtered = cachedStudents.filter(s => normalizeArabic(s.name || "").includes(q));
+      renderTable(filtered);
+    });
+
+    async function loadStudentsForClass(cls){
+      // expects: students collection with field class == "10 / 1" and name
+      try{
+        const qRef = query(collection(db, "students"), where("class", "==", cls));
+        const snap = await getDocs(qRef);
+
+        const out = [];
+        snap.forEach(d=>{
+          const s = d.data() || {};
+          out.push({
+            uid: d.id,
+            name: s.name || s.fullName || d.id,
+            studentNumber: s.studentNumber ?? null
+          });
+        });
+
+        // sort by studentNumber if possible
+        out.sort((a,b)=>{
+          const an = Number(a.studentNumber);
+          const bn = Number(b.studentNumber);
+          const aOk = Number.isFinite(an);
+          const bOk = Number.isFinite(bn);
+          if(aOk && !bOk) return -1;
+          if(!aOk && bOk) return 1;
+          if(aOk && bOk && an !== bn) return an - bn;
+          return String(a.name).localeCompare(String(b.name), "ar-KW", { sensitivity:"base" });
+        });
+
+        return out;
+      }catch(e){
+        console.error(e);
+        return [];
+      }
+    }
+
+    function renderTable(list){
+      if(!currentClassKey){
+        tableBody.innerHTML = `<tr><td colspan="3" class="muted" style="padding:16px;">اختر الصف والفصل لعرض الطلاب.</td></tr>`;
+        return;
+      }
+
+      if(!list || list.length === 0){
+        tableBody.innerHTML = `<tr><td colspan="3" class="muted" style="padding:16px;">لا يوجد طلاب.</td></tr>`;
+        return;
+      }
+
+      tableBody.innerHTML = "";
+
+      list.forEach(s=>{
+        const tr = document.createElement("tr");
+
+        const tdBtn = document.createElement("td");
+        tdBtn.className = "btncol";
+
+        const btn = document.createElement("button");
+        btn.className = "late-btn";
+        btn.type = "button";
+        btn.textContent = "متأخر";
+        btn.addEventListener("click", ()=> openLateConfirm(s));
+        tdBtn.appendChild(btn);
+
+        const tdName = document.createElement("td");
+        tdName.textContent = s.name || "—";
+
+        const tdNum = document.createElement("td");
+        tdNum.textContent = (s.studentNumber === null || s.studentNumber === undefined || s.studentNumber === "") ? "—" : String(s.studentNumber);
+
+        tr.appendChild(tdBtn);
+        tr.appendChild(tdName);
+        tr.appendChild(tdNum);
+        tableBody.appendChild(tr);
+      });
+    }
+
+    function parseGradeAndSection(classKey){
+      // "10 / 1" or "11 / 1 ع"
+      const g = getGradeForClass(classKey) || null;
+      let section = "";
+      const m = String(classKey).match(/\/\s*([0-9]+)/);
+      if(m) section = m[1];
+      return { grade: g, section };
+    }
+
+    function openLateConfirm(student){
+      pendingStudent = student;
+      const nowD = dateInTZ();
+      const nowT = timeInTZ();
+      const dName = dayNameAr();
+
+      confirmText.textContent = `هل تريد تسجيل: ${student.name} متأخر عن طابور الصباح؟\nالتاريخ: ${dName} ${nowD}\nالوقت: ${nowT}\nالفصل: ${currentClassKey}`;
+      openModal();
+      setTimeout(()=>btnYes.focus(), 0);
+    }
+
+    btnYes.addEventListener("click", async ()=>{
+      if(!pendingStudent || !currentClassKey){
+        closeModal();
+        return;
+      }
+      if(!auth.currentUser){
+        closeModal();
+        showToast("خطأ", "يرجى تسجيل الدخول.");
+        return;
+      }
+
+      btnYes.disabled = true;
+      btnNo.disabled = true;
+
+      try{
+        const date = dateInTZ();
+        const time = timeInTZ();
+        const dayName = dayNameAr();
+        const { grade, section } = parseGradeAndSection(currentClassKey);
+
+        const createdByName =
+          (currentUserData && currentUserData.name) ? currentUserData.name :
+          (auth.currentUser.email ? auth.currentUser.email.split("@")[0] : "مستخدم");
+
+        const docId = `${date}__${sanitizeId(currentClassKey)}__${pendingStudent.uid}`;
+        const lateRef = doc(db, "morningLates", docId);
+
+        // setDoc will overwrite if exists, so we prevent duplicates by checking first
+        const existsSnap = await getDoc(lateRef);
+        if(existsSnap.exists()){
+          closeModal();
+          showToast("موجود مسبقًا", "هذا الطالب مسجل متأخر اليوم لنفس الفصل.");
+          return;
+        }
+
+        await setDoc(lateRef, {
+          type: "morning_ceremony",
+          date,
+          dayName,
+          time,
+          createdAt: serverTimestamp(),
+
+          classKey: currentClassKey,
+          grade,
+          section,
+
+          studentUid: pendingStudent.uid,
+          studentName: pendingStudent.name || null,
+          studentNumber: pendingStudent.studentNumber ?? null,
+
+          createdByUid: auth.currentUser.uid,
+          createdByName
+        });
+
+        closeModal();
+        showToast("تم تسجيل التأخير", `${pendingStudent.name} | ${currentClassKey} | ${date} ${time}`);
+      }catch(e){
+        console.error(e);
+        closeModal();
+        showToast("تعذّر الحفظ", "تحقق من الصلاحيات أو الشبكة.");
+      }finally{
+        btnYes.disabled = false;
+        btnNo.disabled = false;
+        pendingStudent = null;
+      }
+    });
+
+    document.addEventListener("keydown", (e)=>{
+      if(e.key === "Escape"){
+        toast.classList.add("hidden");
+        closeModal();
+      }
+    });
+  </script>
+  <script src="/shared/hub-title-link.js" defer></script>
+<script src="/name-glow.js" defer></script>
+</body>
+</html>
+
+
+
+
+
+
+

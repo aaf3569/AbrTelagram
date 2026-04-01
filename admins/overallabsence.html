@@ -1,0 +1,2493 @@
+﻿<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.gstatic.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; manifest-src 'self'; upgrade-insecure-requests; block-all-mixed-content">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  <title>Ù…Ù„Ø®Øµ Ø§Ù„ØºÙŠØ§Ø¨ - Ø«Ø§Ù†ÙˆÙŠØ© Ø£Ø­Ù…Ø¯ Ø§Ù„Ø¨Ø´Ø± Ø§Ù„Ø±ÙˆÙ…ÙŠ</title>
+
+  <!-- Noto Kufi Arabic -->
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+  <!-- Font Awesome for icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <link rel="stylesheet" href="/shared/base.css" />
+  <style>
+    :root{
+      --primary:#033C54;
+      --primary-2:#065372;
+
+      --page:#f6f8fb;
+      --text:#0f172a;
+      --muted:#6b7f9f;
+
+      --border:#e6edf7;
+      --shadow-1:0 8px 22px rgba(3,60,84,.10);
+      --shadow-2:0 18px 44px rgba(2,6,23,.14);
+
+      --radius:14px;
+      --radius-lg:18px;
+      --focus:#79b3c8;
+
+      --green:#10b981;
+      --yellow:#f59e0b;
+      --red:#ef4444;
+
+      --greenBg: rgba(16,185,129,.10);
+      --yellowBg: rgba(245,158,11,.10);
+      --redBg: rgba(239,68,68,.10);
+
+      --chip:#f1f5f9;
+
+      /* Header offset for sticky table head */
+      --headerH: 122px;
+    }
+
+    *{ box-sizing:border-box; margin:0; padding:0 }
+    html,body{ height:100% }
+
+    body{
+      margin:0;
+      background:
+        radial-gradient(1200px 600px at 80% -20%, rgba(3,60,84,.08), transparent 60%),
+        radial-gradient(900px 500px at -10% 120%, rgba(3,60,84,.06), transparent 60%),
+        var(--page);
+      color:var(--text);
+      font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      display:flex; flex-direction:column; min-height:100vh;
+      -webkit-tap-highlight-color: transparent;
+      overflow-x: hidden;
+    }
+
+    body.modal-open{
+      overflow: hidden;
+      position: fixed;
+      width: 100%;
+    }
+
+    @media (prefers-reduced-motion: reduce){
+      *{ animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.001ms !important; scroll-behavior:auto !important; }
+    }
+
+    /* Modal (centered popup) */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(2, 6, 23, 0.45);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      z-index: 1000;
+      display: none;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+
+    .modal-backdrop.open {
+      display: block;
+      opacity: 1;
+    }
+
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1001;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      pointer-events: none;
+    }
+
+    .modal.open {
+      display: flex;
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-card {
+      width: 100%;
+      max-width: 520px;
+      max-height: 85vh;
+      background: #fff;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+      box-shadow: 0 24px 48px rgba(2, 6, 23, 0.2);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transform: translateY(10px);
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .modal.open .modal-card {
+      transform: translateY(0);
+    }
+
+    .modal-head {
+      position: relative;
+      background: rgba(255, 255, 255, 0.98);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--border);
+      padding: 18px 20px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    .modal-title {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .modal-title b {
+      color: var(--primary);
+      font-size: 1.1rem;
+      font-weight: 900;
+      line-height: 1.3;
+    }
+
+    .modal-title span {
+      color: var(--muted);
+      font-weight: 900;
+      font-size: 0.9rem;
+    }
+
+    .modal-close {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #fff;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 22px;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.12s ease;
+      flex-shrink: 0;
+      box-shadow: 0 8px 16px rgba(2, 6, 23, 0.05);
+    }
+
+    .modal-close:hover {
+      background: var(--chip);
+      transform: translateY(-1px);
+      box-shadow: 0 12px 24px rgba(2, 6, 23, 0.08);
+      border-color: rgba(3, 60, 84, 0.2);
+    }
+
+    .modal-body {
+      padding: 20px;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      max-height: 400px;
+    }
+
+    .modal-footer {
+      padding: 16px 20px;
+      border-top: 1px solid var(--border);
+      background: rgba(248, 250, 252, 0.8);
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      flex-shrink: 0;
+    }
+
+    .modal-btn {
+      flex: 1;
+      min-width: 140px;
+      padding: 12px 16px;
+      border-radius: 12px;
+      border: 1px solid rgba(3, 60, 84, 0.2);
+      background: #fff;
+      color: var(--primary);
+      font-family: "Noto Kufi Arabic", sans-serif;
+      font-weight: 900;
+      font-size: 0.95rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.15s ease;
+      box-shadow: 0 6px 12px rgba(3, 60, 84, 0.06);
+    }
+
+    .modal-btn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(3, 60, 84, 0.1);
+      border-color: rgba(3, 60, 84, 0.3);
+      background: #f8fafc;
+    }
+
+    .modal-btn:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    .modal-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      background: #f1f5f9;
+    }
+
+    .modal-btn.warning {
+      background: rgba(245, 158, 11, 0.15);
+      border-color: rgba(245, 158, 11, 0.35);
+      color: #7c2d12;
+    }
+
+    .modal-btn.warning:hover:not(:disabled) {
+      background: rgba(245, 158, 11, 0.25);
+      border-color: rgba(245, 158, 11, 0.5);
+    }
+
+    .late-details-view {
+      display: none;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .late-details-view.active {
+      display: flex;
+    }
+
+    .late-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 12px;
+      border-bottom: 2px solid var(--border);
+    }
+
+    .late-header h4 {
+      color: var(--primary);
+      font-weight: 900;
+      font-size: 1.05rem;
+    }
+
+    .late-status {
+      padding: 14px;
+      border-radius: 14px;
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      background: rgba(245, 158, 11, 0.08);
+      text-align: center;
+      font-weight: 900;
+      color: #7c2d12;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .late-status.green {
+      border-color: rgba(16, 185, 129, 0.3);
+      background: rgba(16, 185, 129, 0.08);
+      color: #065f46;
+    }
+
+    .late-status .status-text {
+      font-size: 1rem;
+    }
+
+    .late-status .status-desc {
+      font-size: 0.9rem;
+      opacity: 0.9;
+    }
+
+    .late-info-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    .info-item {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      text-align: center;
+    }
+
+    .info-item .label {
+      font-size: 0.85rem;
+      color: var(--muted);
+      font-weight: 900;
+      margin-bottom: 6px;
+    }
+
+    .info-item .value {
+      font-weight: 900;
+      color: var(--text);
+      font-size: 1rem;
+    }
+
+    .back-button {
+      align-self: flex-start;
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: #fff;
+      color: var(--primary);
+      font-weight: 900;
+      font-size: 0.9rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.12s ease;
+    }
+
+    .back-button:hover {
+      background: #f1f5f9;
+      border-color: rgba(3, 60, 84, 0.3);
+    }
+
+    /* Header */
+    .site-header{
+      position:sticky; top:0; z-index:30;
+      background: rgba(255,255,255,.86);
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      padding:14px 14px 12px;
+      border-bottom:1px solid rgba(3,60,84,.10);
+      box-shadow: 0 2px 10px rgba(3,60,84,.06);
+    }
+
+    .header-inner{
+      width:min(100%, 1200px);
+      margin:0 auto;
+      display:grid;
+      grid-template-columns: 44px 1fr 44px;
+      align-items:center;
+      gap:10px;
+    }
+
+    .header-center{
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap:2px;
+      text-align:center;
+      padding:2px 0;
+    }
+
+    .site-title{
+      margin:0;
+      font-weight:900;
+      letter-spacing:.2px;
+      font-size: clamp(1.05rem, 2.8vw, 1.5rem);
+      color: var(--primary);
+      line-height:1.25;
+      cursor: pointer;
+    }
+    .site-title:hover {
+      text-decoration: underline;
+    }
+
+    .icon-btn{
+      width:44px; height:44px;
+      border-radius:14px;
+      border:1px solid rgba(3,60,84,.12);
+      background:#fff;
+      color:var(--primary);
+      display:flex; align-items:center; justify-content:center;
+      cursor:pointer;
+      transition: transform .12s ease, box-shadow .12s ease, background .12s ease, border-color .12s ease;
+      box-shadow: var(--shadow-1);
+    }
+    .icon-btn:hover{ transform:translateY(-1px); box-shadow: var(--shadow-2); border-color: rgba(3,60,84,.22) }
+    .icon-btn:active{ transform:translateY(0) scale(.99) }
+    .icon-btn:focus-visible{ outline:3px solid var(--focus); outline-offset:2px }
+
+    /* Date selector chip (clickable) */
+    .date-chip{
+      margin-top:10px;
+      width:min(100%, 1200px);
+      margin-inline:auto;
+      display:flex;
+      justify-content:center;
+      position:relative;
+    }
+    .date-btn{
+      border:none;
+      cursor:pointer;
+      font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      font-weight:900;
+      font-size:.95rem;
+      color:var(--primary);
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      padding:10px 14px;
+      border-radius:999px;
+      background: #fff;
+      border:1px solid var(--border);
+      box-shadow: var(--shadow-1);
+      transition: transform .12s ease, box-shadow .12s ease, background .12s ease, border-color .12s ease;
+      max-width: 95%;
+      position:relative;
+    }
+    .date-btn:hover{ transform: translateY(-1px); box-shadow: var(--shadow-2); border-color: rgba(3,60,84,.22) }
+    .date-btn:active{ transform: translateY(0) scale(.99) }
+    .date-btn:focus-visible{ outline:3px solid var(--focus); outline-offset:2px }
+    .date-btn span{ font-weight:900 }
+    .date-btn small{ color:var(--muted); font-weight:900; font-size:.82rem }
+
+    /*
+      FIX: Mobile date input must be allowed to receive events for some browsers to open the picker.
+      Keep it invisible, but do NOT block pointer-events.
+    */
+    .date-input-wrapper{
+      position:absolute;
+      inset:0;
+      opacity:0;
+      pointer-events:auto;
+    }
+    .mobile-date-input{
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
+      opacity:0;
+      pointer-events:auto;
+      font-size:16px; /* prevents iOS zoom */
+      border:0;
+      background:transparent;
+    }
+
+    /* Main */
+    main{
+      flex:1;
+      padding:0;
+      display:flex;
+      flex-direction:column;
+      overflow:hidden;
+    }
+
+    .full-width{ width:100%; }
+
+    .panel{
+      width:min(100%, 1200px);
+      margin:14px auto 0;
+      background:#fff;
+      border:1px solid var(--border);
+      border-radius:var(--radius-lg);
+      padding:16px;
+      box-shadow: var(--shadow-1);
+    }
+
+    .state{ display:none }
+    .state.active{ display:block }
+    .loading{ display:grid; place-items:center; gap:12px; padding:24px }
+    .spinner{ width:40px; height:40px; border-radius:50%; border:4px solid rgba(3,60,84,.18); border-top-color:var(--primary); animation:spin 1s linear infinite; margin-inline:auto }
+    @keyframes spin{ to{ transform: rotate(360deg); } }
+    .msg{ font-size:.98rem; text-align:center }
+    .error{ color:#a11; background:#fde8e8; border:1px solid #f5c5c5; padding:12px; border-radius:14px }
+    .muted{ color:var(--muted) }
+
+    /* Table shell */
+    .table-shell{
+      width:100%;
+      height: calc(100vh - var(--headerH) - 20px);
+      background:#fff;
+      border-top:1px solid var(--border);
+      border-bottom:1px solid var(--border);
+      border-left:none;
+      border-right:none;
+      border-radius:0;
+      overflow:hidden;
+      box-shadow:none;
+    }
+
+    .table-scroll{
+      width:100%;
+      height:100%;
+      overflow:auto;
+      -webkit-overflow-scrolling:touch;
+      position:relative;
+    }
+
+    table{
+      width:100%;
+      border-collapse:separate;
+      border-spacing:0;
+      min-width:1020px;
+      direction:rtl;
+      table-layout:fixed;
+    }
+
+    thead{
+      position:sticky;
+      top:0;
+      z-index:20;
+      background:#fff;
+    }
+
+    thead th{
+      position:relative;
+      background:#fff;
+      border-bottom:2px solid var(--primary);
+      padding:16px 10px;
+      text-align:center;
+      font-weight:900;
+      color:var(--primary);
+      white-space:nowrap;
+      overflow:visible;
+      box-shadow: 0 4px 12px rgba(3,60,84,.08);
+    }
+
+    /* Sticky columns with explicit classes */
+    .class-col, .morning-col {
+      position: sticky;
+      background: #fff;
+      text-align: center;
+      padding: 12px 10px;
+      z-index: 15;
+      border-left: 2px solid var(--border);
+    }
+
+    /* Ø§Ù„ØµÙ column - rightmost */
+    th.class-col, td.class-col {
+      right: 0;
+      width: 140px;
+      min-width: 140px;
+      z-index: 16;
+    }
+
+    /* Ø§Ù„ØµØ¨Ø­ column - left of Ø§Ù„ØµÙ */
+    th.morning-col, td.morning-col {
+      right: 140px;
+      width: 80px;
+      min-width: 80px;
+      z-index: 15;
+    }
+
+    /* Higher z-index for sticky headers */
+    thead th.class-col {
+      z-index: 26;
+      box-shadow: 4px 0 12px rgba(3,60,84,.08);
+    }
+
+    thead th.morning-col {
+      z-index: 25;
+      box-shadow: 4px 0 12px rgba(3,60,84,.08);
+    }
+
+    tbody td{
+      border-bottom:1px solid var(--border);
+      padding:10px 10px;
+      text-align:center;
+      background:#fff;
+    }
+
+    tbody tr:hover td{ background:#fbfdff; }
+    tbody tr:hover td.class-col,
+    tbody tr:hover td.morning-col { background:#fbfdff; }
+
+    .class-name{
+      font-weight:900;
+      color:var(--text);
+      font-size:1rem;
+      line-height:1.2;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      min-height:38px;
+    }
+
+    .cell-btn{
+      width:56px; height:38px;
+      border-radius:12px;
+      border:1px solid rgba(239,68,68,.25);
+      background: var(--redBg);
+      color: var(--red);
+      font-weight:900;
+      cursor:pointer;
+      transition: transform .12s ease, box-shadow .12s ease, filter .12s ease, border-color .12s ease;
+      box-shadow: 0 10px 20px rgba(239,68,68,.10);
+      font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+    .cell-btn:hover{ transform: translateY(-1px); box-shadow: 0 14px 26px rgba(239,68,68,.14); border-color: rgba(239,68,68,.35) }
+    .cell-btn:active{ transform: translateY(0) scale(.99) }
+    .cell-btn:focus-visible{ outline:3px solid var(--focus); outline-offset:2px }
+
+    .cell-missed{
+      width:56px; height:38px;
+      border-radius:12px;
+      border:1px solid rgba(245,158,11,0.35);
+      background: rgba(245, 158, 11, 0.15);
+      color: #7c2d12;
+      font-weight:900;
+      cursor:pointer;
+      font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      box-shadow: 0 10px 20px rgba(245,158,11,.12);
+      transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease, filter .12s ease;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+    }
+    .cell-missed:hover{
+      transform: translateY(-1px);
+      box-shadow: 0 14px 26px rgba(245,158,11,.16);
+      border-color: rgba(245,158,11,.55);
+      filter: saturate(1.05);
+      background: rgba(245, 158, 11, 0.25);
+    }
+    .cell-missed:active{ transform: translateY(0) scale(.99) }
+    .cell-missed:focus-visible{ outline:3px solid var(--focus); outline-offset:2px }
+
+    .cell-empty{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width:56px; height:38px;
+      border-radius:12px;
+      border:1px solid rgba(3,60,84,.12);
+      background:#f8fafc;
+      color: rgba(100,116,139,.8);
+      font-weight:900;
+      user-select:none;
+    }
+
+    /* Missed indicator badge */
+    .missed-indicator {
+      position: absolute;
+      top: -6px;
+      left: -6px;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: rgba(245, 158, 11, 0.95);
+      border: 2px solid #fff;
+      color: #7c2d12;
+      font-weight: 900;
+      font-size: 0.8rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 3px 8px rgba(245, 158, 11, 0.4);
+      z-index: 5;
+    }
+
+    /* Popover */
+    .popover-backdrop{
+      position:fixed; inset:0;
+      background: rgba(2,6,23,.12);
+      display:none;
+      z-index:999;
+    }
+    .popover-backdrop.open{ display:block; }
+
+    .popover{
+      position:fixed;
+      z-index:1000;
+      width:min(520px, 92vw);
+      max-height:min(520px, 70vh);
+      overflow:auto;
+      background:#fff;
+      border:1px solid var(--border);
+      border-radius:18px;
+      box-shadow: 0 18px 44px rgba(2,6,23,.18);
+      display:none;
+    }
+    .popover.open{ display:block; }
+
+    .pop-head{
+      position:sticky; top:0;
+      background: rgba(255,255,255,.96);
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      border-bottom:1px solid var(--border);
+      padding:14px 14px;
+      display:flex; align-items:flex-start; justify-content:space-between; gap:10px;
+    }
+    .pop-title{ display:flex; flex-direction:column; gap:2px; }
+    .pop-title b{ color:var(--primary); font-size:1.02rem }
+    .pop-title span{ color:var(--muted); font-weight:900; font-size:.9rem }
+
+    .pop-close{
+      width:40px; height:40px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      background:#fff;
+      color:var(--muted);
+      cursor:pointer;
+      font-size:20px;
+      line-height:1;
+      transition: transform .12s ease, box-shadow .12s ease, background .12s ease;
+      box-shadow: 0 10px 20px rgba(2,6,23,.05);
+    }
+    .pop-close:hover{ background: var(--chip); transform: translateY(-1px); box-shadow: 0 14px 26px rgba(2,6,23,.08) }
+
+    .pop-body{ padding:14px 14px 16px 14px; display:flex; flex-direction:column; gap:12px; }
+
+    .section{
+      border:1px solid var(--border);
+      background:#fff;
+      border-radius:14px;
+      padding:12px;
+      box-shadow: 0 10px 22px rgba(2,6,23,.04);
+    }
+    .sec-title{
+      font-weight:900; color:var(--primary);
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      padding-bottom:10px;
+      border-bottom:1px solid var(--border);
+      margin-bottom:10px;
+    }
+    .chips{ display:flex; flex-wrap:wrap; gap:8px; }
+    .chip{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:8px 10px;
+      border-radius:999px;
+      background: var(--chip);
+      border:1px solid var(--border);
+      font-weight:900;
+      color: var(--text);
+      font-size:.9rem;
+    }
+
+    .alert{
+      display:flex; align-items:center; gap:10px;
+      padding:10px 12px;
+      border-radius:14px;
+      border:1px solid rgba(239,68,68,.28);
+      background: linear-gradient(180deg, rgba(239,68,68,.12), rgba(255,255,255,1));
+      color:#991b1b;
+      font-weight:900;
+    }
+    .alert .dot{
+      width:10px; height:10px; border-radius:999px;
+      background: var(--red);
+      box-shadow: 0 0 0 6px rgba(239,68,68,.12);
+      flex:0 0 auto;
+    }
+
+    .list{ display:flex; flex-direction:column; gap:8px; }
+    .li{
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      padding:10px 10px;
+      border-radius:12px;
+      border:1px solid rgba(3,60,84,.10);
+      background:#fbfdff;
+      font-weight:900;
+      cursor: pointer;
+      transition: all 0.12s ease;
+    }
+    .li:hover{
+      background: #f1f5f9;
+      border-color: rgba(3,60,84,.20);
+      transform: translateY(-1px);
+    }
+    .li .name{ color:var(--text) }
+    .li .meta{ color:var(--muted); font-weight:900; font-size:.86rem }
+
+    /* Warning level classes */
+    .li.warning-1 {
+      background-color: rgba(245, 158, 11, 0.08);
+      border-color: rgba(245, 158, 11, 0.25);
+      border-left-width: 3px;
+      border-left-color: #f59e0b;
+    }
+    
+    .li.warning-2 {
+      background-color: rgba(249, 115, 22, 0.10);
+      border-color: rgba(249, 115, 22, 0.30);
+      border-left-width: 3px;
+      border-left-color: #f97316;
+    }
+    
+    .li.warning-3 {
+      background-color: rgba(239, 68, 68, 0.10);
+      border-color: rgba(239, 68, 68, 0.35);
+      border-left-width: 3px;
+      border-left-color: #ef4444;
+    }
+
+    /* Tabs in confirm popup */
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 8px;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: #f8fafc;
+      color: var(--muted);
+      font-weight: 900;
+      cursor: pointer;
+      transition: all 0.12s ease;
+      text-align: center;
+    }
+    .tab-btn.active {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+    .tab-btn:hover:not(.active) {
+      background: #f1f5f9;
+      border-color: rgba(3,60,84,.20);
+    }
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+
+    /* Mobile tweaks */
+    @media (max-width: 480px){
+      .header-inner{ grid-template-columns: 40px 1fr 40px; }
+      .icon-btn{ width:40px; height:40px; border-radius:12px; }
+
+      table{ min-width: 1060px; }
+      
+      /* Adjust widths for mobile */
+      th.class-col, td.class-col {
+        width: 132px;
+        min-width: 132px;
+      }
+      th.morning-col, td.morning-col {
+        right: 132px;
+        width: 70px;
+        min-width: 70px;
+      }
+      
+      .table-shell{ height: calc(100vh - var(--headerH) - 10px); }
+
+      thead th{
+        padding:12px 6px;
+        font-size:.82rem;
+        line-height:1.25;
+        white-space: normal;
+        word-break: keep-all;
+        overflow: visible;
+      }
+
+      .date-btn {
+        padding: 12px 16px;
+        min-height: 48px;
+      }
+
+      .modal {
+        padding: 12px;
+      }
+
+      .modal-card {
+        max-height: 90vh;
+      }
+
+      .modal-footer {
+        flex-direction: column;
+      }
+
+      .modal-btn {
+        min-width: 100%;
+      }
+
+      .late-info-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @supports (-webkit-touch-callout: none) {
+      .mobile-date-input { font-size: 16px !important; }
+      .modal-body {
+        max-height: 60vh;
+      }
+    }
+  </style>
+
+  <!-- iOS home screen icon -->
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/appicon.png" />
+  
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <meta name="theme-color" content="#033C54" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <!-- Browser tab icon (favicon) -->
+  <link rel="icon" type="image/png" sizes="64x64" href="https://framerusercontent.com/images/eepB7V11E8IMGVLttDUMaz62pPQ.png?width=64&height=64" />
+  <link rel="shortcut icon" href="https://framerusercontent.com/images/eepB7V11E8IMGVLttDUMaz62pPQ.png?width=64&height=64" />
+
+  <!-- Social / Safari preview (Open Graph & Twitter) -->
+  <meta property="og:title" content="Ù…Ù„Ø®Øµ Ø§Ù„ØºÙŠØ§Ø¨ - Ø«Ø§Ù†ÙˆÙŠØ© Ø£Ø­Ù…Ø¯ Ø§Ù„Ø¨Ø´Ø± Ø§Ù„Ø±ÙˆÙ…ÙŠ">
+  <meta property="og:description" content="???? ?????? ???? ????? ??????.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://framerusercontent.com/images/jRnZLlPr90qwKsuUwfIlvDS9E.png?width=1200&height=630">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Ù…Ù„Ø®Øµ Ø§Ù„ØºÙŠØ§Ø¨ - Ø«Ø§Ù†ÙˆÙŠØ© Ø£Ø­Ù…Ø¯ Ø§Ù„Ø¨Ø´Ø± Ø§Ù„Ø±ÙˆÙ…ÙŠ">
+  <meta name="twitter:description" content="???? ?????? ???? ????? ??????.">
+  <meta name="twitter:image" content="https://framerusercontent.com/images/jRnZLlPr90qwKsuUwfIlvDS9E.png?width=1200&height=630">
+</head>
+
+<body>
+  <header class="site-header" id="siteHeader">
+    <div class="header-inner">
+      <button class="icon-btn" id="refreshBtn" title="ØªØ­Ø¯ÙŠØ«" aria-label="ØªØ­Ø¯ÙŠØ«">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+        </svg>
+      </button>
+
+      <div class="header-center">
+        <h1 class="site-title" id="navbarTitle">Ø«Ø§Ù†ÙˆÙŠØ© Ø£Ø­Ù…Ø¯ Ø§Ù„Ø¨Ø´Ø± Ø§Ù„Ø±ÙˆÙ…ÙŠ</h1>
+      </div>
+
+      <div></div>
+    </div>
+
+    <div class="date-chip">
+      <button class="date-btn" id="dateBtn" type="button" aria-label="Ø§Ø®ØªÙŠØ§Ø± ØªØ§Ø±ÙŠØ®">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="4" width="18" height="18" rx="2"/>
+          <line x1="16" y1="2" x2="16" y2="6"/>
+          <line x1="8" y1="2" x2="8" y2="6"/>
+          <line x1="3" y1="10" x2="21" y2="10"/>
+        </svg>
+        <span id="dateLabel">â€”</span>
+        <small>Ø§Ø¶ØºØ· Ù„ØªØºÙŠÙŠØ± Ø§Ù„ØªØ§Ø±ÙŠØ®</small>
+
+        <!-- Mobile-friendly date input overlay -->
+        <div class="date-input-wrapper" aria-hidden="true">
+          <input class="mobile-date-input" id="mobileDateInput" type="date" inputmode="none" />
+        </div>
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <div id="stateLoading" class="state active panel">
+      <div class="loading">
+        <div class="spinner"></div>
+        <div class="muted">Ø¬Ø§Ø±ÙŠ Ø§Ù„ØªØ­Ù‚Ù‚ Ù…Ù† ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯Ø®ÙˆÙ„ ÙˆØ¬Ù„Ø¨ Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øªâ€¦</div>
+      </div>
+    </div>
+
+    <div id="stateNotLogged" class="state panel">
+      <div class="msg error">ÙŠØ±Ø¬Ù‰ ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯Ø®ÙˆÙ„ Ù‚Ø¨Ù„ Ø§Ù„Ø§Ø³ØªØ®Ø¯Ø§Ù….</div>
+      <p class="muted" style="text-align:center; margin:8px 0 0;">Ù„Ø§ ØªÙˆØ¬Ø¯ Ø¬Ù„Ø³Ø© Ù†Ø´Ø·Ø©. <a href="/index.html">Ø§Ø°Ù‡Ø¨ Ù„ØµÙØ­Ø© Ø§Ù„Ø¯Ø®ÙˆÙ„</a>.</p>
+    </div>
+
+    <div id="stateDenied" class="state panel">
+      <div class="msg error">ØªÙ… Ø±ÙØ¶ Ø§Ù„ÙˆØµÙˆÙ„. Ù‡Ø°Ù‡ Ø§Ù„ØµÙØ­Ø© Ù…Ø®ØµÙ‘ØµØ© Ù„Ù„Ù…Ø´Ø±ÙÙŠÙ† ÙÙ‚Ø·.</div>
+    </div>
+
+    <section id="stateOk" class="state full-width" aria-label="Ù…Ù„Ø®Øµ Ø§Ù„ØºÙŠØ§Ø¨">
+      <div class="table-shell">
+        <div class="table-scroll" id="tableScroll">
+          <table aria-label="Ù…Ù„Ø®Øµ Ø§Ù„ØºÙŠØ§Ø¨">
+            <thead>
+              <tr>
+                <th class="class-col">Ø§Ù„ØµÙ</th>
+                <th class="morning-col">Ø§Ù„ØµØ¨Ø­</th>
+                <th>Ø§Ù„Ø­ØµØ© Ø§Ù„Ø£ÙˆÙ„Ù‰</th>
+                <th>Ø§Ù„Ø­ØµØ© Ø§Ù„Ø«Ø§Ù†ÙŠØ©</th>
+                <th>Ø§Ù„Ø­ØµØ© Ø§Ù„Ø«Ø§Ù„Ø«Ø©</th>
+                <th>Ø§Ù„Ø­ØµØ© Ø§Ù„Ø±Ø§Ø¨Ø¹Ø©</th>
+                <th>Ø§Ù„Ø­ØµØ© Ø§Ù„Ø®Ø§Ù…Ø³Ø©</th>
+                <th>Ø§Ù„Ø­ØµØ© Ø§Ù„Ø³Ø§Ø¯Ø³Ø©</th>
+                <th>Ø§Ù„Ø­ØµØ© Ø§Ù„Ø³Ø§Ø¨Ø¹Ø©</th>
+              </tr>
+            </thead>
+            <tbody id="gridBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Popover -->
+  <div class="popover-backdrop" id="popBackdrop" aria-hidden="true"></div>
+  <div class="popover" id="popover" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="pop-head">
+      <div class="pop-title">
+        <b id="popTitle">â€”</b>
+        <span id="popSub">â€”</span>
+      </div>
+      <button class="pop-close" id="popClose" aria-label="Ø¥ØºÙ„Ø§Ù‚" type="button">Ã—</button>
+    </div>
+    <div class="pop-body" id="popBody"></div>
+  </div>
+
+  <!-- Modal for lesson actions -->
+  <div class="modal-backdrop" id="modalBackdrop"></div>
+  <div class="modal" id="lessonModal">
+    <div class="modal-card">
+      <div class="modal-head">
+        <div class="modal-title">
+          <b id="modalTitle">â€”</b>
+          <span id="modalSubtitle">â€”</span>
+        </div>
+        <button class="modal-close" id="modalClose" aria-label="Ø¥ØºÙ„Ø§Ù‚">Ã—</button>
+      </div>
+      <div class="modal-body" id="modalBody"></div>
+      <div class="modal-footer" id="modalFooter"></div>
+    </div>
+  </div>
+
+  <!-- Confirm Save Modal -->
+  <div class="modal-backdrop" id="confirmBackdrop"></div>
+  <div class="modal" id="confirmModal">
+    <div class="modal-card">
+      <div class="modal-head">
+        <div class="modal-title">
+          <b>ØªØ£ÙƒÙŠØ¯ Ø­ÙØ¸ Ø§Ù„ØºÙŠØ§Ø¨</b>
+          <span id="confirmSubtitle">â€”</span>
+        </div>
+        <button class="modal-close" id="confirmClose" aria-label="Ø¥ØºÙ„Ø§Ù‚">Ã—</button>
+      </div>
+      <div class="modal-body" id="confirmBody">
+        <div class="tabs">
+          <button class="tab-btn active" id="tabAbsent">Ø§Ù„ØºÙŠØ§Ø¨</button>
+          <button class="tab-btn" id="tabLate">Ø§Ù„Ù…ØªØ£Ø®Ø±ÙˆÙ†</button>
+        </div>
+        <div class="tab-content active" id="tabContentAbsent">
+          <div class="section">
+            <div class="sec-title">
+              <span>Ù‚Ø§Ø¦Ù…Ø© Ø§Ù„ØºÙŠØ§Ø¨</span>
+              <span class="muted" id="absentCount">0 Ø·Ø§Ù„Ø¨</span>
+            </div>
+            <ul class="list" id="confirmAbsentList"></ul>
+          </div>
+        </div>
+        <div class="tab-content" id="tabContentLate">
+          <div class="section">
+            <div class="sec-title">
+              <span>Ù‚Ø§Ø¦Ù…Ø© Ø§Ù„Ù…ØªØ£Ø®Ø±ÙŠÙ†</span>
+              <span class="muted" id="lateCount">0 Ø·Ø§Ù„Ø¨</span>
+            </div>
+            <ul class="list" id="confirmLateList"></ul>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn warning" id="confirmSaveBtn">
+          <i class="fas fa-save"></i> Ø­ÙØ¸
+        </button>
+        <button class="modal-btn" id="confirmCancelBtn">
+          <i class="fas fa-times"></i> Ø¥Ù„ØºØ§Ø¡
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { firebaseConfig } from "/shared/firebase.js";
+    import { initializeApp, getApp, getApps } from "/shared/firebase.js";
+    import { getAuth, onAuthStateChanged } from "/shared/firebase.js";
+    import {
+      initializeFirestore, collection, collectionGroup, getDocs, query, where,
+      doc, getDoc, Timestamp
+    } from "/shared/firebase.js";
+
+    
+
+    const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+    const db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true, useFetchStreams: false });
+    const auth = getAuth(app);
+
+    const sLoading = document.getElementById('stateLoading');
+    const sNotLog  = document.getElementById('stateNotLogged');
+    const sDenied  = document.getElementById('stateDenied');
+    const sOk      = document.getElementById('stateOk');
+
+    const refreshBtn = document.getElementById('refreshBtn');
+    const gridBody = document.getElementById('gridBody');
+
+    const dateBtn = document.getElementById('dateBtn');
+    const dateLabel = document.getElementById('dateLabel');
+    const mobileDateInput = document.getElementById('mobileDateInput');
+
+    const popBackdrop = document.getElementById('popBackdrop');
+    const popover = document.getElementById('popover');
+    const popClose = document.getElementById('popClose');
+    const popTitle = document.getElementById('popTitle');
+    const popSub = document.getElementById('popSub');
+    const popBody = document.getElementById('popBody');
+
+    const siteHeader = document.getElementById('siteHeader');
+    const navbarTitle = document.getElementById('navbarTitle');
+
+    // Modal elements
+    const modalBackdrop = document.getElementById('modalBackdrop');
+    const lessonModal = document.getElementById('lessonModal');
+    const modalClose = document.getElementById('modalClose');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalSubtitle = document.getElementById('modalSubtitle');
+    const modalBody = document.getElementById('modalBody');
+    const modalFooter = document.getElementById('modalFooter');
+
+    // Confirm modal elements
+    const confirmBackdrop = document.getElementById('confirmBackdrop');
+    const confirmModal = document.getElementById('confirmModal');
+    const confirmClose = document.getElementById('confirmClose');
+    const confirmSubtitle = document.getElementById('confirmSubtitle');
+    const confirmBody = document.getElementById('confirmBody');
+    const tabAbsent = document.getElementById('tabAbsent');
+    const tabLate = document.getElementById('tabLate');
+    const tabContentAbsent = document.getElementById('tabContentAbsent');
+    const tabContentLate = document.getElementById('tabContentLate');
+    const confirmAbsentList = document.getElementById('confirmAbsentList');
+    const confirmLateList = document.getElementById('confirmLateList');
+    const absentCount = document.getElementById('absentCount');
+    const lateCount = document.getElementById('lateCount');
+    const confirmSaveBtn = document.getElementById('confirmSaveBtn');
+    const confirmCancelBtn = document.getElementById('confirmCancelBtn');
+
+    // Make navbar title clickable
+    navbarTitle.addEventListener('click', () => {
+      window.location.href = 'adminpage.html';
+    });
+
+    const show = (el) => {
+      [sLoading, sNotLog, sDenied, sOk].forEach(x => x.classList.remove('active'));
+      el.classList.add('active');
+      syncHeaderH();
+    };
+
+    function syncHeaderH(){
+      const headerHeight = siteHeader.getBoundingClientRect().height || 122;
+      document.documentElement.style.setProperty('--headerH', headerHeight + 'px');
+    }
+
+    const toArabicDigits = (str) => (str || "").toString().replace(/\d/g, d => 'Ù Ù¡Ù¢Ù£Ù¤Ù¥Ù¦Ù§Ù¨Ù©'[d]);
+    const arabicSort = (a, b) => (a || "").toString().localeCompare((b || "").toString(), 'ar', { sensitivity: 'base' });
+
+    function fmtDateLong(d){
+      return new Intl.DateTimeFormat('ar-KW', {
+        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+        timeZone: 'Asia/Kuwait'
+      }).format(d);
+    }
+
+    function toInputDate(d) {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const da = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${da}`;
+    }
+
+    function fromInputDate(iso) {
+      const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec((iso || '').toString());
+      if (!m) return new Date();
+      const y = Number(m[1]);
+      const mo = Number(m[2]);
+      const d = Number(m[3]);
+      return new Date(y, (mo || 1) - 1, d || 1);
+    }
+
+    // Kuwait timezone functions
+    function kuwaitTodayISO() {
+      const now = new Date();
+      const kuwaitTime = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Kuwait" }));
+      const y = kuwaitTime.getFullYear();
+      const m = String(kuwaitTime.getMonth() + 1).padStart(2, '0');
+      const d = String(kuwaitTime.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+
+    function getKuwaitTime() {
+      const now = new Date();
+      return new Date(now.toLocaleString("en-US", { timeZone: "Asia/Kuwait" }));
+    }
+
+    function timeToMinutes(timeStr) {
+      const [h, m] = timeStr.split(':').map(Number);
+      return h * 60 + (m || 0);
+    }
+
+    // Lesson times for Kuwait (Asia/Kuwait)
+    const LESSON_TIMES = [
+      { start: "07:55", end: "08:40" },   // Lesson 1
+      { start: "08:40", end: "09:25" },   // Lesson 2
+      { start: "09:25", end: "10:10" },   // Lesson 3
+      { start: "10:30", end: "11:15" },   // Lesson 4
+      { start: "11:15", end: "12:00" },   // Lesson 5
+      { start: "12:20", end: "13:05" },   // Lesson 6
+      { start: "13:05", end: "13:50" }    // Lesson 7
+    ];
+
+    // Attendance cache
+    const attendanceCache = new Map(); // key: `${dateISO}-${className}-${lessonIndex}` -> boolean
+    const attendanceTakenKeys = new Set(); // loaded per selected date
+    const makeAttendanceKey = (dateISO, className, lessonIndex) => `${dateISO}__${className}__L${lessonIndex}`;
+
+    function isAttendanceTaken(className, lessonIndex, dateObj) {
+      const dateISO = toInputDate(dateObj);
+      const cacheKey = `${dateISO}-${className}-${lessonIndex}`;
+      if (attendanceCache.has(cacheKey)) return attendanceCache.get(cacheKey);
+
+      const taken =
+        attendanceTakenKeys.has(makeAttendanceKey(dateISO, className, lessonIndex)) ||
+        !!GRID?.[className]?.[lessonIndex]?.hasAnyRecord;
+      attendanceCache.set(cacheKey, taken);
+      return taken;
+    }
+
+    // Missed lesson detection
+    function isLessonMissed(className, lessonIndex, dateObj, scheduleExists) {
+      // Check if today in Kuwait
+      const todayISO = kuwaitTodayISO();
+      const dateISO = toInputDate(dateObj);
+      if (dateISO !== todayISO) return false;
+
+      // Check if there's a scheduled lesson
+      if (!scheduleExists) return false;
+
+      const kuwaitNow = getKuwaitTime();
+      const currentMinutes = kuwaitNow.getHours() * 60 + kuwaitNow.getMinutes();
+      const lessonEndMinutes = timeToMinutes(LESSON_TIMES[lessonIndex - 1].end);
+
+      // Only missed if lesson has ended and attendance not taken
+      return currentMinutes > lessonEndMinutes;
+    }
+
+    // Update missed status for all cells
+    function updateMissedStatus() {
+      const todayISO = kuwaitTodayISO();
+      const dateISO = toInputDate(selectedDate);
+
+      for (const className of ALL_CLASSES) {
+        for (let lessonIndex = 1; lessonIndex <= 7; lessonIndex++) {
+          const cell = GRID?.[className]?.[lessonIndex];
+          if (!cell) continue;
+
+          const scheduleExists = scheduleMap?.[className]?.[lessonIndex] && 
+                                (scheduleMap[className][lessonIndex].teacherUid || 
+                                 scheduleMap[className][lessonIndex].teacherName);
+
+          if (dateISO === todayISO && scheduleExists && !cell.hasAnyRecord) {
+            const attendanceTaken = isAttendanceTaken(className, lessonIndex, selectedDate);
+            const isMissed = !attendanceTaken && isLessonMissed(className, lessonIndex, selectedDate, true);
+            cell.missed = isMissed;
+          } else {
+            cell.missed = false;
+          }
+        }
+      }
+
+      renderGrid();
+    }
+
+    // Auto-update missed status every 60 seconds
+    let missedUpdateInterval = null;
+    function startMissedUpdateInterval() {
+      if (missedUpdateInterval) clearInterval(missedUpdateInterval);
+      missedUpdateInterval = setInterval(updateMissedStatus, 60000); // 60 seconds
+    }
+
+    function startOfDay(d){
+      const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+      x.setHours(0,0,0,0);
+      return x;
+    }
+    function endOfDay(d){
+      const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+      x.setHours(23,59,59,999);
+      return x;
+    }
+
+    function getRecTime(r){
+      const t = r.updatedAt || r.createdAt;
+      if (!t) return 0;
+      if (t.toMillis) return t.toMillis();
+      if (t.seconds) return t.seconds * 1000;
+      return 0;
+    }
+
+    const CLASS_OPTIONS_RAW = [
+      "10 / 1", "10 / 2", "10 / 3", "10 / 4", "10 / 5", "10 / 6", "10 / 7",
+      "11 / 1 Ø¹", "11 / 2 Ø¹", "11 / 3 Ø¹", "11 / 4 Ø¹", "11 / 5 Ø¹", "11 / 1 Ø¯",
+      "12 / 1 Ø¹", "12 / 2 Ø¹", "12 / 3 Ø¹", "12 / 4 Ø¹", "12 / 5 Ø¹", "12 / 1 Ø¯"
+    ];
+
+    function sorted(list) {
+      const parse = (s) => {
+        const m = s.match(/^(\d+)\s*\/\s*(\d+)(?:\s*(.*))?$/);
+        return m ? { g: +m[1], s: +m[2], suf: (m[3] || '').trim() } : { g: 999, s: 999, suf: "" };
+      };
+      return [...list].sort((A, B) => {
+        const a = parse(A), b = parse(B);
+        if (a.g !== b.g) return a.g - b.g;
+        if (a.s !== b.s) return a.s - b.s;
+        return a.suf.localeCompare(b.suf, 'ar');
+      });
+    }
+
+    const ALL_CLASSES = sorted(CLASS_OPTIONS_RAW);
+
+    const teacherNameCache = new Map();
+    async function getTeacherName(uid) {
+      if (!uid) return "â€”";
+      if (teacherNameCache.has(uid)) return teacherNameCache.get(uid);
+      try {
+        const s = await getDoc(doc(db, 'teachers', uid));
+        const name = s.exists() ? (s.data().name || uid) : uid;
+        teacherNameCache.set(uid, name);
+        return name;
+      } catch {
+        return uid;
+      }
+    }
+
+    // Student warning level cache
+    const studentWarningCache = new Map();
+
+    async function getStudentWarningLevel(studentId) {
+      if (!studentId) return 0;
+      
+      // Check cache first
+      if (studentWarningCache.has(studentId)) {
+        return studentWarningCache.get(studentId);
+      }
+      
+      try {
+        // Query all attendance records for this student where status is 'absent' and hasReason is not true
+        const attendanceRef = collection(db, 'students', studentId, 'attendance');
+        const q = query(
+          attendanceRef,
+          where('status', '==', 'absent')
+        );
+        
+        const snap = await getDocs(q);
+        let absencesWithoutReasonCount = 0;
+        
+        snap.forEach(doc => {
+          const data = doc.data();
+          // Check if hasReason is not true (either false, undefined, or any other value)
+          if (!data.hasReason || data.hasReason !== true) {
+            absencesWithoutReasonCount++;
+          }
+        });
+        
+        // Calculate warning level
+        let warningLevel = 0;
+        if (absencesWithoutReasonCount >= 15) {
+          warningLevel = 3;
+        } else if (absencesWithoutReasonCount >= 10) {
+          warningLevel = 2;
+        } else if (absencesWithoutReasonCount >= 5) {
+          warningLevel = 1;
+        }
+        
+        // Cache the result
+        studentWarningCache.set(studentId, warningLevel);
+        return warningLevel;
+        
+      } catch (error) {
+        console.error('Error calculating warning level:', error);
+        return 0;
+      }
+    }
+
+    let scheduleMap = Object.create(null);
+    const weekdayFromISO = (iso) => new Date(`${iso}T12:00:00Z`).getUTCDay();
+
+    async function loadScheduleForDate(dateObj){
+      scheduleMap = Object.create(null);
+      const iso = toInputDate(dateObj);
+
+      const qy = query(collection(db, 'schedules'), where('date', '==', iso));
+      let snap;
+      try { snap = await getDocs(qy); }
+      catch { return; }
+
+      snap.forEach(ds => {
+        const x = ds.data() || {};
+        const classKey = (x.classKey || '').toString().trim();
+        const li = Number((x.lesson || '').toString());
+        if (!classKey || !Number.isFinite(li) || li < 1 || li > 7) return;
+        if (!ALL_CLASSES.includes(classKey)) return;
+
+        if (!scheduleMap[classKey]) scheduleMap[classKey] = {};
+        scheduleMap[classKey][li] = {
+          teacherUid: (x.teacherUid || '').toString(),
+          teacherName: (x.teacherName || '').toString(),
+          subject: (x.subject || '').toString()
+        };
+      });
+
+      // Merge enabled weekly custom schedules for this weekday as fallback.
+      // Date-specific rows from 'schedules' always take precedence.
+      const dayIndex = weekdayFromISO(iso);
+      try {
+        const qCustom = query(collection(db, 'customDaySchedules'), where('dayIndex', '==', dayIndex));
+        const customSnap = await getDocs(qCustom);
+        customSnap.forEach(ds => {
+          const x = ds.data() || {};
+          if (x.deletedAt || x.enabled !== true) return;
+
+          const classKey = (x.classKey || '').toString().trim();
+          if (!classKey || !ALL_CLASSES.includes(classKey)) return;
+
+          const lessons = Array.isArray(x.lessons) ? x.lessons : [];
+          if (!scheduleMap[classKey]) scheduleMap[classKey] = {};
+
+          const maxLessons = Math.min(7, Number(x.lessonCount) || lessons.length || 7);
+          for (let li = 1; li <= maxLessons; li++) {
+            if (scheduleMap[classKey][li]) continue;
+            const lesson = lessons[li - 1] || {};
+            scheduleMap[classKey][li] = {
+              teacherUid: (lesson.teacherUid || '').toString(),
+              teacherName: (lesson.teacherName || '').toString(),
+              subject: (lesson.subject || '').toString()
+            };
+          }
+        });
+      } catch (e) {
+        console.error('Error loading custom schedules:', e);
+      }
+    }
+
+    let GRID = Object.create(null);
+    let selectedDate = fromInputDate(kuwaitTodayISO());
+    let morningLatesMap = Object.create(null); // className -> {count, details}
+    let gridLoadRequestId = 0;
+
+    dateLabel.textContent = toArabicDigits(fmtDateLong(selectedDate));
+    mobileDateInput.value = toInputDate(selectedDate);
+
+    function normalizeClassName(value) {
+      const raw = (value || '').toString().replace(/\s+/g, ' ').trim();
+      if (!raw) return '';
+      if (ALL_CLASSES.includes(raw)) return raw;
+
+      const m = raw.match(/^(\d+)\s*\/\s*(\d+)(?:\s*(.*))?$/);
+      if (!m) return '';
+
+      const grade = Number(m[1]);
+      const section = Number(m[2]);
+      const track = (m[3] || '').trim();
+      const normalized = `${grade} / ${section}${track ? ` ${track}` : ''}`;
+      return ALL_CLASSES.includes(normalized) ? normalized : '';
+    }
+
+    function parseLessonIndex(...values) {
+      for (const value of values) {
+        const n = Number(value);
+        if (Number.isFinite(n) && n >= 1 && n <= 7) return Math.trunc(n);
+      }
+      return 0;
+    }
+
+    function splitPathSegments(pathLike) {
+      return (pathLike || '').toString().split('/').filter(Boolean);
+    }
+
+    function ensureCell(className, lessonIndex){
+      if (!GRID[className]) GRID[className] = {};
+      if (!GRID[className][lessonIndex]) {
+        GRID[className][lessonIndex] = {
+          count: 0,
+          students: [], // Will store objects with id, name, and className
+          teacherUids: new Set(),
+          hasAnyRecord: false,
+          missed: false,
+          expectedTeacherUids: new Set(),
+          expectedTeacherNames: new Set(),
+          expectedSubject: ""
+        };
+      }
+      return GRID[className][lessonIndex];
+    }
+
+    async function loadMorningLatesForDate(dateObj) {
+      morningLatesMap = Object.create(null);
+      const dateISO = toInputDate(dateObj);
+      
+      try {
+        const q = query(
+          collection(db, 'morningLates'),
+          where('date', '==', dateISO)
+        );
+        const snapshot = await getDocs(q);
+        
+        snapshot.forEach(docSnap => {
+          const data = docSnap.data();
+          const classKey = data.classKey;
+          
+          if (!ALL_CLASSES.includes(classKey)) return;
+          
+          if (!morningLatesMap[classKey]) {
+            morningLatesMap[classKey] = {
+              count: 0,
+              details: []
+            };
+          }
+          
+          morningLatesMap[classKey].count++;
+          morningLatesMap[classKey].details.push({
+            studentName: data.studentName || 'ØºÙŠØ± Ù…Ø¹Ø±ÙˆÙ',
+            time: data.time || '--:--',
+            minutesLate: data.minutesLate || 0,
+            reason: data.reason || ''
+          });
+        });
+        
+        // Sort details for each class by minutesLate desc, then time, then name
+        for (const className in morningLatesMap) {
+          morningLatesMap[className].details.sort((a, b) => {
+            if (b.minutesLate !== a.minutesLate) return b.minutesLate - a.minutesLate;
+            if (a.time !== b.time) return a.time.localeCompare(b.time);
+            return arabicSort(a.studentName, b.studentName);
+          });
+        }
+      } catch (error) {
+        console.error('Error loading morning lates:', error);
+      }
+    }
+
+    function initGrid(){
+      GRID = Object.create(null);
+      for (const cn of ALL_CLASSES){
+        GRID[cn] = {};
+        for (let i=1;i<=7;i++){
+          GRID[cn][i] = {
+            count: 0,
+            students: [],
+            teacherUids: new Set(),
+            hasAnyRecord: false,
+            missed: false,
+            expectedTeacherUids: new Set(),
+            expectedTeacherNames: new Set(),
+            expectedSubject: ""
+          };
+        }
+      }
+    }
+
+    function renderGrid(){
+      gridBody.innerHTML = '';
+
+      for (const cn of ALL_CLASSES){
+        const tr = document.createElement('tr');
+
+        // Class name cell (Ø§Ù„ØµÙ) - FIRST in HTML = RIGHTMOST visually
+        const tdClass = document.createElement('td');
+        tdClass.className = 'class-col';
+        tdClass.innerHTML = `<div class="class-name">${toArabicDigits(cn)}</div>`;
+        tr.appendChild(tdClass);
+
+        // Morning lates cell (Ø§Ù„ØµØ¨Ø­) - SECOND in HTML = LEFT of Ø§Ù„ØµÙ
+        const tdMorning = document.createElement('td');
+        tdMorning.className = 'morning-col';
+        const morningData = morningLatesMap[cn];
+        if (morningData && morningData.count > 0) {
+          const btn = document.createElement('button');
+          btn.className = 'cell-btn';
+          btn.type = 'button';
+          btn.textContent = toArabicDigits(morningData.count);
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            openMorningLatesModal(cn);
+          });
+          tdMorning.appendChild(btn);
+        } else {
+          const empty = document.createElement('div');
+          empty.className = 'cell-empty';
+          empty.textContent = '';
+          tdMorning.appendChild(empty);
+        }
+        tr.appendChild(tdMorning);
+
+        // Lesson cells (Ø§Ù„Ø­ØµØµ) - Ø¨Ø§Ù‚ÙŠ Ø§Ù„Ø­ØµØµ
+        for (let lesson=1; lesson<=7; lesson++){
+          const td = document.createElement('td');
+          const cell = GRID?.[cn]?.[lesson];
+
+          if (!cell){
+            const empty = document.createElement('div');
+            empty.className = 'cell-empty';
+            empty.textContent = '';
+            td.appendChild(empty);
+            tr.appendChild(td);
+            continue;
+          }
+
+          if (cell.count > 0){
+            const btn = document.createElement('button');
+            btn.className = 'cell-btn';
+            btn.type = 'button';
+            btn.textContent = toArabicDigits(cell.count);
+            btn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              openModalForCell(btn, cn, lesson, 'absent');
+            });
+            td.appendChild(btn);
+          } else if (cell.missed) {
+            const btn = document.createElement('button');
+            btn.className = 'cell-missed';
+            btn.type = 'button';
+            btn.textContent = '!';
+            btn.title = 'Ù„Ù… ÙŠØªÙ… ØªØ³Ø¬ÙŠÙ„ Ø§Ù„ØºÙŠØ§Ø¨ Ù„Ù‡Ø°Ù‡ Ø§Ù„Ø­ØµØ©';
+            btn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              openModalForCell(btn, cn, lesson, 'missed');
+            });
+            
+            // Add missed indicator badge
+            const indicator = document.createElement('div');
+            indicator.className = 'missed-indicator';
+            indicator.textContent = '!';
+            btn.appendChild(indicator);
+            
+            td.appendChild(btn);
+          } else {
+            const empty = document.createElement('div');
+            empty.className = 'cell-empty';
+            empty.textContent = '';
+            td.appendChild(empty);
+          }
+
+          tr.appendChild(td);
+        }
+
+        gridBody.appendChild(tr);
+      }
+    }
+
+    // Modal functions
+    function openModal() {
+      document.body.classList.add('modal-open');
+      modalBackdrop.classList.add('open');
+      lessonModal.classList.add('open');
+    }
+
+    function closeModal() {
+      document.body.classList.remove('modal-open');
+      modalBackdrop.classList.remove('open');
+      lessonModal.classList.remove('open');
+      modalBody.innerHTML = '';
+      modalFooter.innerHTML = '';
+      
+      // Reset to default view
+      const lateView = document.getElementById('lateDetailsView');
+      if (lateView) {
+        lateView.classList.remove('active');
+      }
+      const originalContent = document.getElementById('originalModalContent');
+      if (originalContent) {
+        originalContent.style.display = 'block';
+      }
+    }
+
+    // Confirm modal functions
+    function openConfirmModal() {
+      document.body.classList.add('modal-open');
+      confirmBackdrop.classList.add('open');
+      confirmModal.classList.add('open');
+    }
+
+    function closeConfirmModal() {
+      document.body.classList.remove('modal-open');
+      confirmBackdrop.classList.remove('open');
+      confirmModal.classList.remove('open');
+      confirmAbsentList.innerHTML = '';
+      confirmLateList.innerHTML = '';
+    }
+
+    modalClose.addEventListener('click', closeModal);
+    modalBackdrop.addEventListener('click', closeModal);
+    confirmClose.addEventListener('click', closeConfirmModal);
+    confirmCancelBtn.addEventListener('click', closeConfirmModal);
+    confirmBackdrop.addEventListener('click', closeConfirmModal);
+    
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        if (lessonModal.classList.contains('open')) closeModal();
+        if (confirmModal.classList.contains('open')) closeConfirmModal();
+      }
+    });
+
+    // Prevent modal close when clicking inside modal card
+    lessonModal.addEventListener('click', (e) => {
+      if (e.target === lessonModal) {
+        closeModal();
+      }
+    });
+    confirmModal.addEventListener('click', (e) => {
+      if (e.target === confirmModal) {
+        closeConfirmModal();
+      }
+    });
+
+    // Tab switching for confirm modal
+    tabAbsent.addEventListener('click', () => {
+      tabAbsent.classList.add('active');
+      tabLate.classList.remove('active');
+      tabContentAbsent.classList.add('active');
+      tabContentLate.classList.remove('active');
+    });
+
+    tabLate.addEventListener('click', () => {
+      tabLate.classList.add('active');
+      tabAbsent.classList.remove('active');
+      tabContentLate.classList.add('active');
+      tabContentAbsent.classList.remove('active');
+    });
+
+    async function openMorningLatesModal(className) {
+      const morningData = morningLatesMap[className];
+      if (!morningData || morningData.count === 0) return;
+
+      modalTitle.textContent = `ØªØ£Ø®ÙŠØ± Ø§Ù„ØµØ¨Ø§Ø­ - ${toArabicDigits(className)}`;
+      modalSubtitle.textContent = `Ø§Ù„ØªØ§Ø±ÙŠØ®: ${toArabicDigits(fmtDateLong(selectedDate))}`;
+
+      modalBody.innerHTML = `
+        <div class="section">
+          <div class="sec-title">
+            <span>Ù‚Ø§Ø¦Ù…Ø© Ø§Ù„Ù…ØªØ£Ø®Ø±ÙŠÙ† ØµØ¨Ø§Ø­Ø§Ù‹</span>
+            <span style="font-weight:900; color:var(--red)">${toArabicDigits(morningData.count)} Ø·Ø§Ù„Ø¨</span>
+          </div>
+          <div class="list" id="morningLatesList"></div>
+        </div>
+      `;
+
+      const list = modalBody.querySelector('#morningLatesList');
+      morningData.details.forEach(detail => {
+        const li = document.createElement('li');
+        li.className = 'li';
+        li.innerHTML = `
+          <div class="name">${detail.studentName}</div>
+          <div class="meta">
+            ${detail.time} | ØªØ£Ø®Ø± ${toArabicDigits(detail.minutesLate)} Ø¯Ù‚ÙŠÙ‚Ø©
+            ${detail.reason ? `<br><small>Ø³Ø¨Ø¨: ${detail.reason}</small>` : ''}
+          </div>
+        `;
+        list.appendChild(li);
+      });
+
+      modalFooter.innerHTML = '';
+      openModal();
+    }
+
+    async function openModalForCell(anchorEl, className, lessonIndex, mode) {
+      const cell = GRID?.[className]?.[lessonIndex];
+      if (!cell) return;
+
+      const niceClass = toArabicDigits(className);
+      const niceLesson = toArabicDigits(lessonIndex);
+      const niceDate = toArabicDigits(fmtDateLong(selectedDate));
+
+      // Clear previous content
+      modalBody.innerHTML = '';
+      modalFooter.innerHTML = '';
+
+      // Store current cell info for late details
+      const currentCellInfo = { className, lessonIndex, cell };
+
+      if (mode === 'missed') {
+        modalTitle.textContent = `${niceClass} â€¢ Ø§Ù„Ø­ØµØ© ${niceLesson}`;
+        modalSubtitle.textContent = `Ø§Ù„ØªØ§Ø±ÙŠØ®: ${niceDate}`;
+
+        const expectedNames = [...cell.expectedTeacherNames].filter(Boolean);
+        const expectedSubjects = (cell.expectedSubject || '').trim();
+
+        modalBody.innerHTML = `
+          <div id="originalModalContent">
+            <div class="alert">
+              <span class="dot"></span>
+              <span>ØªÙ†Ø¨ÙŠÙ‡: Ù„Ù… ÙŠØªÙ… ØªØ³Ø¬ÙŠÙ„ Ø§Ù„ØºÙŠØ§Ø¨ Ù„Ù‡Ø°Ù‡ Ø§Ù„Ø­ØµØ©</span>
+            </div>
+
+            <div class="section">
+              <div class="sec-title">
+                <span>Ø§Ù„Ù…Ø¹Ù„Ù‘Ù… Ø§Ù„Ù…ÙƒÙ„Ù‘Ù</span>
+                <span class="muted" style="font-weight:900">${expectedNames.length ? toArabicDigits(expectedNames.length) : 'â€”'}</span>
+              </div>
+              <div class="chips" id="teacherChips"></div>
+            </div>
+
+            <div class="section">
+              <div class="sec-title">
+                <span>Ø§Ù„Ù…Ø§Ø¯Ø©</span>
+                <span class="muted" style="font-weight:900">${expectedSubjects ? 'Ù…ÙˆØ¬ÙˆØ¯' : 'ØºÙŠØ± Ù…Ø­Ø¯Ø¯Ø©'}</span>
+              </div>
+              <div class="chips" id="subjectChips"></div>
+            </div>
+          </div>
+
+          <div class="late-details-view" id="lateDetailsView">
+            <button class="back-button" id="backFromLateDetails">
+              <i class="fas fa-arrow-right"></i>
+              Ø§Ù„Ø¹ÙˆØ¯Ø©
+            </button>
+            <div class="late-header">
+              <h4>ØªÙØ§ØµÙŠÙ„ Ø§Ù„Ù…ØªØ£Ø®Ø±ÙŠÙ†</h4>
+              <span class="muted">Ø§Ù„Ø­ØµØ© ${niceLesson}</span>
+            </div>
+            
+            <div class="late-info-grid">
+              <div class="info-item">
+                <div class="label">Ø§Ù„Ø­ØµØ©</div>
+                <div class="value">${niceLesson}</div>
+              </div>
+              <div class="info-item">
+                <div class="label">Ø§Ù„ÙˆÙ‚Øª</div>
+                <div class="value">${LESSON_TIMES[lessonIndex-1].start} - ${LESSON_TIMES[lessonIndex-1].end}</div>
+              </div>
+              <div class="info-item">
+                <div class="label">Ø§Ù„ØªØ§Ø±ÙŠØ®</div>
+                <div class="value">${niceDate}</div>
+              </div>
+              <div class="info-item">
+                <div class="label">Ø§Ù„ÙˆÙ‚Øª Ø§Ù„Ø­Ø§Ù„ÙŠ</div>
+                <div class="value" id="currentKuwaitTime">--:--</div>
+              </div>
+            </div>
+            
+            <div class="late-status" id="lateStatusContainer">
+              <div class="status-text" id="lateStatusText">Ø¬Ø§Ø±ÙŠ Ø§Ù„ØªØ­Ù…ÙŠÙ„...</div>
+              <div class="status-desc" id="lateStatusDesc"></div>
+            </div>
+            
+            <div class="section">
+              <div class="sec-title">
+                <span>Ø§Ù„ØªÙØ§ØµÙŠÙ„</span>
+              </div>
+              <div id="lateDetailsContent"></div>
+            </div>
+          </div>
+        `;
+
+        const teacherWrap = modalBody.querySelector('#teacherChips');
+        teacherWrap.innerHTML = '';
+        if (!expectedNames.length) {
+          teacherWrap.innerHTML = `<span class="chip">ØºÙŠØ± Ù…Ø­Ø¯Ø¯</span>`;
+        } else {
+          expectedNames.forEach(n => {
+            const chip = document.createElement('span');
+            chip.className = 'chip';
+            chip.textContent = n;
+            teacherWrap.appendChild(chip);
+          });
+        }
+
+        const subjWrap = modalBody.querySelector('#subjectChips');
+        subjWrap.innerHTML = '';
+        if (!expectedSubjects) {
+          subjWrap.innerHTML = `<span class="chip">ØºÙŠØ± Ù…Ø­Ø¯Ø¯Ø©</span>`;
+        } else {
+          const chip = document.createElement('span');
+          chip.className = 'chip';
+          chip.textContent = expectedSubjects;
+          subjWrap.appendChild(chip);
+        }
+
+        // Add Late Details button
+        const todayISO = kuwaitTodayISO();
+        const dateISO = toInputDate(selectedDate);
+        const isToday = dateISO === todayISO;
+        const scheduleExists = scheduleMap?.[className]?.[lessonIndex] && 
+                              (scheduleMap[className][lessonIndex].teacherUid || 
+                               scheduleMap[className][lessonIndex].teacherName);
+
+        if (isToday && scheduleExists) {
+          const lateBtn = document.createElement('button');
+          lateBtn.className = `modal-btn ${cell.missed ? 'warning' : ''}`;
+          lateBtn.id = 'lateDetailsBtn';
+          lateBtn.innerHTML = '<i class="fas fa-user-clock"></i> Ø¹Ø±Ø¶ Ø§Ù„Ù…ØªØ£Ø®Ø±ÙŠÙ†';
+          
+          // Check if lesson is currently running or in future
+          const kuwaitNow = getKuwaitTime();
+          const currentMinutes = kuwaitNow.getHours() * 60 + kuwaitNow.getMinutes();
+          const lessonStartMinutes = timeToMinutes(LESSON_TIMES[lessonIndex - 1].start);
+          const lessonEndMinutes = timeToMinutes(LESSON_TIMES[lessonIndex - 1].end);
+          
+          if (currentMinutes < lessonEndMinutes) {
+            lateBtn.disabled = true;
+            lateBtn.title = 'Ù…ØªØ§Ø­ Ø¨Ø¹Ø¯ Ø§Ù†ØªÙ‡Ø§Ø¡ Ø§Ù„Ø­ØµØ©';
+          }
+          
+          lateBtn.addEventListener('click', () => {
+            showLateDetailsView(currentCellInfo);
+          });
+          
+          modalFooter.appendChild(lateBtn);
+        }
+
+      } else {
+        if (cell.count <= 0) return;
+
+        modalTitle.textContent = `${niceClass} â€¢ Ø§Ù„Ø­ØµØ© ${niceLesson}`;
+        modalSubtitle.textContent = `Ø§Ù„ØªØ§Ø±ÙŠØ®: ${niceDate}`;
+
+        modalBody.innerHTML = `
+          <div id="originalModalContent">
+            <div class="section">
+              <div class="sec-title">
+                <span>Ø§Ù„Ù…Ø¹Ù„Ù‘Ù…</span>
+                <span style="font-weight:900; color:var(--red)">${toArabicDigits(cell.count)} Ø·Ø§Ù„Ø¨</span>
+              </div>
+              <div class="chips" id="teacherChips">
+                <span class="chip">Ø¬Ø§Ø±ÙŠ Ø§Ù„ØªØ­Ù…ÙŠÙ„â€¦</span>
+              </div>
+            </div>
+
+            <div class="section">
+              <div class="sec-title">
+                <span>Ø£Ø³Ù…Ø§Ø¡ Ø§Ù„ØºÙŠØ§Ø¨</span>
+                <span class="muted" style="font-weight:900">${toArabicDigits(cell.students.length)} Ø§Ø³Ù…</span>
+              </div>
+              <div class="list" id="studentsList"></div>
+            </div>
+          </div>
+        `;
+
+        const stWrap = modalBody.querySelector('#studentsList');
+        
+        // Sort students by name
+        const students = [...cell.students].sort((a,b) => arabicSort(a.name, b.name));
+        
+        // Create student rows and fetch warning levels
+        for (const student of students){
+          const row = document.createElement('div');
+          row.className = 'li';
+          row.dataset.studentId = student.id;
+          row.dataset.studentClass = student.className || className;
+          row.innerHTML = `
+            <div class="name">${student.name}</div>
+            <div class="meta">ØºØ§Ø¦Ø¨</div>
+          `;
+          
+          // Add click event for redirect
+          row.addEventListener('click', () => {
+            const studentId = row.dataset.studentId;
+            const studentClass = row.dataset.studentClass || "";
+            window.location.href = `students.html?studentId=${encodeURIComponent(studentId)}&class=${encodeURIComponent(studentClass)}`;
+          });
+          
+          stWrap.appendChild(row);
+          
+          // Fetch and apply warning level asynchronously
+          getStudentWarningLevel(student.id).then(warningLevel => {
+            row.classList.add(`warning-${warningLevel}`);
+          }).catch(() => {
+            row.classList.add('warning-0');
+          });
+        }
+
+        const teacherWrap = modalBody.querySelector('#teacherChips');
+        teacherWrap.innerHTML = '';
+        const uids = [...cell.teacherUids].filter(Boolean);
+        if (uids.length === 0){
+          teacherWrap.innerHTML = `<span class="chip">ØºÙŠØ± Ù…Ø­Ø¯Ø¯</span>`;
+        } else {
+          const tnames = await Promise.all(uids.map(uid => getTeacherName(uid)));
+          const uniq = [...new Set(tnames.filter(Boolean))];
+          uniq.forEach(n => {
+            const chip = document.createElement('span');
+            chip.className = 'chip';
+            chip.textContent = n;
+            teacherWrap.appendChild(chip);
+          });
+        }
+      }
+
+      openModal();
+    }
+
+    function showLateDetailsView(cellInfo) {
+      const { className, lessonIndex, cell } = cellInfo;
+      
+      // Hide original content
+      const originalContent = document.getElementById('originalModalContent');
+      if (originalContent) {
+        originalContent.style.display = 'none';
+      }
+      
+      // Show late details view
+      const lateView = document.getElementById('lateDetailsView');
+      if (lateView) {
+        lateView.classList.add('active');
+      }
+      
+      // Update current Kuwait time
+      const updateTime = () => {
+        const kuwaitNow = getKuwaitTime();
+        const hours = String(kuwaitNow.getHours()).padStart(2, '0');
+        const minutes = String(kuwaitNow.getMinutes()).padStart(2, '0');
+        const timeElement = document.getElementById('currentKuwaitTime');
+        if (timeElement) {
+          timeElement.textContent = `${hours}:${minutes}`;
+        }
+      };
+      
+      updateTime();
+      const timeInterval = setInterval(updateTime, 30000); // Update every 30 seconds
+      
+      // Update status
+      const todayISO = kuwaitTodayISO();
+      const dateISO = toInputDate(selectedDate);
+      const isToday = dateISO === todayISO;
+      
+      const kuwaitNow = getKuwaitTime();
+      const currentMinutes = kuwaitNow.getHours() * 60 + kuwaitNow.getMinutes();
+      const lessonStartMinutes = timeToMinutes(LESSON_TIMES[lessonIndex - 1].start);
+      const lessonEndMinutes = timeToMinutes(LESSON_TIMES[lessonIndex - 1].end);
+      
+      const statusContainer = document.getElementById('lateStatusContainer');
+      const statusText = document.getElementById('lateStatusText');
+      const statusDesc = document.getElementById('lateStatusDesc');
+      const detailsContent = document.getElementById('lateDetailsContent');
+      
+      if (!isToday) {
+        statusText.textContent = 'ØºÙŠØ± Ù…ØªØ§Ø­';
+        statusDesc.textContent = 'ØªÙØ§ØµÙŠÙ„ Ø§Ù„Ù…ØªØ£Ø®Ø±ÙŠÙ† Ù…ØªØ§Ø­Ø© ÙÙ‚Ø· Ù„ÙŠÙˆÙ… Ø§Ù„ÙŠÙˆÙ…';
+        statusContainer.classList.remove('green');
+        detailsContent.innerHTML = '<p class="muted">Ù‡Ø°Ù‡ Ø§Ù„Ù…ÙŠØ²Ø© ØªØ¹Ù…Ù„ ÙÙ‚Ø· Ù„Ù„ÙŠÙˆÙ… Ø§Ù„Ø­Ø§Ù„ÙŠ.</p>';
+      } else if (currentMinutes < lessonStartMinutes) {
+        statusText.textContent = 'Ø§Ù„Ø­ØµØ© Ù„Ù… ØªØ¨Ø¯Ø£ Ø¨Ø¹Ø¯';
+        statusDesc.textContent = `Ø³ØªØ¨Ø¯Ø£ Ø§Ù„Ø­ØµØ© Ø§Ù„Ø³Ø§Ø¹Ø© ${LESSON_TIMES[lessonIndex-1].start}`;
+        statusContainer.classList.add('green');
+        detailsContent.innerHTML = '<p class="muted">ÙŠÙ…ÙƒÙ†Ùƒ Ø¹Ø±Ø¶ ØªÙØ§ØµÙŠÙ„ Ø§Ù„Ù…ØªØ£Ø®Ø±ÙŠÙ† Ø¨Ø¹Ø¯ Ø§Ù†ØªÙ‡Ø§Ø¡ Ø§Ù„Ø­ØµØ©.</p>';
+      } else if (currentMinutes >= lessonStartMinutes && currentMinutes <= lessonEndMinutes) {
+        statusText.textContent = 'Ø§Ù„Ø­ØµØ© Ù‚ÙŠØ¯ Ø§Ù„ØªÙ†ÙÙŠØ°';
+        statusDesc.textContent = `Ø³ØªÙ†ØªÙ‡ÙŠ Ø§Ù„Ø­ØµØ© Ø§Ù„Ø³Ø§Ø¹Ø© ${LESSON_TIMES[lessonIndex-1].end}`;
+        statusContainer.classList.add('green');
+        detailsContent.innerHTML = '<p class="muted">ÙŠÙ…ÙƒÙ†Ùƒ Ø¹Ø±Ø¶ ØªÙØ§ØµÙŠÙ„ Ø§Ù„Ù…ØªØ£Ø®Ø±ÙŠÙ† Ø¨Ø¹Ø¯ Ø§Ù†ØªÙ‡Ø§Ø¡ Ø§Ù„Ø­ØµØ©.</p>';
+      } else if (cell.missed) {
+        const minutesLate = currentMinutes - lessonEndMinutes;
+        statusText.textContent = 'Ù…ØªØ£Ø®Ø± Ø¹Ù† ØªØ³Ø¬ÙŠÙ„ Ø§Ù„ØºÙŠØ§Ø¨';
+        statusDesc.textContent = `Ø§Ù†ØªÙ‡Øª Ø§Ù„Ø­ØµØ© Ù…Ù†Ø° ${minutesLate} Ø¯Ù‚ÙŠÙ‚Ø©`;
+        statusContainer.classList.remove('green');
+        detailsContent.innerHTML = `
+          <p><strong>Ù…Ù„Ø§Ø­Ø¸Ø©:</strong> Ø§Ù†ØªÙ‡Ù‰ ÙˆÙ‚Øª Ø§Ù„Ø­ØµØ© ÙˆÙ„Ù… ÙŠØªÙ… ØªØ³Ø¬ÙŠÙ„ Ø§Ù„ØºÙŠØ§Ø¨ Ø¨Ø¹Ø¯.</p>
+          <p class="muted" style="margin-top: 8px;">ÙŠØ±Ø¬Ù‰ ØªØ³Ø¬ÙŠÙ„ Ø§Ù„ØºÙŠØ§Ø¨ ÙÙŠ Ø£Ø³Ø±Ø¹ ÙˆÙ‚Øª Ù…Ù…ÙƒÙ†.</p>
+        `;
+      } else {
+        statusText.textContent = 'Ù„Ù… ÙŠØªØ£Ø®Ø±';
+        statusDesc.textContent = 'ØªÙ… ØªØ³Ø¬ÙŠÙ„ Ø§Ù„ØºÙŠØ§Ø¨ ÙÙŠ Ø§Ù„ÙˆÙ‚Øª Ø§Ù„Ù…Ø­Ø¯Ø¯';
+        statusContainer.classList.add('green');
+        detailsContent.innerHTML = '<p class="muted">ØªÙ… ØªØ³Ø¬ÙŠÙ„ Ø§Ù„ØºÙŠØ§Ø¨ Ù„Ù‡Ø°Ù‡ Ø§Ù„Ø­ØµØ© Ø¨Ù†Ø¬Ø§Ø­.</p>';
+      }
+      
+      // Setup back button
+      const backBtn = document.getElementById('backFromLateDetails');
+      if (backBtn) {
+        backBtn.addEventListener('click', () => {
+          if (lateView) lateView.classList.remove('active');
+          if (originalContent) originalContent.style.display = 'block';
+          clearInterval(timeInterval);
+        });
+      }
+      
+      // Clear interval when modal closes
+      const modalCloseHandler = () => {
+        clearInterval(timeInterval);
+        lessonModal.removeEventListener('close', modalCloseHandler);
+      };
+      lessonModal.addEventListener('close', modalCloseHandler);
+    }
+
+    // Performance safety: limit concurrency so it does not open hundreds of parallel queries
+    async function promisePool(items, worker, concurrency = 18){
+      const results = [];
+      let i = 0;
+      const runners = new Array(Math.min(concurrency, items.length)).fill(0).map(async () => {
+        while (i < items.length){
+          const idx = i++;
+          try { results[idx] = await worker(items[idx], idx); }
+          catch { results[idx] = undefined; }
+        }
+      });
+      await Promise.all(runners);
+      return results;
+    }
+
+    async function loadGridForDate(dateObj, requestId = gridLoadRequestId){
+      const isStale = () => requestId !== gridLoadRequestId;
+      const dateISO = toInputDate(dateObj);
+
+      initGrid();
+      attendanceCache.clear();
+      attendanceTakenKeys.clear();
+
+      dateLabel.textContent = toArabicDigits(fmtDateLong(dateObj));
+      mobileDateInput.value = dateISO;
+
+      await Promise.all([
+        loadScheduleForDate(dateObj),
+        loadMorningLatesForDate(dateObj)
+      ]);
+      if (isStale()) return false;
+
+      const startTs = Timestamp.fromDate(startOfDay(dateObj));
+      const endTs = Timestamp.fromDate(endOfDay(dateObj));
+      const studentsSnap = await getDocs(collection(db, 'students'));
+      if (isStale()) return false;
+
+      const studentsById = new Map();
+      studentsSnap.forEach((docSnap) => {
+        const data = docSnap.data() || {};
+        const className = normalizeClassName(data.class || data.className || '');
+        studentsById.set(docSnap.id, {
+          id: docSnap.id,
+          name: (data.name || '—').toString(),
+          className
+        });
+      });
+
+      const absentSeenByCell = new Map(); // `${className}__L${lessonIndex}` => Set(studentKey)
+      const getAbsentSet = (className, lessonIndex) => {
+        const k = `${className}__L${lessonIndex}`;
+        if (!absentSeenByCell.has(k)) absentSeenByCell.set(k, new Set());
+        return absentSeenByCell.get(k);
+      };
+
+      const markAttendanceTaken = (className, lessonIndex) => {
+        if (!className || !GRID[className]) return null;
+        if (lessonIndex < 1 || lessonIndex > 7) return null;
+        attendanceTakenKeys.add(makeAttendanceKey(dateISO, className, lessonIndex));
+        const cell = ensureCell(className, lessonIndex);
+        cell.hasAnyRecord = true;
+        return cell;
+      };
+
+      const addAbsentStudentToCell = (className, lessonIndex, student, teacherUid = null) => {
+        const cell = markAttendanceTaken(className, lessonIndex);
+        if (!cell) return;
+        if (teacherUid) cell.teacherUids.add(teacherUid);
+
+        const sid = (student?.id || '').toString().trim();
+        const name = (student?.name || '—').toString();
+        const dedupeKey = sid ? `id:${sid}` : `name:${name}`;
+        const seen = getAbsentSet(className, lessonIndex);
+        if (seen.has(dedupeKey)) return;
+        seen.add(dedupeKey);
+
+        cell.count += 1;
+        cell.students.push({
+          id: sid,
+          name,
+          className: student?.className || className
+        });
+      };
+
+      // Legacy top-level attendance sessions
+      try {
+        const legacySessions = await getDocs(
+          query(collection(db, 'attendance'), where('date', '==', dateISO))
+        );
+        legacySessions.forEach((docSnap) => {
+          const r = docSnap.data() || {};
+          const className = normalizeClassName(r.class || r.classKey || '');
+          const lessonIndex = parseLessonIndex(r.lessonIndex, r.lesson);
+          if (!className || !lessonIndex) return;
+
+          const teacherUid = (r.createdBy || r.teacherUid || r.updatedBy || '').toString().trim() || null;
+          const cell = markAttendanceTaken(className, lessonIndex);
+          if (!cell) return;
+          if (teacherUid) cell.teacherUids.add(teacherUid);
+
+          const absentList = Array.isArray(r.absent) ? r.absent : [];
+          absentList.forEach((raw) => {
+            const rawId = (raw || '').toString().trim();
+            if (!rawId) return;
+            const linked = studentsById.get(rawId);
+            addAbsentStudentToCell(className, lessonIndex, {
+              id: rawId,
+              name: linked?.name || rawId,
+              className: linked?.className || className
+            }, teacherUid);
+          });
+        });
+      } catch (error) {
+        console.error('Error loading legacy attendance sessions:', error);
+      }
+      if (isStale()) return false;
+
+      // New attendanceSessions + attendanceRecords structure
+      try {
+        const sessionsSnap = await getDocs(
+          query(collection(db, 'attendanceSessions'), where('date', '==', dateISO))
+        );
+
+        const sessions = [];
+        sessionsSnap.forEach((docSnap) => sessions.push({ id: docSnap.id, data: docSnap.data() || {} }));
+
+        await promisePool(sessions, async (session) => {
+          if (isStale()) return;
+          const data = session.data || {};
+          const className = normalizeClassName(data.classKey || data.class || '');
+          const lessonIndex = parseLessonIndex(data.lesson, data.lessonIndex);
+          if (!className || !lessonIndex) return;
+
+          const teacherUid = (data.teacherUid || data.createdBy || data.updatedBy || '').toString().trim() || null;
+          const cell = markAttendanceTaken(className, lessonIndex);
+          if (!cell) return;
+          if (teacherUid) cell.teacherUids.add(teacherUid);
+
+          let recordsSnap;
+          try {
+            recordsSnap = await getDocs(collection(db, 'attendanceSessions', session.id, 'attendanceRecords'));
+          } catch {
+            return;
+          }
+          if (isStale()) return;
+
+          recordsSnap.forEach((recordSnap) => {
+            const rec = recordSnap.data() || {};
+            if ((rec.status || '').toString() !== 'absent') return;
+
+            const uid = (recordSnap.id || rec.uid || '').toString().trim();
+            const linked = uid ? studentsById.get(uid) : null;
+            const name = (linked?.name || rec.studentName || uid || '—').toString();
+            const recTeacherUid = (rec.updatedBy || rec.createdBy || teacherUid || '').toString().trim() || null;
+            addAbsentStudentToCell(className, lessonIndex, {
+              id: uid,
+              name,
+              className: linked?.className || className
+            }, recTeacherUid);
+          });
+        }, 10);
+      } catch (error) {
+        console.error('Error loading attendance sessions:', error);
+      }
+      if (isStale()) return false;
+
+      const applyLegacyStudentRecord = (docSnap) => {
+        const parts = splitPathSegments(docSnap.ref?.path);
+        if (parts.length < 4) return;
+        if (parts[0] !== 'students' || parts[2] !== 'attendance') return;
+
+        const studentId = parts[1];
+        const rec = docSnap.data() || {};
+        const linked = studentsById.get(studentId);
+        const className = normalizeClassName(rec.class || rec.classKey || linked?.className || '');
+        const lessonIndex = parseLessonIndex(rec.lessonIndex, rec.lesson);
+        if (!className || !lessonIndex) return;
+
+        const teacherUid = (rec.updatedBy || rec.createdBy || '').toString().trim() || null;
+        const cell = markAttendanceTaken(className, lessonIndex);
+        if (!cell) return;
+        if (teacherUid) cell.teacherUids.add(teacherUid);
+
+        if ((rec.status || '').toString() !== 'absent') return;
+        addAbsentStudentToCell(className, lessonIndex, {
+          id: studentId,
+          name: (linked?.name || rec.studentName || studentId || '—').toString(),
+          className: linked?.className || className
+        }, teacherUid);
+      };
+
+      // Legacy student attendance records (date field)
+      try {
+        const legacyByDateSnap = await getDocs(
+          query(collectionGroup(db, 'attendance'), where('date', '==', dateISO))
+        );
+        legacyByDateSnap.forEach(applyLegacyStudentRecord);
+      } catch (error) {
+        console.error('Error loading legacy attendance by date:', error);
+      }
+      if (isStale()) return false;
+
+      // Legacy fallback for records that only have createdAt
+      try {
+        const legacyByCreatedAtSnap = await getDocs(
+          query(
+            collectionGroup(db, 'attendance'),
+            where('createdAt', '>=', startTs),
+            where('createdAt', '<=', endTs)
+          )
+        );
+        legacyByCreatedAtSnap.forEach(applyLegacyStudentRecord);
+      } catch (error) {
+        console.error('Error loading legacy attendance by createdAt:', error);
+      }
+      if (isStale()) return false;
+
+      // Mark expected scheduled lessons and resolve teacher names.
+      const pendingTeacherNames = [];
+      for (const cn of ALL_CLASSES){
+        for (let li = 1; li <= 7; li++){
+          const sch = scheduleMap?.[cn]?.[li];
+          const cell = ensureCell(cn, li);
+          if (!sch || !(sch.teacherUid || sch.teacherName || sch.subject)) continue;
+
+          cell.expectedSubject = sch.subject || "";
+          if (sch.teacherUid) cell.expectedTeacherUids.add(sch.teacherUid);
+
+          if (sch.teacherName) {
+            cell.expectedTeacherNames.add(sch.teacherName);
+          } else if (sch.teacherUid) {
+            pendingTeacherNames.push({ cell, teacherUid: sch.teacherUid });
+          }
+        }
+      }
+
+      await promisePool(pendingTeacherNames, async ({ cell, teacherUid }) => {
+        const nm = await getTeacherName(teacherUid);
+        if (nm) cell.expectedTeacherNames.add(nm);
+      }, 10);
+      if (isStale()) return false;
+
+      updateMissedStatus();
+      startMissedUpdateInterval();
+      requestAnimationFrame(syncHeaderH);
+      return true;
+    }
+
+    function setGridLoadingState(isLoading) {
+      refreshBtn.disabled = isLoading;
+      dateBtn.disabled = isLoading;
+    }
+
+    async function requestGridLoad(dateObj) {
+      const d = new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate());
+      selectedDate = d;
+      closeModal();
+      closePopover();
+
+      const requestId = ++gridLoadRequestId;
+      setGridLoadingState(true);
+      show(sLoading);
+
+      try {
+        const loaded = await loadGridForDate(d, requestId);
+        if (requestId !== gridLoadRequestId) return;
+        if (loaded) show(sOk);
+      } catch (e) {
+        if (requestId !== gridLoadRequestId) return;
+        console.error(e);
+        gridBody.innerHTML = '';
+        show(sDenied);
+      } finally {
+        if (requestId === gridLoadRequestId) {
+          setGridLoadingState(false);
+        }
+      }
+    }
+
+    async function applySelectedDateValue(isoValue) {
+      if (!isoValue) return;
+      const d = fromInputDate(isoValue);
+      if (Number.isNaN(d.getTime())) return;
+      await requestGridLoad(d);
+    }
+
+    // Date picker open handling
+    dateBtn.addEventListener('click', () => {
+      if (dateBtn.disabled) return;
+
+      // Try showPicker when available (modern browsers)
+      try {
+        if (typeof mobileDateInput.showPicker === 'function') {
+          mobileDateInput.showPicker();
+          return;
+        }
+      } catch {}
+
+      // Fallback: focus + click (works in many mobiles)
+      mobileDateInput.focus({ preventScroll: true });
+      mobileDateInput.click();
+    });
+
+    mobileDateInput.addEventListener('change', async () => {
+      if (!mobileDateInput.value) return;
+      await applySelectedDateValue(mobileDateInput.value);
+    });
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) { show(sNotLog); return; }
+
+      try {
+        const tRef = doc(db, 'teachers', user.uid);
+        const snap = await getDoc(tRef);
+        const data = snap.exists() ? snap.data() : {};
+
+        if ((data?.role || '').toString().toLowerCase() !== 'admin') {
+          show(sDenied);
+          return;
+        }
+
+        await requestGridLoad(fromInputDate(kuwaitTodayISO()));
+      } catch (e) {
+        console.error(e);
+        show(sDenied);
+      }
+    });
+
+    refreshBtn.addEventListener('click', async () => {
+      await requestGridLoad(selectedDate);
+    });
+
+    // FIX: Close popover only if click is outside popover (and not inside)
+    document.addEventListener('click', (e) => {
+      if (!popover.classList.contains('open')) return;
+      if (popover.contains(e.target)) return;
+      closePopover();
+    });
+
+    window.addEventListener('resize', () => {
+      if (sOk.classList.contains('active')) syncHeaderH();
+    });
+
+    window.addEventListener('load', () => {
+      syncHeaderH();
+      // One more sync after fonts render
+      setTimeout(syncHeaderH, 250);
+    });
+
+    // Existing popover functions (kept for compatibility)
+    function closePopover(){
+      popBackdrop.classList.remove('open');
+      popBackdrop.setAttribute('aria-hidden', 'true');
+      popover.classList.remove('open');
+      popover.setAttribute('aria-hidden', 'true');
+    }
+
+    popBackdrop.addEventListener('click', closePopover);
+    popClose.addEventListener('click', closePopover);
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && popover.classList.contains('open')) closePopover();
+    });
+
+    popover.addEventListener('click', (e) => e.stopPropagation());
+
+    async function openPopoverForCell(anchorEl, className, lessonIndex, mode){
+      // Redirect to modal for consistency
+      openModalForCell(anchorEl, className, lessonIndex, mode);
+    }
+  </script>
+
+  <script src="/shared/hub-title-link.js" defer></script>
+<script src="/name-glow.js" defer></script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+

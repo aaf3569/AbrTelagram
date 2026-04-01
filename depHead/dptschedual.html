@@ -1,0 +1,1190 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.gstatic.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; manifest-src 'self'; upgrade-insecure-requests; block-all-mixed-content">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  <title>جدول المعلّمين - ثانوية أحمد البشر الرومي</title>
+
+  <!-- Noto Kufi Arabic -->
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+
+  <link rel="stylesheet" href="/shared/base.css" />
+  <style>
+    :root{
+      --primary:#033C54;
+      --primary-2:#065372;
+
+      --page:#f6f8fb;
+      --text:#0f172a;
+      --muted:#6b7f9f;
+
+      --border:#e6edf7;
+      --shadow-1:0 8px 22px rgba(3,60,84,.10);
+      --shadow-2:0 18px 44px rgba(2,6,23,.14);
+
+      --radius:14px;
+      --radius-lg:18px;
+      --focus:#79b3c8;
+
+      --green:#10b981;
+      --yellow:#f59e0b;
+      --red:#ef4444;
+
+      --greenBg: rgba(16,185,129,.10);
+      --yellowBg: rgba(245,158,11,.10);
+      --redBg: rgba(239,68,68,.10);
+
+      --chip:#f1f5f9;
+
+      /* Header offset for sticky table head */
+      --headerH: 122px;
+    }
+
+    *{ box-sizing:border-box; margin:0; padding:0 }
+    html,body{ height:100% }
+
+    body{
+      margin:0;
+      background:
+        radial-gradient(1200px 600px at 80% -20%, rgba(3,60,84,.08), transparent 60%),
+        radial-gradient(900px 500px at -10% 120%, rgba(3,60,84,.06), transparent 60%),
+        var(--page);
+      color:var(--text);
+      font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      display:flex; flex-direction:column; min-height:100vh;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    @media (prefers-reduced-motion: reduce){
+      *{ animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.001ms !important; scroll-behavior:auto !important; }
+    }
+
+    /* Header */
+    .site-header{
+      position:sticky; top:0; z-index:30;
+      background: rgba(255,255,255,.86);
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      padding:14px 14px 12px;
+      border-bottom:1px solid rgba(3,60,84,.10);
+      box-shadow: 0 2px 10px rgba(3,60,84,.06);
+    }
+
+    .header-inner{
+      width:min(100%, 1200px);
+      margin:0 auto;
+      display:grid;
+      grid-template-columns: 44px 1fr 44px;
+      align-items:center;
+      gap:10px;
+    }
+
+    .header-center{
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap:2px;
+      text-align:center;
+      padding:2px 0;
+    }
+
+    .site-title{
+      margin:0;
+      font-weight:900;
+      letter-spacing:.2px;
+      font-size: clamp(1.05rem, 2.8vw, 1.5rem);
+      color: var(--primary);
+      line-height:1.25;
+    }
+
+    .icon-btn{
+      width:44px; height:44px;
+      border-radius:14px;
+      border:1px solid rgba(3,60,84,.12);
+      background:#fff;
+      color:var(--primary);
+      display:flex; align-items:center; justify-content:center;
+      cursor:pointer;
+      transition: transform .12s ease, box-shadow .12s ease, background .12s ease, border-color .12s ease;
+      box-shadow: var(--shadow-1);
+    }
+    .icon-btn:hover{ transform:translateY(-1px); box-shadow: var(--shadow-2); border-color: rgba(3,60,84,.22) }
+    .icon-btn:active{ transform:translateY(0) scale(.99) }
+    .icon-btn:focus-visible{ outline:3px solid var(--focus); outline-offset:2px }
+
+    /* Date selector chip (clickable) */
+    .date-chip{
+      margin-top:10px;
+      width:min(100%, 1200px);
+      margin-inline:auto;
+      display:flex;
+      justify-content:center;
+      position:relative;
+    }
+    .date-btn{
+      border:none;
+      cursor:pointer;
+      font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      font-weight:900;
+      font-size:.95rem;
+      color:var(--primary);
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      padding:10px 14px;
+      border-radius:999px;
+      background: #fff;
+      border:1px solid var(--border);
+      box-shadow: var(--shadow-1);
+      transition: transform .12s ease, box-shadow .12s ease, background .12s ease, border-color .12s ease;
+      max-width: 95%;
+      position:relative;
+    }
+    .date-btn:hover{ transform: translateY(-1px); box-shadow: var(--shadow-2); border-color: rgba(3,60,84,.22) }
+    .date-btn:active{ transform: translateY(0) scale(.99) }
+    .date-btn:focus-visible{ outline:3px solid var(--focus); outline-offset:2px }
+    .date-btn span{ font-weight:900 }
+    .date-btn small{ color:var(--muted); font-weight:900; font-size:.82rem }
+
+    /*
+      FIX: Mobile date input must be allowed to receive events for some browsers to open the picker.
+      Keep it invisible, but do NOT block pointer-events.
+    */
+    .date-input-wrapper{
+      position:absolute;
+      inset:0;
+      opacity:0;
+      pointer-events:auto;
+    }
+    .mobile-date-input{
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
+      opacity:0;
+      pointer-events:auto;
+      font-size:16px; /* prevents iOS zoom */
+      border:0;
+      background:transparent;
+    }
+
+    /* Main */
+    main{
+      flex:1;
+      padding:0;
+      display:flex;
+      flex-direction:column;
+      overflow:hidden;
+    }
+
+    .full-width{ width:100%; }
+
+    .panel{
+      width:min(100%, 1200px);
+      margin:14px auto 0;
+      background:#fff;
+      border:1px solid var(--border);
+      border-radius:var(--radius-lg);
+      padding:16px;
+      box-shadow: var(--shadow-1);
+    }
+
+    .state{ display:none }
+    .state.active{ display:block }
+    .loading{ display:grid; place-items:center; gap:12px; padding:24px }
+    .spinner{ width:40px; height:40px; border-radius:50%; border:4px solid rgba(3,60,84,.18); border-top-color:var(--primary); animation:spin 1s linear infinite; margin-inline:auto }
+    @keyframes spin{ to{ transform: rotate(360deg); } }
+    .msg{ font-size:.98rem; text-align:center }
+    .error{ color:#a11; background:#fde8e8; border:1px solid #f5c5c5; padding:12px; border-radius:14px }
+    .muted{ color:var(--muted) }
+
+    /* Table shell */
+    .table-shell{
+      width:100%;
+      height: calc(100vh - var(--headerH) - 20px);
+      background:#fff;
+      border-top:1px solid var(--border);
+      border-bottom:1px solid var(--border);
+      border-left:none;
+      border-right:none;
+      border-radius:0;
+      overflow:hidden;
+      box-shadow:none;
+    }
+
+    .table-scroll{
+      width:100%;
+      height:100%;
+      overflow:auto;
+      -webkit-overflow-scrolling:touch;
+      position:relative;
+    }
+
+    table{
+      width:100%;
+      border-collapse:separate;
+      border-spacing:0;
+      min-width:940px;
+      direction:rtl;
+      table-layout:fixed;
+    }
+
+    thead{
+      position:sticky;
+      top:0;
+      z-index:20;
+      background:#fff;
+    }
+
+    thead th{
+      position:relative;
+      background:#fff;
+      border-bottom:2px solid var(--primary);
+      padding:16px 10px;
+      text-align:center;
+      font-weight:900;
+      color:var(--primary);
+      white-space:nowrap;
+      overflow:visible;
+      box-shadow: 0 4px 12px rgba(3,60,84,.08);
+    }
+
+    /* Sticky right column */
+    th.sticky-col, td.sticky-col{
+      position:sticky;
+      right:0;
+      background:#fff;
+      border-left:2px solid var(--border);
+      text-align:center;
+      min-width:140px;
+      padding:12px 10px;
+      z-index:15;
+    }
+
+    thead th.sticky-col{
+      z-index:25;
+      box-shadow: 4px 0 12px rgba(3,60,84,.08);
+    }
+
+    tbody td{
+      border-bottom:1px solid var(--border);
+      padding:10px 10px;
+      text-align:center;
+      background:#fff;
+    }
+
+    tbody tr:hover td{ background:#fbfdff; }
+    tbody tr:hover td.sticky-col{ background:#fbfdff; }
+
+    .teacher-name{
+      font-weight:900;
+      color:var(--text);
+      font-size:0.95rem;
+      line-height:1.2;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      min-height:38px;
+      padding:0 4px;
+      word-break: keep-all;
+      overflow-wrap: break-word;
+    }
+
+    .cell-btn-taken{
+      width:56px; height:38px;
+      border-radius:12px;
+      border:1px solid rgba(16,185,129,.25);
+      background: var(--greenBg);
+      color: var(--green);
+      font-weight:900;
+      cursor:pointer;
+      transition: transform .12s ease, box-shadow .12s ease, filter .12s ease, border-color .12s ease;
+      box-shadow: 0 10px 20px rgba(16,185,129,.10);
+      font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+    .cell-btn-taken:hover{ transform: translateY(-1px); box-shadow: 0 14px 26px rgba(16,185,129,.14); border-color: rgba(16,185,129,.35) }
+    .cell-btn-taken:active{ transform: translateY(0) scale(.99) }
+    .cell-btn-taken:focus-visible{ outline:3px solid var(--focus); outline-offset:2px }
+
+    .cell-btn-not-taken{
+      width:56px; height:38px;
+      border-radius:12px;
+      border:1px solid rgba(239,68,68,.25);
+      background: var(--redBg);
+      color: var(--red);
+      font-weight:900;
+      cursor:pointer;
+      transition: transform .12s ease, box-shadow .12s ease, filter .12s ease, border-color .12s ease;
+      box-shadow: 0 10px 20px rgba(239,68,68,.10);
+      font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+    .cell-btn-not-taken:hover{ transform: translateY(-1px); box-shadow: 0 14px 26px rgba(239,68,68,.14); border-color: rgba(239,68,68,.35) }
+    .cell-btn-not-taken:active{ transform: translateY(0) scale(.99) }
+    .cell-btn-not-taken:focus-visible{ outline:3px solid var(--focus); outline-offset:2px }
+
+    .cell-empty{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width:56px; height:38px;
+      border-radius:12px;
+      border:1px solid rgba(3,60,84,.12);
+      background:#f8fafc;
+      color: rgba(100,116,139,.8);
+      font-weight:900;
+      user-select:none;
+    }
+
+    /* Popover */
+    .popover-backdrop{
+      position:fixed; inset:0;
+      background: rgba(2,6,23,.12);
+      display:none;
+      z-index:999;
+    }
+    .popover-backdrop.open{ display:block; }
+
+    .popover{
+      position:fixed;
+      z-index:1000;
+      width:min(520px, 92vw);
+      max-height:min(520px, 70vh);
+      overflow:auto;
+      background:#fff;
+      border:1px solid var(--border);
+      border-radius:18px;
+      box-shadow: 0 18px 44px rgba(2,6,23,.18);
+      display:none;
+    }
+    .popover.open{ display:block; }
+
+    .pop-head{
+      position:sticky; top:0;
+      background: rgba(255,255,255,.96);
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      border-bottom:1px solid var(--border);
+      padding:14px 14px;
+      display:flex; align-items:flex-start; justify-content:space-between; gap:10px;
+    }
+    .pop-title{ display:flex; flex-direction:column; gap:2px; }
+    .pop-title b{ color:var(--primary); font-size:1.02rem }
+    .pop-title span{ color:var(--muted); font-weight:900; font-size:.9rem }
+
+    .pop-close{
+      width:40px; height:40px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      background:#fff;
+      color:var(--muted);
+      cursor:pointer;
+      font-size:20px;
+      line-height:1;
+      transition: transform .12s ease, box-shadow .12s ease, background .12s ease;
+      box-shadow: 0 10px 20px rgba(2,6,23,.05);
+    }
+    .pop-close:hover{ background: var(--chip); transform: translateY(-1px); box-shadow: 0 14px 26px rgba(2,6,23,.08) }
+
+    .pop-body{ padding:14px 14px 16px 14px; display:flex; flex-direction:column; gap:12px; }
+
+    .section{
+      border:1px solid var(--border);
+      background:#fff;
+      border-radius:14px;
+      padding:12px;
+      box-shadow: 0 10px 22px rgba(2,6,23,.04);
+    }
+    .sec-title{
+      font-weight:900; color:var(--primary);
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      padding-bottom:10px;
+      border-bottom:1px solid var(--border);
+      margin-bottom:10px;
+    }
+    .chips{ display:flex; flex-wrap:wrap; gap:8px; }
+    .chip{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:8px 10px;
+      border-radius:999px;
+      background: var(--chip);
+      border:1px solid var(--border);
+      font-weight:900;
+      color: var(--text);
+      font-size:.9rem;
+    }
+
+    .alert{
+      display:flex; align-items:center; gap:10px;
+      padding:10px 12px;
+      border-radius:14px;
+      border:1px solid rgba(239,68,68,.28);
+      background: linear-gradient(180deg, rgba(239,68,68,.12), rgba(255,255,255,1));
+      color:#991b1b;
+      font-weight:900;
+    }
+    .alert .dot{
+      width:10px; height:10px; border-radius:999px;
+      background: var(--red);
+      box-shadow: 0 0 0 6px rgba(239,68,68,.12);
+      flex:0 0 auto;
+    }
+
+    .success{
+      display:flex; align-items:center; gap:10px;
+      padding:10px 12px;
+      border-radius:14px;
+      border:1px solid rgba(16,185,129,.28);
+      background: linear-gradient(180deg, rgba(16,185,129,.12), rgba(255,255,255,1));
+      color:#065f46;
+      font-weight:900;
+    }
+    .success .dot{
+      width:10px; height:10px; border-radius:999px;
+      background: var(--green);
+      box-shadow: 0 0 0 6px rgba(16,185,129,.12);
+      flex:0 0 auto;
+    }
+
+    .list{ display:flex; flex-direction:column; gap:8px; }
+    .li{
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      padding:10px 10px;
+      border-radius:12px;
+      border:1px solid rgba(3,60,84,.10);
+      background:#fbfdff;
+      font-weight:900;
+    }
+    .li .name{ color:var(--text) }
+    .li .meta{ color:var(--muted); font-weight:900; font-size:.86rem }
+
+    /* Mobile tweaks */
+    @media (max-width: 480px){
+      .header-inner{ grid-template-columns: 40px 1fr 40px; }
+      .icon-btn{ width:40px; height:40px; border-radius:12px; }
+
+      table{ min-width: 980px; }
+      th.sticky-col, td.sticky-col{ min-width: 132px; }
+      .table-shell{ height: calc(100vh - var(--headerH) - 10px); }
+
+      thead th{
+        padding:12px 6px;
+        font-size:.82rem;
+        line-height:1.25;
+        white-space: normal;
+        word-break: keep-all;
+        overflow: visible;
+      }
+
+      .teacher-name {
+        font-size: 0.88rem;
+        padding: 0 2px;
+      }
+
+      .date-btn {
+        padding: 12px 16px;
+        min-height: 48px;
+      }
+    }
+
+    @supports (-webkit-touch-callout: none) {
+      .mobile-date-input { font-size: 16px !important; }
+    }
+  </style>
+
+  <!-- iOS home screen icon -->
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/appicon.png" />
+  
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <meta name="theme-color" content="#033C54" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <!-- Browser tab icon (favicon) -->
+  <link rel="icon" type="image/png" sizes="64x64" href="https://framerusercontent.com/images/eepB7V11E8IMGVLttDUMaz62pPQ.png?width=64&height=64" />
+  <link rel="shortcut icon" href="https://framerusercontent.com/images/eepB7V11E8IMGVLttDUMaz62pPQ.png?width=64&height=64" />
+
+  <!-- Social / Safari preview (Open Graph & Twitter) -->
+  <meta property="og:title" content="جدول المعلّمين - ثانوية أحمد البشر الرومي">
+  <meta property="og:description" content="???? ?????? ???? ????? ??????.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://framerusercontent.com/images/jRnZLlPr90qwKsuUwfIlvDS9E.png?width=1200&height=630">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="جدول المعلّمين - ثانوية أحمد البشر الرومي">
+  <meta name="twitter:description" content="???? ?????? ???? ????? ??????.">
+  <meta name="twitter:image" content="https://framerusercontent.com/images/jRnZLlPr90qwKsuUwfIlvDS9E.png?width=1200&height=630">
+</head>
+
+<body>
+  <header class="site-header" id="siteHeader">
+    <div class="header-inner">
+      <button class="icon-btn" id="refreshBtn" title="تحديث" aria-label="تحديث">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+        </svg>
+      </button>
+
+      <div class="header-center">
+        <h1 class="site-title">ثانوية أحمد البشر الرومي</h1>
+      </div>
+
+      <div></div>
+    </div>
+
+    <div class="date-chip">
+      <button class="date-btn" id="dateBtn" type="button" aria-label="اختيار تاريخ">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="4" width="18" height="18" rx="2"/>
+          <line x1="16" y1="2" x2="16" y2="6"/>
+          <line x1="8" y1="2" x2="8" y2="6"/>
+          <line x1="3" y1="10" x2="21" y2="10"/>
+        </svg>
+        <span id="dateLabel">—</span>
+        <small>اضغط لتغيير التاريخ</small>
+
+        <!-- Mobile-friendly date input overlay -->
+        <div class="date-input-wrapper" aria-hidden="true">
+          <input class="mobile-date-input" id="mobileDateInput" type="date" inputmode="none" />
+        </div>
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <div id="stateLoading" class="state active panel">
+      <div class="loading">
+        <div class="spinner"></div>
+        <div class="muted">جاري التحقق من تسجيل الدخول وجلب البيانات…</div>
+      </div>
+    </div>
+
+    <div id="stateNotLogged" class="state panel">
+      <div class="msg error">يرجى تسجيل الدخول قبل الاستخدام.</div>
+      <p class="muted" style="text-align:center; margin:8px 0 0;">لا توجد جلسة نشطة. <a href="/index.html">اذهب لصفحة الدخول</a>.</p>
+    </div>
+
+    <div id="stateDenied" class="state panel">
+      <div class="msg error">تم رفض الوصول. هذه الصفحة مخصّصة لرؤساء الأقسام فقط.</div>
+    </div>
+
+    <section id="stateOk" class="state full-width" aria-label="جدول المعلّمين">
+      <div class="table-shell">
+        <div class="table-scroll" id="tableScroll">
+          <table aria-label="جدول المعلّمين">
+            <thead>
+              <tr>
+                <th class="sticky-col">المعلمين</th>
+                <th>الحصة الأولى</th>
+                <th>الحصة الثانية</th>
+                <th>الحصة الثالثة</th>
+                <th>الحصة الرابعة</th>
+                <th>الحصة الخامسة</th>
+                <th>الحصة السادسة</th>
+                <th>الحصة السابعة</th>
+              </tr>
+            </thead>
+            <tbody id="gridBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Popover -->
+  <div class="popover-backdrop" id="popBackdrop" aria-hidden="true"></div>
+  <div class="popover" id="popover" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="pop-head">
+      <div class="pop-title">
+        <b id="popTitle">—</b>
+        <span id="popSub">—</span>
+      </div>
+      <button class="pop-close" id="popClose" aria-label="إغلاق" type="button">×</button>
+    </div>
+    <div class="pop-body" id="popBody"></div>
+  </div>
+
+  <script type="module">
+    import { firebaseConfig } from "/shared/firebase.js";
+    import { initializeApp, getApp, getApps } from "/shared/firebase.js";
+    import { getAuth, onAuthStateChanged } from "/shared/firebase.js";
+    import {
+      initializeFirestore, collection, getDocs, query, where,
+      doc, getDoc, Timestamp
+    } from "/shared/firebase.js";
+
+    
+
+    const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+    const db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true, useFetchStreams: false });
+    const auth = getAuth(app);
+
+    const sLoading = document.getElementById('stateLoading');
+    const sNotLog  = document.getElementById('stateNotLogged');
+    const sDenied  = document.getElementById('stateDenied');
+    const sOk      = document.getElementById('stateOk');
+
+    const refreshBtn = document.getElementById('refreshBtn');
+    const gridBody = document.getElementById('gridBody');
+
+    const dateBtn = document.getElementById('dateBtn');
+    const dateLabel = document.getElementById('dateLabel');
+    const mobileDateInput = document.getElementById('mobileDateInput');
+
+    const popBackdrop = document.getElementById('popBackdrop');
+    const popover = document.getElementById('popover');
+    const popClose = document.getElementById('popClose');
+    const popTitle = document.getElementById('popTitle');
+    const popSub = document.getElementById('popSub');
+    const popBody = document.getElementById('popBody');
+
+    const siteHeader = document.getElementById('siteHeader');
+
+    const show = (el) => {
+      [sLoading, sNotLog, sDenied, sOk].forEach(x => x.classList.remove('active'));
+      el.classList.add('active');
+      syncHeaderH();
+    };
+
+    function syncHeaderH(){
+      const headerHeight = siteHeader.getBoundingClientRect().height || 122;
+      document.documentElement.style.setProperty('--headerH', headerHeight + 'px');
+    }
+
+    const toArabicDigits = (str) => (str || "").toString().replace(/\d/g, d => '٠١٢٣٤٥٦٧٨٩'[d]);
+    const arabicSort = (a, b) => (a || "").toString().localeCompare((b || "").toString(), 'ar', { sensitivity: 'base' });
+
+    function fmtDateLong(d){
+      return new Intl.DateTimeFormat('ar-KW', {
+        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+        timeZone: 'Asia/Kuwait'
+      }).format(d);
+    }
+
+    function toInputDate(d) {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const da = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${da}`;
+    }
+
+    function startOfDay(d){
+      const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+      x.setHours(0,0,0,0);
+      return x;
+    }
+    function endOfDay(d){
+      const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+      x.setHours(23,59,59,999);
+      return x;
+    }
+
+    function formatTime(timestamp){
+      if (!timestamp) return '—';
+      let date;
+      if (timestamp.toDate) date = timestamp.toDate();
+      else if (timestamp.seconds) date = new Date(timestamp.seconds * 1000);
+      else return '—';
+      
+      return new Intl.DateTimeFormat('ar-KW', {
+        hour: 'numeric',
+        minute: 'numeric',
+        timeZone: 'Asia/Kuwait',
+        hour12: false
+      }).format(date);
+    }
+
+    const MERGED_DEPARTMENTS = [
+      { department: 'الفيزياء والكيمياء', subjects: ['الفيزياء','الكيمياء'] },
+      { department: 'الجيولوجيا والأحياء', subjects: ['الجيولوجيا','الأحياء'] },
+      { department: 'علم النفس والفلسفة', subjects: ['علم النفس','الفلسفة'] },
+      { department: 'التاريخ والجغرافيا', subjects: ['التاريخ','الجغرافيا','جغرافيا'] }
+    ];
+    function resolveDepartmentName(rawValue){
+      const value=(rawValue||'').toString().trim();
+      if(!value) return '';
+      for(const group of MERGED_DEPARTMENTS){
+        if(value===group.department || group.subjects.includes(value)) return group.department;
+      }
+      return value;
+    }
+    function getDepartmentSubjectFilters(department){
+      const normalized=resolveDepartmentName(department);
+      const group=MERGED_DEPARTMENTS.find(item=>item.department===normalized);
+      if(!group) return [normalized].filter(Boolean);
+      return [group.department, ...group.subjects];
+    }
+
+    let headDept = '';
+    let teachersList = [];
+    let scheduleMap = Object.create(null);
+    let attendanceMap = Object.create(null);
+    let selectedDate = new Date();
+
+    // Performance safety: limit concurrency
+    async function promisePool(items, worker, concurrency = 12){
+      const results = [];
+      let i = 0;
+      const runners = new Array(Math.min(concurrency, items.length)).fill(0).map(async () => {
+        while (i < items.length){
+          const idx = i++;
+          try { results[idx] = await worker(items[idx], idx); }
+          catch (e) { 
+            console.warn('Worker error:', e);
+            results[idx] = undefined; 
+          }
+        }
+      });
+      await Promise.all(runners);
+      return results;
+    }
+
+    // Load teachers in department
+    async function loadDepartmentTeachers(department){
+      try {
+        const normalizedDepartment=resolveDepartmentName(department);
+        const subjectFilters=[...new Set(getDepartmentSubjectFilters(normalizedDepartment))];
+        if(!subjectFilters.length) return [];
+        const q = subjectFilters.length===1
+          ? query(collection(db, 'teachers'), where('subject', '==', subjectFilters[0]))
+          : query(collection(db, 'teachers'), where('subject', 'in', subjectFilters));
+        const snap = await getDocs(q);
+        const teachers = [];
+        snap.forEach(docSnap => {
+          const data = docSnap.data();
+          const rawSubject=(data?.department || data?.dept || data?.subject || '').toString().trim();
+          if(resolveDepartmentName(rawSubject)!==normalizedDepartment) return;
+          if (docSnap.id && data.name){
+            teachers.push({
+              uid: docSnap.id,
+              name: data.name,
+              subject: data.subject || ''
+            });
+          }
+        });
+        // Sort Arabic-aware
+        teachers.sort((a, b) => arabicSort(a.name, b.name));
+        return teachers;
+      } catch (e) {
+        console.error('Error loading teachers:', e);
+        return [];
+      }
+    }
+
+    // Load schedules for date
+    async function loadScheduleForDate(dateObj){
+      scheduleMap = Object.create(null);
+      const iso = toInputDate(dateObj);
+
+      try {
+        const q = query(collection(db, 'schedules'), where('date', '==', iso));
+        const snap = await getDocs(q);
+        
+        snap.forEach(docSnap => {
+          const data = docSnap.data();
+          const lesson = Number(data.lesson);
+          const teacherUid = data.teacherUid;
+          const classKey = data.classKey;
+          
+          if (!teacherUid || !lesson || lesson < 1 || lesson > 7 || !classKey) return;
+          
+          if (!scheduleMap[teacherUid]) scheduleMap[teacherUid] = {};
+          scheduleMap[teacherUid][lesson] = {
+            classKey: classKey.toString().trim(),
+            teacherName: data.teacherName || '',
+            subject: data.subject || ''
+          };
+        });
+      } catch (e) {
+        console.error('Error loading schedule:', e);
+      }
+    }
+
+    // Check attendance for a specific teacher's class on a date and lesson
+    async function checkAttendanceTaken(teacherUid, classKey, dateObj, lesson){
+      const start = startOfDay(dateObj);
+      const end = endOfDay(dateObj);
+      const startTs = Timestamp.fromDate(start);
+      const endTs = Timestamp.fromDate(end);
+      
+      // We need to find students in this class
+      try {
+        const studentsQuery = query(collection(db, 'students'), where('class', '==', classKey));
+        const studentsSnap = await getDocs(studentsQuery);
+        
+        if (studentsSnap.empty) return { taken: false, time: null };
+        
+        const studentIds = [];
+        studentsSnap.forEach(docSnap => {
+          studentIds.push(docSnap.id);
+        });
+        
+        // Check each student's attendance for this lesson with concurrency limit
+        let foundAttendance = false;
+        let earliestTime = null;
+        
+        await promisePool(studentIds, async (studentId) => {
+          if (foundAttendance) return; // Early exit
+          
+          const attendanceRef = collection(db, 'students', studentId, 'attendance');
+          const q = query(
+            attendanceRef,
+            where('lessonIndex', '==', lesson),
+            where('createdAt', '>=', startTs),
+            where('createdAt', '<=', endTs)
+          );
+          
+          try {
+            const snap = await getDocs(q);
+            snap.forEach(docSnap => {
+              const data = docSnap.data();
+              const createdBy = data.createdBy;
+              const updatedBy = data.updatedBy;
+              
+              if (createdBy === teacherUid || updatedBy === teacherUid){
+                foundAttendance = true;
+                const time = data.createdAt || data.updatedAt;
+                if (time){
+                  const timeMs = time.toMillis ? time.toMillis() : (time.seconds * 1000);
+                  if (!earliestTime || timeMs < earliestTime){
+                    earliestTime = timeMs;
+                  }
+                }
+              }
+            });
+          } catch (e) {
+            // Skip this student if error
+          }
+        }, 8);
+        
+        return {
+          taken: foundAttendance,
+          time: earliestTime ? Timestamp.fromMillis(earliestTime) : null
+        };
+      } catch (e) {
+        console.error('Error checking attendance:', e);
+        return { taken: false, time: null };
+      }
+    }
+
+    // Build grid data structure
+    function initGrid(){
+      attendanceMap = Object.create(null);
+      for (const teacher of teachersList){
+        attendanceMap[teacher.uid] = {};
+        for (let i=1;i<=7;i++){
+          attendanceMap[teacher.uid][i] = {
+            classKey: null,
+            taken: false,
+            time: null,
+            hasClass: false
+          };
+        }
+      }
+    }
+
+    // Load all attendance data for the grid
+    async function loadAttendanceData(dateObj){
+      initGrid();
+      
+      // First, fill with schedule data
+      for (const teacher of teachersList){
+        const teacherSchedule = scheduleMap[teacher.uid];
+        if (!teacherSchedule) continue;
+        
+        for (let lesson=1; lesson<=7; lesson++){
+          const schedule = teacherSchedule[lesson];
+          if (schedule && schedule.classKey){
+            attendanceMap[teacher.uid][lesson].hasClass = true;
+            attendanceMap[teacher.uid][lesson].classKey = schedule.classKey;
+          }
+        }
+      }
+      
+      // Now check attendance for each scheduled class with concurrency limit
+      const checks = [];
+      for (const teacher of teachersList){
+        for (let lesson=1; lesson<=7; lesson++){
+          const cell = attendanceMap[teacher.uid][lesson];
+          if (cell.hasClass && cell.classKey){
+            checks.push({ teacherUid: teacher.uid, lesson, classKey: cell.classKey });
+          }
+        }
+      }
+      
+      await promisePool(checks, async (check) => {
+        const result = await checkAttendanceTaken(
+          check.teacherUid,
+          check.classKey,
+          selectedDate,
+          check.lesson
+        );
+        attendanceMap[check.teacherUid][check.lesson].taken = result.taken;
+        attendanceMap[check.teacherUid][check.lesson].time = result.time;
+      }, 6);
+    }
+
+    // Render the grid
+    function renderGrid(){
+      gridBody.innerHTML = '';
+      
+      if (teachersList.length === 0){
+        const tr = document.createElement('tr');
+        const td = document.createElement('td');
+        td.colSpan = 8;
+        td.className = 'muted';
+        td.style.textAlign = 'center';
+        td.style.padding = '20px';
+        td.textContent = 'لا يوجد معلمون في هذا القسم';
+        tr.appendChild(td);
+        gridBody.appendChild(tr);
+        return;
+      }
+      
+      for (const teacher of teachersList){
+        const tr = document.createElement('tr');
+        
+        // Teacher name cell
+        const tdTeacher = document.createElement('td');
+        tdTeacher.className = 'sticky-col';
+        tdTeacher.innerHTML = `<div class="teacher-name">${teacher.name}</div>`;
+        tr.appendChild(tdTeacher);
+        
+        // Lesson cells
+        for (let lesson=1; lesson<=7; lesson++){
+          const td = document.createElement('td');
+          const cell = attendanceMap[teacher.uid][lesson];
+          
+          if (!cell || !cell.hasClass){
+            const empty = document.createElement('div');
+            empty.className = 'cell-empty';
+            empty.textContent = '';
+            td.appendChild(empty);
+          } else {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = cell.taken ? 'cell-btn-taken' : 'cell-btn-not-taken';
+            btn.textContent = toArabicDigits(cell.classKey);
+            btn.title = cell.taken ? 'تم تسليم الغياب' : 'لم يتم تسليم الغياب';
+            btn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              openPopoverForCell(btn, teacher, lesson, cell);
+            });
+            td.appendChild(btn);
+          }
+          
+          tr.appendChild(td);
+        }
+        
+        gridBody.appendChild(tr);
+      }
+    }
+
+    function clamp(n, min, max){ return Math.max(min, Math.min(max, n)); }
+
+    async function openPopoverForCell(anchorEl, teacher, lesson, cellData){
+      const niceLesson = toArabicDigits(lesson);
+      const niceDate = toArabicDigits(fmtDateLong(selectedDate));
+      const niceClass = toArabicDigits(cellData.classKey);
+      const niceTime = cellData.taken && cellData.time ? toArabicDigits(formatTime(cellData.time)) : '—';
+      
+      popTitle.textContent = `${teacher.name}`;
+      popSub.textContent = `الحصة ${niceLesson} • ${niceDate}`;
+      
+      popBody.innerHTML = `
+        <div class="section">
+          <div class="sec-title">
+            <span>تفاصيل الحصة</span>
+            <span class="muted" style="font-weight:900">الحصة ${niceLesson}</span>
+          </div>
+          <div class="chips">
+            <span class="chip">الصف: ${niceClass}</span>
+            <span class="chip">التاريخ: ${niceDate}</span>
+          </div>
+        </div>
+        
+        <div class="${cellData.taken ? 'success' : 'alert'}">
+          <span class="dot"></span>
+          <span>${cellData.taken ? 'تم تسليم الغياب' : 'لم يتم تسليم الغياب'}</span>
+        </div>
+        
+        ${cellData.taken ? `
+        <div class="section">
+          <div class="sec-title">
+            <span>معلومات التسليم</span>
+            <span class="muted" style="font-weight:900">الوقت</span>
+          </div>
+          <div class="chips">
+            <span class="chip">تم التسليم في: ${niceTime}</span>
+          </div>
+        </div>
+        ` : ''}
+      `;
+      
+      const r = anchorEl.getBoundingClientRect();
+      const popW = Math.min(520, Math.floor(window.innerWidth * 0.92));
+      const popH = Math.min(520, Math.floor(window.innerHeight * 0.70));
+      
+      popover.style.width = popW + 'px';
+      popover.style.maxHeight = popH + 'px';
+      
+      const margin = 12;
+      let top = r.bottom + 10;
+      let left = r.left + (r.width / 2) - (popW / 2);
+      
+      if (top + popH + margin > window.innerHeight){
+        top = r.top - popH - 10;
+      }
+      top = clamp(top, margin, window.innerHeight - popH - margin);
+      left = clamp(left, margin, window.innerWidth - popW - margin);
+      
+      popover.style.top = top + 'px';
+      popover.style.left = left + 'px';
+      
+      popBackdrop.classList.add('open');
+      popBackdrop.setAttribute('aria-hidden', 'false');
+      popover.classList.add('open');
+      popover.setAttribute('aria-hidden', 'false');
+      
+      popClose.focus({ preventScroll: true });
+    }
+
+    function closePopover(){
+      popBackdrop.classList.remove('open');
+      popBackdrop.setAttribute('aria-hidden', 'true');
+      popover.classList.remove('open');
+      popover.setAttribute('aria-hidden', 'true');
+    }
+
+    popBackdrop.addEventListener('click', closePopover);
+    popClose.addEventListener('click', closePopover);
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closePopover();
+    });
+
+    popover.addEventListener('click', (e) => e.stopPropagation());
+
+    async function loadGridForDate(dateObj){
+      show(sLoading);
+      
+      dateLabel.textContent = toArabicDigits(fmtDateLong(dateObj));
+      mobileDateInput.value = toInputDate(dateObj);
+      
+      try {
+        // Load schedule
+        await loadScheduleForDate(dateObj);
+        
+        // Load attendance data
+        await loadAttendanceData(dateObj);
+        
+        // Render grid
+        renderGrid();
+        show(sOk);
+      } catch (e) {
+        console.error('Error loading grid:', e);
+        show(sDenied);
+      }
+      
+      requestAnimationFrame(syncHeaderH);
+    }
+
+    // Date picker open handling
+    dateBtn.addEventListener('click', () => {
+      try {
+        if (typeof mobileDateInput.showPicker === 'function') {
+          mobileDateInput.showPicker();
+          return;
+        }
+      } catch {}
+      
+      mobileDateInput.focus({ preventScroll: true });
+      mobileDateInput.click();
+    });
+
+    mobileDateInput.addEventListener('change', async () => {
+      if (!mobileDateInput.value) return;
+      
+      const [yy, mm, dd] = mobileDateInput.value.split('-').map(Number);
+      const d = new Date(yy, (mm || 1) - 1, dd || 1);
+      if (Number.isNaN(d.getTime())) return;
+      
+      selectedDate = d;
+      closePopover();
+      await loadGridForDate(selectedDate);
+    });
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) { show(sNotLog); return; }
+      
+      try {
+        const tRef = doc(db, 'teachers', user.uid);
+        const snap = await getDoc(tRef);
+        const data = snap.exists() ? snap.data() : {};
+        
+        const role = (data?.role || '').toString().toLowerCase();
+        if (role !== 'head') {
+          show(sDenied);
+          return;
+        }
+        
+        // Get head's department
+        headDept = resolveDepartmentName(data.department || data.dept || data.subject || '');
+        if (!headDept) {
+          show(sDenied);
+          return;
+        }
+        
+        // Load teachers in department
+        teachersList = await loadDepartmentTeachers(headDept);
+        
+        // Load initial grid
+        selectedDate = new Date();
+        await loadGridForDate(selectedDate);
+      } catch (e) {
+        console.error('Auth error:', e);
+        show(sDenied);
+      }
+    });
+
+    refreshBtn.addEventListener('click', async () => {
+      try{
+        refreshBtn.disabled = true;
+        closePopover();
+        await loadGridForDate(selectedDate);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        refreshBtn.disabled = false;
+      }
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!popover.classList.contains('open')) return;
+      if (popover.contains(e.target)) return;
+      closePopover();
+    });
+
+    window.addEventListener('resize', () => {
+      if (sOk.classList.contains('active')) syncHeaderH();
+    });
+
+    window.addEventListener('load', () => {
+      syncHeaderH();
+      setTimeout(syncHeaderH, 250);
+    });
+  </script>
+  <script src="/shared/hub-title-link.js" defer></script>
+<script src="/name-glow.js" defer></script>
+</body>
+</html>
+
+
+
+
+
+

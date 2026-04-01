@@ -1,0 +1,1287 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.gstatic.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; manifest-src 'self'; upgrade-insecure-requests; block-all-mixed-content">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  <title>معلومات المعلّم</title>
+
+  <!-- Noto Kufi Arabic -->
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+
+  <link rel="stylesheet" href="/shared/base.css" />
+  <style>
+    :root{
+      --primary:#022b42;
+      --primary-2:#044563;
+      --primary-light: rgba(2, 43, 66, 0.08);
+
+      --page:#f8fafc;
+      --card-bg:#ffffff;
+
+      --text:#0f172a;
+      --muted:#64748b;
+
+      --border:#e2e8f0;
+
+      --radius:16px;
+      --radius-sm:12px;
+
+      --shadow-1:0 4px 12px rgba(2,43,66,.08);
+      --shadow-2:0 12px 28px rgba(2,43,66,.12);
+
+      --g: #1a7f37;
+      --g-bg: rgba(26,127,55,.12);
+      --g-bg-hover: rgba(26,127,55,.20);
+
+      --r: #b42318;
+      --r-bg: rgba(180,35,24,.12);
+      --r-bg-hover: rgba(180,35,24,.20);
+
+      --y: #a06d00;
+      --y-bg: rgba(160,109,0,.14);
+      --y-bg-hover: rgba(160,109,0,.22);
+
+      --transition: all 0.16s ease;
+    }
+
+    *{ box-sizing:border-box; margin:0; padding:0; }
+    html, body{ height:100%; }
+
+    body, button, input, textarea, select, summary, .chip, .btn, .card, .muted {
+      font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif !important;
+    }
+
+    body{
+      background:
+        radial-gradient(1200px 600px at 80% -20%, rgba(2,43,66,0.05), transparent 60%),
+        radial-gradient(900px 500px at -10% 120%, rgba(2,43,66,0.04), transparent 60%),
+        var(--page);
+      color:var(--text);
+      min-height:100vh;
+      display:flex;
+      flex-direction:column;
+      -webkit-tap-highlight-color:transparent;
+      line-height:1.6;
+    }
+
+    /* Header */
+    .site-header{
+      position:sticky; top:0; z-index:30;
+      background: rgba(255,255,255,0.88);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom:1px solid rgba(2,43,66,0.10);
+      box-shadow: 0 2px 10px rgba(2,43,66,0.06);
+      padding: 12px 14px;
+    }
+    .header-container{
+      width:min(1200px, 100%);
+      margin:0 auto;
+      display:grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items:center;
+      gap:12px;
+    }
+    .back-btn{
+      justify-self:start;
+      height:44px;
+      padding:0 14px;
+      border-radius:14px;
+      border:1px solid rgba(2,43,66,0.20);
+      background:#fff;
+      color:var(--primary);
+      font-weight:900;
+      cursor:pointer;
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      box-shadow: var(--shadow-1);
+      transition: var(--transition);
+    }
+    .back-btn:hover{ transform: translateY(-2px); box-shadow: var(--shadow-2); border-color: rgba(2,43,66,0.35); }
+
+    .title-wrap{
+      justify-self:center;
+      text-align:center;
+      min-width:0;
+      display:flex;
+      flex-direction:column;
+      gap:2px;
+    }
+    .title{
+      font-weight: 1000;
+      color: var(--primary);
+      font-size: clamp(1.05rem, 3.2vw, 1.35rem);
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      max-width: 78vw;
+    }
+    .subtitle{
+      color: rgba(100,116,139,0.95);
+      font-weight: 900;
+      font-size: .9rem;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      max-width: 78vw;
+    }
+    .right-spacer{ justify-self:end; width:44px; height:44px; opacity:0; }
+
+    main{ flex:1; padding:16px; }
+    .wrap{
+      width:min(1200px, 100%);
+      margin:0 auto;
+      display:flex;
+      flex-direction:column;
+      gap:14px;
+    }
+
+    .status{
+      display:none;
+      align-items:center;
+      gap:10px;
+      padding:12px 14px;
+      border-radius: var(--radius-sm);
+      border:1px solid rgba(2,43,66,0.12);
+      background: var(--primary-light);
+      color: var(--primary);
+      font-weight:900;
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns: 360px 1fr;
+      gap:14px;
+      align-items:start;
+    }
+
+    .card{
+      background: var(--card-bg);
+      border:1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-1);
+      padding:14px;
+      transition: var(--transition);
+    }
+    .card:hover{ box-shadow: var(--shadow-2); }
+
+    .section-head{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-bottom:10px;
+    }
+    .section-title{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      font-weight:1000;
+      color: var(--primary);
+      font-size: 1.05rem;
+    }
+
+    .muted{
+      color: var(--muted);
+      font-weight: 900;
+      font-size: .92rem;
+    }
+
+    /* Buttons lists */
+    .stack{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+
+    .list-btn{
+      width:100%;
+      border:1px solid rgba(2,43,66,0.12);
+      border-radius: 16px;
+      background: rgba(255,255,255,0.95);
+      box-shadow: 0 10px 22px rgba(2,43,66,0.07);
+      padding: 12px 12px;
+      cursor:pointer;
+      transition: var(--transition);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      text-align:right;
+    }
+    .list-btn:hover{ transform: translateY(-2px); box-shadow: var(--shadow-2); border-color: rgba(2,43,66,0.22); }
+    .list-btn.active{
+      outline: 3px solid rgba(2,43,66,0.10);
+      border-color: rgba(2,43,66,0.32);
+      background: linear-gradient(135deg, rgba(4,69,99,0.10), rgba(2,43,66,0.04)), rgba(255,255,255,0.98);
+    }
+    .lb-left{
+      display:flex;
+      flex-direction:column;
+      gap:2px;
+      min-width:0;
+      flex:1;
+    }
+    .lb-title{
+      font-weight: 1000;
+      color: var(--text);
+      font-size: 1.0rem;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .lb-sub{
+      color: rgba(100,116,139,0.95);
+      font-weight: 900;
+      font-size: .84rem;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-weight: 1000;
+      font-size: 12px;
+      border:1px solid rgba(2,43,66,0.12);
+      background: rgba(2,43,66,0.06);
+      color: var(--primary);
+      flex: 0 0 auto;
+    }
+
+    .empty{
+      text-align:center;
+      color: var(--muted);
+      background:#fff;
+      border:1px dashed var(--border);
+      border-radius:16px;
+      padding:16px;
+      font-weight: 900;
+    }
+
+    /* ====== Sheet (Popup) ====== */
+    .sheet-backdrop{
+      position: fixed;
+      inset: 0;
+      background: rgba(2,6,23,0.40);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+      z-index: 80;
+      padding: 10px;
+    }
+    .sheet-backdrop.show{ display:flex; }
+
+    .sheet{
+      width: min(980px, 100%);
+      max-height: min(86vh, 780px);
+      background: rgba(255,255,255,0.98);
+      border: 1px solid rgba(2,43,66,0.12);
+      border-radius: 22px;
+      box-shadow: 0 30px 80px rgba(2,6,23,0.25);
+      overflow: hidden;
+      transform: translateY(14px);
+      opacity: 0;
+      transition: transform .22s ease, opacity .22s ease;
+      display: grid;
+      grid-template-rows: auto 1fr;
+    }
+    .sheet-backdrop.show .sheet{
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    .sheet-header{
+      padding: 12px 14px;
+      border-bottom: 1px solid rgba(2,43,66,0.10);
+      background: linear-gradient(180deg, rgba(2,43,66,0.06), rgba(255,255,255,0.98));
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+    }
+    .sheet-title{
+      display:flex;
+      flex-direction:column;
+      min-width:0;
+      gap:2px;
+    }
+    .sheet-title .t1{
+      font-weight:1000;
+      color: var(--primary);
+      font-size: 1.02rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 70vw;
+    }
+    .sheet-title .t2{
+      color: rgba(100,116,139,0.95);
+      font-weight: 900;
+      font-size: .86rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 70vw;
+    }
+
+    .sheet-actions{
+      display:flex;
+      gap:8px;
+      align-items:center;
+      flex: 0 0 auto;
+    }
+    .icon-btn{
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      border: 1px solid rgba(2,43,66,0.18);
+      background: #fff;
+      color: var(--primary);
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      cursor:pointer;
+      box-shadow: var(--shadow-1);
+      transition: var(--transition);
+    }
+    .icon-btn:hover{ transform: translateY(-2px); box-shadow: var(--shadow-2); }
+
+    .sheet-body{
+      padding: 12px;
+      overflow: auto;
+    }
+
+    .sheet-grid{
+      display:grid;
+      grid-template-columns: 360px 1fr;
+      gap: 12px;
+      align-items: start;
+    }
+
+    .mini-card{
+      background:#fff;
+      border:1px solid var(--border);
+      border-radius: 18px;
+      box-shadow: var(--shadow-1);
+      padding: 12px;
+    }
+
+    .input{
+      width:100%;
+      height: 44px;
+      border-radius: 14px;
+      border: 1px solid rgba(2,43,66,0.14);
+      background: rgba(255,255,255,0.98);
+      padding: 0 12px;
+      outline: none;
+      font-weight: 900;
+      color: var(--text);
+      box-shadow: var(--shadow-1);
+      transition: var(--transition);
+    }
+    .input:focus{
+      border-color: rgba(2,43,66,0.28);
+      box-shadow: var(--shadow-2);
+    }
+
+    /* Notes */
+    .filters{
+      display:flex;
+      gap:8px;
+      justify-content:flex-start;
+      flex-wrap:wrap;
+      margin: 10px 0 10px;
+    }
+    .chip{
+      padding:8px 12px;
+      border-radius:999px;
+      border:1px solid var(--border);
+      background:#fff;
+      cursor:pointer;
+      font-weight:1000;
+      color: var(--text);
+      transition: var(--transition);
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      box-shadow: var(--shadow-1);
+      user-select:none;
+    }
+    .chip:hover{ box-shadow: var(--shadow-2); transform: translateY(-1px); }
+    .chip.active{ background: var(--primary); color:#fff; border-color: transparent; }
+
+    details.note{
+      background:#fff;
+      border:1px solid var(--border);
+      border-radius:16px;
+      box-shadow: var(--shadow-1);
+      overflow:hidden;
+      transition: var(--transition);
+    }
+    details.note[open]{ box-shadow: var(--shadow-2); }
+
+    summary{
+      list-style:none;
+      cursor:pointer;
+      padding:14px 14px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+    }
+    summary::-webkit-details-marker{ display:none; }
+
+    .note-title{
+      font-weight:1000;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      min-width:0;
+    }
+    .dot{
+      width:10px;
+      height:10px;
+      border-radius:50%;
+      flex: 0 0 auto;
+    }
+    .dot-pos{ background: var(--g); }
+    .dot-neg{ background: var(--r); }
+    .dot-gen{ background: var(--y); }
+
+    .note-meta{
+      color: rgba(100,116,139,0.95);
+      font-weight: 900;
+      font-size: .9rem;
+      white-space:nowrap;
+    }
+
+    .note-body{
+      border-top:1px dashed var(--border);
+      padding: 12px 14px 14px;
+      display:grid;
+      gap:10px;
+    }
+    .kv .k{ color: var(--muted); font-weight: 1000; }
+    .kv .v{ font-weight: 900; color: var(--text); white-space: pre-wrap; }
+
+    @media (max-width: 980px){
+      .grid{ grid-template-columns: 1fr; }
+      .sheet-grid{ grid-template-columns: 1fr; }
+    }
+    @media (max-width: 520px){
+      main{ padding: 12px; }
+      .header-container{ grid-template-columns: auto 1fr auto; }
+      .title{ max-width: 70vw; }
+      .subtitle{ max-width: 70vw; }
+      .sheet{
+        max-height: 90vh;
+        border-radius: 20px;
+      }
+      .sheet-backdrop{ padding: 8px; }
+    }
+  </style>
+
+  <!-- iOS home screen icon -->
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/appicon.png" />
+  
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <meta name="theme-color" content="#033C54" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <!-- Browser tab icon (favicon) -->
+  <link rel="icon" type="image/png" sizes="64x64" href="https://framerusercontent.com/images/eepB7V11E8IMGVLttDUMaz62pPQ.png?width=64&height=64" />
+  <link rel="shortcut icon" href="https://framerusercontent.com/images/eepB7V11E8IMGVLttDUMaz62pPQ.png?width=64&height=64" />
+
+  <!-- Social / Safari preview (Open Graph & Twitter) -->
+  <meta property="og:title" content="معلومات المعلّم">
+  <meta property="og:description" content="???? ?????? ???? ????? ??????.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://framerusercontent.com/images/jRnZLlPr90qwKsuUwfIlvDS9E.png?width=1200&height=630">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="معلومات المعلّم">
+  <meta name="twitter:description" content="???? ?????? ???? ????? ??????.">
+  <meta name="twitter:image" content="https://framerusercontent.com/images/jRnZLlPr90qwKsuUwfIlvDS9E.png?width=1200&height=630">
+</head>
+
+<body>
+  <header class="site-header">
+    <div class="header-container">
+      <button id="backBtn" class="back-btn" type="button" aria-label="رجوع">
+        <i class="fas fa-arrow-right"></i>
+        رجوع
+      </button>
+
+      <div class="title-wrap">
+        <div class="title" id="teacherTitle">اسم المعلّم</div>
+        <div class="subtitle" id="subTitle">اختر صفًا لعرض الطلاب والملاحظات</div>
+      </div>
+
+      <div class="right-spacer" aria-hidden="true"></div>
+    </div>
+  </header>
+
+  <main>
+    <div class="wrap">
+      <div id="status" class="status"></div>
+
+      <section class="grid">
+        <!-- Classes (vertical buttons) -->
+        <div class="card">
+          <div class="section-head">
+            <div class="section-title">
+              <i class="fas fa-chalkboard"></i>
+              <span>الصفوف</span>
+            </div>
+            <span class="pill" id="classesCountPill"><i class="fas fa-layer-group"></i><span id="classesCount">0</span></span>
+          </div>
+
+          <div class="muted" style="margin:-2px 0 10px;">
+            يعرض كل صفوف المعلّم من جدول الحصص (حسب البيانات الموجودة في schedules).
+          </div>
+
+          <div id="classesStack" class="stack"></div>
+          <div id="classesEmpty" class="empty" style="display:none;">لا توجد صفوف لهذا المعلّم.</div>
+        </div>
+
+        <!-- Right card is now a hint only -->
+        <div class="card">
+          <div class="section-head">
+            <div class="section-title">
+              <i class="fas fa-users"></i>
+              <span>الطلاب والملاحظات</span>
+            </div>
+          </div>
+
+          <div class="empty">
+            اختر صفًا من اليسار. سيتم فتح نافذة تعرض الطلاب والملاحظات بشكل صفحة مستقلة.
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- ===== Sheet Popup ===== -->
+  <div id="sheetBackdrop" class="sheet-backdrop" aria-hidden="true">
+    <div id="sheet" class="sheet" role="dialog" aria-modal="true" aria-label="الطلاب والملاحظات">
+      <div class="sheet-header">
+        <div class="sheet-title">
+          <div class="t1" id="sheetMainTitle">الطلاب والملاحظات</div>
+          <div class="t2" id="sheetSubTitle">اختر طالبًا لعرض الملاحظات</div>
+        </div>
+        <div class="sheet-actions">
+          <button id="sheetClose" class="icon-btn" type="button" aria-label="إغلاق">
+            <i class="fas fa-xmark"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="sheet-body">
+        <div class="sheet-grid">
+          <!-- Students panel -->
+          <div class="mini-card">
+            <div class="section-head" style="margin-bottom:8px;">
+              <div class="section-title">
+                <i class="fas fa-users"></i>
+                <span>الطلاب</span>
+              </div>
+              <span class="pill" id="studentsCountPill" style="display:none;"><i class="fas fa-user"></i><span id="studentsCount">0</span></span>
+            </div>
+
+            <input id="studentSearch" class="input" type="search" placeholder="بحث عن طالب..." autocomplete="off" />
+
+            <div id="studentsHint" class="empty" style="margin-top:10px;">جاري تحميل الطلاب...</div>
+            <div id="studentsStackWrap" style="display:none; margin-top:10px;">
+              <div class="muted" id="selectedClassLabel" style="margin-bottom:10px; font-weight:1000;"></div>
+              <div id="studentsStack" class="stack"></div>
+              <div id="studentsEmpty" class="empty" style="display:none;">لا يوجد طلاب في هذا الصف.</div>
+            </div>
+          </div>
+
+          <!-- Notes panel -->
+          <div class="mini-card">
+            <div class="section-head" style="margin-bottom:6px;">
+              <div class="section-title">
+                <i class="fas fa-note-sticky"></i>
+                <span id="notesTitle">ملاحظات الطالب</span>
+              </div>
+            </div>
+
+            <div id="notesPrompt" class="empty">اختر طالبًا لعرض الملاحظات.</div>
+
+            <div id="notesArea" style="display:none;">
+              <div class="filters" id="filters">
+                <button class="chip active" data-filter="all" type="button">الكل <span id="c-all">0</span></button>
+                <button class="chip" data-filter="positive" type="button">إيجابية <span id="c-pos">0</span></button>
+                <button class="chip" data-filter="negative" type="button">سلبية <span id="c-neg">0</span></button>
+                <button class="chip" data-filter="general" type="button">ملاحظة <span id="c-gen">0</span></button>
+              </div>
+
+              <div id="notesList" class="stack" style="gap:12px;"></div>
+              <div id="notesEmpty" class="empty" style="display:none;">لا توجد ملاحظات لهذا الطالب.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { firebaseConfig } from "/shared/firebase.js";
+    /* ========= Firebase ========= */
+    import { initializeApp, getApp, getApps } from "/shared/firebase.js";
+    import { getAuth, onAuthStateChanged, setPersistence, browserLocalPersistence } from "/shared/firebase.js";
+    import {
+      initializeFirestore, persistentSingleTabManager,
+      collection, getDocs, query, where, orderBy, doc, getDoc, limit
+    } from "/shared/firebase.js";
+
+    
+
+    const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+    let db;
+    try{
+      db = initializeFirestore(app, { localCache: persistentSingleTabManager() });
+    }catch(e){
+      db = initializeFirestore(app, {});
+    }
+    const auth = getAuth(app);
+    setPersistence(auth, browserLocalPersistence).catch(()=>{});
+
+    /* ========= URL params ========= */
+    const qp = new URLSearchParams(location.search);
+    const teacherUid = (qp.get("teacherUid") || "").trim();
+    const teacherNameParam = (qp.get("teacherName") || "").trim();
+
+    /* ========= Elements ========= */
+    const statusEl = document.getElementById("status");
+    const teacherTitle = document.getElementById("teacherTitle");
+    const subTitle = document.getElementById("subTitle");
+
+    const classesStack = document.getElementById("classesStack");
+    const classesEmpty = document.getElementById("classesEmpty");
+    const classesCount = document.getElementById("classesCount");
+
+    const backBtn = document.getElementById("backBtn");
+
+    // Sheet
+    const sheetBackdrop = document.getElementById("sheetBackdrop");
+    const sheetClose = document.getElementById("sheetClose");
+    const sheetMainTitle = document.getElementById("sheetMainTitle");
+    const sheetSubTitle = document.getElementById("sheetSubTitle");
+
+    const studentSearch = document.getElementById("studentSearch");
+
+    const studentsHint = document.getElementById("studentsHint");
+    const studentsStackWrap = document.getElementById("studentsStackWrap");
+    const studentsStack = document.getElementById("studentsStack");
+    const studentsEmpty = document.getElementById("studentsEmpty");
+    const studentsCountPill = document.getElementById("studentsCountPill");
+    const studentsCount = document.getElementById("studentsCount");
+    const selectedClassLabel = document.getElementById("selectedClassLabel");
+
+    const notesPrompt = document.getElementById("notesPrompt");
+    const notesArea = document.getElementById("notesArea");
+    const notesTitle = document.getElementById("notesTitle");
+    const notesList = document.getElementById("notesList");
+    const notesEmpty = document.getElementById("notesEmpty");
+
+    /* ========= Status helpers ========= */
+    function showStatus(msg, isError=false){
+      statusEl.style.display = "flex";
+      statusEl.textContent = msg;
+      statusEl.style.background = isError ? "#fef2f2" : "var(--primary-light)";
+      statusEl.style.color = isError ? "#dc2626" : "var(--primary)";
+      statusEl.style.borderColor = isError ? "rgba(220,38,38,0.18)" : "rgba(2,43,66,0.12)";
+    }
+    function clearStatus(){
+      statusEl.style.display = "none";
+      statusEl.textContent = "";
+    }
+
+    function escapeHtml(str){
+      return String(str ?? "")
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#039;");
+    }
+
+    function displayStudentNameFromDoc(d){
+      const x = d || {};
+      return (x.name || x.fullName || x.studentName || x.displayName || x.username || x.email || "طالب").toString();
+    }
+
+    function normalizeClassKey(raw){
+      const s = (raw ?? "").toString().trim();
+      if(!s) return "";
+      // Try to normalize common variants:
+      // "10/1" -> "10 / 1"
+      // "10 / 1ع" -> "10 / 1 ع"
+      const m = s.match(/^(\d{2})\s*\/\s*(\d)(?:\s*([عد]))?$/);
+      if(m){
+        const g = m[1];
+        const sec = m[2];
+        const tr = m[3] ? (" " + m[3]) : "";
+        return `${g} / ${sec}${tr}`.trim();
+      }
+      // If already "10 / 1 ع" keep it
+      const m2 = s.match(/^(\d{2})\s*\/\s*(\d)\s*([عد])$/);
+      if(m2){
+        return `${m2[1]} / ${m2[2]} ${m2[3]}`.trim();
+      }
+      return s;
+    }
+
+    function parseGradeSectionTrack(classKey){
+      // From rules: "10|11|12 / 1..7 (ع|د optional)"
+      const s = (classKey || "").toString().trim();
+      const m = s.match(/^(10|11|12)\s*\/\s*(1|2|3|4|5|6|7)(?:\s*(ع|د))?$/);
+      if(!m) return { grade:"", section:"", track:"" };
+      return { grade: m[1], section: m[2], track: m[3] || "" };
+    }
+
+    /* ========= Notes paths (matches your rules) ========= */
+    const notePaths = {
+      positive: "positiveNotes",
+      negative: "negativeNotes",
+      general:  "generalNotes",
+    };
+
+    /* ========= State ========= */
+    let classes = [];            // [{classKey, lessonCount, lastSeenDate}]
+    let selectedClass = null;
+    let students = [];           // [{id,name, classKey, grade, section, track, raw}]
+    let selectedStudent = null;  // {id,name}
+    let allNotes = [];           // merged notes
+    let filter = "all";
+    let studentSearchText = "";
+
+    /* ========= Header ========= */
+    teacherTitle.textContent = teacherNameParam || "المعلّم";
+    backBtn.addEventListener("click", ()=>{
+      if(history.length > 1) history.back();
+      else location.href = "dptlead.html";
+    });
+
+    /* ========= Sheet controls ========= */
+    function openSheet(){
+      sheetBackdrop.classList.add("show");
+      sheetBackdrop.setAttribute("aria-hidden", "false");
+      document.body.style.overflow = "hidden";
+    }
+    function closeSheet(){
+      sheetBackdrop.classList.remove("show");
+      sheetBackdrop.setAttribute("aria-hidden", "true");
+      document.body.style.overflow = "";
+    }
+
+    sheetClose.addEventListener("click", closeSheet);
+    sheetBackdrop.addEventListener("click", (e)=>{
+      if(e.target === sheetBackdrop) closeSheet();
+    });
+    document.addEventListener("keydown", (e)=>{
+      if(e.key === "Escape" && sheetBackdrop.classList.contains("show")) closeSheet();
+    });
+
+    /* ========= Load ALL teacher classes =========
+       Pull from schedules where teacherUid == teacherUid, across many records.
+       This shows every class the teacher appears in (based on data in schedules).
+    */
+    async function loadTeacherClassesAll(){
+      if(!teacherUid){
+        classes = [];
+        renderClasses();
+        return;
+      }
+
+      // Important: this query may require an index (teacherUid + orderBy(date)).
+      // If it fails, we show a clear message.
+      let snap;
+      try{
+        const q1 = query(
+          collection(db, "schedules"),
+          where("teacherUid", "==", teacherUid),
+          orderBy("date", "desc"),
+          limit(2000)
+        );
+        snap = await getDocs(q1);
+      }catch(e){
+        console.error(e);
+        showStatus("تعذّر تحميل صفوف المعلّم من schedules. قد تحتاج إنشاء فهرس (Index) للاستعلام.", true);
+        classes = [];
+        renderClasses();
+        return;
+      }
+
+      const map = new Map(); // classKey -> obj
+      snap.forEach(ds=>{
+        const d = ds.data() || {};
+
+        // Prefer classKey, then class (matches your rules), then any fallback
+        const rawClass =
+          d.classKey ?? d.class ?? d.className ?? d.class_id ?? d.classroom ?? "";
+
+        const classKey = normalizeClassKey(rawClass);
+        if(!classKey) return;
+
+        const dateStr = (d.date ?? "").toString().trim(); // ISO string in your rules
+        const cur = map.get(classKey) || { classKey, lessonCount: 0, lastSeenDate: "" };
+        cur.lessonCount += 1;
+
+        // Track latest date for subtitle
+        if(dateStr && (!cur.lastSeenDate || dateStr > cur.lastSeenDate)){
+          cur.lastSeenDate = dateStr;
+        }
+
+        map.set(classKey, cur);
+      });
+
+      classes = Array.from(map.values()).sort((a,b)=>{
+        const pa = parseGradeSectionTrack(a.classKey);
+        const pb = parseGradeSectionTrack(b.classKey);
+        const ag = parseInt(pa.grade || "999", 10);
+        const bg = parseInt(pb.grade || "999", 10);
+        if(ag !== bg) return ag - bg;
+        const as = parseInt(pa.section || "999", 10);
+        const bs = parseInt(pb.section || "999", 10);
+        if(as !== bs) return as - bs;
+
+        // Put "ع" and "د" last/first consistently
+        const ta = pa.track || "";
+        const tb = pb.track || "";
+        if(ta !== tb) return ta.localeCompare(tb, "ar");
+
+        return (a.classKey || "").localeCompare(b.classKey || "", "ar");
+      });
+
+      renderClasses();
+    }
+
+    function renderClasses(){
+      classesStack.innerHTML = "";
+      classesCount.textContent = String(classes.length);
+      classesEmpty.style.display = classes.length ? "none" : "block";
+
+      if(!classes.length){
+        subTitle.textContent = "لا توجد صفوف لهذا المعلّم (حسب بيانات schedules).";
+        return;
+      }
+
+      subTitle.textContent = "اختر صفًا لعرض الطلاب والملاحظات";
+
+      for(const c of classes){
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "list-btn" + (selectedClass?.classKey === c.classKey ? " active" : "");
+
+        const lastSeen = c.lastSeenDate ? `آخر ظهور: ${escapeHtml(c.lastSeenDate)}` : " ";
+        btn.innerHTML = `
+          <div class="lb-left">
+            <div class="lb-title">${escapeHtml(c.classKey)}</div>
+            <div class="lb-sub">إجمالي الحصص في schedules: ${escapeHtml(String(c.lessonCount || 0))} • ${lastSeen}</div>
+          </div>
+          <span class="pill"><i class="fas fa-arrow-left"></i><span>فتح</span></span>
+        `;
+
+        btn.addEventListener("click", async ()=>{
+          selectedClass = c;
+          selectedStudent = null;
+          allNotes = [];
+          filter = "all";
+          setFilterUI("all");
+
+          renderClasses();
+
+          // Reset sheet UI
+          sheetMainTitle.textContent = "الطلاب والملاحظات";
+          sheetSubTitle.textContent = `الصف: ${c.classKey}`;
+          selectedClassLabel.textContent = "الصف المحدد: " + (c.classKey || "");
+          notesTitle.textContent = "ملاحظات الطالب";
+          notesPrompt.style.display = "block";
+          notesArea.style.display = "none";
+          notesList.innerHTML = "";
+          notesEmpty.style.display = "none";
+
+          studentSearch.value = "";
+          studentSearchText = "";
+
+          // Open sheet and load students
+          openSheet();
+          await loadStudentsForClass(c);
+        });
+
+        classesStack.appendChild(btn);
+      }
+    }
+
+    /* ========= Load students for selected class =========
+       Your rules validate "class" field as the main one.
+       So we try to fetch students by:
+       1) students where class == classKey
+       2) students where classKey == classKey
+       3) fallback grade/section/track (if your docs have them)
+    */
+    async function tryStudentsQueryByField(fieldName, value){
+      try{
+        const qy = query(
+          collection(db, "students"),
+          where(fieldName, "==", value),
+          limit(400)
+        );
+        const snap = await getDocs(qy);
+        return snap;
+      }catch(e){
+        // may fail if field missing index or permission, return null
+        return null;
+      }
+    }
+
+    async function loadStudentsForClass(c){
+      studentsHint.style.display = "block";
+      studentsHint.textContent = "جاري تحميل الطلاب...";
+      studentsStackWrap.style.display = "none";
+      studentsEmpty.style.display = "none";
+      studentsStack.innerHTML = "";
+      studentsCountPill.style.display = "none";
+      studentsCount.textContent = "0";
+
+      clearStatus();
+
+      const classKey = normalizeClassKey(c.classKey);
+
+      let snap = null;
+
+      // 1) Most likely per your rules: field name "class"
+      snap = await tryStudentsQueryByField("class", classKey);
+
+      // 2) Older/alternative: "classKey"
+      if(!snap || snap.size === 0){
+        const s2 = await tryStudentsQueryByField("classKey", classKey);
+        if(s2 && s2.size) snap = s2;
+      }
+
+      // 3) Another common alternative: "className"
+      if(!snap || snap.size === 0){
+        const s3 = await tryStudentsQueryByField("className", classKey);
+        if(s3 && s3.size) snap = s3;
+      }
+
+      // 4) Fallback by grade/section/track if present
+      if(!snap || snap.size === 0){
+        const p = parseGradeSectionTrack(classKey);
+        const grade = (p.grade || "").toString().trim();
+        const section = (p.section || "").toString().trim();
+        const track = (p.track || "").toString().trim();
+
+        try{
+          if(grade && section && track){
+            snap = await getDocs(query(
+              collection(db, "students"),
+              where("grade", "==", grade),
+              where("section", "==", section),
+              where("track", "==", track),
+              limit(400)
+            ));
+          }else if(grade && section){
+            snap = await getDocs(query(
+              collection(db, "students"),
+              where("grade", "==", grade),
+              where("section", "==", section),
+              limit(400)
+            ));
+          }
+        }catch(e){
+          // ignore
+        }
+      }
+
+      // If still null, show useful message
+      if(!snap){
+        studentsHint.style.display = "none";
+        studentsStackWrap.style.display = "block";
+        studentsEmpty.style.display = "block";
+        studentsEmpty.textContent = "تعذّر تحميل الطلاب. راجع أسماء الحقول في students (class أو classKey).";
+        showStatus("الطلاب لا يظهرون غالبًا لأن حقل الصف في students ليس مطابقًا لـ classKey أو لأن الاستعلام يحتاج فهرس.", true);
+        return;
+      }
+
+      const list = [];
+      snap.forEach(ds=>{
+        const d = ds.data() || {};
+        const raw = d.classKey ?? d.class ?? d.className ?? "";
+        const ck = normalizeClassKey(raw);
+
+        list.push({
+          id: ds.id,
+          name: displayStudentNameFromDoc(d),
+          classKey: ck,
+          grade: (d.grade ?? "").toString(),
+          section: (d.section ?? "").toString(),
+          track: (d.track ?? "").toString(),
+          raw: d
+        });
+      });
+
+      list.sort((a,b)=> (a.name || "").localeCompare(b.name || "", "ar"));
+      students = list;
+
+      studentsHint.style.display = "none";
+      studentsStackWrap.style.display = "block";
+
+      studentsCountPill.style.display = "inline-flex";
+      studentsCount.textContent = String(students.length);
+
+      renderStudents();
+    }
+
+    function renderStudents(){
+      studentsStack.innerHTML = "";
+
+      const filtered = students.filter(s=>{
+        if(!studentSearchText) return true;
+        const n = (s.name || "").toLowerCase();
+        return n.includes(studentSearchText);
+      });
+
+      studentsEmpty.style.display = filtered.length ? "none" : "block";
+
+      if(!filtered.length){
+        // keep notes prompt unless a student selected
+        return;
+      }
+
+      for(const s of filtered){
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "list-btn" + (selectedStudent?.id === s.id ? " active" : "");
+        btn.innerHTML = `
+          <div class="lb-left">
+            <div class="lb-title">${escapeHtml(s.name)}</div>
+            <div class="lb-sub">${escapeHtml(selectedClass?.classKey || "")}</div>
+          </div>
+          <span class="pill"><i class="fas fa-note-sticky"></i><span>عرض</span></span>
+        `;
+        btn.addEventListener("click", async ()=>{
+          selectedStudent = { id: s.id, name: s.name };
+          renderStudents();
+          await loadNotesForStudent(s.id, s.name);
+        });
+        studentsStack.appendChild(btn);
+      }
+    }
+
+    studentSearch.addEventListener("input", ()=>{
+      studentSearchText = (studentSearch.value || "").trim().toLowerCase();
+      renderStudents();
+    });
+
+    /* ========= Notes loading (read only) ========= */
+    async function loadNotesForStudent(studentId, studentName){
+      if(!teacherUid){
+        showStatus("معرّف المعلّم غير موجود في الرابط.", true);
+        return;
+      }
+
+      notesPrompt.style.display = "none";
+      notesArea.style.display = "block";
+
+      notesTitle.textContent = "ملاحظات: " + (studentName || "طالب");
+      notesList.innerHTML = "";
+      notesEmpty.style.display = "none";
+
+      // IMPORTANT:
+      // Your rules allow read for teachers/supervisors/admin.
+      // Notes are stored under: students/{sid}/notes_by_teacher/{teacherId}/(positiveNotes|...)
+      // So teacherId MUST match the teacher who wrote the notes (usually teacherUid).
+      const lists = await Promise.all([
+        loadTypeNotes(studentId, "positive"),
+        loadTypeNotes(studentId, "negative"),
+        loadTypeNotes(studentId, "general"),
+      ]);
+
+      const pos = lists[0];
+      const neg = lists[1];
+      const gen = lists[2];
+
+      allNotes = [...pos, ...neg, ...gen].sort((a,b)=> b.dateMs - a.dateMs);
+
+      setCounters(pos.length, neg.length, gen.length, allNotes.length);
+      renderNotes();
+    }
+
+    async function loadTypeNotes(studentId, type){
+      try{
+        const colRef = collection(
+          db,
+          "students", studentId,
+          "notes_by_teacher", teacherUid,
+          notePaths[type]
+        );
+
+        // Your rules require "date" as timestamp on create, so orderBy("date") should work.
+        // If some old docs do not have "date", we fallback to createdAt.
+        let qy;
+        try{
+          qy = query(colRef, orderBy("date", "desc"), limit(250));
+        }catch(_){
+          qy = query(colRef, orderBy("createdAt", "desc"), limit(250));
+        }
+
+        const snap = await getDocs(qy);
+
+        const out = [];
+        snap.forEach(ds=>{
+          const d = ds.data() || {};
+          const dt =
+            (d.date?.toDate ? d.date.toDate() : null) ||
+            (d.createdAt?.toDate ? d.createdAt.toDate() : null) ||
+            null;
+
+          out.push({
+            id: ds.id,
+            type,
+            title: (d.title || "").toString(),
+            description: (d.description || "").toString(),
+            actionTaken: (d.actionTaken || "").toString(),
+            date: dt,
+            dateMs: dt ? dt.getTime() : 0
+          });
+        });
+
+        return out;
+      }catch(e){
+        console.error(e);
+        return [];
+      }
+    }
+
+    function setCounters(pos, neg, gen, all){
+      document.getElementById("c-pos").textContent = String(pos);
+      document.getElementById("c-neg").textContent = String(neg);
+      document.getElementById("c-gen").textContent = String(gen);
+      document.getElementById("c-all").textContent = String(all);
+    }
+
+    function setFilterUI(next){
+      filter = next;
+      document.querySelectorAll("#filters .chip").forEach(b=> b.classList.remove("active"));
+      const btn = document.querySelector(`#filters .chip[data-filter="${next}"]`);
+      if(btn) btn.classList.add("active");
+    }
+
+    document.getElementById("filters").addEventListener("click", (e)=>{
+      const btn = e.target.closest(".chip");
+      if(!btn) return;
+      setFilterUI(btn.dataset.filter || "all");
+      renderNotes();
+    });
+
+    function renderNotes(){
+      notesList.innerHTML = "";
+
+      const filtered = allNotes.filter(n => (filter === "all") ? true : n.type === filter);
+
+      if(!filtered.length){
+        notesEmpty.style.display = "block";
+        return;
+      }
+      notesEmpty.style.display = "none";
+
+      for(const n of filtered){
+        const det = document.createElement("details");
+        det.className = "note";
+
+        const dotClass = n.type === "positive" ? "dot-pos" : n.type === "negative" ? "dot-neg" : "dot-gen";
+        const typeText = n.type === "positive" ? "إيجابية" : n.type === "negative" ? "سلبية" : "ملاحظة";
+        const dateStr = n.date
+          ? new Intl.DateTimeFormat("ar-KW", { dateStyle:"medium" }).format(n.date)
+          : "بدون تاريخ";
+
+        const safeTitle = n.title ? escapeHtml(n.title) : "بدون عنوان";
+        const safeDesc = n.description ? escapeHtml(n.description) : "لا يوجد وصف";
+        const safeAct = n.actionTaken ? escapeHtml(n.actionTaken) : "لا يوجد إجراء";
+
+        det.innerHTML = `
+          <summary>
+            <span class="note-title">
+              <span class="dot ${dotClass}"></span>
+              <span style="min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${safeTitle}</span>
+            </span>
+            <span class="note-meta">${typeText} • ${escapeHtml(dateStr)}</span>
+          </summary>
+          <div class="note-body">
+            <div class="kv"><span class="k">الوصف:</span> <span class="v">${safeDesc}</span></div>
+            <div class="kv"><span class="k">الإجراء المتخذ:</span> <span class="v">${safeAct}</span></div>
+          </div>
+        `;
+        notesList.appendChild(det);
+      }
+    }
+
+    /* ========= Init ========= */
+    onAuthStateChanged(auth, async (user)=>{
+      clearStatus();
+
+      if(!user){
+        showStatus("الرجاء تسجيل الدخول أولاً. سيتم تحويلك لصفحة الدخول.", true);
+        setTimeout(()=> location.href = "/index.html", 250);
+        return;
+      }
+
+      if(!teacherUid){
+        showStatus("الرابط ناقص: teacherUid غير موجود.", true);
+        classes = [];
+        renderClasses();
+        return;
+      }
+
+      try{
+        // If teacherName not provided, fetch it
+        if(!teacherNameParam){
+          try{
+            const ts = await getDoc(doc(db, "teachers", teacherUid));
+            if(ts.exists()){
+              const d = ts.data() || {};
+              const name = (d.name || d.fullName || d.teacherName || d.displayName || "").toString().trim();
+              if(name) teacherTitle.textContent = name;
+            }
+          }catch(_){}
+        }
+
+        await loadTeacherClassesAll();
+      }catch(e){
+        console.error(e);
+        showStatus("تعذّر تحميل بيانات المعلّم.", true);
+      }
+    });
+  </script>
+  <script src="/shared/hub-title-link.js" defer></script>
+<script src="/name-glow.js" defer></script>
+</body>
+</html>
+
+
+
+
+
+
+

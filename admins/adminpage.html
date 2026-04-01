@@ -1,0 +1,1981 @@
+﻿<!DOCTYPE html> 
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.gstatic.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; manifest-src 'self'; upgrade-insecure-requests; block-all-mixed-content">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  <title>لوحة الإدارة - ثانوية أحمد البشر الرومي</title>
+
+  <!-- Noto Kufi Arabic -->
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+
+  <link rel="stylesheet" href="/shared/base.css" />
+  <style>
+    :root{
+      --primary:#033C54; --page:#f6f8fb; --text:#0f172a; --muted:#6b7f9f;
+      --border:#e6edf7; --shadow-1:0 8px 22px rgba(3,60,84,.14); --radius:16px;
+      --focus:#79b3c8; --primary-light:#065372; --transition: all 0.16s ease;
+    }
+    *{ box-sizing:border-box }
+    html,body{ height:100%; margin:0; padding:0; }
+    body{
+      background:
+        radial-gradient(1200px 600px at 80% -20%, rgba(3,60,84,.08), transparent 60%),
+        radial-gradient(900px 500px at -10% 120%, rgba(3,60,84,.06), transparent 60%),
+        var(--page);
+      color:var(--text);
+      font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      display:flex; flex-direction:column; min-height:100vh;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    @media (prefers-reduced-motion: reduce){
+      *{ animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.001ms !important; scroll-behavior:auto !important; }
+    }
+
+    .site-header{
+      position:sticky; top:0; z-index:10;
+      background: rgba(255,255,255,.68);
+      backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+      color:var(--primary);
+      padding:16px 20px;
+      display:flex; align-items:center; justify-content:center;
+      border-bottom:1px solid rgba(3,60,84,.08);
+      box-shadow: 0 2px 10px rgba(3,60,84,.06);
+    }
+    .site-title{ margin:0; font-weight:900; letter-spacing:.2px; font-size:clamp(1.1rem,2.4vw,1.5rem); text-shadow:0 1px 0 rgba(255,255,255,.6) }
+
+    main{ flex:1; padding:24px 14px 32px; display:flex }
+    .credits-footer{ width:100%; display:flex; justify-content:center; padding:20px 14px 28px }
+    .credits-card{ width:100%; background:#fff; border:1px solid var(--border); border-radius:16px; box-shadow:var(--shadow-1); padding:18px 16px; display:flex; flex-direction:column; align-items:center; gap:8px; text-align:center; font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif }
+    .credits-logo{ width:112px; height:112px; object-fit:contain }
+    .credits-line{ margin:0; font-size:.92rem; font-weight:700; color:var(--muted); line-height:1.7 }
+    .credits-label{ color:var(--primary); font-weight:900 }
+    @media (max-width:480px){
+      .credits-card{ padding:16px 12px }
+      .credits-logo{ width:90px; height:90px }
+      .credits-line{ font-size:.86rem }
+    }
+    .column{
+      width:min(820px, 96vw);
+      margin:0 auto;
+      display:flex; flex-direction:column; align-items:center; gap:16px;
+    }
+
+    .panel{ width:100%; background:#fff; border:1px solid var(--border); border-radius:16px; padding:16px 14px; box-shadow: var(--shadow-1) }
+    .state{ display:none } .state.active{ display:block }
+    .loading{ display:grid; place-items:center; gap:12px; padding:24px }
+    .spinner{ width:40px; height:40px; border-radius:50%; border:4px solid rgba(3,60,84,.18); border-top-color:var(--primary); animation:spin 1s linear infinite; margin-inline:auto }
+    @keyframes spin{ to{ transform: rotate(360deg); } }
+    .msg{ font-size:.98rem; text-align:center }
+    .error{ color:#a11; background:#fde8e8; border:1px solid #f5c5c5; padding:12px; border-radius:14px }
+    .muted{ color:var(--muted) }
+
+    .center{ display:flex; flex-direction:column; align-items:center; gap:8px; margin-top:6px; text-align:center }
+    .avatar{ width:112px; height:112px; border-radius:999px; background:var(--primary); display:grid; place-items:center; border:2px solid rgba(255,255,255,.9); box-shadow: var(--shadow-1); overflow:hidden }
+    .avatar svg{ width:60px; height:60px; stroke:#fff; fill:none; stroke-width:2 }
+    .name{ font-size:1.18rem; font-weight:900; color:#033C54 }
+    .created{ font-size:.92rem; color:#6b7f9f }
+    .divider{ width:100%; height:1px; background:#e9eef6; margin:8px 0 4px; border-radius:1px }
+
+    .stack{ width:min(640px, 100%); display:flex; flex-direction:column; gap:18px; margin-top:16px; align-items:center; margin-inline:auto }
+    .btn{
+      font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      width:100%; min-height:66px; border:none; border-radius:18px; cursor:pointer;
+      font-weight:800; font-size:clamp(1rem, 2.2vw, 1.1rem); letter-spacing:.2px;
+      padding:18px 24px; transition:var(--transition);
+      user-select:none; display:flex; align-items:center; justify-content:center; gap:12px;
+      position:relative; overflow:hidden; isolation:isolate;
+    }
+    .btn::after{content:'';position:absolute;inset:0;background:rgba(255,255,255,.1);opacity:0;transition:var(--transition)}
+    .btn:hover::after{opacity:1}
+    .btn:active{ transform:translateY(0) scale(.995) }
+    .btn:focus-visible{ outline:3px solid var(--focus); outline-offset:2px }
+    .btn.primary{ background:linear-gradient(145deg,var(--primary),var(--primary-light)); color:#fff; box-shadow:0 18px 40px rgba(3,60,84,.32) }
+    .btn.primary:hover{ transform:translateY(-3px); box-shadow:0 22px 48px rgba(3,60,84,.38) }
+    .btn.ghost{ background:#fff; color:#033C54; border:1px solid rgba(3,60,84,.25); box-shadow:var(--shadow-1) }
+    .btn.ghost:hover{ transform:translateY(-3px); box-shadow:0 18px 40px rgba(3,60,84,.22); border-color:rgba(3,60,84,.4) }
+    .btn.danger{ background:#fff; color:#cb2b2b; border:1px solid rgba(203,43,43,.4); box-shadow:var(--shadow-1) }
+    .btn.danger:hover{ transform:translateY(-3px); box-shadow:0 18px 40px rgba(203,43,43,.2); border-color:rgba(203,43,43,.55) }
+    .btn.section-break{ margin-top:12px }
+
+    .sheet{ position:fixed; inset:0; z-index:50; background:var(--page); display:flex; flex-direction:column; transform: translateX(100%); transition: transform .28s cubic-bezier(.22,.7,.25,1); }
+    .sheet.open{ transform: translateX(0) }
+    .sheet-header{ background:#ffffff; border-bottom:1px solid var(--border); padding:14px 12px; display:flex; align-items:center; gap:10px; position:sticky; top:0; z-index:10 }
+    .back-btn{ height:40px; padding:0 14px; border-radius:12px; border:1px solid rgba(3,60,84,.25); background:#fff; color:#033C54; font-weight:900; cursor:pointer; box-shadow: var(--shadow-1); transition: transform .12s ease }
+    .back-btn:hover{ transform:translateY(-1px) }
+    .sheet-title{ margin:0; font-size:1.05rem; font-weight:900; color:#033C54 }
+    .sheet-body{ flex:1 1 auto; overflow:auto; padding:16px; width:min(820px,94vw); margin:0 auto; display:flex; flex-direction:column; gap:12px }
+
+    .subject{
+      width:100%; background:#fff; border:1px solid var(--border); border-radius:16px; padding:14px;
+      display:flex; align-items:center; justify-content:space-between; gap:10px; cursor:pointer; box-shadow: var(--shadow-1);
+      color:#0f2743; font-weight:600; font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease, background .12s ease;
+    }
+    .subject:hover{ transform:translateY(-2px); box-shadow:0 16px 32px rgba(3,60,84,.18); border-color:rgba(3,60,84,.35); background:#fbfdff }
+    .subject:active{ transform:translateY(0) scale(.997) }
+    .chev{ width:22px; height:22px }
+    .chev path{ stroke:#6b7f9f; stroke-width:2.4; fill:none; stroke-linecap:round; stroke-linejoin:round }
+
+    .section{ background:#fff; border:1px solid var(--border); border-radius:16px; box-shadow: var(--shadow-1); padding:14px; display:flex; flex-direction:column; gap:12px }
+    .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center }
+    .field{ display:flex; flex-direction:column; gap:8px; width:100% }
+    .label{ font-size:.92rem; font-weight:800; color:#0f2743 }
+    .input-wrap{ display:flex; align-items:center; gap:10px; min-height:56px; padding:0 16px; background:#fff; border:1px solid var(--border); border-radius:var(--radius); box-shadow: var(--shadow-1); transition:border-color .12s ease, box-shadow .12s ease, transform .06s ease }
+    .input-wrap:focus-within{ border-color: rgba(3,60,84,.35); box-shadow: 0 16px 32px rgba(3,60,84,.18) }
+    .input, select{
+      flex:1; height:52px; border:none; outline:none; background:transparent; font-size:16px; color:#0a0a0a;
+      font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+    .ok, .err{ padding:12px; border-radius:14px; margin-top:6px; font-size:.9rem; box-shadow: var(--shadow-1); display:none }
+    .ok{ color:#126a2e; background:#e6f6ea; border:1px solid #c7ebd0 }
+    .err{ color:#a12; background:#fde8e8; border:1px solid #f5c5c5 }
+
+    .teacher-item{
+      padding:14px; border:1px solid var(--border); border-radius:14px; background:#fff; box-shadow: var(--shadow-1);
+      font-weight:900; color:#0f2743; display:flex; align-items:center; justify-content:space-between; cursor:pointer;
+      transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease, background .12s ease;
+    }
+    .teacher-item:hover{ transform:translateY(-2px); box-shadow:0 16px 32px rgba(3,60,84,.18); border-color:rgba(3,60,84,.35); background:#fbfdff }
+    .teacher-item:active{ transform:translateY(0) scale(.997) }
+    
+    /* Supervisor star styling */
+    .supervisor-star {
+      color: gold;
+      filter: drop-shadow(0 0 3px rgba(255,215,0,0.5));
+      margin-right: 5px;
+      font-size: 1.2em;
+    }
+
+    .sheet.small .sheet-body{ width:min(620px,94vw) }
+
+    .classes-list{ display:flex; flex-direction:column; gap:10px; }
+    .class-row{ display:flex; flex-direction:column; gap:8px; border:1px dashed var(--border); border-radius:14px; padding:10px; background:#fcfeff }
+    .class-row .top{ display:flex; gap:10px; align-items:center }
+    .class-row .remove{ height:40px; padding:0 12px; border-radius:10px; border:1px solid rgba(203,43,43,.35); color:#cb2b2b; background:#fff; font-weight:800; cursor:pointer; transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease }
+    .class-row .remove:hover{ transform:translateY(-1px); box-shadow:0 10px 22px rgba(203,43,43,.12); border-color:rgba(203,43,43,.55) }
+    .inline-add{ display:flex; gap:10px; align-items:center; flex-wrap:wrap }
+    .inline-add .add{ height:44px; padding:0 16px; border-radius:12px; border:1px solid rgba(3,60,84,.3); background:#fff; color:#033C54; font-weight:900; cursor:pointer; box-shadow: var(--shadow-1); transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease }
+    .inline-add .add:hover{ transform:translateY(-1px); box-shadow: 0 12px 26px rgba(3,60,84,.16); border-color:rgba(3,60,84,.55) }
+    .muted-small{ color:var(--muted); font-size:.82rem }
+
+    /* Popup Modal Styles */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(5px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.3s ease, visibility 0.3s ease;
+    }
+    
+    .modal-overlay.active {
+      opacity: 1;
+      visibility: visible;
+    }
+    
+    .modal {
+      background: white;
+      border-radius: var(--radius);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      width: min(90vw, 500px);
+      max-height: 90vh;
+      overflow-y: auto;
+      transform: scale(0.9);
+      opacity: 0;
+      transition: transform 0.3s ease, opacity 0.3s ease;
+    }
+    
+    .modal.active {
+      transform: scale(1);
+      opacity: 1;
+    }
+    
+    .modal-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .modal-title {
+      margin: 0;
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: var(--primary);
+    }
+    
+    .close-modal {
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+      color: var(--muted);
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+    }
+    
+    .close-modal:hover {
+      background: rgba(0, 0, 0, 0.05);
+    }
+    
+    .modal-body {
+      padding: 20px;
+    }
+    
+    .modal-footer {
+      padding: 16px 20px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    /* Add Teacher Modal refinements */
+    #addTeacherModal .modal {
+      width: min(92vw, 680px);
+    }
+
+    .add-teacher-body {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px 16px;
+      align-items: start;
+    }
+
+    .add-teacher-body .field {
+      margin: 0;
+    }
+
+    .add-teacher-full {
+      grid-column: 1 / -1;
+    }
+    
+    .checkbox-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 5px;
+    }
+    
+    .checkbox-wrap input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+    }
+
+    /* Absence Modal Specific Styles */
+    .absence-modal-body {
+      padding: 24px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    
+    .absence-modal-btn {
+      width: 100%;
+      height: 60px;
+      border: none;
+      border-radius: 14px;
+      font-family: "Noto Kufi Arabic", system-ui;
+      font-size: 1.1rem;
+      font-weight: 800;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+    
+    .absence-modal-btn.primary {
+      background: linear-gradient(145deg, var(--primary), var(--primary-light));
+      color: white;
+      box-shadow: 0 18px 40px rgba(3, 60, 84, 0.32);
+    }
+    
+    .absence-modal-btn.primary:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 22px 48px rgba(3, 60, 84, 0.38);
+    }
+    
+    .absence-modal-btn.ghost {
+      background: white;
+      color: var(--primary);
+      border: 1px solid rgba(3, 60, 84, 0.3);
+      box-shadow: 0 6px 20px rgba(3, 60, 84, 0.1);
+    }
+    
+    .absence-modal-btn.ghost:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 18px 40px rgba(3, 60, 84, 0.22);
+      border-color: rgba(3, 60, 84, 0.4);
+    }
+    
+    .absence-modal-icon {
+      font-size: 1.3rem;
+    }
+
+    @media (max-width:480px){
+      .btn{
+        min-height:56px;
+        padding:14px 16px;
+        font-size:1rem;
+      }
+      .stack{ gap:12px }
+      .absence-modal-btn {
+        height: 56px;
+        font-size: 1rem;
+      }
+      .add-teacher-body {
+        grid-template-columns: 1fr;
+      }
+      .add-teacher-full {
+        grid-column: auto;
+      }
+    }
+  </style>
+
+  <!-- iOS home screen icon -->
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/appicon.png" />
+  
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <meta name="theme-color" content="#033C54" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <!-- Browser tab icon (favicon) -->
+  <link rel="icon" type="image/png" sizes="64x64" href="https://framerusercontent.com/images/eepB7V11E8IMGVLttDUMaz62pPQ.png?width=64&height=64" />
+  <link rel="shortcut icon" href="https://framerusercontent.com/images/eepB7V11E8IMGVLttDUMaz62pPQ.png?width=64&height=64" />
+
+  <!-- Social / Safari preview (Open Graph & Twitter) -->
+  <meta property="og:title" content="لوحة الإدارة - ثانوية أحمد البشر الرومي">
+  <meta property="og:description" content="???? ?????? ???? ????? ??????.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://framerusercontent.com/images/jRnZLlPr90qwKsuUwfIlvDS9E.png?width=1200&height=630">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="لوحة الإدارة - ثانوية أحمد البشر الرومي">
+  <meta name="twitter:description" content="???? ?????? ???? ????? ??????.">
+  <meta name="twitter:image" content="https://framerusercontent.com/images/jRnZLlPr90qwKsuUwfIlvDS9E.png?width=1200&height=630">
+</head>
+<body>
+  <header class="site-header">
+    <h1 class="site-title">ثانوية أحمد البشر الرومي</h1>
+  </header>
+
+  <main>
+    <div class="column">
+
+      <div id="stateLoading" class="state active panel">
+        <div class="loading">
+          <div class="spinner"></div>
+          <div class="muted">جاري التحقق من تسجيل الدخول والصلاحيات…</div>
+        </div>
+      </div>
+
+      <div id="stateNotLogged" class="state panel">
+        <div class="msg error">يرجى تسجيل الدخول قبل الاستخدام.</div>
+        <p class="muted" style="text-align:center; margin:8px 0 0;">لا توجد جلسة نشطة. <a href="/index.html">اذهب لصفحة الدخول</a>.</p>
+      </div>
+
+      <div id="stateDenied" class="state panel">
+        <div class="msg error">تم رفض الوصول — هذه الصفحة مخصّصة للمشرفين فقط.</div>
+      </div>
+
+      <section id="stateAdmin" class="state" aria-label="لوحة الإدارة">
+        <div class="center">
+          <div id="profileAvatar" class="avatar"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.2"></circle><path d="M5 19c0-3.3 3.1-5.5 7-5.5s7 2.2 7 5.5"></path></svg></div>
+          <div id="adminName" class="name">—</div>
+          <div id="createdAtText" class="created">—</div>
+        </div>
+
+        <div class="divider" aria-hidden="true"></div>
+
+        <div class="stack" role="group" aria-label="أوامر الإدارة">
+          <button id="openAbsence" class="btn primary" type="button" aria-label="الغياب">الغياب</button>
+          <button id="openTeachers" class="btn ghost" type="button" aria-label="إدارة المعلمين">المعلمون</button>
+          <button id="openClasses" class="btn ghost" type="button" aria-label="الفصول">الفصول</button>
+          <!-- NEW BUTTON: schedules -->
+          <button id="openSchedules" class="btn ghost" type="button" aria-label="الجداول">الجداول</button>
+          <button id="openLogs" class="btn ghost" type="button" aria-label="السجلات">السجلات</button>
+          <!-- /NEW -->
+          <button id="logoutBtn" class="btn ghost section-break" type="button" aria-label="تسجيل الخروج">تسجيل الخروج</button>
+          <button id="deleteBtn" class="btn danger" type="button" aria-label="حذف الحساب">حذف الحساب</button>
+        </div>
+
+      </section>
+
+    </div>
+  </main>
+  <footer class="credits-footer" aria-label="اعتمادات الموقع">
+    <div class="credits-card">
+      <img class="credits-logo" src="/images/schoollogo.png" alt="شعار المدرسة" loading="lazy">
+      <p class="credits-line"><span class="credits-label">مدير المدرسة:</span> أ/ صلاح الناصر</p>
+      <p class="credits-line"><span class="credits-label">تصميم و برمجة:</span> الطالب عبدالله الصايغ</p>
+    </div>
+  </footer>
+
+  <!-- Absence Options Modal -->
+  <div id="absenceModal" class="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title">خيارات الغياب</h3>
+        <button id="closeAbsenceModal" class="close-modal" aria-label="إغلاق">×</button>
+      </div>
+      <div class="absence-modal-body">
+        <button id="overallAbsenceBtn" class="absence-modal-btn primary" type="button">
+          <span class="absence-modal-icon">📋</span>
+          <span>الغياب المختصر</span>
+        </button>
+        <button id="detailedAbsenceBtn" class="absence-modal-btn ghost" type="button">
+          <span class="absence-modal-icon">🔍</span>
+          <span>تدقيق في الغائب</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- اختيار المادة ثم إدارة المعلمين -->
+  <section id="teachersSheet" class="sheet" aria-hidden="true">
+    <div class="sheet-header">
+      <button id="closeTeachers" class="back-btn" aria-label="رجوع">رجوع</button>
+      <h3 class="sheet-title">اختر المادة</h3>
+    </div>
+    <div class="sheet-body" id="subjectsList"></div>
+  </section>
+
+  <section id="subjectSheet" class="sheet" aria-hidden="true">
+    <div class="sheet-header">
+      <button id="closeSubject" class="back-btn" aria-label="رجوع">رجوع</button>
+      <h3 id="subjectTitle" class="sheet-title">—</h3>
+    </div>
+    <div class="sheet-body">
+      <div class="section">
+        <div class="row" style="justify-content:space-between;">
+          <div class="label" style="margin:0;">إدارة المعلّمين لمادة <span id="subjectNameStrong" style="font-weight:900;"></span></div>
+          <div class="actions-inline" style="display:flex; gap:10px; flex-wrap:wrap;">
+            <button id="refreshTeachers" class="btn ghost" type="button" style="max-width:200px; height:48px;">تحديث</button>
+            <button id="openAddUser" class="btn primary" type="button" style="max-width:220px; height:48px;">إضافة معلم</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="label" style="margin-bottom:2px;">قائمة المعلّمين</div>
+        <div id="teachersList" class="stack"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- محرر المعلّم -->
+  <section id="teacherSheet" class="sheet small" aria-hidden="true">
+    <div class="sheet-header">
+      <button id="closeTeacher" class="back-btn" aria-label="رجوع">رجوع</button>
+      <h3 id="teacherTitle" class="sheet-title">بيانات المعلّم</h3>
+    </div>
+    <div class="sheet-body">
+      <div class="section">
+        <div class="field">
+          <label class="label" for="edTName">الاسم الكامل</label>
+          <div class="input-wrap"><input id="edTName" class="input" type="text" placeholder="الاسم" autocomplete="name"></div>
+        </div>
+        <div class="field">
+          <label class="label" for="edTEmail">البريد الإلكتروني</label>
+          <div class="input-wrap"><input id="edTEmail" class="input" type="email" placeholder="example@email.com" autocomplete="email"></div>
+        </div>
+        <div class="field">
+          <label class="label" for="edTPhone">رقم الهاتف</label>
+          <div class="input-wrap"><input id="edTPhone" class="input" type="tel" placeholder="رقم الهاتف" autocomplete="tel"></div>
+        </div>
+        <div class="field">
+          <label class="label" for="edTTeams">رابط Teams</label>
+          <div class="input-wrap"><input id="edTTeams" class="input" type="url" placeholder="https://teams.microsoft.com/l/..." autocomplete="url"></div>
+        </div>
+        <div class="field">
+          <label class="label" for="edTRole">الدور</label>
+          <div class="input-wrap">
+            <select id="edTRole" class="input">
+              <option value="user">مدرس</option>
+              <option value="head">رئيس القسم</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <div class="checkbox-wrap">
+            <input type="checkbox" id="edTIsSupervisor">
+            <label for="edTIsSupervisor" class="label" style="margin:0;">تعيين كمشرف</label>
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="label">الفصول (Classes)</label>
+          <div id="edClasses" class="classes-list"></div>
+          <div class="inline-add">
+            <button id="edAddClass" class="add" type="button">+ إضافة</button>
+            <span class="muted-small">أضف أو عدّل فصول المعلّم.</span>
+          </div>
+        </div>
+
+        <div class="actions-inline" style="display:flex; gap:10px; justify-content:flex-end;">
+          <button id="saveTeacher" class="btn primary" type="button" style="max-width:200px; height:48px;">حفظ</button>
+          <button id="deleteTeacher" class="btn danger" type="button" style="max-width:200px; height:48px;">حذف</button>
+        </div>
+        <div id="edOk" class="ok"></div>
+        <div id="edErr" class="err"></div>
+        <div class="muted" style="font-size:.86rem;">ملاحظة: الحذف هنا يزيل ملف Firestore فقط. حذف حساب الدخول يحتاج وظيفة سحابية (Admin SDK).</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Add Teacher Popup Modal -->
+  <div id="addTeacherModal" class="modal-overlay">
+    <div class="modal add-teacher-modal">
+      <div class="modal-header">
+        <h3 class="modal-title">إضافة معلم جديد</h3>
+        <button class="close-modal" aria-label="إغلاق">×</button>
+      </div>
+      <div class="modal-body add-teacher-body">
+        <div class="field">
+          <label class="label" for="teacherName">الاسم الكامل</label>
+          <div class="input-wrap"><input id="teacherName" class="input" type="text" placeholder="الاسم الكامل" autocomplete="name"></div>
+        </div>
+        <div class="field">
+          <label class="label" for="teacherEmail">رقم البطاقة المدنية</label>
+          <div class="input-wrap"><input id="teacherEmail" class="input" type="text" placeholder="مثال: 298040100633" autocomplete="off" inputmode="numeric" pattern="[0-9]*"></div>
+          <div class="muted" style="font-size:.82rem; margin-top:-4px;">سيتم الحفظ تلقائياً بصيغة: t[الرقم]@gmail.com</div>
+        </div>
+        <div class="field">
+          <label class="label" for="teacherPassword">كلمة المرور</label>
+          <div class="input-wrap"><input id="teacherPassword" class="input" type="password" placeholder="••••••••" autocomplete="new-password"></div>
+          <div class="muted" style="font-size:.86rem; margin-top:-4px;">٦ أحرف على الأقل.</div>
+        </div>
+        <div class="field">
+          <label class="label" for="teacherPhone">رقم الهاتف</label>
+          <div class="input-wrap"><input id="teacherPhone" class="input" type="tel" placeholder="رقم الهاتف" autocomplete="tel"></div>
+        </div>
+        <div class="field">
+          <label class="label" for="teacherTeams">رابط Teams</label>
+          <div class="input-wrap"><input id="teacherTeams" class="input" type="url" placeholder="https://teams.microsoft.com/l/..." autocomplete="url"></div>
+        </div>
+        <div class="field">
+          <label class="label" for="teacherRole">الدور</label>
+          <div class="input-wrap">
+            <select id="teacherRole" class="input">
+              <option value="user">مدرس</option>
+              <option value="head">رئيس القسم</option>
+            </select>
+          </div>
+        </div>
+        <div class="field add-teacher-full">
+          <div class="checkbox-wrap">
+            <input type="checkbox" id="teacherIsSupervisor">
+            <label for="teacherIsSupervisor" class="label" style="margin:0;">تعيين كمشرف</label>
+          </div>
+        </div>
+        <div class="field add-teacher-full">
+          <label class="label">الفصول (Classes)</label>
+          <div id="auClasses" class="classes-list"></div>
+          <div class="inline-add">
+            <button id="auAddClass" class="add" type="button">+ إضافة</button>
+            <span class="muted-small">يمكن إضافة أكثر من فصل؛ اختر <b>custom</b> لكتابة قيمة خاصة.</span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="cancelAddTeacher" class="btn ghost" type="button" style="max-width:120px; height:48px;">إلغاء</button>
+        <button id="createTeacherBtn" class="btn primary" type="button" style="max-width:160px; height:48px;">إنشاء الحساب</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Success Popup Modal -->
+  <div id="successModal" class="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title">تمت العملية بنجاح</h3>
+      </div>
+      <div class="modal-body">
+        <div style="text-align:center; padding:20px 0;">
+          <div style="font-size:3rem; margin-bottom:15px;">✅</div>
+          <div style="font-size:1.1rem; font-weight:600; color:var(--primary);">تم إنشاء الحساب بنجاح</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="closeSuccessModal" class="btn primary" type="button" style="max-width:120px; height:48px;">موافق</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- صفحة الإدارة (المشرفون) -->
+  <section id="adminsSheet" class="sheet" aria-hidden="true">
+    <div class="sheet-header">
+      <button id="closeAdmins" class="back-btn" aria-label="رجوع">رجوع</button>
+      <h3 class="sheet-title">إدارة المشرفين</h3>
+    </div>
+    <div class="sheet-body">
+      <div class="section">
+        <div class="row" style="justify-content:space-between;">
+          <div class="label" style="margin:0;">إنشاء حساب مشرف (الدور يُحفظ تلقائيًا: admin)</div>
+          <div class="actions-inline" style="display:flex; gap:10px; flex-wrap:wrap;">
+            <button id="refreshAdmins" class="btn ghost" type="button" style="max-width:200px; height:48px;">تحديث</button>
+            <button id="openAddAdmin" class="btn primary" type="button" style="max-width:220px; height:48px;">إضافة مشرف</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="addAdminForm" class="section" style="display:none;">
+        <div class="row">
+          <div class="field">
+            <label class="label" for="adName">الاسم</label>
+            <div class="input-wrap"><input id="adName" class="input" type="text" placeholder="الاسم الكامل" autocomplete="name"></div>
+          </div>
+          <div class="field">
+            <label class="label" for="adEmail">البريد الإلكتروني</label>
+            <div class="input-wrap"><input id="adEmail" class="input" type="email" placeholder="example@email.com" autocomplete="email"></div>
+          </div>
+          <div class="field">
+            <label class="label" for="adPassword">كلمة المرور</label>
+            <div class="input-wrap"><input id="adPassword" class="input" type="password" placeholder="••••••••" autocomplete="new-password"></div>
+            <div class="muted" style="font-size:.86rem; margin-top:-4px;">٦ أحرف على الأقل.</div>
+          </div>
+        </div>
+        <div class="actions-inline" style="display:flex; gap:10px; justify-content:flex-end;">
+          <button id="createAdminBtn" class="btn primary" type="button" style="max-width:220px; height:48px;">إنشاء مشرف</button>
+        </div>
+        <div id="adOk" class="ok"></div>
+        <div id="adErr" class="err"></div>
+      </div>
+
+      <div class="section">
+        <div class="label" style="margin-bottom:2px;">قائمة المشرفين</div>
+        <div id="adminsList" class="stack"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- محرر المشرف -->
+  <section id="adminSheet" class="sheet small" aria-hidden="true">
+    <div class="sheet-header">
+      <button id="closeAdmin" class="back-btn" aria-label="رجوع">رجوع</button>
+      <h3 id="adminTitle" class="sheet-title">بيانات المشرف</h3>
+    </div>
+    <div class="sheet-body">
+      <div class="section">
+        <div class="field">
+          <label class="label" for="edAName">الاسم</label>
+          <div class="input-wrap"><input id="edAName" class="input" type="text" placeholder="الاسم" autocomplete="name"></div>
+        </div>
+        <div class="field">
+          <label class="label" for="edAEmail">البريد الإلكتروني</label>
+          <div class="input-wrap"><input id="edAEmail" class="input" type="email" placeholder="example@email.com" autocomplete="email"></div>
+        </div>
+
+        <div class="actions-inline" style="display:flex; gap:10px; justify-content:flex-end;">
+          <button id="saveAdmin" class="btn primary" type="button" style="max-width:200px; height:48px;">حفظ</button>
+          <button id="deleteAdmin" class="btn danger" type="button" style="max-width:200px; height:48px;">حذف</button>
+        </div>
+        <div id="edAOk" class="ok"></div>
+        <div id="edAErr" class="err"></div>
+        <div class="muted" style="font-size:.86rem;">ملاحظة: الحذف هنا يزيل ملف Firestore فقط. حذف حساب الدخول يحتاج وظيفة سحابية (Admin SDK).</div>
+      </div>
+    </div>
+  </section>
+
+  <script type="module">
+    import { firebaseConfig } from "/shared/firebase.js";
+    /* ========= Firebase ========= */
+    import { initializeApp, getApp, getApps } from "/shared/firebase.js";
+    import {
+      getAuth, onAuthStateChanged, signOut,
+      EmailAuthProvider, reauthenticateWithCredential, deleteUser,
+      createUserWithEmailAndPassword
+    } from "/shared/firebase.js";
+    import {
+      initializeFirestore, collection, getDocs, query, where,
+      doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp
+    } from "/shared/firebase.js";
+    import { showActionPopup } from "/shared/action-popup.js";
+
+    
+
+    const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+
+    const db = initializeFirestore(app, {
+      experimentalAutoDetectLongPolling: true,
+      useFetchStreams: false
+    });
+
+    const auth = getAuth(app);
+
+    // تطبيق مساعد لإنشاء المستخدمين الجدد
+    const helperApp = getApps().some(a => a.name === "AdminHelper")
+      ? getApp("AdminHelper")
+      : initializeApp(firebaseConfig, "AdminHelper");
+    const helperAuth = getAuth(helperApp);
+
+    /* ========= UI refs ========= */
+    const sLoading = document.getElementById('stateLoading');
+    const sNotLog  = document.getElementById('stateNotLogged');
+    const sDenied  = document.getElementById('stateDenied');
+    const sAdmin   = document.getElementById('stateAdmin');
+
+    const profileAvatar = document.getElementById('profileAvatar');
+    const adminName     = document.getElementById('adminName');
+    const createdAtText = document.getElementById('createdAtText');
+
+    const openAbsence  = document.getElementById('openAbsence');
+    const openTeachers = document.getElementById('openTeachers');
+    const openAdmins   = document.getElementById('openAdmins');
+    const openClasses  = document.getElementById('openClasses');
+    const logoutBtn    = document.getElementById('logoutBtn');
+    const deleteBtn    = document.getElementById('deleteBtn');
+
+    // NEW: schedules button ref
+    const openSchedules = document.getElementById('openSchedules');
+    const openLogs = document.getElementById('openLogs');
+
+    // NEW: Absence modal refs
+    const absenceModal = document.getElementById('absenceModal');
+    const closeAbsenceModal = document.getElementById('closeAbsenceModal');
+    const overallAbsenceBtn = document.getElementById('overallAbsenceBtn');
+    const detailedAbsenceBtn = document.getElementById('detailedAbsenceBtn');
+
+    // Teachers sheets
+    const teachersSheet = document.getElementById('teachersSheet');
+    const closeTeachers = document.getElementById('closeTeachers');
+    const subjectsList  = document.getElementById('subjectsList');
+
+    const subjectSheet  = document.getElementById('subjectSheet');
+    const closeSubject  = document.getElementById('closeSubject');
+    const subjectTitle  = document.getElementById('subjectTitle');
+    const subjectNameStrong = document.getElementById('subjectNameStrong');
+
+    const refreshTeachers = document.getElementById('refreshTeachers');
+    const openAddUser   = document.getElementById('openAddUser');
+    const teachersList = document.getElementById('teachersList');
+
+    // Teacher editor
+    const teacherSheet = document.getElementById('teacherSheet');
+    const closeTeacher = document.getElementById('closeTeacher');
+    const teacherTitle = document.getElementById('teacherTitle');
+    const edTName = document.getElementById('edTName');
+    const edTEmail = document.getElementById('edTEmail');
+    const edTPhone = document.getElementById('edTPhone');
+    const edTTeams = document.getElementById('edTTeams');
+    const edTRole = document.getElementById('edTRole');
+    const edTIsSupervisor = document.getElementById('edTIsSupervisor');
+    const saveTeacher = document.getElementById('saveTeacher');
+    const deleteTeacherBtn = document.getElementById('deleteTeacher');
+    const edOk = document.getElementById('edOk');
+    const edErr = document.getElementById('edErr');
+
+    const edClasses = document.getElementById('edClasses');
+    const edAddClass = document.getElementById('edAddClass');
+
+    // Add teacher modal
+    const addTeacherModal = document.getElementById('addTeacherModal');
+    const closeAddTeacherModal = document.querySelector('#addTeacherModal .close-modal');
+    const cancelAddTeacher = document.getElementById('cancelAddTeacher');
+    const teacherName = document.getElementById('teacherName');
+    const teacherEmail = document.getElementById('teacherEmail');
+    const teacherPassword = document.getElementById('teacherPassword');
+    const teacherPhone = document.getElementById('teacherPhone');
+    const teacherTeams = document.getElementById('teacherTeams');
+    const teacherRole = document.getElementById('teacherRole');
+    const teacherIsSupervisor = document.getElementById('teacherIsSupervisor');
+    const createTeacherBtn = document.getElementById('createTeacherBtn');
+
+    const auClasses = document.getElementById('auClasses');
+    const auAddClass = document.getElementById('auAddClass');
+
+    // Success modal
+    const successModal = document.getElementById('successModal');
+    const closeSuccessModal = document.getElementById('closeSuccessModal');
+
+        /* ========= Local Avatar (Per Account / Per Device) ========= */
+        const AVATAR_STORAGE_PREFIX = 'localAvatarByUid:';
+        const defaultAvatarMarkup = profileAvatar ? profileAvatar.innerHTML : '';
+        let avatarUserUid = null;
+
+        function getAvatarStorageKey(uid){
+            return `${AVATAR_STORAGE_PREFIX}${uid || ''}`;
+        }
+
+        function hasStoredAvatar(uid){
+            if(!uid) return false;
+            try{
+                return Boolean(localStorage.getItem(getAvatarStorageKey(uid)));
+            }catch{
+                return false;
+            }
+        }
+
+        function removeStoredAvatar(uid){
+            if(!uid) return;
+            try{
+                localStorage.removeItem(getAvatarStorageKey(uid));
+            }catch(e){
+                console.error('Avatar remove error:', e);
+            }
+        }
+
+        function applyAvatarToUI(dataUrl){
+            if(!profileAvatar) return;
+            if(!dataUrl){
+                profileAvatar.innerHTML = defaultAvatarMarkup;
+                return;
+            }
+            const img = document.createElement('img');
+            img.src = dataUrl;
+            img.alt = 'الصورة الشخصية';
+            img.style.width = '100%';
+            img.style.height = '100%';
+            img.style.objectFit = 'cover';
+            img.style.display = 'block';
+            profileAvatar.innerHTML = '';
+            profileAvatar.appendChild(img);
+        }
+
+        function loadStoredAvatar(uid){
+            if(!uid){
+                applyAvatarToUI(null);
+                return;
+            }
+            try{
+                const saved = localStorage.getItem(getAvatarStorageKey(uid));
+                applyAvatarToUI(saved || null);
+            }catch(e){
+                console.error('Avatar load error:', e);
+                applyAvatarToUI(null);
+            }
+        }
+
+        function saveStoredAvatar(uid, dataUrl){
+            if(!uid || !dataUrl) return false;
+            try{
+                localStorage.setItem(getAvatarStorageKey(uid), dataUrl);
+                return true;
+            }catch(e){
+                console.error('Avatar save error:', e);
+                return false;
+            }
+        }
+
+        function fileToDataUrl(file){
+            return new Promise((resolve, reject)=>{
+                const reader = new FileReader();
+                reader.onerror = () => reject(new Error('read-failed'));
+                reader.onload = () => resolve(String(reader.result || ''));
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function closeAvatarPicker(){
+            const existing = document.getElementById('avatarPickerOverlay');
+            if(existing) existing.remove();
+        }
+
+        function closeAvatarEditor(){
+            const existing = document.getElementById('avatarEditorOverlay');
+            if(existing) existing.remove();
+        }
+
+        function openAvatarEditor(sourceDataUrl){
+            return new Promise((resolve)=>{
+                closeAvatarEditor();
+
+                const overlay = document.createElement('div');
+                overlay.id = 'avatarEditorOverlay';
+                Object.assign(overlay.style, {
+                    position: 'fixed',
+                    inset: '0',
+                    zIndex: '3100',
+                    background: 'rgba(15, 23, 42, 0.55)',
+                    display: 'grid',
+                    placeItems: 'center',
+                    padding: '16px'
+                });
+
+                const card = document.createElement('div');
+                Object.assign(card.style, {
+                    width: 'min(460px, 94vw)',
+                    background: '#fff',
+                    border: '1px solid #e6edf7',
+                    borderRadius: '16px',
+                    boxShadow: '0 20px 55px rgba(3,60,84,.28)',
+                    padding: '18px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px',
+                    fontFamily: '"Noto Kufi Arabic", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif'
+                });
+
+                const title = document.createElement('div');
+                title.textContent = 'ضبط الصورة الشخصية';
+                Object.assign(title.style, {
+                    fontWeight: '900',
+                    color: '#033C54',
+                    textAlign: 'center'
+                });
+
+                const subtitle = document.createElement('div');
+                subtitle.textContent = 'حرّك الصورة داخل الدائرة ثم اضغط حفظ.';
+                Object.assign(subtitle.style, {
+                    fontWeight: '700',
+                    color: '#5f738c',
+                    textAlign: 'center',
+                    fontSize: '0.92rem'
+                });
+
+                const stageSize = 280;
+                const stage = document.createElement('div');
+                Object.assign(stage.style, {
+                    width: `${stageSize}px`,
+                    height: `${stageSize}px`,
+                    margin: '6px auto',
+                    borderRadius: '50%',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    background: '#d9e5f1',
+                    border: '2px solid rgba(255,255,255,.9)',
+                    boxShadow: 'inset 0 0 0 1px rgba(3,60,84,.12)',
+                    cursor: 'grab',
+                    touchAction: 'none'
+                });
+
+                const imageEl = document.createElement('img');
+                Object.assign(imageEl.style, {
+                    position: 'absolute',
+                    left: '0',
+                    top: '0',
+                    userSelect: 'none',
+                    pointerEvents: 'none'
+                });
+                imageEl.draggable = false;
+                stage.appendChild(imageEl);
+
+                const grid = document.createElement('div');
+                Object.assign(grid.style, {
+                    position: 'absolute',
+                    inset: '0',
+                    pointerEvents: 'none'
+                });
+                for(let i = 1; i <= 2; i++){
+                    const v = document.createElement('div');
+                    Object.assign(v.style, {
+                        position: 'absolute',
+                        top: '0',
+                        bottom: '0',
+                        left: `${(i * 100) / 3}%`,
+                        width: '1px',
+                        background: 'rgba(255,255,255,.52)'
+                    });
+                    const h = document.createElement('div');
+                    Object.assign(h.style, {
+                        position: 'absolute',
+                        left: '0',
+                        right: '0',
+                        top: `${(i * 100) / 3}%`,
+                        height: '1px',
+                        background: 'rgba(255,255,255,.52)'
+                    });
+                    grid.appendChild(v);
+                    grid.appendChild(h);
+                }
+                stage.appendChild(grid);
+
+                const actions = document.createElement('div');
+                Object.assign(actions.style, {
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 1fr',
+                    gap: '10px'
+                });
+
+                const cancelBtn = document.createElement('button');
+                cancelBtn.type = 'button';
+                cancelBtn.textContent = 'إلغاء';
+                Object.assign(cancelBtn.style, {
+                    minHeight: '48px',
+                    borderRadius: '12px',
+                    border: '1px solid rgba(3,60,84,.22)',
+                    background: '#fff',
+                    color: '#033C54',
+                    fontWeight: '800',
+                    cursor: 'pointer'
+                });
+
+                const saveBtn = document.createElement('button');
+                saveBtn.type = 'button';
+                saveBtn.textContent = 'حفظ الصورة';
+                saveBtn.disabled = true;
+                Object.assign(saveBtn.style, {
+                    minHeight: '48px',
+                    borderRadius: '12px',
+                    border: 'none',
+                    background: 'linear-gradient(145deg,#065372,#033C54)',
+                    color: '#fff',
+                    fontWeight: '800',
+                    cursor: 'pointer',
+                    opacity: '.6'
+                });
+
+                actions.appendChild(cancelBtn);
+                actions.appendChild(saveBtn);
+
+                card.appendChild(title);
+                card.appendChild(subtitle);
+                card.appendChild(stage);
+                card.appendChild(actions);
+                overlay.appendChild(card);
+                document.body.appendChild(overlay);
+
+                let drawW = 0;
+                let drawH = 0;
+                let offsetX = 0;
+                let offsetY = 0;
+                let ready = false;
+                let dragging = false;
+                let startX = 0;
+                let startY = 0;
+                let originX = 0;
+                let originY = 0;
+
+                const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
+                const minX = () => stageSize - drawW;
+                const minY = () => stageSize - drawH;
+
+                function renderImage(){
+                    imageEl.style.width = `${drawW}px`;
+                    imageEl.style.height = `${drawH}px`;
+                    imageEl.style.left = `${offsetX}px`;
+                    imageEl.style.top = `${offsetY}px`;
+                }
+
+                function finish(result){
+                    closeAvatarEditor();
+                    resolve(result);
+                }
+
+                imageEl.addEventListener('load', ()=>{
+                    const naturalW = imageEl.naturalWidth || 1;
+                    const naturalH = imageEl.naturalHeight || 1;
+                    const coverScale = Math.max(stageSize / naturalW, stageSize / naturalH);
+                    drawW = Math.max(stageSize, naturalW * coverScale);
+                    drawH = Math.max(stageSize, naturalH * coverScale);
+                    offsetX = (stageSize - drawW) / 2;
+                    offsetY = (stageSize - drawH) / 2;
+                    renderImage();
+                    ready = true;
+                    saveBtn.disabled = false;
+                    saveBtn.style.opacity = '1';
+                });
+                imageEl.src = sourceDataUrl;
+
+                stage.addEventListener('pointerdown', (e)=>{
+                    if(!ready) return;
+                    dragging = true;
+                    startX = e.clientX;
+                    startY = e.clientY;
+                    originX = offsetX;
+                    originY = offsetY;
+                    stage.style.cursor = 'grabbing';
+                    stage.setPointerCapture(e.pointerId);
+                });
+
+                stage.addEventListener('pointermove', (e)=>{
+                    if(!dragging || !ready) return;
+                    offsetX = clamp(originX + (e.clientX - startX), minX(), 0);
+                    offsetY = clamp(originY + (e.clientY - startY), minY(), 0);
+                    renderImage();
+                });
+
+                function stopDragging(e){
+                    if(!dragging) return;
+                    dragging = false;
+                    stage.style.cursor = 'grab';
+                    if(e && stage.hasPointerCapture(e.pointerId)){
+                        stage.releasePointerCapture(e.pointerId);
+                    }
+                }
+
+                stage.addEventListener('pointerup', stopDragging);
+                stage.addEventListener('pointercancel', stopDragging);
+
+                cancelBtn.addEventListener('click', ()=> finish(null));
+                saveBtn.addEventListener('click', ()=>{
+                    if(!ready) return;
+                    const outSize = 512;
+                    const ratio = outSize / stageSize;
+                    const canvas = document.createElement('canvas');
+                    canvas.width = outSize;
+                    canvas.height = outSize;
+                    const ctx = canvas.getContext('2d');
+                    if(!ctx){
+                        finish(null);
+                        return;
+                    }
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.arc(outSize / 2, outSize / 2, outSize / 2, 0, Math.PI * 2);
+                    ctx.closePath();
+                    ctx.clip();
+                    ctx.drawImage(
+                        imageEl,
+                        offsetX * ratio,
+                        offsetY * ratio,
+                        drawW * ratio,
+                        drawH * ratio
+                    );
+                    ctx.restore();
+                    finish(canvas.toDataURL('image/jpeg', 0.9));
+                });
+
+                overlay.addEventListener('click', (e)=>{
+                    if(e.target === overlay) finish(null);
+                });
+            });
+        }
+
+        const avatarCameraInput = document.createElement('input');
+        avatarCameraInput.type = 'file';
+        avatarCameraInput.accept = 'image/*';
+        avatarCameraInput.setAttribute('capture', 'environment');
+        avatarCameraInput.style.display = 'none';
+
+        const avatarLibraryInput = document.createElement('input');
+        avatarLibraryInput.type = 'file';
+        avatarLibraryInput.accept = 'image/*';
+        avatarLibraryInput.style.display = 'none';
+
+        document.body.appendChild(avatarCameraInput);
+        document.body.appendChild(avatarLibraryInput);
+
+        async function handleAvatarFile(file){
+            if(!file || !avatarUserUid) return;
+            try{
+                const sourceDataUrl = await fileToDataUrl(file);
+                const editedDataUrl = await openAvatarEditor(sourceDataUrl);
+                if(!editedDataUrl) return;
+                const ok = saveStoredAvatar(avatarUserUid, editedDataUrl);
+                if(!ok){
+                    alert('تعذّر حفظ الصورة محلياً. جرّب صورة بحجم أصغر.');
+                    return;
+                }
+                applyAvatarToUI(editedDataUrl);
+            }catch(e){
+                console.error('Avatar process error:', e);
+                alert('تعذّر معالجة الصورة. حاول مرة أخرى.');
+            }
+        }
+
+        avatarCameraInput.addEventListener('change', async ()=>{
+            const file = avatarCameraInput.files && avatarCameraInput.files[0];
+            avatarCameraInput.value = '';
+            await handleAvatarFile(file);
+        });
+
+        avatarLibraryInput.addEventListener('change', async ()=>{
+            const file = avatarLibraryInput.files && avatarLibraryInput.files[0];
+            avatarLibraryInput.value = '';
+            await handleAvatarFile(file);
+        });
+
+        function openAvatarPicker(){
+            if(!avatarUserUid || !profileAvatar) return;
+            closeAvatarPicker();
+            closeAvatarEditor();
+
+            const overlay = document.createElement('div');
+            overlay.id = 'avatarPickerOverlay';
+            Object.assign(overlay.style, {
+                position: 'fixed',
+                inset: '0',
+                zIndex: '3000',
+                background: 'rgba(15, 23, 42, 0.45)',
+                display: 'grid',
+                placeItems: 'center',
+                padding: '16px'
+            });
+
+            const card = document.createElement('div');
+            Object.assign(card.style, {
+                width: 'min(420px, 92vw)',
+                background: '#fff',
+                border: '1px solid #e6edf7',
+                borderRadius: '16px',
+                boxShadow: '0 20px 55px rgba(3,60,84,.28)',
+                padding: '18px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '10px',
+                fontFamily: '"Noto Kufi Arabic", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif'
+            });
+
+            const title = document.createElement('div');
+            title.textContent = 'اختر صورة الملف الشخصي';
+            Object.assign(title.style, {
+                fontWeight: '900',
+                color: '#033C54',
+                textAlign: 'center',
+                marginBottom: '4px'
+            });
+
+            const makeBtn = (label, onClick, isGhost = false) => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.textContent = label;
+                Object.assign(btn.style, {
+                    minHeight: '48px',
+                    borderRadius: '12px',
+                    border: isGhost ? '1px solid rgba(3,60,84,.22)' : 'none',
+                    background: isGhost ? '#fff' : 'linear-gradient(145deg,#065372,#033C54)',
+                    color: isGhost ? '#033C54' : '#fff',
+                    fontWeight: '800',
+                    cursor: 'pointer'
+                });
+                btn.addEventListener('click', onClick);
+                return btn;
+            };
+
+            const cameraBtn = makeBtn('التقاط صورة', () => {
+                closeAvatarPicker();
+                avatarCameraInput.click();
+            });
+
+            const libraryBtn = makeBtn('اختيار من المكتبة', () => {
+                closeAvatarPicker();
+                avatarLibraryInput.click();
+            });
+
+            card.appendChild(title);
+            card.appendChild(cameraBtn);
+            card.appendChild(libraryBtn);
+
+            if(hasStoredAvatar(avatarUserUid)){
+                const removeBtn = makeBtn('إزالة الصورة', () => {
+                    removeStoredAvatar(avatarUserUid);
+                    applyAvatarToUI(null);
+                    closeAvatarPicker();
+                }, true);
+                removeBtn.style.color = '#b42318';
+                removeBtn.style.border = '1px solid rgba(180,35,24,.26)';
+                card.appendChild(removeBtn);
+            }
+
+            const cancelBtn = makeBtn('إلغاء', () => closeAvatarPicker(), true);
+            card.appendChild(cancelBtn);
+            overlay.appendChild(card);
+
+            overlay.addEventListener('click', (e)=>{
+                if(e.target === overlay) closeAvatarPicker();
+            });
+
+            document.body.appendChild(overlay);
+        }
+
+        if(profileAvatar){
+            profileAvatar.style.cursor = 'pointer';
+            profileAvatar.setAttribute('role', 'button');
+            profileAvatar.setAttribute('tabindex', '0');
+            profileAvatar.setAttribute('aria-label', 'تغيير الصورة الشخصية');
+            profileAvatar.addEventListener('click', openAvatarPicker);
+            profileAvatar.addEventListener('keydown', (e)=>{
+                if(e.key === 'Enter' || e.key === ' '){
+                    e.preventDefault();
+                    openAvatarPicker();
+                }
+            });
+        }
+
+    // Admins sheets
+    const adminsSheet = document.getElementById('adminsSheet');
+    const closeAdmins = document.getElementById('closeAdmins');
+    const openAddAdmin = document.getElementById('openAddAdmin');
+    const refreshAdmins = document.getElementById('refreshAdmins');
+    const addAdminForm = document.getElementById('addAdminForm');
+    const adName = document.getElementById('adName');
+    const adEmail = document.getElementById('adEmail');
+    const adPassword = document.getElementById('adPassword');
+    const createAdminBtn = document.getElementById('createAdminBtn');
+    const adOk = document.getElementById('adOk');
+    const adErr = document.getElementById('adErr');
+    const adminsList = document.getElementById('adminsList');
+
+    const adminSheet = document.getElementById('adminSheet');
+    const closeAdmin = document.getElementById('closeAdmin');
+    const adminTitle = document.getElementById('adminTitle');
+    const edAName = document.getElementById('edAName');
+    const edAEmail = document.getElementById('edAEmail');
+    const saveAdmin = document.getElementById('saveAdmin');
+    const deleteAdminBtn = document.getElementById('deleteAdmin');
+    const edAOk = document.getElementById('edAOk');
+    const edAErr = document.getElementById('edAErr');
+
+    /* ========= Helpers ========= */
+    const show = (el)=>{ [sLoading, sNotLog, sDenied, sAdmin].forEach(x=>x.classList.remove('active')); el.classList.add('active'); };
+    const openSheet = (el)=>{ el.classList.add('open'); el.setAttribute('aria-hidden','false'); };
+    const closeSheet = (el)=>{ el.classList.remove('open'); el.setAttribute('aria-hidden','true'); };
+    const fmtDateTime = (d)=> new Intl.DateTimeFormat('ar-KW', { dateStyle:'medium', timeStyle:'short' }).format(d);
+    const emailRx = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const toArabicDigits = (str) => str.replace(/\d/g, d => '٠١٢٣٤٥٦٧٨٩'[d]);
+    
+    // Modal functions
+    const openModal = (modal) => {
+      document.body.style.overflow = 'hidden';
+      modal.classList.add('active');
+      setTimeout(() => {
+        modal.querySelector('.modal').classList.add('active');
+      }, 10);
+    };
+    
+    const closeModal = (modal) => {
+      modal.querySelector('.modal').classList.remove('active');
+      setTimeout(() => {
+        modal.classList.remove('active');
+        document.body.style.overflow = '';
+      }, 300);
+    };
+    
+    const resetTeacherForm = () => {
+      teacherName.value = '';
+      teacherEmail.value = '';
+      teacherPassword.value = '';
+      teacherPhone.value = '';
+      teacherTeams.value = '';
+      teacherRole.value = 'user';
+      teacherIsSupervisor.checked = false;
+      auClasses.innerHTML = '';
+      auClasses.appendChild(makeClassRow(""));
+    };
+
+    /* ========= Subjects ========= */
+    const subjectsKW = [
+      "اللغة العربية", "اللغة الإنجليزية", "الرياضيات",
+      "التربية الإسلامية", "التاريخ", "الجغرافيا",
+      "الاقتصاد", "الفلسفة", "علم النفس",
+      "الفيزياء", "الكيمياء", "الأحياء", "الجيولوجيا",
+      "الحاسوب", "التربية البدنية", "التربية الفنية"
+    ];
+
+    function renderSubjects(){
+      subjectsList.innerHTML = '';
+      subjectsKW.forEach(label=>{
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'subject';
+        btn.innerHTML = `<span>${label}</span>
+          <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>`;
+        btn.addEventListener('click', ()=> openSubject(label));
+        subjectsList.appendChild(btn);
+      });
+    }
+
+    /* ========= Classes options (للـمعلمين فقط) ========= */
+    const CLASS_CUSTOM_VALUE = "__custom__";
+    const classOptionsRaw = [
+      "10 / 1","10 / 2","10 / 3","10 / 4","10 / 5","10 / 6","10 / 7",
+      "11 / 1 ع","11 / 2 ع","11 / 3 ع","11 / 4 ع","11 / 5 ع","11 / 1 د",
+      "12 / 1 ع","12 / 2 ع","12 / 3 ع","12 / 4 ع","12 / 5 ع","12 / 1 د"
+    ];
+    function sortedClassOptions() {
+      const parse = (s)=>{
+        const m = s.match(/^(\d+)\s*\/\s*(\d+)(?:\s*(.*))?$/);
+        if(!m) return {g:999, s:999, suf:""};
+        return { g: parseInt(m[1],10), s: parseInt(m[2],10), suf: (m[3]||"").trim() };
+      };
+      return [...classOptionsRaw].sort((a,b)=>{
+        const A=parse(a), B=parse(b);
+        if(A.g!==B.g) return A.g-B.g;
+        if(A.s!==B.s) return A.s-B.s;
+        return A.suf.localeCompare(B.suf,'ar');
+      });
+    }
+    const classOptions = sortedClassOptions();
+
+    function makeClassRow(initialValue=""){
+      const row = document.createElement('div');
+      row.className = 'class-row';
+
+      const top = document.createElement('div');
+      top.className = 'top';
+
+      const wrap = document.createElement('div');
+      wrap.className = 'input-wrap';
+      const sel = document.createElement('select');
+      sel.className = 'input';
+
+      const optCustom = document.createElement('option');
+      optCustom.value = CLASS_CUSTOM_VALUE;
+      optCustom.textContent = 'custom';
+      sel.appendChild(optCustom);
+
+      classOptions.forEach(v=>{
+        const o=document.createElement('option');
+        o.value=v;
+        o.textContent=toArabicDigits(v);
+        sel.appendChild(o);
+      });
+
+      const customWrap = document.createElement('div');
+      customWrap.className = 'input-wrap';
+      customWrap.style.display = 'none';
+      const customInput = document.createElement('input');
+      customInput.className = 'input';
+      customInput.type = 'text';
+      customInput.placeholder = 'اكتب الصّف المخصص (مثال: ٩ / ٣ برنامج خاص)';
+      customWrap.appendChild(customInput);
+
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.className = 'remove';
+      removeBtn.textContent = 'حذف';
+      removeBtn.addEventListener('click', ()=> row.remove());
+
+      sel.addEventListener('change', ()=>{
+        if(sel.value === CLASS_CUSTOM_VALUE){
+          customWrap.style.display = '';
+          customInput.focus();
+        }else{
+          customWrap.style.display = 'none';
+        }
+      });
+
+      if(!initialValue){
+        sel.value = CLASS_CUSTOM_VALUE;
+        customWrap.style.display = '';
+      }else if(classOptions.includes(initialValue)){
+        sel.value = initialValue;
+        customWrap.style.display = 'none';
+      }else{
+        sel.value = CLASS_CUSTOM_VALUE;
+        customWrap.style.display = '';
+        customInput.value = initialValue;
+      }
+
+      wrap.appendChild(sel);
+      top.appendChild(wrap);
+      top.appendChild(removeBtn);
+      row.appendChild(top);
+      row.appendChild(customWrap);
+
+      row.getValue = ()=> sel.value === CLASS_CUSTOM_VALUE
+        ? (customInput.value || '').trim()
+        : sel.value;
+
+      return row;
+    }
+
+    function getClassesFrom(container){
+      const rows = Array.from(container.querySelectorAll('.class-row'));
+      return [...new Set(rows.map(r => r.getValue && r.getValue()).filter(Boolean))];
+    }
+
+    /* ========= Auth gate ========= */
+    show(sLoading);
+    onAuthStateChanged(auth, async (user)=>{
+      if(!user){
+        avatarUserUid = null;
+        applyAvatarToUI(null);
+        show(sNotLog);
+        return;
+      }
+      try{
+        const tRef = doc(db, 'teachers', user.uid);
+        const snap = await getDoc(tRef);
+        const data = snap.exists()? snap.data(): {};
+        if((data?.role||'').toString().toLowerCase()!=='admin'){
+          avatarUserUid = null;
+          applyAvatarToUI(null);
+          show(sDenied);
+          return;
+        }
+        adminName.textContent = data?.name || (user.email ? user.email.split('@')[0] : 'مشرف');
+        avatarUserUid = user.uid;
+        loadStoredAvatar(user.uid);
+        let created=null;
+        if (data?.createdAt?.toDate) created=data.createdAt.toDate();
+        else if (user.metadata?.creationTime) created=new Date(user.metadata.creationTime);
+        createdAtText.textContent = created ? `تاريخ إنشاء الحساب: ${fmtDateTime(created)}` : '';
+        show(sAdmin);
+        if(window.location.hash === '#admins') openAdminsPanel();
+      }catch(e){ console.error(e); show(sDenied); }
+    });
+
+    /* ========= Core actions ========= */
+    // NEW: Absence modal functionality
+    openAbsence.addEventListener('click', ()=>{ 
+      openModal(absenceModal);
+    });
+    
+    closeAbsenceModal.addEventListener('click', ()=> closeModal(absenceModal));
+    
+    // Close absence modal when clicking outside
+    absenceModal.addEventListener('click', (e) => {
+      if (e.target === absenceModal) {
+        closeModal(absenceModal);
+      }
+    });
+    
+    // Absence modal button actions
+    overallAbsenceBtn.addEventListener('click', ()=>{ 
+      window.location.href = '/admins/overallabsence.html';
+    });
+    
+    detailedAbsenceBtn.addEventListener('click', ()=>{ 
+      window.location.href = '/admins/absence.html';
+    });
+
+    const openTeachersHandler = ()=>{ window.location.href = '/admins/teachers.html'; };
+    openTeachers.addEventListener('click', openTeachersHandler);
+    closeTeachers.addEventListener('click', ()=> closeSheet(teachersSheet));
+
+    openClasses.addEventListener('click', ()=>{ window.location.href = '/admins/students.html'; });
+
+    // NEW: schedules button action
+    openSchedules.addEventListener('click', ()=>{ window.location.href = '/admins/adminschedule.html'; });
+    openLogs.addEventListener('click', ()=>{ window.location.href = '/admins/logs.html'; });
+
+    // إدارة المشرفين
+    function openAdminsPanel(){
+      openSheet(adminsSheet);
+      loadAdmins();
+    }
+    if(openAdmins) openAdmins.addEventListener('click', openAdminsPanel);
+    closeAdmins.addEventListener('click', ()=> closeSheet(adminsSheet));
+
+    document.addEventListener('keydown', (e)=>{ 
+      if(e.key==='Escape'){
+        [teachersSheet,subjectSheet,teacherSheet,adminsSheet,adminSheet].forEach(s=>s.classList.remove('open'));
+        closeModal(absenceModal);
+      } 
+    });
+
+    const logoutBtnHandler = async ()=>{
+      const isConfirmed = await showActionPopup({
+        title: 'تسجيل الخروج',
+        message: 'هل تريد تسجيل الخروج الآن؟',
+        confirmText: 'نعم، تسجيل الخروج',
+        cancelText: 'إلغاء',
+        icon: '↩'
+      });
+      if(!isConfirmed) return;
+      await signOut(auth);
+      location.href='/index.html';
+    };
+    logoutBtn.addEventListener('click', logoutBtnHandler);
+
+    async function ensureRecentLogin(){
+      const u=auth.currentUser; if(!u) throw new Error('غير مسجّل الدخول');
+      const p=prompt('لأمانك، أدخل كلمة المرور الحالية:'); if(!p) throw new Error('تم الإلغاء');
+      const cred=EmailAuthProvider.credential(u.email||'', p);
+      await reauthenticateWithCredential(u, cred);
+    }
+    deleteBtn.addEventListener('click', async ()=>{
+      const u=auth.currentUser; if(!u) return;
+      const isConfirmed = await showActionPopup({
+        variant: 'danger',
+        title: 'تحذير: حذف الحساب نهائيًا',
+        message: 'سيتم حذف حسابك بشكل دائم ولا يمكن التراجع عن هذه العملية.',
+        confirmText: 'نعم، احذف الحساب',
+        cancelText: 'إلغاء',
+        icon: '!'
+      });
+      if(!isConfirmed) return;
+      try{
+        try{ await setDoc(doc(db,'teachers',u.uid), { deletedAt: serverTimestamp() }, { merge:true }); }catch{}
+        await ensureRecentLogin();
+        await deleteUser(u);
+        alert('تم حذف الحساب.');
+        location.href='/index.html';
+      }catch(e){ alert('تعذّر الحذف: '+(e?.message||'')); }
+    });
+
+    /* ========= معلمون ========= */
+    let selectedSubject = null;
+    function openSubject(label){
+      selectedSubject = label;
+      subjectTitle.textContent = label;
+      subjectNameStrong.textContent = label;
+      openSheet(subjectSheet);
+      loadTeachers(label);
+    }
+    closeSubject.addEventListener('click', ()=> closeSheet(subjectSheet));
+
+    // Add teacher modal
+    openAddUser.addEventListener('click', () => {
+      resetTeacherForm();
+      openModal(addTeacherModal);
+    });
+    
+    closeAddTeacherModal.addEventListener('click', () => closeModal(addTeacherModal));
+    cancelAddTeacher.addEventListener('click', () => closeModal(addTeacherModal));
+    auAddClass.addEventListener('click', ()=>{ auClasses.appendChild(makeClassRow("")); });
+    teacherEmail.addEventListener('input', () => {
+      const digits = teacherEmail.value.replace(/\D+/g, '');
+      if (teacherEmail.value !== digits) teacherEmail.value = digits;
+    });
+    
+    // Success modal
+    closeSuccessModal.addEventListener('click', () => closeModal(successModal));
+
+    // Close success modal when clicking outside
+    successModal.addEventListener('click', (e) => {
+      if (e.target === successModal) {
+        closeModal(successModal);
+      }
+    });
+
+    // Create teacher
+    createTeacherBtn.addEventListener('click', async ()=>{
+      try{
+        const name = teacherName.value.trim();
+        const civilId = teacherEmail.value.trim().replace(/\D+/g, '');
+        const email = civilId ? `t${civilId}@gmail.com` : '';
+        const password = teacherPassword.value;
+        const phone = teacherPhone.value.trim();
+        const teams = teacherTeams.value.trim();
+        const role = teacherRole.value;
+        const isSupervisor = teacherIsSupervisor.checked;
+        const classes = getClassesFrom(auClasses);
+
+        if(!name) throw new Error('أدخل الاسم الكامل.');
+        if(!civilId) throw new Error('أدخل رقم البطاقة المدنية بالأرقام فقط.');
+        if(!emailRx.test(email)) throw new Error('تعذّر توليد البريد الإلكتروني من رقم البطاقة المدنية.');
+        if(!password || password.length<6) throw new Error('كلمة المرور ٦ أحرف على الأقل.');
+
+        // Create user in Firebase Auth
+        const cred = await createUserWithEmailAndPassword(helperAuth, email, password);
+        const newUid = cred.user.uid;
+
+        // Store teacher data in Firestore
+        await setDoc(doc(db,'teachers',newUid), {
+          uid: newUid, 
+          name, 
+          email, 
+          civilId,
+          phone, 
+          teams,
+          role,
+          isSupervisor,
+          subject: selectedSubject,
+          classes: classes,
+          createdAt: serverTimestamp()
+        }, { merge:true });
+
+        // Sign out from helper auth
+        try{ await signOut(helperAuth); }catch{}
+
+        // Show success modal
+        closeModal(addTeacherModal);
+        openModal(successModal);
+        
+        // Refresh teacher list
+        await loadTeachers(selectedSubject);
+        
+      }catch(e){
+        alert('تعذّر إنشاء الحساب: ' + (e?.message||''));
+        console.error('[createTeacher]', e);
+      }
+    });
+
+    async function loadTeachers(subject){
+      teachersList.innerHTML='';
+      try{
+        const q = query(collection(db,'teachers'), where('subject','==', subject));
+        const snap = await getDocs(q);
+        if(snap.empty){
+          const empty=document.createElement('div');
+          empty.className='teacher-item';
+          empty.textContent='لا يوجد معلمون بعد.';
+          teachersList.appendChild(empty);
+          return;
+        }
+        
+        snap.forEach(d=>{
+          const t=d.data();
+          const el=document.createElement('div');
+          el.className='teacher-item';
+          el.setAttribute('data-uid', t.uid);
+          
+          // Create teacher info with supervisor star if applicable
+          let teacherInfo = `<div>
+              <div>${t.name || t.email || t.uid}</div>
+              <div class="teacher-sub">${t.email || ''} | ${t.role === 'head' ? 'رئيس القسم' : 'مدرس'}</div>
+            </div>`;
+          
+          // Add supervisor star if teacher is a supervisor
+          if (t.isSupervisor) {
+            teacherInfo = `<div style="display:flex; align-items:center;">
+                <span class="supervisor-star">⭐</span>
+                ${teacherInfo}
+              </div>`;
+          }
+          
+          el.innerHTML = teacherInfo + `<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>`;
+          el.addEventListener('click', ()=> openTeacherEditor(t.uid));
+          teachersList.appendChild(el);
+        });
+      }catch(e){
+        const err=document.createElement('div');
+        err.className='teacher-item';
+        err.textContent='تعذّر تحميل القائمة.'; 
+        teachersList.appendChild(err);
+        console.error('[loadTeachers]', e);
+      }
+    }
+
+    refreshTeachers.addEventListener('click', () => loadTeachers(selectedSubject));
+
+    let currentTeacher = { uid:null, data:null };
+
+    async function openTeacherEditor(uid){
+      edOk.style.display='none'; edErr.style.display='none';
+      try{
+        const ref=doc(db,'teachers',uid);
+        const s=await getDoc(ref);
+        if(!s.exists()){ alert('الملف غير موجود.'); return; }
+        const d=s.data();
+        currentTeacher = { uid, data:d };
+
+        teacherTitle.textContent = `بيانات: ${d.name || d.email || uid}`;
+        edTName.value = d.name || '';
+        edTEmail.value = d.email || '';
+        edTPhone.value = d.phone || '';
+        edTTeams.value = d.teams || '';
+        edTRole.value = d.role || 'user';
+        edTIsSupervisor.checked = d.isSupervisor || false;
+
+        edClasses.innerHTML='';
+        const cls = Array.isArray(d.classes)? d.classes : [];
+        if(cls.length===0){
+          edClasses.appendChild(makeClassRow(""));
+        }else{
+          cls.forEach(v=> edClasses.appendChild(makeClassRow(v)));
+        }
+
+        openSheet(teacherSheet);
+      }catch(e){
+        console.error('[openTeacherEditor]', e);
+        alert('تعذّر فتح صفحة المعلّم.');
+      }
+    }
+    closeTeacher.addEventListener('click', ()=> closeSheet(teacherSheet));
+    edAddClass.addEventListener('click', ()=>{ edClasses.appendChild(makeClassRow("")); });
+
+    saveTeacher.addEventListener('click', async ()=>{
+      edOk.style.display='none'; edErr.style.display='none';
+      try{
+        const { uid } = currentTeacher;
+        if(!uid) throw new Error('لم يتم اختيار معلّم.');
+        const name = edTName.value.trim();
+        const email= edTEmail.value.trim();
+        const phone = edTPhone.value.trim();
+        const teams = edTTeams.value.trim();
+        const role = edTRole.value;
+        const isSupervisor = edTIsSupervisor.checked;
+        const classes = getClassesFrom(edClasses);
+
+        if(!name) throw new Error('أدخل الاسم.');
+        if(!emailRx.test(email)) throw new Error('أدخل بريدًا صالحًا.');
+
+        await updateDoc(doc(db,'teachers',uid), { 
+          name, 
+          email, 
+          phone, 
+          teams,
+          role,
+          isSupervisor,
+          classes 
+        });
+
+        edOk.textContent='تم حفظ التعديلات.'; edOk.style.display='block';
+        setTimeout(()=>{ edOk.style.display='none'; closeSheet(teacherSheet); }, 900);
+        if(selectedSubject) await loadTeachers(selectedSubject);
+      }catch(e){
+        edErr.textContent = e?.message || 'تعذّر الحفظ.'; edErr.style.display='block';
+      }
+    });
+
+    deleteTeacherBtn.addEventListener('click', async ()=>{
+      edOk.style.display='none'; edErr.style.display='none';
+      try{
+        const { uid } = currentTeacher;
+        if(!uid) return;
+        if(!confirm('حذف ملف المعلّم من Firestore؟')) return;
+        await deleteDoc(doc(db,'teachers',uid));
+        edOk.textContent='تم الحذف.'; edOk.style.display='block';
+        setTimeout(()=>{ edOk.style.display='none'; closeSheet(teacherSheet); }, 700);
+        if(selectedSubject) await loadTeachers(selectedSubject);
+      }catch(e){
+        edErr.textContent = e?.message || 'تعذّر الحذف.'; edErr.style.display='block';
+      }
+    });
+
+    /* ========= مشرفون ========= */
+    let currentAdmin = { uid:null, data:null };
+
+    function openAdminEditor(uid){
+      edAOk.style.display='none'; edAErr.style.display='none';
+      (async ()=>{
+        try{
+          const ref=doc(db,'teachers',uid);
+          const s=await getDoc(ref);
+          if(!s.exists()){ alert('الملف غير موجود.'); return; }
+          const d=s.data();
+          currentAdmin = { uid, data:d };
+          adminTitle.textContent = `بيانات: ${d.name || d.email || uid}`;
+          edAName.value = d.name || '';
+          edAEmail.value = d.email || '';
+          openSheet(adminSheet);
+        }catch(e){
+          console.error('[openAdminEditor]', e);
+          alert('تعذّر فتح صفحة المشرف.');
+        }
+      })();
+    }
+
+    function renderAdminsListEmpty(){
+      const empty=document.createElement('div');
+      empty.className='teacher-item';
+      empty.textContent='لا يوجد مشرفون بعد.';
+      adminsList.appendChild(empty);
+    }
+
+    async function loadAdmins(){
+      adminsList.innerHTML='';
+      try{
+        const q = query(collection(db,'teachers'), where('role','==','admin'));
+        const snap = await getDocs(q);
+        if(snap.empty){ renderAdminsListEmpty(); return; }
+        snap.forEach(d=>{
+          const t=d.data();
+          const el=document.createElement('div');
+          el.className='teacher-item';
+          el.setAttribute('data-uid', t.uid);
+          el.innerHTML=`<div>
+              <div>${t.name || t.email || t.uid}</div>
+              <div class="teacher-sub">${t.email || ''}</div>
+            </div>
+            <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>`;
+          el.addEventListener('click', ()=> openAdminEditor(t.uid));
+          adminsList.appendChild(el);
+        });
+      }catch(e){
+        const err=document.createElement('div');
+        err.className='teacher-item';
+        err.textContent='تعذّر تحميل القائمة.'; adminsList.appendChild(err);
+        console.error('[loadAdmins]', e);
+      }
+    }
+
+    openAddAdmin.addEventListener('click', ()=>{
+      addAdminForm.style.display = addAdminForm.style.display==='none' ? 'block' : 'none';
+      adOk.style.display='none'; adErr.style.display='none';
+    });
+    refreshAdmins.addEventListener('click', loadAdmins);
+
+    createAdminBtn.addEventListener('click', async ()=>{
+      adOk.style.display='none'; adErr.style.display='none';
+      try{
+        const name = adName.value.trim();
+        const email = adEmail.value.trim();
+        const pass  = adPassword.value;
+
+        if(!name) throw new Error('أدخل الاسم.');
+        if(!emailRx.test(email)) throw new Error('أدخل بريدًا صالحًا.');
+        if(!pass || pass.length<6) throw new Error('كلمة المرور ٦ أحرف على الأقل.');
+
+        const cred = await createUserWithEmailAndPassword(helperAuth, email, pass);
+        const newUid = cred.user.uid;
+
+        await setDoc(doc(db,'teachers',newUid), {
+          uid:newUid, name, email, role:"admin",
+          createdAt: serverTimestamp()
+        }, { merge:true });
+
+        try{ await signOut(helperAuth); }catch{}
+
+        adOk.textContent='تم إنشاء حساب المشرف وتخزينه (role=admin).'; adOk.style.display='block';
+        adName.value=''; adEmail.value=''; adPassword.value='';
+        await loadAdmins();
+      }catch(e){
+        adErr.textContent=e?.message||'تعذّر إنشاء الحساب.'; adErr.style.display='block';
+        console.error('[createAdmin]', e);
+      }
+    });
+
+    closeAdmin.addEventListener('click', ()=> closeSheet(adminSheet));
+
+    saveAdmin.addEventListener('click', async ()=>{
+      edAOk.style.display='none'; edAErr.style.display='none';
+      try{
+        const { uid } = currentAdmin;
+        if(!uid) throw new Error('لم يتم اختيار مشرف.');
+        const name = edAName.value.trim();
+        const email= edAEmail.value.trim();
+
+        if(!name) throw new Error('أدخل الاسم.');
+        if(!emailRx.test(email)) throw new Error('أدخل بريدًا صالحًا.');
+
+        await updateDoc(doc(db,'teachers',uid), { name, email });
+
+        edAOk.textContent='تم حفظ التعديلات.'; edAOk.style.display='block';
+        setTimeout(()=>{ edAOk.style.display='none'; closeSheet(adminSheet); }, 900);
+        await loadAdmins();
+      }catch(e){
+        edAErr.textContent = e?.message || 'تعذّر الحفظ.'; edAErr.style.display='block';
+      }
+    });
+
+    deleteAdminBtn.addEventListener('click', async ()=>{
+      edAOk.style.display='none'; edAErr.style.display='none';
+      try{
+        const { uid } = currentAdmin;
+        if(!uid) return;
+        if(!confirm('حذف ملف المشرف من Firestore؟')) return;
+        await deleteDoc(doc(db,'teachers',uid));
+        edAOk.textContent='تم الحذف.'; edAOk.style.display='block';
+        setTimeout(()=>{ edAOk.style.display='none'; closeSheet(adminSheet); }, 700);
+        await loadAdmins();
+      }catch(e){
+        edAErr.textContent = e?.message || 'تعذّر الحذف.'; edAErr.style.display='block';
+      }
+    });
+
+  </script>
+
+  <script src="/shared/hub-title-link.js" defer></script>
+<script src="/name-glow.js" defer></script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+

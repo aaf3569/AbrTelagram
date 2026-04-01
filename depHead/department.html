@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.gstatic.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; manifest-src 'self'; upgrade-insecure-requests; block-all-mixed-content">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  <title>القسم - ثانوية أحمد البشر الرومي</title>
+
+  <!-- Noto Kufi Arabic -->
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+
+  <link rel="stylesheet" href="/shared/base.css" />
+  <style>
+    :root{
+      --primary:#022b42;
+      --primary-2:#044563;
+      --primary-light: rgba(2, 43, 66, 0.08);
+
+      --page:#f8fafc;
+      --card-bg:#ffffff;
+
+      --text:#0f172a;
+      --muted:#64748b;
+
+      --border:#e2e8f0;
+      --border-light:#f1f5f9;
+
+      --radius:16px;
+      --radius-sm:12px;
+
+      --shadow-1:0 4px 12px rgba(2,43,66,.08);
+      --shadow-2:0 12px 28px rgba(2,43,66,.12);
+
+      --success:#10b981;
+      --danger:#ef4444;
+      --warning:#f59e0b;
+
+      --transition: all 0.16s ease;
+    }
+
+    *{ box-sizing:border-box; margin:0; padding:0; }
+    html, body{ height:100%; }
+
+    /* Force Noto Kufi Arabic everywhere */
+    body, button, input, textarea, select, .btn, .chip, .tbtn, .cbtn, .stat, .card, .muted {
+      font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif !important;
+    }
+
+    body{
+      background:
+        radial-gradient(1200px 600px at 80% -20%, rgba(2,43,66,0.05), transparent 60%),
+        radial-gradient(900px 500px at -10% 120%, rgba(2,43,66,0.04), transparent 60%),
+        var(--page);
+      color:var(--text);
+      min-height:100vh;
+      display:flex;
+      flex-direction:column;
+      -webkit-tap-highlight-color:transparent;
+      line-height:1.6;
+    }
+
+    /* Header */
+    .site-header{
+      position:sticky; top:0; z-index:30;
+      background: rgba(255,255,255,0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom:1px solid rgba(2,43,66,0.10);
+      box-shadow: 0 2px 10px rgba(2,43,66,0.06);
+      padding: 14px 18px;
+    }
+    .header-container{
+      max-width:1200px; margin:0 auto;
+      display:flex; align-items:center; justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+    .brand{
+      display:flex; align-items:center; gap:10px;
+      min-width: 260px;
+      flex: 1 1 auto;
+    }
+    .brand .logo{
+      width:44px; height:44px;
+      border-radius:14px;
+      background: linear-gradient(135deg, rgba(4,69,99,0.14), rgba(2,43,66,0.06));
+      border:1px solid rgba(2,43,66,0.12);
+      display:grid; place-items:center;
+      color:var(--primary);
+      box-shadow: var(--shadow-1);
+      flex:0 0 auto;
+    }
+    .brand .titles{
+      display:flex; flex-direction:column;
+      gap:2px;
+      min-width:0;
+    }
+    .brand .school{
+      font-weight:900;
+      color:var(--primary);
+      font-size: 1.05rem;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .brand .page-title{
+      color:var(--muted);
+      font-weight:800;
+      font-size: 0.86rem;
+      display:flex;
+      align-items:center;
+      gap:8px;
+      min-width:0;
+      flex-wrap:wrap;
+    }
+    .chip{
+      padding:6px 12px;
+      border-radius:999px;
+      background: var(--primary-light);
+      border:1px solid var(--border);
+      color:var(--primary);
+      font-weight:900;
+      font-size:12px;
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      max-width: 100%;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+
+    .top-actions{
+      display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+
+    .btn{
+      height:44px;
+      padding:0 16px;
+      border-radius: var(--radius-sm);
+      border:1px solid rgba(2,43,66,0.20);
+      background: var(--card-bg);
+      color: var(--primary);
+      font-weight:900;
+      cursor:pointer;
+      box-shadow: var(--shadow-1);
+      transition: var(--transition);
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      font-size: 0.9rem;
+      position:relative;
+    }
+    .btn:hover{ transform: translateY(-2px); box-shadow: var(--shadow-2); border-color: rgba(2,43,66,0.35); }
+    .btn:active{ transform: translateY(0); }
+    .btn[disabled]{ opacity:.6; cursor:not-allowed; transform:none; }
+    .btn.solid{
+      background: linear-gradient(135deg, var(--primary-2), var(--primary));
+      border-color: rgba(2,43,66,0.15);
+      color: #fff;
+    }
+    .btn.ghost{
+      background: rgba(2,43,66,0.04);
+      border-color: rgba(2,43,66,0.14);
+    }
+    .btn.loading::after{
+      content:"";
+      width:10px; height:10px;
+      border-radius:50%;
+      border:2px solid currentColor;
+      border-top-color:transparent;
+      position:absolute;
+      left:10px;
+      animation: spin .8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Layout */
+    main{ flex:1; padding:18px; }
+    .wrap{
+      max-width:1200px; margin:0 auto;
+      display:flex; flex-direction:column;
+      gap:16px;
+    }
+
+    .card{
+      background: var(--card-bg);
+      border:1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-1);
+      padding:16px;
+      transition: var(--transition);
+    }
+    .card:hover{ box-shadow: var(--shadow-2); }
+    .muted{ color: var(--muted); font-weight:800; font-size: .9rem; }
+
+    /* Status */
+    .status{
+      display:none;
+      align-items:center;
+      gap:10px;
+      padding:12px 14px;
+      border-radius: var(--radius-sm);
+      border:1px solid rgba(2,43,66,0.12);
+      background: var(--primary-light);
+      color: var(--primary);
+      font-weight:900;
+    }
+
+    /* Stats */
+    .stats{
+      display:grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap:12px;
+    }
+    .stat{
+      border:1px solid rgba(226,232,240,0.95);
+      border-radius: 16px;
+      padding:14px 14px;
+      background:
+        radial-gradient(600px 160px at 30% -20%, rgba(2,43,66,0.06), transparent 55%),
+        rgba(255,255,255,0.92);
+      box-shadow: 0 10px 22px rgba(2,43,66,0.07);
+      display:flex;
+      gap:12px;
+      align-items:center;
+      min-height: 86px;
+    }
+    .stat .icon{
+      width:44px; height:44px;
+      border-radius: 16px;
+      background: rgba(2,43,66,0.08);
+      border:1px solid rgba(2,43,66,0.10);
+      display:grid;
+      place-items:center;
+      color: var(--primary);
+      flex: 0 0 auto;
+    }
+    .stat .k{
+      color: var(--muted);
+      font-weight:900;
+      font-size: 12px;
+      margin-bottom: 2px;
+    }
+    .stat .v{
+      font-weight: 900;
+      font-size: 1.15rem;
+      color: var(--text);
+      line-height: 1.25;
+    }
+
+    /* Teachers */
+    .section-head{
+      display:flex;
+      align-items:center;
+      justify-content:center; /* centered */
+      gap:10px;
+      margin-bottom: 10px;
+      flex-wrap:wrap;
+      text-align:center;
+    }
+    .section-title{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      font-weight: 900;
+      color: var(--primary);
+      font-size: 1.10rem;
+      justify-content:center;
+      width:100%;
+    }
+    .search{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding: 0 12px;
+      border:1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: rgba(248,250,252,0.75);
+      box-shadow: var(--shadow-1);
+      min-height: 46px;
+      width:100%;
+      max-width: 520px;
+      margin: 0 auto;
+    }
+    .search i{ color: rgba(2,43,66,0.55); }
+    .search input{
+      border:none; outline:none;
+      background:transparent;
+      width:100%;
+      font-weight: 800;
+      color: var(--text);
+      font-size: .95rem;
+    }
+    .search input::placeholder{ color: rgba(100,116,139,0.8); }
+
+    .teacher-list{
+      display:grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .tbtn{
+      border:1px solid rgba(2,43,66,0.12);
+      border-radius: 16px;
+      background: rgba(255,255,255,0.92);
+      box-shadow: 0 10px 22px rgba(2,43,66,0.07);
+      padding: 12px 12px;
+      cursor:pointer;
+      transition: var(--transition);
+      display:flex;
+      align-items:center;
+      gap:12px;
+      text-align:right;
+      min-height: 70px;
+    }
+    .tbtn:hover{ transform: translateY(-2px); box-shadow: var(--shadow-2); border-color: rgba(2,43,66,0.22); }
+
+    .tbtn .avatar{
+      width:44px; height:44px;
+      border-radius: 16px;
+      background: rgba(2,43,66,0.08);
+      border:1px solid rgba(2,43,66,0.10);
+      display:grid;
+      place-items:center;
+      color: var(--primary);
+      flex: 0 0 auto;
+    }
+    .tbtn .name{
+      font-weight: 900;
+      color: var(--text);
+      font-size: .98rem;
+      line-height: 1.2;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+    }
+    .tbtn .sub{
+      color: rgba(100,116,139,0.95);
+      font-weight: 800;
+      font-size: .82rem;
+      margin-top: 2px;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+    }
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-weight: 900;
+      font-size: 12px;
+      border:1px solid rgba(2,43,66,0.12);
+      background: rgba(2,43,66,0.06);
+      color: var(--primary);
+      flex: 0 0 auto;
+    }
+
+    /* Responsive */
+    @media (max-width: 980px){
+      .teacher-list{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .stats{ grid-template-columns: 1fr; }
+    }
+    @media (max-width: 600px){
+      main{ padding: 14px; }
+      .teacher-list{ grid-template-columns: 1fr; }
+      .brand{ min-width: 0; flex: 1 1 auto; }
+      .top-actions{ width:100%; justify-content:flex-end; }
+    }
+    @media (max-width: 420px){
+      .btn span{ display:none; }
+      .btn{ width:44px; padding:0; justify-content:center; }
+    }
+  </style>
+
+  <!-- iOS home screen icon -->
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/appicon.png" />
+  
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <meta name="theme-color" content="#033C54" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <!-- Browser tab icon (favicon) -->
+  <link rel="icon" type="image/png" sizes="64x64" href="https://framerusercontent.com/images/eepB7V11E8IMGVLttDUMaz62pPQ.png?width=64&height=64" />
+  <link rel="shortcut icon" href="https://framerusercontent.com/images/eepB7V11E8IMGVLttDUMaz62pPQ.png?width=64&height=64" />
+
+  <!-- Social / Safari preview (Open Graph & Twitter) -->
+  <meta property="og:title" content="القسم - ثانوية أحمد البشر الرومي">
+  <meta property="og:description" content="???? ?????? ???? ????? ??????.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://framerusercontent.com/images/jRnZLlPr90qwKsuUwfIlvDS9E.png?width=1200&height=630">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="القسم - ثانوية أحمد البشر الرومي">
+  <meta name="twitter:description" content="???? ?????? ???? ????? ??????.">
+  <meta name="twitter:image" content="https://framerusercontent.com/images/jRnZLlPr90qwKsuUwfIlvDS9E.png?width=1200&height=630">
+</head>
+
+<body>
+  <header class="site-header">
+    <div class="header-container">
+      <div class="brand">
+        <div class="logo"><i class="fas fa-school"></i></div>
+        <div class="titles">
+          <div class="school">ثانوية أحمد البشر الرومي</div>
+          <div class="page-title">
+            <span class="chip" id="deptChip"><i class="fas fa-layer-group"></i> القسم: —</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="top-actions">
+        <button id="btnRefresh" class="btn ghost" type="button" aria-label="تحديث">
+          <i class="fas fa-rotate"></i><span>تحديث</span>
+        </button>
+
+        <button id="btnBack" class="btn" type="button" aria-label="رجوع">
+          <i class="fas fa-arrow-right"></i><span>رجوع</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="wrap">
+      <div id="status" class="status"></div>
+
+      <!-- Removed date stat + removed extra sub texts -->
+      <section class="card">
+        <div class="stats">
+          <div class="stat">
+            <div class="icon"><i class="fas fa-chalkboard"></i></div>
+            <div>
+              <div class="k">عدد حصص القسم اليوم</div>
+              <div class="v" id="statLessons">—</div>
+            </div>
+          </div>
+
+          <div class="stat">
+            <div class="icon"><i class="fas fa-users"></i></div>
+            <div>
+              <div class="k">عدد معلمي القسم</div>
+              <div class="v" id="statTeachers">—</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Removed the entire "حصص المعلّم اليوم" container and layout -->
+      <section class="card">
+        <div class="section-head">
+          <div class="section-title">
+            <i class="fas fa-user-group"></i>
+            <span>معلّمو القسم</span>
+          </div>
+
+          <div class="search" aria-label="بحث عن معلّم">
+            <i class="fas fa-magnifying-glass"></i>
+            <input id="teacherSearch" type="text" placeholder="ابحث عن معلّم..." autocomplete="off" />
+          </div>
+        </div>
+
+        <div id="teachersList" class="teacher-list"></div>
+        <div id="teachersEmpty" class="muted" style="display:none; padding-top:10px; text-align:center;">
+          لا يوجد معلمون مطابقون.
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script type="module">
+    import { firebaseConfig } from "/shared/firebase.js";
+    /* ========= Firebase ========= */
+    import { initializeApp, getApp, getApps } from "/shared/firebase.js";
+    import {
+      getAuth, onAuthStateChanged, setPersistence, browserLocalPersistence
+    } from "/shared/firebase.js";
+    import {
+      initializeFirestore, persistentSingleTabManager,
+      collection, getDocs, query, where, doc, getDoc, limit
+    } from "/shared/firebase.js";
+
+    
+
+    const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+    let db;
+    try{
+      db = initializeFirestore(app, { localCache: persistentSingleTabManager() });
+    }catch(e){
+      db = initializeFirestore(app, {});
+    }
+    const auth = getAuth(app);
+
+    /* ========= Elements ========= */
+    const statusEl = document.getElementById('status');
+    const deptChip = document.getElementById('deptChip');
+
+    const statLessons = document.getElementById('statLessons');
+    const statTeachers = document.getElementById('statTeachers');
+
+    const btnRefresh = document.getElementById('btnRefresh');
+    const btnBack = document.getElementById('btnBack');
+
+    const teacherSearch = document.getElementById('teacherSearch');
+    const teachersListEl = document.getElementById('teachersList');
+    const teachersEmptyEl = document.getElementById('teachersEmpty');
+
+    /* ========= Helpers ========= */
+    function showStatus(msg, isError=false){
+      statusEl.style.display = 'flex';
+      statusEl.textContent = msg;
+      statusEl.style.background = isError ? '#fef2f2' : 'var(--primary-light)';
+      statusEl.style.color = isError ? '#dc2626' : 'var(--primary)';
+      statusEl.style.borderColor = isError ? 'rgba(220,38,38,0.18)' : 'rgba(2,43,66,0.12)';
+    }
+    function clearStatus(){
+      statusEl.style.display = 'none';
+      statusEl.textContent = '';
+    }
+    function setLoading(btn, on=true){
+      if(!btn) return;
+      if(on){
+        btn.classList.add('loading');
+        btn.setAttribute('disabled','disabled');
+      }else{
+        btn.classList.remove('loading');
+        btn.removeAttribute('disabled');
+      }
+    }
+
+    function kuwaitTodayISO(){
+      const fmt = new Intl.DateTimeFormat('en-CA', {
+        timeZone:'Asia/Kuwait',
+        year:'numeric', month:'2-digit', day:'2-digit'
+      });
+      return fmt.format(new Date());
+    }
+
+    function displayTeacherNameFromDoc(data){
+      const d = data || {};
+      const name = d.name || d.fullName || d.teacherName || d.displayName || d.username || d.email || d.phone || '';
+      return (name || 'معلّم').toString();
+    }
+
+    function escapeHtml(str){
+      return String(str ?? '')
+        .replaceAll('&','&amp;')
+        .replaceAll('<','&lt;')
+        .replaceAll('>','&gt;')
+        .replaceAll('"','&quot;')
+        .replaceAll("'","&#039;");
+    }
+
+    function chunkArray(arr, size){
+      const out = [];
+      for(let i=0;i<arr.length;i+=size) out.push(arr.slice(i,i+size));
+      return out;
+    }
+
+    const MERGED_DEPARTMENTS = [
+      { department: 'الفيزياء والكيمياء', subjects: ['الفيزياء','الكيمياء'] },
+      { department: 'الجيولوجيا والأحياء', subjects: ['الجيولوجيا','الأحياء'] },
+      { department: 'علم النفس والفلسفة', subjects: ['علم النفس','الفلسفة'] },
+      { department: 'التاريخ والجغرافيا', subjects: ['التاريخ','الجغرافيا','جغرافيا'] }
+    ];
+    function resolveDepartmentName(rawValue){
+      const value=(rawValue||'').toString().trim();
+      if(!value) return '';
+      for(const group of MERGED_DEPARTMENTS){
+        if(value===group.department || group.subjects.includes(value)) return group.department;
+      }
+      return value;
+    }
+
+    /* ========= State ========= */
+    let currentUser = null;
+    let headDept = '';
+    let deptTeachers = []; // [{uid,name,subject}]
+    let todayISO = '';
+
+    /* ========= Rendering ========= */
+    function renderTeachers(list){
+      teachersListEl.innerHTML = '';
+      teachersEmptyEl.style.display = (list.length === 0) ? 'block' : 'none';
+
+      for(const t of list){
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'tbtn';
+        btn.dataset.uid = t.uid;
+
+        btn.innerHTML = `
+          <div class="avatar"><i class="fas fa-user"></i></div>
+          <div style="min-width:0; flex:1">
+            <div class="name">${escapeHtml(t.name)}</div>
+            <div class="sub">${escapeHtml(headDept || '—')}</div>
+          </div>
+          <div class="pill"><i class="fas fa-arrow-left"></i><span>فتح</span></div>
+        `;
+
+        // On click: go directly to teacherinfo.html
+        btn.addEventListener('click', ()=>{
+          const params = new URLSearchParams({
+            teacherUid: t.uid,
+            teacherName: t.name,
+            date: todayISO
+          });
+          window.location.href = `teacherinfo.html?${params.toString()}`;
+        });
+
+        teachersListEl.appendChild(btn);
+      }
+    }
+
+    /* ========= Data Loading ========= */
+    async function loadHeadProfileAndCheck(user){
+      const snap = await getDoc(doc(db,'teachers', user.uid));
+      if(!snap.exists()){
+        throw new Error('no_teacher_profile');
+      }
+      const d = snap.data() || {};
+      const role = (d.role || '').toString().toLowerCase();
+      if(role !== 'head'){
+        throw new Error('not_head');
+      }
+      const rawDept = (d.department || d.dept || d.subject || '').toString().trim();
+      headDept = resolveDepartmentName(rawDept);
+      if(!headDept){
+        headDept = '—';
+      }
+      deptChip.innerHTML = `<i class="fas fa-layer-group"></i> القسم: ${escapeHtml(headDept)}`;
+      return d;
+    }
+
+    async function loadDeptTeachers(){
+      const list = [];
+      const snap = await getDocs(collection(db,'teachers'));
+      snap.forEach(docSnap=>{
+        const d = docSnap.data() || {};
+        const rawSubj = (d.department || d.dept || d.subject || '').toString().trim();
+        const subj = resolveDepartmentName(rawSubj);
+
+        // Only match current head department when known
+        if(headDept !== '—' && subj && subj !== headDept) return;
+        if(headDept !== '—' && !subj) return;
+
+        const role = (d.role || '').toString().toLowerCase();
+        if(role === 'head') return;
+
+        list.push({
+          uid: docSnap.id,
+          name: displayTeacherNameFromDoc(d),
+          subject: subj || ''
+        });
+      });
+
+      list.sort((a,b)=> a.name.localeCompare(b.name, 'ar'));
+      deptTeachers = list;
+
+      statTeachers.textContent = String(list.length);
+      return list;
+    }
+
+    async function loadDeptLessonsCountToday(){
+      const uids = deptTeachers.map(t=>t.uid);
+      if(uids.length === 0){
+        statLessons.textContent = '0';
+        return 0;
+      }
+
+      let total = 0;
+      const chunks = chunkArray(uids, 10);
+
+      for(const ch of chunks){
+        try{
+          const q1 = query(
+            collection(db,'schedules'),
+            where('date','==', todayISO),
+            where('teacherUid','in', ch)
+          );
+          const snap = await getDocs(q1);
+          total += snap.size;
+        }catch(e){
+          // fallback per-teacher
+          for(const uid of ch){
+            try{
+              const q2 = query(
+                collection(db,'schedules'),
+                where('date','==', todayISO),
+                where('teacherUid','==', uid),
+                limit(50)
+              );
+              const s2 = await getDocs(q2);
+              total += s2.size;
+            }catch(_){}
+          }
+        }
+      }
+
+      statLessons.textContent = String(total);
+      return total;
+    }
+
+    function filterTeachers(q){
+      const s = (q || '').trim().toLowerCase();
+      if(!s) return deptTeachers;
+      return deptTeachers.filter(t => (t.name || '').toLowerCase().includes(s));
+    }
+
+    /* ========= Init ========= */
+    setPersistence(auth, browserLocalPersistence).catch(()=>{});
+
+    btnBack.addEventListener('click', ()=>{
+      window.location.href = 'dptlead.html';
+    });
+
+    btnRefresh.addEventListener('click', async ()=>{
+      if(!currentUser) return;
+      setLoading(btnRefresh, true);
+      clearStatus();
+
+      try{
+        await loadDeptTeachers();
+        renderTeachers(filterTeachers(teacherSearch.value));
+        await loadDeptLessonsCountToday();
+      }catch(e){
+        console.error(e);
+        showStatus('تعذّر التحديث.', true);
+      }finally{
+        setLoading(btnRefresh, false);
+      }
+    });
+
+    teacherSearch.addEventListener('input', ()=>{
+      const list = filterTeachers(teacherSearch.value);
+      renderTeachers(list);
+      teachersEmptyEl.style.display = (list.length === 0) ? 'block' : 'none';
+    });
+
+    onAuthStateChanged(auth, async (user)=>{
+      todayISO = kuwaitTodayISO();
+      clearStatus();
+
+      if(!user){
+        currentUser = null;
+        showStatus('الرجاء تسجيل الدخول أولاً. سيتم تحويلك إلى صفحة الدخول.', true);
+        setTimeout(()=> window.location.href = '/index.html', 250);
+        return;
+      }
+
+      currentUser = user;
+
+      try{
+        await loadHeadProfileAndCheck(user);
+      }catch(e){
+        console.error(e);
+        const msg = (String(e?.message || e) === 'not_head')
+          ? 'غير مصرح. هذه الصفحة خاصة برئيس القسم فقط.'
+          : 'تعذّر قراءة بيانات الحساب. تأكد من وجود ملف في teachers.';
+        showStatus(msg, true);
+        return;
+      }
+
+      setLoading(btnRefresh, true);
+      try{
+        await loadDeptTeachers();
+        renderTeachers(deptTeachers);
+        await loadDeptLessonsCountToday();
+      }catch(e){
+        console.error(e);
+        showStatus('تعذّر تحميل بيانات القسم.', true);
+      }finally{
+        setLoading(btnRefresh, false);
+      }
+    });
+  </script>
+  <script src="/shared/hub-title-link.js" defer></script>
+<script src="/name-glow.js" defer></script>
+</body>
+</html>
+
+
+
+
+
+
+
