@@ -30,6 +30,7 @@ const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "";
 const TELEGRAM_BOT_USERNAME = process.env.TELEGRAM_BOT_USERNAME || "AbrSchool_bot";
 const KUWAIT_TIMEZONE = "Asia/Kuwait";
 const LESSON_REMINDER_LEAD_MINUTES = 5;
+const REMINDER_CLAIM_STALE_MINUTES = 3;
 const ATTENDANCE_REMINDER_DELAY_MINUTES = Math.max(
   1,
   Number(process.env.ATTENDANCE_REMINDER_DELAY_MINUTES || 10)
@@ -280,6 +281,15 @@ function toTimeLabel(minutesFromMidnight) {
 
 function toArabicDigits(value) {
   return String(value ?? "").replace(/\d/g, (digit) => "٠١٢٣٤٥٦٧٨٩"[Number(digit)]);
+}
+
+function timestampToMillis(value) {
+  if (!value) return null;
+  if (typeof value.toMillis === "function") return value.toMillis();
+  if (typeof value._seconds === "number") return value._seconds * 1000;
+  const parsed = Date.parse(String(value));
+  if (Number.isNaN(parsed)) return null;
+  return parsed;
 }
 
 function shortHash(input) {
@@ -593,16 +603,92 @@ async function claimReminderSend(meta) {
     await ref.create({
       ...meta,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      sentAt: null,
+      retryCount: 0,
     });
     return { claimed: true, ref };
   } catch (error) {
     if (error?.code === 6 || /already exists/i.test(String(error?.message || ""))) {
-      return { claimed: false, ref };
+      try {
+        const snap = await ref.get();
+        if (!snap.exists) return { claimed: false, ref };
+
+        const existing = snap.data() || {};
+        const sentAtMs = timestampToMillis(existing.sentAt);
+        if (sentAtMs) {
+          return { claimed: false, ref };
+        }
+
+        const createdAtMs = timestampToMillis(existing.createdAt);
+        const staleAfterMs = REMINDER_CLAIM_STALE_MINUTES * 60 * 1000;
+        const isStale = !createdAtMs || Date.now() - createdAtMs >= staleAfterMs;
+        if (!isStale) {
+          return { claimed: false, ref };
+        }
+
+        await ref.set(
+          {
+            ...meta,
+            reclaimedAt: admin.firestore.FieldValue.serverTimestamp(),
+            retryCount: Number(existing.retryCount || 0) + 1,
+            sentAt: null,
+          },
+          { merge: true }
+        );
+        return { claimed: true, ref, reclaimed: true };
+      } catch (innerError) {
+        console.error(
+          `[reminder] claimReminderSend duplicate-check failed userId=${meta.teacherUid} lesson=${meta.lesson} type=${meta.type}: ${innerError.message}`
+        );
+        return { claimed: false, ref };
+      }
     }
     console.error(
       `[reminder] claimReminderSend failed userId=${meta.teacherUid} lesson=${meta.lesson} type=${meta.type}: ${error.message}`
     );
     return { claimed: false, ref: null };
+  }
+}
+
+async function markReminderSent(ref, meta) {
+  if (!ref || !isFirebaseReady()) return;
+  try {
+    await ref.set(
+      {
+        sentAt: admin.firestore.FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+  } catch (error) {
+    console.error(
+      `[reminder] markReminderSent failed userId=${meta.teacherUid} lesson=${meta.lesson} type=${meta.type}: ${error.message}`
+    );
+  }
+}
+
+async function getReminderSendState(meta) {
+  if (!isFirebaseReady()) {
+    return { exists: false, sent: false };
+  }
+  const ref = reminderDocRef(meta);
+  if (!ref) {
+    return { exists: false, sent: false };
+  }
+  try {
+    const snap = await ref.get();
+    if (!snap.exists) {
+      return { exists: false, sent: false };
+    }
+    const data = snap.data() || {};
+    return {
+      exists: true,
+      sent: Boolean(timestampToMillis(data.sentAt)),
+    };
+  } catch (error) {
+    console.error(
+      `[reminder] getReminderSendState failed userId=${meta.teacherUid} lesson=${meta.lesson} type=${meta.type}: ${error.message}`
+    );
+    return { exists: false, sent: false };
   }
 }
 
@@ -723,6 +809,7 @@ async function runReminderSweep() {
                   classKey: item.classKey,
                 })
               );
+              await markReminderSent(claim.ref, meta);
               console.log(
                 `[reminder] sent type=lesson_start userId=${teacherUid} lesson=${item.lesson} classKey=${item.classKey}`
               );
@@ -774,6 +861,7 @@ async function runReminderSweep() {
                   classKey: item.classKey,
                 })
               );
+              await markReminderSent(lateClaim.ref, lateMeta);
               console.log(
                 `[reminder] sent type=attendance_late userId=${teacherUid} lesson=${item.lesson} classKey=${item.classKey}`
               );
@@ -806,6 +894,7 @@ async function runReminderSweep() {
                   classKey: item.classKey,
                 })
               );
+              await markReminderSent(missedClaim.ref, missedMeta);
               console.log(
                 `[reminder] sent type=attendance_missed userId=${teacherUid} lesson=${item.lesson} classKey=${item.classKey}`
               );
@@ -845,6 +934,16 @@ app.get("/api/telegram/debug-env", (req, res) => {
     projectId: process.env.GOOGLE_CLOUD_PROJECT || null,
     hasToken: Boolean(process.env.TELEGRAM_BOT_TOKEN),
   });
+});
+
+app.post("/api/telegram/run-reminder-sweep", async (req, res) => {
+  try {
+    await runReminderSweep();
+    return res.json({ ok: true });
+  } catch (error) {
+    console.error(`[reminder] manual sweep failed: ${error.message}`);
+    return res.status(500).json({ ok: false, error: error.message });
+  }
 });
 
 app.get("/api/telegram/connect-link", async (req, res) => {
@@ -967,6 +1066,27 @@ app.get("/api/telegram/debug-reminders", async (req, res) => {
       const lateWindow =
         now.nowMinutes >= item.startMin + ATTENDANCE_REMINDER_DELAY_MINUTES && now.nowMinutes <= item.endMin + 15;
       const missedWindow = now.nowMinutes >= item.endMin + 16 && now.nowMinutes <= item.endMin + 180;
+      const lessonStartState = await getReminderSendState({
+        dateISO: now.dateISO,
+        teacherUid: userId,
+        lesson: item.lesson,
+        classKey: item.classKey,
+        type: "lesson_start",
+      });
+      const attendanceLateState = await getReminderSendState({
+        dateISO: now.dateISO,
+        teacherUid: userId,
+        lesson: item.lesson,
+        classKey: item.classKey,
+        type: "attendance_late",
+      });
+      const attendanceMissedState = await getReminderSendState({
+        dateISO: now.dateISO,
+        teacherUid: userId,
+        lesson: item.lesson,
+        classKey: item.classKey,
+        type: "attendance_missed",
+      });
 
       lessonChecks.push({
         lesson: item.lesson,
@@ -980,6 +1100,11 @@ app.get("/api/telegram/debug-reminders", async (req, res) => {
           before5Window,
           lateWindow,
           missedWindow,
+        },
+        reminderState: {
+          lessonStart: lessonStartState,
+          attendanceLate: attendanceLateState,
+          attendanceMissed: attendanceMissedState,
         },
       });
     }
