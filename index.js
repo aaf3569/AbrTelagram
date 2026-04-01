@@ -697,7 +697,7 @@ async function getReminderSendState(meta) {
 function lessonReminderText({ lesson, classKey }) {
   const classKeyAr = toArabicDigits(classKey);
   const leadMinutesAr = toArabicDigits(LESSON_REMINDER_LEAD_MINUTES);
-  return `لديك حصة بعد ${leadMinutesAr} دقائق | الصف: ${classKeyAr} | ا ${lesson}`;
+  return `لديك حصة بعد ${leadMinutesAr} دقائق | الصف: ${classKeyAr} | ${lesson}`;
 }
 
 function attendanceReminderText({ lesson, classKey }) {
