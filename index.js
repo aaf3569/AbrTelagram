@@ -509,22 +509,19 @@ async function claimReminderSend(meta) {
 }
 
 function lessonReminderText({ teacherName, lesson, classKey, startMin }) {
-  const title = teacherName ? `مرحبًا ${teacherName}` : "مرحبًا";
-  return [
-    title,
-    `تبقى ${LESSON_REMINDER_LEAD_MINUTES} دقائق على حصتك.`,
-    `${lesson}: ${classKey}`,
-    `الوقت: ${toTimeLabel(startMin)}`,
-  ].join("\n");
+  const header = teacherName ? `${teacherName},` : "";
+  const withHeader = header ? `${header}\n` : "";
+  return `${withHeader}You have lesson ${lesson} in ${LESSON_REMINDER_LEAD_MINUTES} mins.\nClass: ${classKey}\nTime: ${toTimeLabel(startMin)}`;
 }
 
 function attendanceReminderText({ teacherName, lesson, classKey }) {
-  const title = teacherName ? `مرحبًا ${teacherName}` : "مرحبًا";
-  return [
-    title,
-    "تذكير: الرجاء تسجيل الحضور الآن.",
-    `${lesson}: ${classKey}`,
-  ].join("\n");
+  const header = teacherName ? `${teacherName},\n` : "";
+  return `${header}Reminder to take attendance for ${lesson}.\nClass: ${classKey}`;
+}
+
+function missedAttendanceText({ teacherName, lesson, classKey }) {
+  const header = teacherName ? `${teacherName},\n` : "";
+  return `${header}You did not take attendance for ${lesson}.\nClass: ${classKey}`;
 }
 
 async function runReminderSweep() {
@@ -597,7 +594,13 @@ async function runReminderSweep() {
         const attendanceReminderEnd = item.endMin + 15;
         const inAttendanceReminderWindow =
           now.nowMinutes >= attendanceReminderStart && now.nowMinutes <= attendanceReminderEnd;
-        if (!inAttendanceReminderWindow) continue;
+
+        const missedReminderStart = item.endMin + 16;
+        const missedReminderEnd = item.endMin + 180;
+        const inMissedAttendanceWindow =
+          now.nowMinutes >= missedReminderStart && now.nowMinutes <= missedReminderEnd;
+
+        if (!inAttendanceReminderWindow && !inMissedAttendanceWindow) continue;
 
         const sessionExists = await hasAttendanceSession({
           dateISO: now.dateISO,
@@ -606,28 +609,56 @@ async function runReminderSweep() {
         });
         if (sessionExists) continue;
 
-        const meta = {
-          dateISO: now.dateISO,
-          teacherUid,
-          lesson: item.lesson,
-          classKey: item.classKey,
-          type: "attendance_late",
-        };
-        const claim = await claimReminderSend(meta);
-        if (!claim.claimed) continue;
+        if (inAttendanceReminderWindow) {
+          const lateMeta = {
+            dateISO: now.dateISO,
+            teacherUid,
+            lesson: item.lesson,
+            classKey: item.classKey,
+            type: "attendance_late",
+          };
+          const lateClaim = await claimReminderSend(lateMeta);
+          if (lateClaim.claimed) {
+            try {
+              await sendTelegramMessage(
+                chatId,
+                attendanceReminderText({
+                  teacherName,
+                  lesson: lessonLabel,
+                  classKey: item.classKey,
+                })
+              );
+            } catch (error) {
+              console.error("Attendance reminder failed:", error.message);
+              await lateClaim.ref.delete().catch(() => {});
+            }
+          }
+        }
 
-        try {
-          await sendTelegramMessage(
-            chatId,
-            attendanceReminderText({
-              teacherName,
-              lesson: lessonLabel,
-              classKey: item.classKey,
-            })
-          );
-        } catch (error) {
-          console.error("Attendance reminder failed:", error.message);
-          await claim.ref.delete().catch(() => {});
+        if (inMissedAttendanceWindow) {
+          const missedMeta = {
+            dateISO: now.dateISO,
+            teacherUid,
+            lesson: item.lesson,
+            classKey: item.classKey,
+            type: "attendance_missed",
+          };
+          const missedClaim = await claimReminderSend(missedMeta);
+          if (missedClaim.claimed) {
+            try {
+              await sendTelegramMessage(
+                chatId,
+                missedAttendanceText({
+                  teacherName,
+                  lesson: lessonLabel,
+                  classKey: item.classKey,
+                })
+              );
+            } catch (error) {
+              console.error("Missed attendance reminder failed:", error.message);
+              await missedClaim.ref.delete().catch(() => {});
+            }
+          }
         }
       }
     }
@@ -650,6 +681,22 @@ app.get("/api/telegram/connect-link", async (req, res) => {
 app.post("/api/telegram/disconnect", async (req, res) => {
   const userId = String(req.body?.userId || req.query?.userId || "teacher123").trim() || "teacher123";
   delete users[userId];
+  try {
+    await db.collection("teachers").doc(userId).set(
+      {
+        telegramConnected: false,
+        telegramChatId: null,
+        telegram: {
+          connected: false,
+          chatId: null,
+          disconnectedAt: admin.firestore.FieldValue.serverTimestamp(),
+        },
+      },
+      { merge: true }
+    );
+  } catch (error) {
+    console.error(`[telegram] disconnect Firestore update failed for userId=${userId}:`, error.message);
+  }
   console.log(`[telegram] disconnected mapping for userId=${userId}`);
   return res.json({ ok: true });
 });
@@ -670,9 +717,26 @@ app.post("/api/telegram-webhook", async (req, res) => {
       const userId = String(connectMatch[1] || "").trim();
       if (userId) {
         users[userId] = String(chatId);
+        try {
+          await db.collection("teachers").doc(userId).set(
+            {
+              telegramConnected: true,
+              telegramChatId: String(chatId),
+              telegram: {
+                connected: true,
+                chatId: String(chatId),
+                linkedAt: admin.firestore.FieldValue.serverTimestamp(),
+                linkedVia: "connect_payload",
+              },
+            },
+            { merge: true }
+          );
+        } catch (error) {
+          console.error(`[telegram] Firestore save failed for userId=${userId}:`, error.message);
+        }
         console.log(`[telegram] Connected user ${userId} -> chat_id ${chatId}`);
         try {
-          await sendTelegramMessage(chatId, `Connected successfully for user: ${userId}`);
+          await sendTelegramMessage(chatId, `Connected successfully for user: ${userId}.`);
         } catch (error) {
           console.error("Webhook connect_ response failed:", error.message);
         }
@@ -753,3 +817,4 @@ app.listen(PORT, () => {
     runReminderSweep().catch(() => {});
   }, 60 * 1000);
 });
+
