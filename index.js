@@ -581,9 +581,11 @@ async function hasAttendanceSession({ dateISO, lesson, classKey }) {
   }
 }
 
-function reminderDocRef({ dateISO, teacherUid, lesson, classKey, type }) {
+function reminderDocRef({ dateISO, teacherUid, lesson, classKey, type, timeKey }) {
   if (!isFirebaseReady()) return null;
-  const id = `${dateISO}_${type}_${teacherUid}_${lesson}_${shortHash(classKey)}`;
+  const normalizedTimeKey = Number.isFinite(Number(timeKey)) ? Number(timeKey) : null;
+  const timePart = normalizedTimeKey === null ? "" : `_t${normalizedTimeKey}`;
+  const id = `${dateISO}_${type}_${teacherUid}_${lesson}_${shortHash(classKey)}${timePart}`;
   try {
     return db.collection("telegramNotificationLog").doc(id);
   } catch (error) {
@@ -798,6 +800,7 @@ async function runReminderSweep() {
             lesson: item.lesson,
             classKey: item.classKey,
             type: "lesson_start",
+            timeKey: item.startMin,
           };
           const claim = await claimReminderSend(meta);
           if (claim.claimed) {
@@ -850,6 +853,7 @@ async function runReminderSweep() {
             lesson: item.lesson,
             classKey: item.classKey,
             type: "attendance_late",
+            timeKey: attendanceReminderStart,
           };
           const lateClaim = await claimReminderSend(lateMeta);
           if (lateClaim.claimed) {
@@ -883,6 +887,7 @@ async function runReminderSweep() {
             lesson: item.lesson,
             classKey: item.classKey,
             type: "attendance_missed",
+            timeKey: missedReminderStart,
           };
           const missedClaim = await claimReminderSend(missedMeta);
           if (missedClaim.claimed) {
@@ -1063,15 +1068,17 @@ app.get("/api/telegram/debug-reminders", async (req, res) => {
         classKey: item.classKey,
       });
       const before5Window = now.nowMinutes >= item.startMin - LESSON_REMINDER_LEAD_MINUTES && now.nowMinutes < item.startMin;
-      const lateWindow =
-        now.nowMinutes >= item.startMin + ATTENDANCE_REMINDER_DELAY_MINUTES && now.nowMinutes <= item.endMin + 15;
-      const missedWindow = now.nowMinutes >= item.endMin + 16 && now.nowMinutes <= item.endMin + 180;
+      const attendanceReminderStart = item.startMin + ATTENDANCE_REMINDER_DELAY_MINUTES;
+      const lateWindow = now.nowMinutes >= attendanceReminderStart && now.nowMinutes <= item.endMin + 15;
+      const missedReminderStart = item.endMin + 16;
+      const missedWindow = now.nowMinutes >= missedReminderStart && now.nowMinutes <= item.endMin + 180;
       const lessonStartState = await getReminderSendState({
         dateISO: now.dateISO,
         teacherUid: userId,
         lesson: item.lesson,
         classKey: item.classKey,
         type: "lesson_start",
+        timeKey: item.startMin,
       });
       const attendanceLateState = await getReminderSendState({
         dateISO: now.dateISO,
@@ -1079,6 +1086,7 @@ app.get("/api/telegram/debug-reminders", async (req, res) => {
         lesson: item.lesson,
         classKey: item.classKey,
         type: "attendance_late",
+        timeKey: attendanceReminderStart,
       });
       const attendanceMissedState = await getReminderSendState({
         dateISO: now.dateISO,
@@ -1086,6 +1094,7 @@ app.get("/api/telegram/debug-reminders", async (req, res) => {
         lesson: item.lesson,
         classKey: item.classKey,
         type: "attendance_missed",
+        timeKey: missedReminderStart,
       });
 
       lessonChecks.push({
