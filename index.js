@@ -14,6 +14,7 @@
   export ATTENDANCE_REMINDER_DELAY_MINUTES=10
   export ALLOW_PLAIN_TEACHER_ID_START=true
   export FIREBASE_SERVICE_ACCOUNT_JSON='{"type":"service_account",...}'
+  export GOOGLE_CLOUD_PROJECT=your-firebase-project-id
   # or GOOGLE_APPLICATION_CREDENTIALS=/absolute/path/service-account.json
 
   How to set webhook:
@@ -55,25 +56,57 @@ app.use((req, res, next) => {
   return next();
 });
 
-const db = initFirebaseAdmin();
+const firebaseState = initFirebaseAdmin();
+const db = firebaseState.db;
 let reminderSweepRunning = false;
 let botUsernameCache = null;
 const users = Object.create(null); // in-memory mapping: USER_ID -> chat_id
 
 function initFirebaseAdmin() {
-  if (admin.apps.length) return admin.firestore();
+  const state = {
+    ready: false,
+    db: null,
+    projectId: process.env.GOOGLE_CLOUD_PROJECT || null,
+  };
 
-  const rawServiceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-  if (rawServiceAccount) {
-    const serviceAccount = JSON.parse(rawServiceAccount);
+  try {
+    if (admin.apps.length) {
+      state.db = admin.firestore();
+      state.ready = true;
+      console.log(`[firebase] already initialized projectId=${state.projectId || "unknown"}`);
+      return state;
+    }
+
+    if (!process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
+      console.warn("[firebase] missing or invalid credentials");
+      return state;
+    }
+
+    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+    if (typeof serviceAccount.private_key === "string") {
+      serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, "\n");
+    }
+    const resolvedProjectId = process.env.GOOGLE_CLOUD_PROJECT || serviceAccount.project_id || null;
+
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
+      projectId: process.env.GOOGLE_CLOUD_PROJECT || serviceAccount.project_id,
     });
-  } else {
-    admin.initializeApp();
-  }
 
-  return admin.firestore();
+    state.db = admin.firestore();
+    state.ready = true;
+    state.projectId = resolvedProjectId;
+    console.log(`[firebase] initialized projectId=${resolvedProjectId || "unknown"}`);
+    return state;
+  } catch (error) {
+    console.warn("[firebase] missing or invalid credentials");
+    console.warn(`[firebase] init error: ${error.message}`);
+    return state;
+  }
+}
+
+function isFirebaseReady() {
+  return Boolean(firebaseState.ready && db);
 }
 
 function base64UrlEncode(value) {
@@ -292,14 +325,24 @@ async function getBotUsername() {
 }
 
 async function verifyFirebaseUser(req) {
+  if (!isFirebaseReady()) return null;
   const authHeader = req.headers.authorization || "";
   if (!authHeader.startsWith("Bearer ")) return null;
   const idToken = authHeader.slice("Bearer ".length).trim();
   if (!idToken) return null;
-  return admin.auth().verifyIdToken(idToken);
+  try {
+    return await admin.auth().verifyIdToken(idToken);
+  } catch (error) {
+    console.error(`[firebase] verifyIdToken failed: ${error.message}`);
+    return null;
+  }
 }
 
 async function loadLessonTimes() {
+  if (!isFirebaseReady()) {
+    console.warn("[firebase] loadLessonTimes skipped: Firebase unavailable");
+    return DEFAULT_LESSON_TIMES.map((x) => ({ ...x }));
+  }
   try {
     const lessonTimesDoc = await db.collection("settings").doc("lessonTimes").get();
     if (!lessonTimesDoc.exists) return DEFAULT_LESSON_TIMES.map((x) => ({ ...x }));
@@ -315,7 +358,7 @@ async function loadLessonTimes() {
       end: String(data.times[i]?.end || fallback.end),
     }));
   } catch (error) {
-    console.error("Failed to load lesson times:", error.message);
+    console.error(`[firebase] loadLessonTimes failed: ${error.message}`);
     return DEFAULT_LESSON_TIMES.map((x) => ({ ...x }));
   }
 }
@@ -324,24 +367,33 @@ async function loadOverridesForDate(dateISO) {
   const addedByTeacher = new Map();
   const removedByTeacher = new Map();
 
-  const snap = await db.collection("scheduleOverrides").where("date", "==", dateISO).get();
-  snap.forEach((docSnap) => {
-    const x = docSnap.data() || {};
-    const lesson = Number(x.lesson);
-    if (!Number.isFinite(lesson) || lesson < 1 || lesson > 7) return;
-    const classKey = buildClassKeyFromRow(x);
+  if (!isFirebaseReady()) {
+    console.warn("[firebase] loadOverridesForDate skipped: Firebase unavailable");
+    return { addedByTeacher, removedByTeacher };
+  }
 
-    if (x.kind === "new" && x.newTeacherUid) {
-      const uid = String(x.newTeacherUid);
-      if (!addedByTeacher.has(uid)) addedByTeacher.set(uid, []);
-      addedByTeacher.get(uid).push({ lesson, classKey });
-    }
-    if (x.kind === "original" && x.originalTeacherUid) {
-      const uid = String(x.originalTeacherUid);
-      if (!removedByTeacher.has(uid)) removedByTeacher.set(uid, new Set());
-      removedByTeacher.get(uid).add(lesson);
-    }
-  });
+  try {
+    const snap = await db.collection("scheduleOverrides").where("date", "==", dateISO).get();
+    snap.forEach((docSnap) => {
+      const x = docSnap.data() || {};
+      const lesson = Number(x.lesson);
+      if (!Number.isFinite(lesson) || lesson < 1 || lesson > 7) return;
+      const classKey = buildClassKeyFromRow(x);
+
+      if (x.kind === "new" && x.newTeacherUid) {
+        const uid = String(x.newTeacherUid);
+        if (!addedByTeacher.has(uid)) addedByTeacher.set(uid, []);
+        addedByTeacher.get(uid).push({ lesson, classKey });
+      }
+      if (x.kind === "original" && x.originalTeacherUid) {
+        const uid = String(x.originalTeacherUid);
+        if (!removedByTeacher.has(uid)) removedByTeacher.set(uid, new Set());
+        removedByTeacher.get(uid).add(lesson);
+      }
+    });
+  } catch (error) {
+    console.error(`[firebase] loadOverridesForDate failed date=${dateISO}: ${error.message}`);
+  }
 
   return { addedByTeacher, removedByTeacher };
 }
@@ -349,6 +401,10 @@ async function loadOverridesForDate(dateISO) {
 async function loadCustomLessonsByTeacher(dayIndex, lessonTimes) {
   const out = new Map();
   if (dayIndex < 0) return out;
+  if (!isFirebaseReady()) {
+    console.warn("[firebase] loadCustomLessonsByTeacher skipped: Firebase unavailable");
+    return out;
+  }
 
   const defaultByIndex = new Map(
     lessonTimes.map((x) => [
@@ -360,46 +416,50 @@ async function loadCustomLessonsByTeacher(dayIndex, lessonTimes) {
     ])
   );
 
-  const snap = await db
-    .collection("customDaySchedules")
-    .where("dayIndex", "==", dayIndex)
-    .get();
+  try {
+    const snap = await db
+      .collection("customDaySchedules")
+      .where("dayIndex", "==", dayIndex)
+      .get();
 
-  snap.forEach((docSnap) => {
-    const row = docSnap.data() || {};
-    if (row.enabled !== true) return;
-    if (row.deletedAt) return;
+    snap.forEach((docSnap) => {
+      const row = docSnap.data() || {};
+      if (row.enabled !== true) return;
+      if (row.deletedAt) return;
 
-    const lessons = Array.isArray(row.lessons) ? row.lessons : [];
-    const times = Array.isArray(row.times) ? row.times : [];
-    const lessonCount = Math.min(7, Number(row.lessonCount) || lessons.length || 7);
+      const lessons = Array.isArray(row.lessons) ? row.lessons : [];
+      const times = Array.isArray(row.times) ? row.times : [];
+      const lessonCount = Math.min(7, Number(row.lessonCount) || lessons.length || 7);
 
-    for (let i = 0; i < lessonCount; i += 1) {
-      const lessonRow = lessons[i] || {};
-      const teacherUid = String(lessonRow.teacherUid || "").trim();
-      if (!teacherUid) continue;
+      for (let i = 0; i < lessonCount; i += 1) {
+        const lessonRow = lessons[i] || {};
+        const teacherUid = String(lessonRow.teacherUid || "").trim();
+        if (!teacherUid) continue;
 
-      const classKey =
-        normalizeClassKey(row.classKey) ||
-        normalizeClassKey(lessonRow.classKey) ||
-        buildClassKeyFromRow(row);
-      if (!classKey) continue;
+        const classKey =
+          normalizeClassKey(row.classKey) ||
+          normalizeClassKey(lessonRow.classKey) ||
+          buildClassKeyFromRow(row);
+        if (!classKey) continue;
 
-      const fallback = defaultByIndex.get(i + 1) || { startMin: 0, endMin: 0 };
-      const customTime = times[i] || {};
-      const startMin = parseTimeToMinutes(customTime.start || toTimeLabel(fallback.startMin));
-      const endMin = parseTimeToMinutes(customTime.end || toTimeLabel(fallback.endMin));
+        const fallback = defaultByIndex.get(i + 1) || { startMin: 0, endMin: 0 };
+        const customTime = times[i] || {};
+        const startMin = parseTimeToMinutes(customTime.start || toTimeLabel(fallback.startMin));
+        const endMin = parseTimeToMinutes(customTime.end || toTimeLabel(fallback.endMin));
 
-      if (!out.has(teacherUid)) out.set(teacherUid, []);
-      out.get(teacherUid).push({
-        lesson: i + 1,
-        classKey,
-        startMin,
-        endMin,
-        source: "custom",
-      });
-    }
-  });
+        if (!out.has(teacherUid)) out.set(teacherUid, []);
+        out.get(teacherUid).push({
+          lesson: i + 1,
+          classKey,
+          startMin,
+          endMin,
+          source: "custom",
+        });
+      }
+    });
+  } catch (error) {
+    console.error(`[firebase] loadCustomLessonsByTeacher failed dayIndex=${dayIndex}: ${error.message}`);
+  }
 
   return out;
 }
@@ -423,30 +483,42 @@ async function buildTeacherLessonsForToday({
     ])
   );
 
-  const schedulesSnap = await db.collection("schedules").where("teacherUid", "==", teacherUid).get();
-  schedulesSnap.forEach((docSnap) => {
-    const row = docSnap.data() || {};
-    const lesson = Number(row.lesson ?? row.lessonIndex ?? row.lessonNumber);
-    if (!Number.isFinite(lesson) || lesson < 1 || lesson > 7) return;
+  if (!isFirebaseReady()) {
+    console.warn(
+      `[firebase] buildTeacherLessonsForToday schedules skipped userId=${teacherUid}: Firebase unavailable`
+    );
+  } else {
+    try {
+      const schedulesSnap = await db.collection("schedules").where("teacherUid", "==", teacherUid).get();
+      schedulesSnap.forEach((docSnap) => {
+        const row = docSnap.data() || {};
+        const lesson = Number(row.lesson ?? row.lessonIndex ?? row.lessonNumber);
+        if (!Number.isFinite(lesson) || lesson < 1 || lesson > 7) return;
 
-    const rowDate = String(row.date || "").trim();
-    const rowWeekday = row.weekday ?? row.day ?? row.dow ?? row.dayIndex ?? "";
-    const appliesToday = rowDate === dateISO || weekdayMatchesToday(rowWeekday, weekdayEnglish);
-    if (!appliesToday) return;
+        const rowDate = String(row.date || "").trim();
+        const rowWeekday = row.weekday ?? row.day ?? row.dow ?? row.dayIndex ?? "";
+        const appliesToday = rowDate === dateISO || weekdayMatchesToday(rowWeekday, weekdayEnglish);
+        if (!appliesToday) return;
 
-    const classKey = buildClassKeyFromRow(row);
-    if (!classKey) return;
+        const classKey = buildClassKeyFromRow(row);
+        if (!classKey) return;
 
-    const fallback = lessonTimeByIndex.get(lesson) || { startMin: 0, endMin: 0 };
-    const key = `${lesson}|${normalizeClassKey(classKey)}`;
-    byKey.set(key, {
-      lesson,
-      classKey,
-      startMin: fallback.startMin,
-      endMin: fallback.endMin,
-      source: "schedule",
-    });
-  });
+        const fallback = lessonTimeByIndex.get(lesson) || { startMin: 0, endMin: 0 };
+        const key = `${lesson}|${normalizeClassKey(classKey)}`;
+        byKey.set(key, {
+          lesson,
+          classKey,
+          startMin: fallback.startMin,
+          endMin: fallback.endMin,
+          source: "schedule",
+        });
+      });
+    } catch (error) {
+      console.error(
+        `[firebase] buildTeacherLessonsForToday failed userId=${teacherUid} date=${dateISO}: ${error.message}`
+      );
+    }
+  }
 
   const removed = overrides.removedByTeacher.get(teacherUid) || new Set();
   if (removed.size > 0) {
@@ -482,18 +554,37 @@ async function buildTeacherLessonsForToday({
 }
 
 async function hasAttendanceSession({ dateISO, lesson, classKey }) {
+  if (!isFirebaseReady()) return false;
   const sessionId = `${dateISO}_${lesson}_${normalizeForSessionId(classKey)}`;
-  const snap = await db.collection("attendanceSessions").doc(sessionId).get();
-  return snap.exists;
+  try {
+    const snap = await db.collection("attendanceSessions").doc(sessionId).get();
+    return snap.exists;
+  } catch (error) {
+    console.error(
+      `[firebase] hasAttendanceSession failed date=${dateISO} lesson=${lesson} classKey=${classKey}: ${error.message}`
+    );
+    return false;
+  }
 }
 
 function reminderDocRef({ dateISO, teacherUid, lesson, classKey, type }) {
+  if (!isFirebaseReady()) return null;
   const id = `${dateISO}_${type}_${teacherUid}_${lesson}_${shortHash(classKey)}`;
-  return db.collection("telegramNotificationLog").doc(id);
+  try {
+    return db.collection("telegramNotificationLog").doc(id);
+  } catch (error) {
+    console.error(
+      `[firebase] reminderDocRef failed userId=${teacherUid} lesson=${lesson} type=${type}: ${error.message}`
+    );
+    return null;
+  }
 }
 
 async function claimReminderSend(meta) {
   const ref = reminderDocRef(meta);
+  if (!ref) {
+    return { claimed: true, ref: null };
+  }
   try {
     await ref.create({
       ...meta,
@@ -504,7 +595,10 @@ async function claimReminderSend(meta) {
     if (error?.code === 6 || /already exists/i.test(String(error?.message || ""))) {
       return { claimed: false, ref };
     }
-    throw error;
+    console.error(
+      `[reminder] claimReminderSend failed userId=${meta.teacherUid} lesson=${meta.lesson} type=${meta.type}: ${error.message}`
+    );
+    return { claimed: false, ref: null };
   }
 }
 
@@ -527,21 +621,25 @@ function missedAttendanceText({ teacherName, lesson, classKey }) {
 async function loadConnectedTeachersForSweep() {
   const out = new Map();
 
-  try {
-    const teachersSnap = await db.collection("teachers").where("telegramConnected", "==", true).get();
-    teachersSnap.forEach((docSnap) => {
-      const teacherUid = docSnap.id;
-      const data = docSnap.data() || {};
-      const chatId = String(data.telegramChatId || "").trim();
-      if (!chatId) return;
-      out.set(teacherUid, {
-        teacherUid,
-        teacherName: String(data.name || "").trim(),
-        chatId,
+  if (!isFirebaseReady()) {
+    console.warn("[firebase] loadConnectedTeachersForSweep skipped Firestore: Firebase unavailable");
+  } else {
+    try {
+      const teachersSnap = await db.collection("teachers").where("telegramConnected", "==", true).get();
+      teachersSnap.forEach((docSnap) => {
+        const teacherUid = docSnap.id;
+        const data = docSnap.data() || {};
+        const chatId = String(data.telegramChatId || "").trim();
+        if (!chatId) return;
+        out.set(teacherUid, {
+          teacherUid,
+          teacherName: String(data.name || "").trim(),
+          chatId,
+        });
       });
-    });
-  } catch (error) {
-    console.error("Failed to load connected teachers from Firestore:", error.message);
+    } catch (error) {
+      console.error(`[firebase] loadConnectedTeachersForSweep failed: ${error.message}`);
+    }
   }
 
   for (const [teacherUid, chatIdRaw] of Object.entries(users)) {
@@ -563,7 +661,14 @@ async function runReminderSweep() {
   reminderSweepRunning = true;
 
   try {
-    if (!TELEGRAM_BOT_TOKEN) return;
+    if (!TELEGRAM_BOT_TOKEN) {
+      console.warn("[reminder] skipped: TELEGRAM_BOT_TOKEN missing");
+      return;
+    }
+    if (!isFirebaseReady()) {
+      console.warn("[reminder] skipped: Firebase unavailable");
+      return;
+    }
 
     const now = kuwaitNowContext();
     const lessonTimes = await loadLessonTimes();
@@ -574,9 +679,10 @@ async function runReminderSweep() {
     if (!connectedTeachers.length) return;
 
     for (const teacherRow of connectedTeachers) {
-      const teacherUid = teacherRow.teacherUid;
-      const chatId = String(teacherRow.chatId || "").trim();
-      if (!chatId) continue;
+      try {
+        const teacherUid = teacherRow.teacherUid;
+        const chatId = String(teacherRow.chatId || "").trim();
+        if (!chatId) continue;
 
       const lessons = await buildTeacherLessonsForToday({
         teacherUid,
@@ -591,7 +697,7 @@ async function runReminderSweep() {
       const teacherName = String(teacherRow.teacherName || "").trim();
 
       for (const item of lessons) {
-        const lessonLabel = DEFAULT_LESSON_TIMES[item.lesson - 1]?.label || `الحصة ${item.lesson}`;
+        const lessonLabel = DEFAULT_LESSON_TIMES[item.lesson - 1]?.label || `lesson ${item.lesson}`;
 
         const inLessonReminderWindow =
           now.nowMinutes >= item.startMin - LESSON_REMINDER_LEAD_MINUTES &&
@@ -616,9 +722,16 @@ async function runReminderSweep() {
                   startMin: item.startMin,
                 })
               );
+              console.log(
+                `[reminder] sent type=lesson_start userId=${teacherUid} lesson=${item.lesson} classKey=${item.classKey}`
+              );
             } catch (error) {
-              console.error("Lesson reminder failed:", error.message);
-              await claim.ref.delete().catch(() => {});
+              console.error(
+                `[reminder] send failed type=lesson_start userId=${teacherUid} lesson=${item.lesson}: ${error.message}`
+              );
+              if (claim.ref) {
+                await claim.ref.delete().catch(() => {});
+              }
             }
           }
         }
@@ -661,9 +774,16 @@ async function runReminderSweep() {
                   classKey: item.classKey,
                 })
               );
+              console.log(
+                `[reminder] sent type=attendance_late userId=${teacherUid} lesson=${item.lesson} classKey=${item.classKey}`
+              );
             } catch (error) {
-              console.error("Attendance reminder failed:", error.message);
-              await lateClaim.ref.delete().catch(() => {});
+              console.error(
+                `[reminder] send failed type=attendance_late userId=${teacherUid} lesson=${item.lesson}: ${error.message}`
+              );
+              if (lateClaim.ref) {
+                await lateClaim.ref.delete().catch(() => {});
+              }
             }
           }
         }
@@ -687,20 +807,46 @@ async function runReminderSweep() {
                   classKey: item.classKey,
                 })
               );
+              console.log(
+                `[reminder] sent type=attendance_missed userId=${teacherUid} lesson=${item.lesson} classKey=${item.classKey}`
+              );
             } catch (error) {
-              console.error("Missed attendance reminder failed:", error.message);
-              await missedClaim.ref.delete().catch(() => {});
+              console.error(
+                `[reminder] send failed type=attendance_missed userId=${teacherUid} lesson=${item.lesson}: ${error.message}`
+              );
+              if (missedClaim.ref) {
+                await missedClaim.ref.delete().catch(() => {});
+              }
             }
           }
         }
       }
+      } catch (teacherError) {
+        console.error(`[reminder] teacher sweep failed userId=${teacherRow.teacherUid}: ${teacherError.message}`);
+      }
     }
   } catch (error) {
-    console.error("Reminder sweep error:", error.message);
+    console.error(`[reminder] sweep failed: ${error.message}`);
   } finally {
     reminderSweepRunning = false;
   }
 }
+
+app.get("/api/health", (req, res) => {
+  return res.json({
+    ok: true,
+    firebase: isFirebaseReady(),
+    uptime: process.uptime(),
+  });
+});
+
+app.get("/api/telegram/debug-env", (req, res) => {
+  return res.json({
+    hasFirebaseEnv: Boolean(process.env.FIREBASE_SERVICE_ACCOUNT_JSON),
+    projectId: process.env.GOOGLE_CLOUD_PROJECT || null,
+    hasToken: Boolean(process.env.TELEGRAM_BOT_TOKEN),
+  });
+});
 
 app.get("/api/telegram/connect-link", async (req, res) => {
   const userIdRaw = req.query.userId;
@@ -714,21 +860,25 @@ app.get("/api/telegram/connect-link", async (req, res) => {
 app.post("/api/telegram/disconnect", async (req, res) => {
   const userId = String(req.body?.userId || req.query?.userId || "teacher123").trim() || "teacher123";
   delete users[userId];
-  try {
-    await db.collection("teachers").doc(userId).set(
-      {
-        telegramConnected: false,
-        telegramChatId: null,
-        telegram: {
-          connected: false,
-          chatId: null,
-          disconnectedAt: admin.firestore.FieldValue.serverTimestamp(),
+  if (!isFirebaseReady()) {
+    console.warn(`[firebase] disconnect skipped Firestore update userId=${userId}: Firebase unavailable`);
+  } else {
+    try {
+      await db.collection("teachers").doc(userId).set(
+        {
+          telegramConnected: false,
+          telegramChatId: null,
+          telegram: {
+            connected: false,
+            chatId: null,
+            disconnectedAt: admin.firestore.FieldValue.serverTimestamp(),
+          },
         },
-      },
-      { merge: true }
-    );
-  } catch (error) {
-    console.error(`[telegram] disconnect Firestore update failed for userId=${userId}:`, error.message);
+        { merge: true }
+      );
+    } catch (error) {
+      console.error(`[telegram] disconnect Firestore update failed userId=${userId}: ${error.message}`);
+    }
   }
   console.log(`[telegram] disconnected mapping for userId=${userId}`);
   return res.json({ ok: true });
@@ -739,7 +889,7 @@ app.get("/api/telegram/test-message", async (req, res) => {
   const memoryChatId = String(users[userId] || "").trim();
   let chatId = memoryChatId;
 
-  if (!chatId) {
+  if (!chatId && isFirebaseReady()) {
     try {
       const teacherSnap = await db.collection("teachers").doc(userId).get();
       if (teacherSnap.exists) {
@@ -747,8 +897,10 @@ app.get("/api/telegram/test-message", async (req, res) => {
         chatId = String(teacherData.telegramChatId || "").trim();
       }
     } catch (error) {
-      console.error(`[telegram] test-message Firestore lookup failed for userId=${userId}:`, error.message);
+      console.error(`[telegram] test-message Firestore lookup failed userId=${userId}: ${error.message}`);
     }
+  } else if (!chatId) {
+    console.warn(`[firebase] test-message skipped Firestore lookup userId=${userId}: Firebase unavailable`);
   }
 
   if (!chatId) {
@@ -763,6 +915,7 @@ app.get("/api/telegram/test-message", async (req, res) => {
     await sendTelegramMessage(chatId, "Test message: Telegram is connected and ready.");
     return res.json({ ok: true, userId, chatId });
   } catch (error) {
+    console.error(`[telegram] test-message send failed userId=${userId}: ${error.message}`);
     return res.status(500).json({ ok: false, error: error.message, userId, chatId });
   }
 });
@@ -786,15 +939,19 @@ app.get("/api/telegram/debug-reminders", async (req, res) => {
 
     let firestoreChatId = "";
     let teacherName = "";
-    try {
-      const teacherSnap = await db.collection("teachers").doc(userId).get();
-      if (teacherSnap.exists) {
-        const data = teacherSnap.data() || {};
-        firestoreChatId = String(data.telegramChatId || "").trim();
-        teacherName = String(data.name || "").trim();
+    if (!isFirebaseReady()) {
+      console.warn(`[firebase] debug-reminders skipped teacher lookup userId=${userId}: Firebase unavailable`);
+    } else {
+      try {
+        const teacherSnap = await db.collection("teachers").doc(userId).get();
+        if (teacherSnap.exists) {
+          const data = teacherSnap.data() || {};
+          firestoreChatId = String(data.telegramChatId || "").trim();
+          teacherName = String(data.name || "").trim();
+        }
+      } catch (error) {
+        console.error(`[telegram] debug-reminders Firestore lookup failed userId=${userId}: ${error.message}`);
       }
-    } catch (error) {
-      console.error(`[telegram] debug Firestore lookup failed for userId=${userId}:`, error.message);
     }
 
     const memoryChatId = String(users[userId] || "").trim();
@@ -847,6 +1004,7 @@ app.get("/api/telegram/debug-reminders", async (req, res) => {
       lessons: lessonChecks,
     });
   } catch (error) {
+    console.error(`[telegram] debug-reminders failed userId=${userId}: ${error.message}`);
     return res.status(500).json({
       ok: false,
       userId,
@@ -861,8 +1019,8 @@ app.post("/api/telegram-webhook", async (req, res) => {
   const text = String(update?.message?.text || "").trim();
 
   if (chatId && text.startsWith("/start")) {
-    console.log("chat_id:", chatId);
-    console.log("full text:", text);
+    console.log(`[telegram] /start chatId=${chatId}`);
+    console.log(`[telegram] /start text=${text}`);
 
     const maybePayload = text.split(/\s+/)[1] || "";
 
@@ -871,28 +1029,32 @@ app.post("/api/telegram-webhook", async (req, res) => {
       const userId = String(connectMatch[1] || "").trim();
       if (userId) {
         users[userId] = String(chatId);
-        try {
-          await db.collection("teachers").doc(userId).set(
-            {
-              telegramConnected: true,
-              telegramChatId: String(chatId),
-              telegram: {
-                connected: true,
-                chatId: String(chatId),
-                linkedAt: admin.firestore.FieldValue.serverTimestamp(),
-                linkedVia: "connect_payload",
+        if (!isFirebaseReady()) {
+          console.warn(`[firebase] webhook connect skipped Firestore write userId=${userId}: Firebase unavailable`);
+        } else {
+          try {
+            await db.collection("teachers").doc(userId).set(
+              {
+                telegramConnected: true,
+                telegramChatId: String(chatId),
+                telegram: {
+                  connected: true,
+                  chatId: String(chatId),
+                  linkedAt: admin.firestore.FieldValue.serverTimestamp(),
+                  linkedVia: "connect_payload",
+                },
               },
-            },
-            { merge: true }
-          );
-        } catch (error) {
-          console.error(`[telegram] Firestore save failed for userId=${userId}:`, error.message);
+              { merge: true }
+            );
+          } catch (error) {
+            console.error(`[telegram] webhook connect Firestore save failed userId=${userId}: ${error.message}`);
+          }
         }
-        console.log(`[telegram] Connected user ${userId} -> chat_id ${chatId}`);
+        console.log(`[telegram] connected userId=${userId} chatId=${chatId}`);
         try {
           await sendTelegramMessage(chatId, `Connected successfully for user: ${userId}.`);
         } catch (error) {
-          console.error("Webhook connect_ response failed:", error.message);
+          console.error(`[telegram] webhook connect confirmation send failed userId=${userId}: ${error.message}`);
         }
         return res.sendStatus(200);
       }
@@ -902,7 +1064,7 @@ app.post("/api/telegram-webhook", async (req, res) => {
       try {
         await sendTelegramMessage(chatId, "Welcome! Open the app and tap Connect Telegram first.");
       } catch (error) {
-        console.error("Webhook /start basic response failed:", error.message);
+        console.error(`[telegram] webhook basic /start response failed chatId=${chatId}: ${error.message}`);
       }
       return res.sendStatus(200);
     }
@@ -912,25 +1074,32 @@ app.post("/api/telegram-webhook", async (req, res) => {
       try {
         await sendTelegramMessage(chatId, "Invalid or expired link. Please reconnect from the app.");
       } catch (error) {
-        console.error("Webhook invalid payload response failed:", error.message);
+        console.error(`[telegram] webhook invalid payload response failed chatId=${chatId}: ${error.message}`);
       }
       return res.sendStatus(200);
     }
 
     try {
-      await db.collection("teachers").doc(verified.teacherUid).set(
-        {
-          telegramConnected: true,
-          telegramChatId: String(chatId),
-          telegram: {
-            connected: true,
-            chatId: String(chatId),
-            linkedAt: admin.firestore.FieldValue.serverTimestamp(),
-            lastStartText: text,
+      users[verified.teacherUid] = String(chatId);
+      if (!isFirebaseReady()) {
+        console.warn(
+          `[firebase] webhook verified connect skipped Firestore write userId=${verified.teacherUid}: Firebase unavailable`
+        );
+      } else {
+        await db.collection("teachers").doc(verified.teacherUid).set(
+          {
+            telegramConnected: true,
+            telegramChatId: String(chatId),
+            telegram: {
+              connected: true,
+              chatId: String(chatId),
+              linkedAt: admin.firestore.FieldValue.serverTimestamp(),
+              lastStartText: text,
+            },
           },
-        },
-        { merge: true }
-      );
+          { merge: true }
+        );
+      }
 
       if (verified.plain) {
         await sendTelegramMessage(
@@ -940,12 +1109,13 @@ app.post("/api/telegram-webhook", async (req, res) => {
       } else {
         await sendTelegramMessage(chatId, "Welcome! Telegram notifications are now connected.");
       }
+      console.log(`[telegram] verified connect success userId=${verified.teacherUid} chatId=${chatId}`);
     } catch (error) {
-      console.error("Failed to link Telegram chat:", error.message);
+      console.error(`[telegram] verified connect failed userId=${verified.teacherUid}: ${error.message}`);
       try {
         await sendTelegramMessage(chatId, "Link failed on server. Please try again from the app.");
       } catch (nestedError) {
-        console.error("Failed to send link error to Telegram:", nestedError.message);
+        console.error(`[telegram] failed to send link error chatId=${chatId}: ${nestedError.message}`);
       }
     }
   }
@@ -958,17 +1128,20 @@ app.get("/", (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`[telegram] server running on port ${PORT}`);
   if (!TELEGRAM_BOT_TOKEN) {
-    console.warn("Missing TELEGRAM_BOT_TOKEN. Webhook replies and reminders are disabled.");
+    console.warn("[telegram] missing TELEGRAM_BOT_TOKEN. Webhook replies and reminders are disabled.");
   }
 
   setTimeout(() => {
-    runReminderSweep().catch(() => {});
+    runReminderSweep().catch((error) => {
+      console.error(`[reminder] startup sweep crashed: ${error.message}`);
+    });
   }, 5000);
 
   setInterval(() => {
-    runReminderSweep().catch(() => {});
+    runReminderSweep().catch((error) => {
+      console.error(`[reminder] interval sweep crashed: ${error.message}`);
+    });
   }, 60 * 1000);
 });
-
