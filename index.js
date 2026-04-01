@@ -278,6 +278,10 @@ function toTimeLabel(minutesFromMidnight) {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
+function toArabicDigits(value) {
+  return String(value ?? "").replace(/\d/g, (digit) => "٠١٢٣٤٥٦٧٨٩"[Number(digit)]);
+}
+
 function shortHash(input) {
   return crypto.createHash("sha1").update(String(input || "")).digest("hex").slice(0, 10);
 }
@@ -602,20 +606,20 @@ async function claimReminderSend(meta) {
   }
 }
 
-function lessonReminderText({ teacherName, lesson, classKey, startMin }) {
-  const header = teacherName ? `${teacherName},` : "";
-  const withHeader = header ? `${header}\n` : "";
-  return `${withHeader}You have lesson ${lesson} in ${LESSON_REMINDER_LEAD_MINUTES} mins.\nClass: ${classKey}\nTime: ${toTimeLabel(startMin)}`;
+function lessonReminderText({ lesson, classKey }) {
+  const classKeyAr = toArabicDigits(classKey);
+  const leadMinutesAr = toArabicDigits(LESSON_REMINDER_LEAD_MINUTES);
+  return `لديك حصة الصف: ${classKeyAr} | بعد ${leadMinutesAr} دقائق | ${lesson}`;
 }
 
-function attendanceReminderText({ teacherName, lesson, classKey }) {
-  const header = teacherName ? `${teacherName},\n` : "";
-  return `${header}Reminder to take attendance for ${lesson}.\nClass: ${classKey}`;
+function attendanceReminderText({ lesson, classKey }) {
+  const classKeyAr = toArabicDigits(classKey);
+  return `تذكير: سجّل الحضور الآن | الصف: ${classKeyAr} | ${lesson}`;
 }
 
-function missedAttendanceText({ teacherName, lesson, classKey }) {
-  const header = teacherName ? `${teacherName},\n` : "";
-  return `${header}You did not take attendance for ${lesson}.\nClass: ${classKey}`;
+function missedAttendanceText({ lesson, classKey }) {
+  const classKeyAr = toArabicDigits(classKey);
+  return `لم يتم تسجيل الحضور لـ ${lesson} | الصف: ${classKeyAr}`;
 }
 
 async function loadConnectedTeachersForSweep() {
@@ -694,10 +698,9 @@ async function runReminderSweep() {
       });
       if (!lessons.length) continue;
 
-      const teacherName = String(teacherRow.teacherName || "").trim();
-
       for (const item of lessons) {
-        const lessonLabel = DEFAULT_LESSON_TIMES[item.lesson - 1]?.label || `lesson ${item.lesson}`;
+        const lessonLabel =
+          DEFAULT_LESSON_TIMES[item.lesson - 1]?.label || `الحصة ${toArabicDigits(item.lesson)}`;
 
         const inLessonReminderWindow =
           now.nowMinutes >= item.startMin - LESSON_REMINDER_LEAD_MINUTES &&
@@ -716,10 +719,8 @@ async function runReminderSweep() {
               await sendTelegramMessage(
                 chatId,
                 lessonReminderText({
-                  teacherName,
                   lesson: lessonLabel,
                   classKey: item.classKey,
-                  startMin: item.startMin,
                 })
               );
               console.log(
@@ -769,7 +770,6 @@ async function runReminderSweep() {
               await sendTelegramMessage(
                 chatId,
                 attendanceReminderText({
-                  teacherName,
                   lesson: lessonLabel,
                   classKey: item.classKey,
                 })
@@ -802,7 +802,6 @@ async function runReminderSweep() {
               await sendTelegramMessage(
                 chatId,
                 missedAttendanceText({
-                  teacherName,
                   lesson: lessonLabel,
                   classKey: item.classKey,
                 })
@@ -971,7 +970,7 @@ app.get("/api/telegram/debug-reminders", async (req, res) => {
 
       lessonChecks.push({
         lesson: item.lesson,
-        lessonLabel: DEFAULT_LESSON_TIMES[item.lesson - 1]?.label || `lesson_${item.lesson}`,
+        lessonLabel: DEFAULT_LESSON_TIMES[item.lesson - 1]?.label || `الحصة_${toArabicDigits(item.lesson)}`,
         classKey: item.classKey,
         start: toTimeLabel(item.startMin),
         end: toTimeLabel(item.endMin),
