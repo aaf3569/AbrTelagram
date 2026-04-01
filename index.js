@@ -524,6 +524,40 @@ function missedAttendanceText({ teacherName, lesson, classKey }) {
   return `${header}You did not take attendance for ${lesson}.\nClass: ${classKey}`;
 }
 
+async function loadConnectedTeachersForSweep() {
+  const out = new Map();
+
+  try {
+    const teachersSnap = await db.collection("teachers").where("telegramConnected", "==", true).get();
+    teachersSnap.forEach((docSnap) => {
+      const teacherUid = docSnap.id;
+      const data = docSnap.data() || {};
+      const chatId = String(data.telegramChatId || "").trim();
+      if (!chatId) return;
+      out.set(teacherUid, {
+        teacherUid,
+        teacherName: String(data.name || "").trim(),
+        chatId,
+      });
+    });
+  } catch (error) {
+    console.error("Failed to load connected teachers from Firestore:", error.message);
+  }
+
+  for (const [teacherUid, chatIdRaw] of Object.entries(users)) {
+    const chatId = String(chatIdRaw || "").trim();
+    if (!chatId) continue;
+    if (out.has(teacherUid)) continue;
+    out.set(teacherUid, {
+      teacherUid,
+      teacherName: "",
+      chatId,
+    });
+  }
+
+  return Array.from(out.values());
+}
+
 async function runReminderSweep() {
   if (reminderSweepRunning) return;
   reminderSweepRunning = true;
@@ -536,13 +570,12 @@ async function runReminderSweep() {
     const overrides = await loadOverridesForDate(now.dateISO);
     const customLessonsByTeacher = await loadCustomLessonsByTeacher(now.dayIndex, lessonTimes);
 
-    const teachersSnap = await db.collection("teachers").where("telegramConnected", "==", true).get();
-    if (teachersSnap.empty) return;
+    const connectedTeachers = await loadConnectedTeachersForSweep();
+    if (!connectedTeachers.length) return;
 
-    for (const teacherDoc of teachersSnap.docs) {
-      const teacherUid = teacherDoc.id;
-      const teacherData = teacherDoc.data() || {};
-      const chatId = String(teacherData.telegramChatId || "").trim();
+    for (const teacherRow of connectedTeachers) {
+      const teacherUid = teacherRow.teacherUid;
+      const chatId = String(teacherRow.chatId || "").trim();
       if (!chatId) continue;
 
       const lessons = await buildTeacherLessonsForToday({
@@ -555,7 +588,7 @@ async function runReminderSweep() {
       });
       if (!lessons.length) continue;
 
-      const teacherName = String(teacherData.name || "").trim();
+      const teacherName = String(teacherRow.teacherName || "").trim();
 
       for (const item of lessons) {
         const lessonLabel = DEFAULT_LESSON_TIMES[item.lesson - 1]?.label || `الحصة ${item.lesson}`;
@@ -699,6 +732,39 @@ app.post("/api/telegram/disconnect", async (req, res) => {
   }
   console.log(`[telegram] disconnected mapping for userId=${userId}`);
   return res.json({ ok: true });
+});
+
+app.get("/api/telegram/test-message", async (req, res) => {
+  const userId = String(req.query?.userId || "teacher123").trim() || "teacher123";
+  const memoryChatId = String(users[userId] || "").trim();
+  let chatId = memoryChatId;
+
+  if (!chatId) {
+    try {
+      const teacherSnap = await db.collection("teachers").doc(userId).get();
+      if (teacherSnap.exists) {
+        const teacherData = teacherSnap.data() || {};
+        chatId = String(teacherData.telegramChatId || "").trim();
+      }
+    } catch (error) {
+      console.error(`[telegram] test-message Firestore lookup failed for userId=${userId}:`, error.message);
+    }
+  }
+
+  if (!chatId) {
+    return res.status(404).json({
+      ok: false,
+      error: "chat_not_found",
+      hint: "Reconnect Telegram first from the app settings.",
+    });
+  }
+
+  try {
+    await sendTelegramMessage(chatId, "Test message: Telegram is connected and ready.");
+    return res.json({ ok: true, userId, chatId });
+  } catch (error) {
+    return res.status(500).json({ ok: false, error: error.message, userId, chatId });
+  }
 });
 
 app.post("/api/telegram-webhook", async (req, res) => {
