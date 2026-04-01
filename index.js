@@ -205,6 +205,23 @@ function normalizeForSessionId(classKey) {
     .replace(/[^\w-]/g, "");
 }
 
+function normalizeForSafeSessionId(classKey) {
+  return String(classKey || "")
+    .replace(/[\/\\#?\[\]\s]+/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/^_|_$/g, "");
+}
+
+function buildAttendanceSessionCandidateIds({ dateISO, lesson, classKey }) {
+  const prefix = `${dateISO}_${lesson}_`;
+  const legacyId = `${prefix}${normalizeForSessionId(classKey)}`;
+  const safeId = `${prefix}${normalizeForSafeSessionId(classKey)}`;
+  if (safeId && safeId !== legacyId) {
+    return [legacyId, safeId];
+  }
+  return [legacyId];
+}
+
 function dayIndexFromEnglishWeekday(weekday) {
   if (weekday === "Sunday") return 0;
   if (weekday === "Monday") return 1;
@@ -567,18 +584,399 @@ async function buildTeacherLessonsForToday({
   });
 }
 
-async function hasAttendanceSession({ dateISO, lesson, classKey }) {
-  if (!isFirebaseReady()) return false;
-  const sessionId = `${dateISO}_${lesson}_${normalizeForSessionId(classKey)}`;
-  try {
-    const snap = await db.collection("attendanceSessions").doc(sessionId).get();
-    return snap.exists;
-  } catch (error) {
-    console.error(
-      `[firebase] hasAttendanceSession failed date=${dateISO} lesson=${lesson} classKey=${classKey}: ${error.message}`
-    );
-    return false;
+function parseClassKeyParts(classKey) {
+  const raw = String(classKey || "").trim();
+  const match = raw.match(/^(\d+)\s*\/\s*(\d+)(?:\s+(.+))?$/);
+  if (!match) return null;
+  return {
+    grade: String(match[1] || "").trim(),
+    section: String(match[2] || "").trim(),
+    track: String(match[3] || "").trim(),
+  };
+}
+
+function normalizeTrackValue(value) {
+  const raw = String(value || "")
+    .trim()
+    .replace(/^_+$/g, "");
+  return raw;
+}
+
+function scheduleRowAppliesToday(row, dateISO, weekdayEnglish) {
+  const rowDate = String(row?.date || "").trim();
+  if (rowDate && rowDate === dateISO) return true;
+  const rowWeekday = row?.weekday ?? row?.day ?? row?.dow ?? row?.dayIndex ?? "";
+  return weekdayMatchesToday(rowWeekday, weekdayEnglish);
+}
+
+function getCurrentLessonWindow(nowMinutes, lessonTimes) {
+  for (const slot of lessonTimes) {
+    const lesson = Number(slot?.index);
+    if (!Number.isFinite(lesson)) continue;
+    const startMin = parseTimeToMinutes(slot?.start);
+    const endMin = parseTimeToMinutes(slot?.end);
+    if (nowMinutes >= startMin && nowMinutes <= endMin) {
+      return {
+        lesson,
+        startMin,
+        endMin,
+        start: toTimeLabel(startMin),
+        end: toTimeLabel(endMin),
+        lessonLabel: DEFAULT_LESSON_TIMES[lesson - 1]?.label || `الحصة ${toArabicDigits(lesson)}`,
+      };
+    }
   }
+  return null;
+}
+
+function rowMatchesClass(row, classKey, classParts) {
+  const normalizedTarget = normalizeClassKey(classKey);
+  const rowClassKey = normalizeClassKey(buildClassKeyFromRow(row));
+  if (rowClassKey && rowClassKey === normalizedTarget) return true;
+
+  if (!classParts) return false;
+  const rowGrade = String(row?.grade || "").trim();
+  const rowSection = String(row?.section || "").trim();
+  if (!rowGrade || !rowSection) return false;
+  if (rowGrade !== classParts.grade || rowSection !== classParts.section) return false;
+  const rowTrack = normalizeTrackValue(row?.track ?? row?.trackKey ?? "");
+  return rowTrack === normalizeTrackValue(classParts.track);
+}
+
+async function resolveTeacherTelegramTarget(teacherUid, teacherNameHint = "") {
+  const uid = String(teacherUid || "").trim();
+  if (!uid) {
+    return { teacherUid: "", teacherName: "", chatId: "" };
+  }
+
+  const memoryChatId = String(users[uid] || "").trim();
+  let teacherName = String(teacherNameHint || "").trim();
+  let chatId = memoryChatId;
+
+  if (isFirebaseReady()) {
+    try {
+      const snap = await db.collection("teachers").doc(uid).get();
+      if (snap.exists) {
+        const data = snap.data() || {};
+        if (!teacherName) teacherName = String(data.name || "").trim();
+        if (!chatId) chatId = String(data.telegramChatId || "").trim();
+      }
+    } catch (error) {
+      console.error(`[telegram] resolveTeacherTelegramTarget failed userId=${uid}: ${error.message}`);
+    }
+  }
+
+  return {
+    teacherUid: uid,
+    teacherName,
+    chatId,
+  };
+}
+
+async function resolveClassLiveContext({ classKey, now, lessonTimes }) {
+  const normalizedClassKey = normalizeClassKey(classKey);
+  const classParts = parseClassKeyParts(normalizedClassKey);
+  const lessonWindow = getCurrentLessonWindow(now.nowMinutes, lessonTimes);
+
+  if (!lessonWindow) {
+    return {
+      classKey: normalizedClassKey,
+      inLesson: false,
+      now: {
+        dateISO: now.dateISO,
+        weekdayEnglish: now.weekdayEnglish,
+        nowMinutes: now.nowMinutes,
+        nowTime: toTimeLabel(now.nowMinutes),
+      },
+      lesson: null,
+      teacher: null,
+    };
+  }
+
+  let teacherUid = "";
+  let teacherName = "";
+  let subject = "";
+  let source = "schedule";
+
+  if (isFirebaseReady()) {
+    try {
+      const customSnap = await db
+        .collection("customDaySchedules")
+        .where("classKey", "==", normalizedClassKey)
+        .where("dayIndex", "==", now.dayIndex)
+        .get();
+      customSnap.forEach((docSnap) => {
+        if (teacherUid) return;
+        const row = docSnap.data() || {};
+        if (row.enabled !== true || row.deletedAt) return;
+        const lessons = Array.isArray(row.lessons) ? row.lessons : [];
+        const lessonRow = lessons[lessonWindow.lesson - 1] || {};
+        const uid = String(lessonRow.teacherUid || "").trim();
+        if (!uid) return;
+        teacherUid = uid;
+        teacherName = String(lessonRow.teacherName || "").trim();
+        subject = String(lessonRow.subject || "").trim();
+        source = "custom";
+      });
+    } catch (error) {
+      console.error(
+        `[firebase] resolveClassLiveContext customDaySchedules failed classKey=${normalizedClassKey}: ${error.message}`
+      );
+    }
+
+    if (!teacherUid) {
+      try {
+        const overrideSnap = await db.collection("scheduleOverrides").where("date", "==", now.dateISO).get();
+        overrideSnap.forEach((docSnap) => {
+          if (teacherUid) return;
+          const row = docSnap.data() || {};
+          const lesson = Number(row.lesson);
+          if (!Number.isFinite(lesson) || lesson !== lessonWindow.lesson) return;
+          if (!rowMatchesClass(row, normalizedClassKey, classParts)) return;
+          if (row.kind !== "new") return;
+          const uid = String(row.newTeacherUid || "").trim();
+          if (!uid) return;
+          teacherUid = uid;
+          teacherName = String(row.newTeacherName || "").trim();
+          source = "override";
+        });
+      } catch (error) {
+        console.error(
+          `[firebase] resolveClassLiveContext scheduleOverrides failed classKey=${normalizedClassKey}: ${error.message}`
+        );
+      }
+    }
+
+    if (!teacherUid) {
+      const candidates = [];
+      try {
+        const classKeySnap = await db.collection("schedules").where("classKey", "==", normalizedClassKey).get();
+        classKeySnap.forEach((docSnap) => candidates.push(docSnap.data() || {}));
+      } catch (error) {
+        console.error(
+          `[firebase] resolveClassLiveContext schedules classKey query failed classKey=${normalizedClassKey}: ${error.message}`
+        );
+      }
+
+      if (candidates.length === 0 && classParts) {
+        try {
+          const gradeSectionSnap = await db
+            .collection("schedules")
+            .where("grade", "==", classParts.grade)
+            .where("section", "==", classParts.section)
+            .get();
+          gradeSectionSnap.forEach((docSnap) => candidates.push(docSnap.data() || {}));
+        } catch (error) {
+          console.error(
+            `[firebase] resolveClassLiveContext schedules grade/section query failed classKey=${normalizedClassKey}: ${error.message}`
+          );
+        }
+      }
+
+      for (const row of candidates) {
+        if (!rowMatchesClass(row, normalizedClassKey, classParts)) continue;
+        if (!scheduleRowAppliesToday(row, now.dateISO, now.weekdayEnglish)) continue;
+        const lesson = Number(row.lesson ?? row.lessonIndex ?? row.lessonNumber);
+        if (!Number.isFinite(lesson) || lesson !== lessonWindow.lesson) continue;
+        const uid = String(row.teacherUid || "").trim();
+        if (!uid) continue;
+        teacherUid = uid;
+        teacherName = String(row.teacherName || "").trim();
+        subject = String(row.subject || "").trim();
+        source = "schedule";
+        break;
+      }
+    }
+  } else {
+    console.warn(`[firebase] resolveClassLiveContext skipped class lookup classKey=${normalizedClassKey}: Firebase unavailable`);
+  }
+
+  let teacher = null;
+  if (teacherUid) {
+    const target = await resolveTeacherTelegramTarget(teacherUid, teacherName);
+    teacher = {
+      teacherUid: target.teacherUid,
+      teacherName: target.teacherName || teacherName || "",
+      chatId: target.chatId || null,
+      connected: Boolean(target.chatId),
+    };
+  }
+
+  return {
+    classKey: normalizedClassKey,
+    inLesson: true,
+    now: {
+      dateISO: now.dateISO,
+      weekdayEnglish: now.weekdayEnglish,
+      nowMinutes: now.nowMinutes,
+      nowTime: toTimeLabel(now.nowMinutes),
+    },
+    lesson: {
+      lesson: lessonWindow.lesson,
+      lessonLabel: lessonWindow.lessonLabel,
+      start: lessonWindow.start,
+      end: lessonWindow.end,
+      subject,
+      source,
+    },
+    teacher,
+  };
+}
+
+async function requireAdminFromRequest(req, res) {
+  if (!isFirebaseReady()) {
+    res.status(503).json({ ok: false, error: "firebase_unavailable" });
+    return null;
+  }
+
+  const decoded = await verifyFirebaseUser(req);
+  if (!decoded?.uid) {
+    res.status(401).json({ ok: false, error: "unauthorized" });
+    return null;
+  }
+
+  try {
+    const teacherSnap = await db.collection("teachers").doc(decoded.uid).get();
+    const teacherData = teacherSnap.exists ? teacherSnap.data() || {} : {};
+    const role = String(teacherData.role || "").toLowerCase();
+    const isAdmin = role === "admin" || role === "superadmin" || decoded.admin === true;
+    if (!isAdmin) {
+      res.status(403).json({ ok: false, error: "forbidden" });
+      return null;
+    }
+    return {
+      uid: decoded.uid,
+      name: String(teacherData.name || "").trim(),
+      role,
+    };
+  } catch (error) {
+    console.error(`[firebase] requireAdminFromRequest failed userId=${decoded.uid}: ${error.message}`);
+    res.status(500).json({ ok: false, error: "admin_check_failed" });
+    return null;
+  }
+}
+
+function buildStudentRequestMessage({
+  studentNames,
+  classKey,
+  destinationLabel,
+  destinationDetails,
+  withBag,
+  requesterName,
+}) {
+  const namesText = studentNames.join("، ");
+  const classText = toArabicDigits(classKey);
+  const bagText = withBag ? "مع الحقيبة" : "بدون الحقيبة";
+  const lines = [
+    "طلب طالب من الإدارة",
+    `الطلاب: ${namesText}`,
+    `الصف: ${classText}`,
+    `الجهة: ${destinationLabel}`,
+    `التوجيه: يرجى توجيه الطلاب إلى ${destinationLabel} ${withBag ? "مع الحقيبة" : "بدون الحقيبة"}.`,
+  ];
+  if (destinationDetails) {
+    lines.push(`تفاصيل الطلب: ${destinationDetails}`);
+  }
+  if (requesterName) {
+    lines.push(`المُرسل: ${requesterName}`);
+  }
+  lines.push(`الوقت: ${new Date().toLocaleString("ar-KW", { timeZone: KUWAIT_TIMEZONE })}`);
+  lines.push(`الحالة: ${bagText}`);
+  return lines.join("\n");
+}
+
+async function getAttendanceSessionState({ dateISO, lesson, classKey, teacherUid = "" }) {
+  const checkedSessionIds = buildAttendanceSessionCandidateIds({ dateISO, lesson, classKey });
+  if (!isFirebaseReady()) {
+    return {
+      sessionExists: false,
+      attendanceSubmitted: false,
+      matchedSessionId: null,
+      attendanceRecordCount: 0,
+      classKeyMatches: false,
+      teacherMatches: false,
+      checkedSessionIds,
+    };
+  }
+
+  const normalizedClassKey = normalizeClassKey(classKey);
+  const normalizedTeacherUid = String(teacherUid || "").trim();
+  let bestExisting = null;
+
+  for (const sessionId of checkedSessionIds) {
+    const sessionRef = db.collection("attendanceSessions").doc(sessionId);
+    try {
+      const sessionSnap = await sessionRef.get();
+      if (!sessionSnap.exists) continue;
+
+      const data = sessionSnap.data() || {};
+      const sessionClassKey = normalizeClassKey(data.classKey || "");
+      const sessionTeacherUid = String(data.teacherUid || "").trim();
+      const sessionDate = String(data.date || "").trim();
+      const sessionLesson = Number(data.lesson);
+
+      const classKeyMatches = sessionClassKey === normalizedClassKey;
+      const teacherMatches = !normalizedTeacherUid || sessionTeacherUid === normalizedTeacherUid;
+      const dateMatches = sessionDate === String(dateISO);
+      const lessonMatches = Number.isFinite(sessionLesson) && sessionLesson === Number(lesson);
+
+      let attendanceRecordCount = 0;
+      try {
+        const recordsSnap = await sessionRef.collection("attendanceRecords").limit(1).get();
+        attendanceRecordCount = recordsSnap.size;
+      } catch (recordsError) {
+        console.error(
+          `[firebase] attendance records lookup failed date=${dateISO} lesson=${lesson} classKey=${classKey} sessionId=${sessionId}: ${recordsError.message}`
+        );
+      }
+
+      const attendanceSubmitted =
+        classKeyMatches && teacherMatches && dateMatches && lessonMatches && attendanceRecordCount > 0;
+
+      const candidate = {
+        sessionExists: true,
+        attendanceSubmitted,
+        matchedSessionId: sessionId,
+        attendanceRecordCount,
+        classKeyMatches,
+        teacherMatches,
+        score:
+          Number(classKeyMatches) + Number(teacherMatches) + Number(dateMatches) + Number(lessonMatches),
+      };
+
+      if (attendanceSubmitted) {
+        return {
+          ...candidate,
+          checkedSessionIds,
+        };
+      }
+
+      if (!bestExisting || candidate.score > bestExisting.score) {
+        bestExisting = candidate;
+      }
+    } catch (error) {
+      console.error(
+        `[firebase] getAttendanceSessionState failed date=${dateISO} lesson=${lesson} classKey=${classKey} sessionId=${sessionId}: ${error.message}`
+      );
+    }
+  }
+
+  if (bestExisting) {
+    return {
+      ...bestExisting,
+      checkedSessionIds,
+    };
+  }
+
+  return {
+    sessionExists: false,
+    attendanceSubmitted: false,
+    matchedSessionId: null,
+    attendanceRecordCount: 0,
+    classKeyMatches: false,
+    teacherMatches: false,
+    checkedSessionIds,
+  };
 }
 
 function reminderDocRef({ dateISO, teacherUid, lesson, classKey, type, timeKey }) {
@@ -839,12 +1237,13 @@ async function runReminderSweep() {
 
         if (!inAttendanceReminderWindow && !inMissedAttendanceWindow) continue;
 
-        const sessionExists = await hasAttendanceSession({
+        const attendanceState = await getAttendanceSessionState({
           dateISO: now.dateISO,
           lesson: item.lesson,
           classKey: item.classKey,
+          teacherUid,
         });
-        if (sessionExists) continue;
+        if (attendanceState.attendanceSubmitted) continue;
 
         if (inAttendanceReminderWindow) {
           const lateMeta = {
@@ -939,6 +1338,140 @@ app.get("/api/telegram/debug-env", (req, res) => {
     projectId: process.env.GOOGLE_CLOUD_PROJECT || null,
     hasToken: Boolean(process.env.TELEGRAM_BOT_TOKEN),
   });
+});
+
+app.get("/api/telegram/class-live-info", async (req, res) => {
+  const adminUser = await requireAdminFromRequest(req, res);
+  if (!adminUser) return;
+
+  const classKey = normalizeClassKey(req.query?.classKey);
+  if (!classKey) {
+    return res.status(400).json({ ok: false, error: "missing_class_key" });
+  }
+
+  try {
+    const now = kuwaitNowContext();
+    const lessonTimes = await loadLessonTimes();
+    const context = await resolveClassLiveContext({ classKey, now, lessonTimes });
+    return res.json({
+      ok: true,
+      ...context,
+    });
+  } catch (error) {
+    console.error(`[telegram] class-live-info failed classKey=${classKey}: ${error.message}`);
+    return res.status(500).json({
+      ok: false,
+      error: "class_live_info_failed",
+    });
+  }
+});
+
+app.post("/api/telegram/request-students", async (req, res) => {
+  const adminUser = await requireAdminFromRequest(req, res);
+  if (!adminUser) return;
+
+  if (!TELEGRAM_BOT_TOKEN) {
+    return res.status(503).json({ ok: false, error: "telegram_token_missing" });
+  }
+
+  const classKey = normalizeClassKey(req.body?.classKey);
+  const studentNames = Array.isArray(req.body?.studentNames)
+    ? req.body.studentNames.map((x) => String(x || "").trim()).filter(Boolean)
+    : [];
+  const destinationType = String(req.body?.destinationType || "").trim();
+  const destinationLabelInput = String(req.body?.destinationLabel || "").trim();
+  const destinationDetails = String(req.body?.destinationDetails || "").trim();
+  const withBag = Boolean(req.body?.withBag);
+
+  if (!classKey) {
+    return res.status(400).json({ ok: false, error: "missing_class_key" });
+  }
+  if (!studentNames.length) {
+    return res.status(400).json({ ok: false, error: "missing_students" });
+  }
+  if (!destinationType) {
+    return res.status(400).json({ ok: false, error: "missing_destination_type" });
+  }
+  if (destinationType === "administration" && !destinationDetails) {
+    return res.status(400).json({ ok: false, error: "missing_destination_details" });
+  }
+  if (destinationType === "custom" && !destinationLabelInput) {
+    return res.status(400).json({ ok: false, error: "missing_custom_destination" });
+  }
+
+  const destinationLabel =
+    destinationType === "administration"
+      ? "الإدارة المدرسية"
+      : destinationType === "absence_office"
+        ? "مكتب الغيابات"
+        : destinationLabelInput;
+
+  try {
+    const now = kuwaitNowContext();
+    const lessonTimes = await loadLessonTimes();
+    const context = await resolveClassLiveContext({ classKey, now, lessonTimes });
+
+    if (!context.inLesson) {
+      return res.status(409).json({ ok: false, error: "no_active_lesson", classKey });
+    }
+
+    const teacherUid = context.teacher?.teacherUid || "";
+    const chatId = String(context.teacher?.chatId || "").trim();
+    if (!teacherUid) {
+      return res.status(404).json({ ok: false, error: "teacher_not_found", classKey });
+    }
+    if (!chatId) {
+      return res.status(404).json({ ok: false, error: "teacher_chat_not_connected", teacherUid, classKey });
+    }
+
+    const message = buildStudentRequestMessage({
+      studentNames,
+      classKey,
+      destinationLabel,
+      destinationDetails: destinationType === "administration" ? destinationDetails : "",
+      withBag,
+      requesterName: adminUser.name,
+    });
+
+    await sendTelegramMessage(chatId, message);
+
+    if (isFirebaseReady()) {
+      try {
+        await db.collection("telegramStudentRequests").add({
+          requestedByUid: adminUser.uid,
+          requestedByName: adminUser.name || null,
+          classKey,
+          studentNames,
+          destinationType,
+          destinationLabel,
+          destinationDetails: destinationType === "administration" ? destinationDetails : "",
+          withBag,
+          teacherUid,
+          teacherName: context.teacher?.teacherName || null,
+          teacherChatId: chatId,
+          lesson: context.lesson || null,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+      } catch (error) {
+        console.error(`[telegram] request-students log write failed classKey=${classKey}: ${error.message}`);
+      }
+    }
+
+    return res.json({
+      ok: true,
+      classKey,
+      teacherUid,
+      teacherName: context.teacher?.teacherName || null,
+      lesson: context.lesson || null,
+      sentAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error(`[telegram] request-students failed classKey=${classKey}: ${error.message}`);
+    return res.status(500).json({
+      ok: false,
+      error: "request_send_failed",
+    });
+  }
 });
 
 app.post("/api/telegram/run-reminder-sweep", async (req, res) => {
@@ -1062,10 +1595,11 @@ app.get("/api/telegram/debug-reminders", async (req, res) => {
 
     const lessonChecks = [];
     for (const item of lessons) {
-      const attendanceExists = await hasAttendanceSession({
+      const attendanceState = await getAttendanceSessionState({
         dateISO: now.dateISO,
         lesson: item.lesson,
         classKey: item.classKey,
+        teacherUid: userId,
       });
       const before5Window = now.nowMinutes >= item.startMin - LESSON_REMINDER_LEAD_MINUTES && now.nowMinutes < item.startMin;
       const attendanceReminderStart = item.startMin + ATTENDANCE_REMINDER_DELAY_MINUTES;
@@ -1104,7 +1638,15 @@ app.get("/api/telegram/debug-reminders", async (req, res) => {
         start: toTimeLabel(item.startMin),
         end: toTimeLabel(item.endMin),
         source: item.source || "schedule",
-        attendanceExists,
+        attendanceExists: attendanceState.sessionExists,
+        attendanceSubmitted: attendanceState.attendanceSubmitted,
+        attendanceRecordCount: attendanceState.attendanceRecordCount,
+        attendanceSessionId: attendanceState.matchedSessionId || null,
+        attendanceCheck: {
+          classKeyMatches: attendanceState.classKeyMatches,
+          teacherMatches: attendanceState.teacherMatches,
+          checkedSessionIds: attendanceState.checkedSessionIds,
+        },
         windows: {
           before5Window,
           lateWindow,
