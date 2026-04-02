@@ -26,11 +26,19 @@ const express = require("express");
 const admin = require("firebase-admin");
 
 const PORT = Number(process.env.PORT || 3000);
-const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "";
-const TELEGRAM_BOT_USERNAME = process.env.TELEGRAM_BOT_USERNAME || "AbrSchool_bot";
+const TELEGRAM_BOT_TOKEN = String(process.env.TELEGRAM_BOT_TOKEN || "").trim();
+const TELEGRAM_BOT_USERNAME = String(process.env.TELEGRAM_BOT_USERNAME || "").trim();
 const KUWAIT_TIMEZONE = "Asia/Kuwait";
 const LESSON_REMINDER_LEAD_MINUTES = 5;
 const REMINDER_CLAIM_STALE_MINUTES = 3;
+const TELEGRAM_REQUEST_TIMEOUT_MS = Math.max(
+  3000,
+  Number(process.env.TELEGRAM_REQUEST_TIMEOUT_MS || 15000)
+);
+const TELEGRAM_REQUEST_RETRIES = Math.max(
+  0,
+  Number(process.env.TELEGRAM_REQUEST_RETRIES || 2)
+);
 const ATTENDANCE_REMINDER_DELAY_MINUTES = Math.max(
   1,
   Number(process.env.ATTENDANCE_REMINDER_DELAY_MINUTES || 10)
@@ -78,6 +86,7 @@ function initFirebaseAdmin() {
     ready: false,
     db: null,
     projectId: process.env.GOOGLE_CLOUD_PROJECT || null,
+    credentialSource: null,
   };
 
   try {
@@ -88,26 +97,38 @@ function initFirebaseAdmin() {
       return state;
     }
 
-    if (!process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
-      console.warn("[firebase] missing or invalid credentials");
-      return state;
+    const serviceAccountJson = String(process.env.FIREBASE_SERVICE_ACCOUNT_JSON || "").trim();
+    if (serviceAccountJson) {
+      const serviceAccount = JSON.parse(serviceAccountJson);
+      if (typeof serviceAccount.private_key === "string") {
+        serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, "\n");
+      }
+      const resolvedProjectId = process.env.GOOGLE_CLOUD_PROJECT || serviceAccount.project_id || null;
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+        projectId: process.env.GOOGLE_CLOUD_PROJECT || serviceAccount.project_id,
+      });
+      state.projectId = resolvedProjectId;
+      state.credentialSource = "service_account_json";
+    } else {
+      // Fallback path for GOOGLE_APPLICATION_CREDENTIALS or in-cloud default credentials.
+      admin.initializeApp({
+        credential: admin.credential.applicationDefault(),
+        projectId: process.env.GOOGLE_CLOUD_PROJECT || undefined,
+      });
+      state.projectId =
+        process.env.GOOGLE_CLOUD_PROJECT ||
+        admin.app().options.projectId ||
+        process.env.GCLOUD_PROJECT ||
+        null;
+      state.credentialSource = "application_default";
     }
-
-    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
-    if (typeof serviceAccount.private_key === "string") {
-      serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, "\n");
-    }
-    const resolvedProjectId = process.env.GOOGLE_CLOUD_PROJECT || serviceAccount.project_id || null;
-
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-      projectId: process.env.GOOGLE_CLOUD_PROJECT || serviceAccount.project_id,
-    });
 
     state.db = admin.firestore();
     state.ready = true;
-    state.projectId = resolvedProjectId;
-    console.log(`[firebase] initialized projectId=${resolvedProjectId || "unknown"}`);
+    console.log(
+      `[firebase] initialized projectId=${state.projectId || "unknown"} credential=${state.credentialSource || "unknown"}`
+    );
     return state;
   } catch (error) {
     console.warn("[firebase] missing or invalid credentials");
@@ -323,30 +344,104 @@ function shortHash(input) {
   return crypto.createHash("sha1").update(String(input || "")).digest("hex").slice(0, 10);
 }
 
-async function sendTelegramMessage(chatId, text) {
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function fetchWithTimeout(url, options, timeoutMs) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...(options || {}), signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function isRetryableTelegramStatus(status) {
+  return status === 429 || status >= 500;
+}
+
+function parseRetryAfterMs(payload) {
+  const retryAfterSeconds = Number(payload?.parameters?.retry_after);
+  if (Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0) {
+    return retryAfterSeconds * 1000;
+  }
+  return 0;
+}
+
+async function telegramApiRequest(method, payload) {
   if (!TELEGRAM_BOT_TOKEN) {
     throw new Error("Missing TELEGRAM_BOT_TOKEN");
   }
-  const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
-  const response = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      chat_id: chatId,
-      text,
-    }),
+  const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/${method}`;
+  let attempt = 0;
+  let lastError = null;
+
+  while (attempt <= TELEGRAM_REQUEST_RETRIES) {
+    try {
+      const response = await fetchWithTimeout(
+        url,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload || {}),
+        },
+        TELEGRAM_REQUEST_TIMEOUT_MS
+      );
+
+      const rawBody = await response.text();
+      let parsedBody = null;
+      try {
+        parsedBody = rawBody ? JSON.parse(rawBody) : null;
+      } catch {
+        parsedBody = null;
+      }
+
+      const ok = Boolean(response.ok && parsedBody?.ok);
+      if (ok) return parsedBody;
+
+      const desc = String(parsedBody?.description || rawBody || "").trim();
+      const retryable = isRetryableTelegramStatus(response.status);
+      if (retryable && attempt < TELEGRAM_REQUEST_RETRIES) {
+        const retryAfterMs = parseRetryAfterMs(parsedBody);
+        const backoffMs = retryAfterMs || Math.min(1000 * 2 ** attempt, 8000);
+        await delay(backoffMs);
+        attempt += 1;
+        continue;
+      }
+
+      const error = new Error(
+        `Telegram API error method=${method} status=${response.status} description=${desc || "unknown_error"}`
+      );
+      error.code = "telegram_api_error";
+      error.status = response.status;
+      error.telegramBody = parsedBody;
+      throw error;
+    } catch (error) {
+      lastError = error;
+      const isAbort = error?.name === "AbortError";
+      const networkLike = /fetch failed|network|ECONNRESET|ETIMEDOUT|ENOTFOUND|socket/i.test(
+        String(error?.message || "")
+      );
+      if ((isAbort || networkLike) && attempt < TELEGRAM_REQUEST_RETRIES) {
+        const backoffMs = Math.min(1000 * 2 ** attempt, 8000);
+        await delay(backoffMs);
+        attempt += 1;
+        continue;
+      }
+      throw error;
+    }
+  }
+
+  throw lastError || new Error(`Telegram API request failed method=${method}`);
+}
+
+async function sendTelegramMessage(chatId, text) {
+  return telegramApiRequest("sendMessage", {
+    chat_id: String(chatId),
+    text: String(text ?? ""),
   });
-
-  if (!response.ok) {
-    const errorBody = await response.text();
-    throw new Error(`Telegram API error: ${response.status} ${errorBody}`);
-  }
-
-  const body = await response.json();
-  if (!body?.ok) {
-    throw new Error(`Telegram API failed: ${JSON.stringify(body)}`);
-  }
-  return body;
 }
 
 async function getBotUsername() {
@@ -1345,9 +1440,50 @@ app.get("/api/health", (req, res) => {
 app.get("/api/telegram/debug-env", (req, res) => {
   return res.json({
     hasFirebaseEnv: Boolean(process.env.FIREBASE_SERVICE_ACCOUNT_JSON),
+    hasGoogleApplicationCredentials: Boolean(process.env.GOOGLE_APPLICATION_CREDENTIALS),
     projectId: process.env.GOOGLE_CLOUD_PROJECT || null,
     hasToken: Boolean(process.env.TELEGRAM_BOT_TOKEN),
+    firebaseReady: isFirebaseReady(),
+    firebaseCredentialSource: firebaseState.credentialSource || null,
   });
+});
+
+app.get("/api/telegram/debug-status", async (req, res) => {
+  const out = {
+    ok: true,
+    nowIso: new Date().toISOString(),
+    firebase: {
+      ready: isFirebaseReady(),
+      credentialSource: firebaseState.credentialSource || null,
+      projectId: firebaseState.projectId || null,
+    },
+    telegram: {
+      hasToken: Boolean(TELEGRAM_BOT_TOKEN),
+      configuredUsername: TELEGRAM_BOT_USERNAME || null,
+      resolvedUsername: null,
+      webhookInfo: null,
+    },
+  };
+
+  if (!TELEGRAM_BOT_TOKEN) {
+    return res.json(out);
+  }
+
+  try {
+    const me = await telegramApiRequest("getMe", {});
+    out.telegram.resolvedUsername = String(me?.result?.username || "") || null;
+  } catch (error) {
+    out.telegram.getMeError = String(error?.message || error);
+  }
+
+  try {
+    const webhookInfo = await telegramApiRequest("getWebhookInfo", {});
+    out.telegram.webhookInfo = webhookInfo?.result || null;
+  } catch (error) {
+    out.telegram.webhookInfoError = String(error?.message || error);
+  }
+
+  return res.json(out);
 });
 
 app.get("/api/telegram/class-live-info", async (req, res) => {
@@ -1477,6 +1613,13 @@ app.post("/api/telegram/request-students", async (req, res) => {
     });
   } catch (error) {
     console.error(`[telegram] request-students failed classKey=${classKey}: ${error.message}`);
+    if (error?.code === "telegram_api_error") {
+      return res.status(502).json({
+        ok: false,
+        error: "telegram_send_failed",
+        status: Number(error?.status) || 502,
+      });
+    }
     return res.status(500).json({
       ok: false,
       error: "request_send_failed",
@@ -1497,9 +1640,10 @@ app.post("/api/telegram/run-reminder-sweep", async (req, res) => {
 app.get("/api/telegram/connect-link", async (req, res) => {
   const userIdRaw = req.query.userId;
   const userId = String(userIdRaw || "teacher123").trim() || "teacher123";
-  const url = `https://t.me/${TELEGRAM_BOT_USERNAME}?start=${encodeURIComponent(`connect_${userId}`)}`;
+  const resolvedUsername = (await getBotUsername()) || TELEGRAM_BOT_USERNAME || "AbrSchool_bot";
+  const url = `https://t.me/${resolvedUsername}?start=${encodeURIComponent(`connect_${userId}`)}`;
 
-  console.log(`[telegram] connect-link generated for userId=${userId}`);
+  console.log(`[telegram] connect-link generated for userId=${userId} bot=${resolvedUsername}`);
   return res.json({ url });
 });
 
@@ -1562,6 +1706,15 @@ app.get("/api/telegram/test-message", async (req, res) => {
     return res.json({ ok: true, userId, chatId });
   } catch (error) {
     console.error(`[telegram] test-message send failed userId=${userId}: ${error.message}`);
+    if (error?.code === "telegram_api_error") {
+      return res.status(502).json({
+        ok: false,
+        error: "telegram_send_failed",
+        status: Number(error?.status) || 502,
+        userId,
+        chatId,
+      });
+    }
     return res.status(500).json({ ok: false, error: error.message, userId, chatId });
   }
 });
@@ -1816,6 +1969,32 @@ app.listen(PORT, () => {
   console.log(`[telegram] server running on port ${PORT}`);
   if (!TELEGRAM_BOT_TOKEN) {
     console.warn("[telegram] missing TELEGRAM_BOT_TOKEN. Webhook replies and reminders are disabled.");
+  } else {
+    (async () => {
+      try {
+        const me = await telegramApiRequest("getMe", {});
+        const username = String(me?.result?.username || "").trim();
+        if (username) {
+          botUsernameCache = username;
+        }
+        console.log(`[telegram] bot ready username=${username || "unknown"}`);
+      } catch (error) {
+        console.error(`[telegram] startup getMe failed: ${error.message}`);
+      }
+      try {
+        const webhook = await telegramApiRequest("getWebhookInfo", {});
+        const webhookUrl = String(webhook?.result?.url || "").trim();
+        const pendingCount = Number(webhook?.result?.pending_update_count || 0);
+        const lastError = String(webhook?.result?.last_error_message || "").trim();
+        console.log(
+          `[telegram] webhook url=${webhookUrl || "(not set)"} pending=${pendingCount}${
+            lastError ? ` lastError=${lastError}` : ""
+          }`
+        );
+      } catch (error) {
+        console.error(`[telegram] startup getWebhookInfo failed: ${error.message}`);
+      }
+    })().catch(() => {});
   }
 
   setTimeout(() => {
