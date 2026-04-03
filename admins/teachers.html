@@ -87,13 +87,19 @@
     body.teacher-route-active .floating-back{display:none}
     body.teacher-route-active #teacherSheet{position:static;inset:auto;transform:none !important;display:flex;min-height:calc(100vh - 80px)}
     .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-    .field{display:flex;flex-direction:column;gap:8px;width:100%}
+    .field{display:flex;flex-direction:column;gap:8px;width:100%;min-width:0}
     .label{font-size:.92rem;font-weight:800;color:#0f2743}
-    .input-wrap{display:flex;align-items:center;gap:10px;min-height:52px;padding:0 14px;background:#fff;border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-1)}
-    .input{flex:1;height:48px;border:none;outline:none;background:transparent;font-size:16px;color:#0a0a0a;font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif}
+    .input-wrap{display:flex;align-items:center;gap:10px;min-height:52px;padding:0 14px;background:#fff;border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-1);overflow:hidden}
+    .input{flex:1;height:48px;border:none;outline:none;background:transparent;font-size:16px;color:#0a0a0a;font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;min-width:0}
     .input:disabled{color:#334155;opacity:1;cursor:default}
+    .input-wrap.password-field{padding-inline-end:8px}
+    .eye-toggle{width:38px;height:38px;border-radius:10px;border:1px solid rgba(3,60,84,.2);background:#fff;color:#64748b;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:.14s ease;flex-shrink:0;font-weight:900}
+    .eye-toggle:hover{border-color:rgba(3,60,84,.45);color:#033C54}
+    .eye-toggle:disabled{opacity:.5;cursor:not-allowed}
+    .eye-toggle svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+    .eye-toggle.is-revealed{color:#0f766e;border-color:rgba(15,118,110,.45)}
     .value-wrap{display:flex;align-items:center;min-height:52px;padding:0 14px;background:#f8fbff;border:1px solid #dce8f5;border-radius:var(--radius);box-shadow:var(--shadow-1);color:#0f2743;font-weight:800}
-    .view-value{font-size:.95rem}
+    .view-value{font-size:.95rem;overflow-wrap:anywhere;word-break:break-word}
     .checkbox-wrap{display:flex;align-items:center;gap:10px}
     .ok,.err{padding:12px;border-radius:14px;margin-top:6px;font-size:.9rem;box-shadow:var(--shadow-1);display:none}
     .ok{color:#126a2e;background:#e6f6ea;border:1px solid #c7ebd0}.err{color:#a12;background:#fde8e8;border:1px solid #f5c5c5}
@@ -108,11 +114,11 @@
     .profile-badges{display:flex;flex-wrap:wrap;gap:8px}
     .pill{display:inline-flex;align-items:center;height:30px;padding:0 10px;border-radius:999px;border:1px solid rgba(3,60,84,.2);background:#fff;color:#0f2743;font-size:.8rem;font-weight:800}
     .pill.role-head{border-color:rgba(203,160,18,.38);color:#7a5a00;background:#fffaf0}
-    .profile-grid{display:grid;grid-template-columns:1fr;gap:12px}
-    .profile-card{border:1px solid var(--border);border-radius:16px;background:#fff;box-shadow:var(--shadow-1);padding:14px}
+    .profile-grid{display:grid;grid-template-columns:1fr;gap:12px;min-width:0}
+    .profile-card{border:1px solid var(--border);border-radius:16px;background:#fff;box-shadow:var(--shadow-1);padding:14px;min-width:0}
     .profile-card-title{margin:0 0 10px;font-size:.96rem;color:#033C54;font-weight:900}
     .info-grid{display:grid;grid-template-columns:1fr;gap:10px}
-    .plain-value{padding:2px 0 8px;color:#0f2743;font-weight:900;min-height:30px;font-size:.95rem;line-height:1.8}
+    .plain-value{padding:2px 0 8px;color:#0f2743;font-weight:900;min-height:30px;font-size:.95rem;line-height:1.8;overflow-wrap:anywhere;word-break:break-word}
     .teacher-readonly .field .label{color:#6b7f9f;font-weight:700;font-size:.86rem}
     .view-value.empty{color:#94a3b8;font-weight:700}
     .class-chips{display:flex;flex-wrap:wrap;gap:8px}
@@ -140,7 +146,7 @@
       .profile-card-classes{grid-column:2;grid-row:1}
       .profile-card-perms{grid-column:2;grid-row:2}
       .profile-card-classes{max-width:360px;justify-self:stretch}
-      .profile-card-basic .info-grid{grid-template-columns:repeat(2, minmax(220px,1fr));gap:14px 18px}
+      .profile-card-basic .info-grid{grid-template-columns:repeat(2, minmax(0,1fr));gap:14px 18px}
     }
     .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;z-index:100;opacity:0;visibility:hidden;transition:opacity .3s ease,visibility .3s ease}
     .modal-overlay.active{opacity:1;visibility:visible}.modal{background:#fff;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.3);width:min(90vw,500px);max-height:90vh;overflow-y:auto;transform:scale(.9);opacity:0;transition:transform .3s ease,opacity .3s ease}.modal.active{transform:scale(1);opacity:1}.modal-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}.modal-title{margin:0;font-size:1.2rem;font-weight:800;color:var(--primary)}.close-modal{background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--muted);width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:50%}.modal-body{padding:20px}.modal-footer{padding:16px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px}
@@ -241,6 +247,7 @@
               <div class="field"><label class="label" for="edTEmail">البريد الإلكتروني</label><div class="plain-value view-only"><span id="vEdTEmail" class="view-value">—</span></div><div class="input-wrap edit-only"><input id="edTEmail" class="input" type="email"></div></div>
               <div class="field"><label class="label" for="edTPhone">رقم الهاتف</label><div class="plain-value view-only"><span id="vEdTPhone" class="view-value">—</span></div><div class="input-wrap edit-only"><input id="edTPhone" class="input" type="tel"></div></div>
               <div class="field"><label class="label" for="edTTeams">رابط Teams</label><div class="plain-value view-only"><span id="vEdTTeams" class="view-value">—</span></div><div class="input-wrap edit-only"><input id="edTTeams" class="input" type="url"></div></div>
+              <div class="field"><label class="label" for="edTDisplayedPassword">كلمة المرور الظاهرة</label><div class="plain-value view-only"><span id="vEdTDisplayedPassword" class="view-value">—</span></div><div class="input-wrap edit-only password-field"><input id="edTDisplayedPassword" class="input" type="password" autocomplete="off" dir="ltr"><button id="toggleDisplayedPasswordBtn" class="eye-toggle" type="button" aria-label="إظهار كلمة المرور الظاهرة" title="إظهار كلمة المرور الظاهرة"><span aria-hidden="true">👁</span></button></div></div>
               <div class="field"><label class="label" for="edTRole">الدور</label><div class="plain-value view-only"><span id="vEdTRole" class="view-value">—</span></div><div class="input-wrap edit-only"><select id="edTRole" class="input"><option value="user">مدرس</option><option value="head">رئيس القسم</option></select></div></div>
               <div class="field"><label class="label">الصلاحية</label><div class="plain-value view-only"><span id="vEdTSupervisor" class="view-value">—</span></div><div class="input-wrap edit-only"><div class="checkbox-wrap"><input type="checkbox" id="edTIsSupervisor"><label for="edTIsSupervisor" class="label" style="margin:0;">تعيين كمشرف</label></div></div></div>
             </div>
@@ -286,6 +293,7 @@
         <div class="field"><label class="label" for="teacherName">الاسم الكامل</label><div class="input-wrap"><input id="teacherName" class="input" type="text"></div></div>
         <div class="field"><label class="label" for="teacherEmail">رقم البطاقة المدنية</label><div class="input-wrap"><input id="teacherEmail" class="input" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="مثال: 298040100633"></div></div>
         <div class="field"><label class="label" for="teacherPassword">كلمة المرور</label><div class="input-wrap"><input id="teacherPassword" class="input" type="password"></div></div>
+        <div class="field"><label class="label" for="teacherDisplayedPassword">الكلمة الظاهرة</label><div class="input-wrap"><input id="teacherDisplayedPassword" class="input" type="text" dir="ltr" readonly></div></div>
         <div class="field"><label class="label" for="teacherPhone">رقم الهاتف</label><div class="input-wrap"><input id="teacherPhone" class="input" type="tel"></div></div>
         <div class="field"><label class="label" for="teacherRole">الدور</label><div class="input-wrap"><select id="teacherRole" class="input"><option value="user">مدرس</option><option value="head">رئيس القسم</option></select></div></div>
         <div id="teacherSpecializationField" class="field" hidden><label class="label" for="teacherSpecialization">التخصص داخل القسم</label><div class="input-wrap"><select id="teacherSpecialization" class="input"><option value="الفيزياء">الفيزياء</option><option value="الكيمياء">الكيمياء</option></select></div></div>
@@ -315,7 +323,7 @@
   <script type="module">
     import { firebaseConfig } from "/shared/firebase.js";
     import { initializeApp, getApp, getApps } from "/shared/firebase.js";
-    import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signOut } from "/shared/firebase.js";
+    import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signOut, EmailAuthProvider, reauthenticateWithCredential } from "/shared/firebase.js";
     import { initializeFirestore, collection, getDocs, query, where, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp } from "/shared/firebase.js";
 
     
@@ -350,6 +358,7 @@
     const vEdTEmail=document.getElementById('vEdTEmail');
     const vEdTPhone=document.getElementById('vEdTPhone');
     const vEdTTeams=document.getElementById('vEdTTeams');
+    const vEdTDisplayedPassword=document.getElementById('vEdTDisplayedPassword');
     const vEdTRole=document.getElementById('vEdTRole');
     const vEdTSupervisor=document.getElementById('vEdTSupervisor');
     const permissionsView=document.getElementById('permissionsView');
@@ -359,6 +368,8 @@
     const edTEmail=document.getElementById('edTEmail');
     const edTPhone=document.getElementById('edTPhone');
     const edTTeams=document.getElementById('edTTeams');
+    const edTDisplayedPassword=document.getElementById('edTDisplayedPassword');
+    const toggleDisplayedPasswordBtn=document.getElementById('toggleDisplayedPasswordBtn');
     const edTRole=document.getElementById('edTRole');
     const edTIsSupervisor=document.getElementById('edTIsSupervisor');
     const edTAllowEditSchedule=document.getElementById('edTAllowEditSchedule');
@@ -378,6 +389,7 @@
     const teacherName=document.getElementById('teacherName');
     const teacherEmail=document.getElementById('teacherEmail');
     const teacherPassword=document.getElementById('teacherPassword');
+    const teacherDisplayedPassword=document.getElementById('teacherDisplayedPassword');
     const teacherPhone=document.getElementById('teacherPhone');
     const teacherRole=document.getElementById('teacherRole');
     const teacherSpecializationField=document.getElementById('teacherSpecializationField');
@@ -588,6 +600,9 @@
     let selectedSubject=null;
     let currentTeacher={uid:null,data:null};
     let teacherEditMode=false;
+    let displayedPasswordRevealed=false;
+    let isCurrentUserAdmin=false;
+    const MASKED_PASSWORD='••••••••';
 
     function getInitials(name,email,uid){
       const source=(name||email||uid||'').trim();
@@ -647,11 +662,49 @@
       el.textContent=normalized;
       el.classList.remove('empty');
     }
+    function getStoredDisplayedPassword(data){
+      if(!data || typeof data!=='object') return '';
+      const value=data.displayedPassword ?? data.viewedPassword;
+      return value==null ? '' : String(value);
+    }
+    function setDisplayedPasswordPreview(value){
+      const normalized=String(value ?? '');
+      if(!normalized){
+        vEdTDisplayedPassword.textContent='غير متوفر';
+        vEdTDisplayedPassword.classList.add('empty');
+        return;
+      }
+      vEdTDisplayedPassword.textContent=MASKED_PASSWORD;
+      vEdTDisplayedPassword.classList.remove('empty');
+    }
+    function setDisplayedPasswordVisibility(isVisible){
+      displayedPasswordRevealed=!!isVisible;
+      edTDisplayedPassword.type=displayedPasswordRevealed?'text':'password';
+      toggleDisplayedPasswordBtn.classList.toggle('is-revealed', displayedPasswordRevealed);
+      const actionLabel=displayedPasswordRevealed?'إخفاء كلمة المرور الظاهرة':'إظهار كلمة المرور الظاهرة';
+      toggleDisplayedPasswordBtn.setAttribute('aria-label', actionLabel);
+      toggleDisplayedPasswordBtn.title=actionLabel;
+    }
+    function syncDisplayedPasswordMirror(){
+      teacherDisplayedPassword.value=teacherPassword.value;
+    }
+    async function reauthenticateAdminForPasswordReveal(){
+      if(!isCurrentUserAdmin) throw new Error('هذه الميزة متاحة للمشرف فقط.');
+      const user=auth.currentUser;
+      const email=(user?.email||'').trim();
+      if(!user || !email) throw new Error('تعذّر تحديد حساب المشرف الحالي.');
+      const adminPassword=prompt('لأمان الحساب، أدخل كلمة مرور المشرف الحالي:');
+      if(adminPassword===null) throw new Error('تم الإلغاء');
+      if(!adminPassword) throw new Error('أدخل كلمة مرور المشرف.');
+      const credential=EmailAuthProvider.credential(email, adminPassword);
+      await reauthenticateWithCredential(user, credential);
+    }
     function updateProfileSummary(){
       const name=edTName.value.trim() || currentTeacher?.data?.name || currentTeacher?.uid || '—';
       const email=edTEmail.value.trim() || currentTeacher?.data?.email || '—';
       const phone=edTPhone.value.trim() || '—';
       const teams=edTTeams.value.trim() || '—';
+      const displayedPassword=edTDisplayedPassword.value;
       const role=(edTRole.value||'user').toLowerCase();
       const isSupervisor=!!edTIsSupervisor.checked;
       const allowEditSchedule=!!edTAllowEditSchedule.checked;
@@ -667,6 +720,7 @@
       setViewValue(vEdTEmail,email);
       setViewValue(vEdTPhone,phone);
       setViewValue(vEdTTeams,teams);
+      setDisplayedPasswordPreview(displayedPassword);
       setViewValue(vEdTRole,role==='head'?'رئيس القسم':'مدرس');
       setViewValue(vEdTSupervisor,isSupervisor?'مشرف':'غير مشرف');
       renderPermissionsPreview({ allowEditSchedule, allowMorningLate, allowSupervisorStudents });
@@ -676,7 +730,9 @@
       teacherEditMode=!!isEdit;
       teacherProfileShell.classList.toggle('teacher-readonly', !teacherEditMode);
       teacherProfileShell.classList.toggle('teacher-editing', teacherEditMode);
-      [edTName,edTEmail,edTPhone,edTTeams,edTRole,edTIsSupervisor,edTAllowEditSchedule,edTAllowMorningLate,edTAllowSupervisorStudents].forEach(el=>el.disabled=!teacherEditMode);
+      [edTName,edTEmail,edTPhone,edTTeams,edTDisplayedPassword,edTRole,edTIsSupervisor,edTAllowEditSchedule,edTAllowMorningLate,edTAllowSupervisorStudents].forEach(el=>el.disabled=!teacherEditMode);
+      toggleDisplayedPasswordBtn.disabled=!teacherEditMode;
+      if(!teacherEditMode) setDisplayedPasswordVisibility(false);
       classesEditorWrap.hidden=!teacherEditMode;
       editTeacherBtn.hidden=teacherEditMode;
       cancelTeacherEditBtn.hidden=!teacherEditMode;
@@ -718,6 +774,8 @@
       edTEmail.value=d.email||'';
       edTPhone.value=d.phone||'';
       edTTeams.value=d.teams||'';
+      edTDisplayedPassword.value=getStoredDisplayedPassword(d);
+      setDisplayedPasswordVisibility(false);
       edTRole.value=d.role||'user';
       edTIsSupervisor.checked=!!d.isSupervisor;
       edTAllowEditSchedule.checked=!!normalizePermissions(d).allowEditSchedule;
@@ -729,8 +787,34 @@
       else cls.forEach(v=>edClasses.appendChild(makeClassRow(v)));
       setTeacherEditMode(false);
     });
+    toggleDisplayedPasswordBtn.addEventListener('click', async ()=>{
+      edErr.style.display='none';
+      if(!teacherEditMode || toggleDisplayedPasswordBtn.disabled) return;
+      if(displayedPasswordRevealed){
+        setDisplayedPasswordVisibility(false);
+        return;
+      }
+      if(!edTDisplayedPassword.value){
+        edErr.textContent='لا توجد كلمة مرور ظاهرة محفوظة لهذا المعلّم.';
+        edErr.style.display='block';
+        return;
+      }
+      try{
+        await reauthenticateAdminForPasswordReveal();
+        setDisplayedPasswordVisibility(true);
+      }catch(error){
+        setDisplayedPasswordVisibility(false);
+        if(error?.message==='تم الإلغاء') return;
+        if(['auth/wrong-password','auth/invalid-credential','auth/invalid-login-credentials'].includes(error?.code)){
+          edErr.textContent='كلمة مرور المشرف غير صحيحة.';
+        }else{
+          edErr.textContent=error?.message||'تعذّر التحقق من كلمة مرور المشرف.';
+        }
+        edErr.style.display='block';
+      }
+    });
     edAddClass.addEventListener('click',()=>{edClasses.appendChild(makeClassRow(""));updateProfileSummary();});
-    [edTName,edTEmail,edTPhone,edTTeams,edTRole,edTIsSupervisor,edTAllowEditSchedule,edTAllowMorningLate,edTAllowSupervisorStudents].forEach(el=>{
+    [edTName,edTEmail,edTPhone,edTTeams,edTDisplayedPassword,edTRole,edTIsSupervisor,edTAllowEditSchedule,edTAllowMorningLate,edTAllowSupervisorStudents].forEach(el=>{
       const ev=el.tagName==='SELECT'||el.type==='checkbox'?'change':'input';
       el.addEventListener(ev, updateProfileSummary);
     });
@@ -740,6 +824,7 @@
       teacherName.value='';
       teacherEmail.value='';
       teacherPassword.value='';
+      teacherDisplayedPassword.value='';
       teacherPhone.value='';
       teacherRole.value='user';
       teacherIsSupervisor.checked=false;
@@ -761,6 +846,7 @@
     auAddClass.addEventListener('click',()=>auClasses.appendChild(makeClassRow("")));
     closeSuccessModal.addEventListener('click', closeSuccessModalFn);
     teacherEmail.addEventListener('input',()=>{const digits=teacherEmail.value.replace(/\D+/g,''); if(teacherEmail.value!==digits) teacherEmail.value=digits;});
+    teacherPassword.addEventListener('input', syncDisplayedPasswordMirror);
     successModal.addEventListener('click',(e)=>{if(e.target===successModal)closeSuccessModalFn();});
 
     async function loadTeachers(subject){
@@ -810,7 +896,14 @@
         if(!s.exists()){alert('الملف غير موجود.');return;}
         const d=s.data();currentTeacher={uid,data:d};
         selectedSubject = mapTeacherSubjectToDepartment(d.subject) || selectedSubject;
-        edTName.value=d.name||'';edTEmail.value=d.email||'';edTPhone.value=d.phone||'';edTTeams.value=d.teams||'';edTRole.value=d.role||'user';edTIsSupervisor.checked=!!d.isSupervisor;
+        edTName.value=d.name||'';
+        edTEmail.value=d.email||'';
+        edTPhone.value=d.phone||'';
+        edTTeams.value=d.teams||'';
+        edTDisplayedPassword.value=getStoredDisplayedPassword(d);
+        setDisplayedPasswordVisibility(false);
+        edTRole.value=d.role||'user';
+        edTIsSupervisor.checked=!!d.isSupervisor;
         edTAllowEditSchedule.checked=!!normalizePermissions(d).allowEditSchedule;
         edTAllowMorningLate.checked=!!normalizePermissions(d).allowMorningLate;
         edTAllowSupervisorStudents.checked=!!normalizePermissions(d).allowSupervisorStudents;
@@ -828,14 +921,15 @@
       try{
         const {uid}=currentTeacher;if(!uid) throw new Error('لم يتم اختيار معلّم.');
         const name=edTName.value.trim(), email=edTEmail.value.trim(), phone=edTPhone.value.trim(), teams=edTTeams.value.trim();
+        const displayedPassword=edTDisplayedPassword.value;
         const role=edTRole.value, isSupervisor=edTIsSupervisor.checked, classes=getClassesFrom(edClasses);
         const teacherDepartment=mapTeacherSubjectToDepartment((currentTeacher?.data?.subject || '').toString().trim()) || mapTeacherSubjectToDepartment(selectedSubject) || selectedSubject;
         const prevPermissions=(currentTeacher?.data?.permissions&&typeof currentTeacher.data.permissions==='object')?currentTeacher.data.permissions:{};
         const permissions={...prevPermissions,allowEditSchedule:!!edTAllowEditSchedule.checked,allowMorningLate:!!edTAllowMorningLate.checked,allowSupervisorStudents:!!edTAllowSupervisorStudents.checked};
         if(!name) throw new Error('أدخل الاسم.'); if(!emailRx.test(email)) throw new Error('أدخل بريدًا صالحًا.');
         if(role==='head') await ensureSingleHeadForDepartment(teacherDepartment,{ excludeUid: uid });
-        await updateDoc(doc(db,'teachers',uid),{name,email,phone,teams,role,isSupervisor,classes,permissions});
-        currentTeacher.data={...(currentTeacher.data||{}),name,email,phone,teams,role,isSupervisor,classes,permissions};
+        await updateDoc(doc(db,'teachers',uid),{name,email,phone,teams,displayedPassword,role,isSupervisor,classes,permissions});
+        currentTeacher.data={...(currentTeacher.data||{}),name,email,phone,teams,displayedPassword,role,isSupervisor,classes,permissions};
         setTeacherEditMode(false);
         edOk.textContent='تم حفظ التعديلات.';edOk.style.display='block';setTimeout(()=>{edOk.style.display='none';closeTeacherView();},900);
         if(selectedSubject) await loadTeachers(selectedSubject);
@@ -855,6 +949,7 @@
     createTeacherBtn.addEventListener('click', async ()=>{
       try{
         const name=teacherName.value.trim(), civilId=teacherEmail.value.trim().replace(/\D+/g,''), email=civilId?`t${civilId}@gmail.com`:'', password=teacherPassword.value, phone=teacherPhone.value.trim();
+        const displayedPassword=teacherDisplayedPassword.value||password;
         const role=teacherRole.value, isSupervisor=teacherIsSupervisor.checked, classes=getClassesFrom(auClasses);
         const permissions={allowEditSchedule:!!teacherAllowEditSchedule.checked,allowMorningLate:!!teacherAllowMorningLate.checked,allowSupervisorStudents:!!teacherAllowSupervisorStudents.checked};
         const selectedSpecialization=(teacherSpecialization.value||'').trim();
@@ -869,7 +964,7 @@
         if(isMergedDepartment(selectedSubject) && !mergedSubjects.includes(subjectToSave)) throw new Error(getMergedDepartmentSpecializationMessage(selectedSubject));
         if(role==='head') await ensureSingleHeadForDepartment(departmentToSave);
         const cred=await createUserWithEmailAndPassword(helperAuth,email,password); const newUid=cred.user.uid;
-        await setDoc(doc(db,'teachers',newUid),{uid:newUid,name,email,civilId,phone,role,isSupervisor,subject:subjectToSave,department:departmentToSave,classes,permissions,createdAt:serverTimestamp()},{merge:true});
+        await setDoc(doc(db,'teachers',newUid),{uid:newUid,name,email,civilId,phone,displayedPassword,role,isSupervisor,subject:subjectToSave,department:departmentToSave,classes,permissions,createdAt:serverTimestamp()},{merge:true});
         try{await signOut(helperAuth);}catch{}
         closeModal(addTeacherModal);openSuccessModal();
         await loadTeachers(selectedSubject);
@@ -887,15 +982,16 @@
     }
 
     onAuthStateChanged(auth, async (user)=>{
-      if(!user){show(sNotLog);return;}
+      if(!user){isCurrentUserAdmin=false;show(sNotLog);return;}
       try{
         const snap=await getDoc(doc(db,'teachers',user.uid));
         const data=snap.exists()?snap.data():{};
-        if((data?.role||'').toString().toLowerCase()!=='admin'){show(sDenied);return;}
+        if((data?.role||'').toString().toLowerCase()!=='admin'){isCurrentUserAdmin=false;show(sDenied);return;}
+        isCurrentUserAdmin=true;
         renderSubjects();
         show(sTeachers);
         await applyTeacherRoute();
-      }catch{show(sDenied);}
+      }catch{isCurrentUserAdmin=false;show(sDenied);}
     });
 
     window.addEventListener('hashchange', ()=>{ applyTeacherRoute(); });
