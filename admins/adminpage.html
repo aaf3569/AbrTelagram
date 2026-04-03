@@ -352,6 +352,92 @@
         grid-column: auto;
       }
     }
+
+    /* ===== Notification Admin Form ===== */
+    .notif-open-btn { width:100%; min-height:60px; }
+    .notif-open-btn svg { transition: transform .25s ease; flex-shrink:0; }
+    .notif-form {
+      display:flex; flex-direction:column; gap:14px;
+      overflow:hidden; max-height:0; opacity:0;
+      transition: max-height .38s cubic-bezier(.22,.7,.25,1), opacity .25s ease;
+    }
+    .notif-form.expanded { max-height:800px; opacity:1; }
+    .notif-toggle-row {
+      display:flex; align-items:center; justify-content:space-between;
+      padding:12px 0; border-bottom:1px solid var(--border);
+    }
+    .toggle-switch { position:relative; display:inline-block; width:50px; height:28px; flex-shrink:0; }
+    .toggle-switch input { opacity:0; width:0; height:0; position:absolute; }
+    .toggle-track {
+      position:absolute; inset:0; background:#cdd8e8;
+      border-radius:999px; cursor:pointer; transition:background .2s ease;
+    }
+    .toggle-track::after {
+      content:''; position:absolute; width:22px; height:22px; border-radius:50%;
+      background:#fff; top:3px; right:3px;
+      transition:transform .2s ease; box-shadow:0 2px 6px rgba(0,0,0,.2);
+    }
+    .toggle-switch input:checked + .toggle-track { background:var(--primary); }
+    .toggle-switch input:checked + .toggle-track::after { transform:translateX(-22px); }
+    .notif-textarea {
+      width:100%; min-height:130px; border:1px solid var(--border); border-radius:var(--radius);
+      padding:14px 16px;
+      font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      font-size:16px; color:#0a0a0a; resize:vertical; outline:none;
+      box-shadow:var(--shadow-1); transition:border-color .12s ease, box-shadow .12s ease;
+      background:#fff; direction:rtl; line-height:1.8;
+    }
+    .notif-textarea:focus { border-color:rgba(3,60,84,.35); box-shadow:0 16px 32px rgba(3,60,84,.18); }
+    .notif-current {
+      padding:14px; border:1px solid var(--border); border-radius:14px;
+      background:#f8fbff; font-size:.93rem; color:#2d4a5e;
+      line-height:1.9; white-space:pre-wrap; word-break:break-word;
+    }
+    .nc-badge {
+      display:inline-block; padding:3px 10px; border-radius:999px;
+      font-size:.78rem; font-weight:800; margin-bottom:8px;
+      background:rgba(3,60,84,.08); color:#033C54;
+    }
+    .nc-badge.important { background:rgba(185,28,28,.10); color:#b91c1c; }
+    .nc-title { font-weight:900; color:#083b57; margin-bottom:6px; font-size:1rem; }
+    /* ===== Notification History ===== */
+    .notif-hist-stack { display:flex; flex-direction:column; gap:10px; }
+    .notif-hist-card {
+      border:1px solid var(--border); border-radius:14px; background:#fff;
+      box-shadow:var(--shadow-1); overflow:hidden;
+    }
+    .notif-hist-header {
+      padding:12px 14px; display:flex; align-items:flex-start;
+      justify-content:space-between; gap:10px;
+    }
+    .notif-hist-meta { flex:1; min-width:0; }
+    .notif-hist-title {
+      font-weight:900; font-size:.92rem; color:#083b57; margin:4px 0 2px;
+      overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    }
+    .notif-hist-preview {
+      font-size:.86rem; color:#4a6072; overflow:hidden;
+      text-overflow:ellipsis; white-space:nowrap; margin-top:2px;
+    }
+    .notif-hist-date { font-size:.76rem; color:var(--muted); margin-top:4px; }
+    .seen-count-btn {
+      flex-shrink:0; padding:6px 12px; border:1px solid var(--border);
+      border-radius:999px; background:#f4f8fb; color:#033C54;
+      font-weight:800; font-size:.8rem; cursor:pointer;
+      transition:background .12s ease, border-color .12s ease;
+      font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      white-space:nowrap; align-self:flex-start;
+    }
+    .seen-count-btn:hover { background:#e8f0f8; border-color:rgba(3,60,84,.3); }
+    .notif-seen-list {
+      border-top:1px solid var(--border); padding:10px 14px 12px; display:none;
+    }
+    .notif-seen-list.open { display:flex; flex-direction:column; gap:2px; }
+    .seen-name-item {
+      padding:7px 0; font-size:.88rem; color:#2d4a5e;
+      border-bottom:1px solid #f0f4f8; display:flex; align-items:center; gap:8px;
+    }
+    .seen-name-item:last-child { border-bottom:none; }
   </style>
 
   <!-- iOS home screen icon -->
@@ -417,7 +503,7 @@
           <button id="openClasses" class="btn ghost" type="button" aria-label="الفصول">الفصول</button>
           <!-- NEW BUTTON: schedules -->
           <button id="openSchedules" class="btn ghost" type="button" aria-label="الجداول">الجداول</button>
-          <button id="openLogs" class="btn ghost" type="button" aria-label="السجلات">السجلات</button>
+          <button id="openNotifications" class="btn ghost" type="button" aria-label="الإشعارات">الإشعارات</button>
           <!-- /NEW -->
           <button id="telegramSettingsBtn" class="btn ghost section-break" type="button" aria-label="إعدادات المستخدم">إعدادات المستخدم</button>
           <button id="logoutBtn" class="btn ghost section-break" type="button" aria-label="تسجيل الخروج">تسجيل الخروج</button>
@@ -674,6 +760,70 @@
     </div>
   </section>
 
+  <section id="notificationsSheet" class="sheet small" aria-hidden="true">
+    <div class="sheet-header">
+      <button id="closeNotifications" class="back-btn" aria-label="رجوع">رجوع</button>
+      <h3 class="sheet-title">الإشعارات</h3>
+    </div>
+    <div class="sheet-body">
+      <div class="section">
+        <button id="openNotifForm" class="btn primary notif-open-btn">
+          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          إرسال إشعار جديد
+        </button>
+
+        <div id="notifForm" class="notif-form">
+          <div class="field" style="margin-top:14px;">
+            <div class="label">ما مدى الأهمية؟</div>
+            <div class="input-wrap">
+              <select id="notifImportance" class="input">
+                <option value="normal">إشعار عادي</option>
+                <option value="important">مهم</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="notif-toggle-row">
+            <div class="label" style="margin:0;">إضافة عنوان</div>
+            <label class="toggle-switch" aria-label="إضافة عنوان">
+              <input type="checkbox" id="notifTitleToggle">
+              <span class="toggle-track"></span>
+            </label>
+          </div>
+
+          <div id="notifTitleWrap" class="field" style="display:none;">
+            <div class="input-wrap">
+              <input type="text" id="notifTitle" class="input" placeholder="عنوان الإشعار..." maxlength="120">
+            </div>
+          </div>
+
+          <div class="field">
+            <div class="label">نص الإشعار</div>
+            <textarea id="notifText" class="notif-textarea" placeholder="اكتب نص الإشعار هنا..." maxlength="1000"></textarea>
+          </div>
+
+          <button id="sendNotifBtn" class="btn primary" style="min-height:56px;">إرسال الإشعار</button>
+          <div id="notifOk" class="ok"></div>
+          <div id="notifErr" class="err"></div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="label">الإشعار النشط حالياً</div>
+        <div id="currentNotifDisplay" style="margin-top:8px;">
+          <div class="muted">—</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="label">سجل الإشعارات السابقة</div>
+        <div id="notifHistory" style="margin-top:8px;">
+          <div class="muted">—</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- محرر المشرف -->
   <section id="adminSheet" class="sheet small" aria-hidden="true">
     <div class="sheet-header">
@@ -712,11 +862,12 @@
       createUserWithEmailAndPassword
     } from "/shared/firebase.js";
     import {
-      initializeFirestore, collection, getDocs, query, where,
+      initializeFirestore, collection, getDocs, query, where, orderBy, limit,
       doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp
     } from "/shared/firebase.js";
     import { showActionPopup } from "/shared/action-popup.js";
     import { mountTelegramSettings } from "/shared/telegram-settings.js";
+    import { initNotificationPopup } from "/shared/notification-popup.js";
 
     
 
@@ -755,7 +906,7 @@
 
     // NEW: schedules button ref
     const openSchedules = document.getElementById('openSchedules');
-    const openLogs = document.getElementById('openLogs');
+    const openNotifications = document.getElementById('openNotifications');
 
     mountTelegramSettings({
       auth,
@@ -1339,13 +1490,33 @@
     const edAOk = document.getElementById('edAOk');
     const edAErr = document.getElementById('edAErr');
 
+    const notificationsSheet = document.getElementById('notificationsSheet');
+    const closeNotifications = document.getElementById('closeNotifications');
+    const NOTIFICATIONS_HASH = '#notifications';
+
     /* ========= Helpers ========= */
     const show = (el)=>{ [sLoading, sNotLog, sDenied, sAdmin].forEach(x=>x.classList.remove('active')); el.classList.add('active'); };
     const openSheet = (el)=>{ el.classList.add('open'); el.setAttribute('aria-hidden','false'); };
     const closeSheet = (el)=>{ el.classList.remove('open'); el.setAttribute('aria-hidden','true'); };
+    const clearHash = ()=> history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
     const fmtDateTime = (d)=> new Intl.DateTimeFormat('ar-KW', { dateStyle:'medium', timeStyle:'short' }).format(d);
     const emailRx = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const toArabicDigits = (str) => str.replace(/\d/g, d => '٠١٢٣٤٥٦٧٨٩'[d]);
+
+    function openNotificationsPanel(updateHash = true){
+      openSheet(notificationsSheet);
+      if(updateHash && window.location.hash !== NOTIFICATIONS_HASH){
+        window.location.hash = 'notifications';
+      }
+      loadCurrentNotif();
+      loadNotifHistory();
+    }
+    function closeNotificationsPanel(clearHashOnClose = true){
+      closeSheet(notificationsSheet);
+      if(clearHashOnClose && window.location.hash === NOTIFICATIONS_HASH){
+        clearHash();
+      }
+    }
     
     // Modal functions
     const openModal = (modal) => {
@@ -1525,7 +1696,9 @@
         else if (user.metadata?.creationTime) created=new Date(user.metadata.creationTime);
         createdAtText.textContent = created ? `تاريخ إنشاء الحساب: ${fmtDateTime(created)}` : '';
         show(sAdmin);
+        initNotificationPopup(db, { uid: user.uid, name: data?.name || '' });
         if(window.location.hash === '#admins') openAdminsPanel();
+        if(window.location.hash === NOTIFICATIONS_HASH) openNotificationsPanel(false);
       }catch(e){ console.error(e); show(sDenied); }
     });
 
@@ -1561,7 +1734,211 @@
 
     // NEW: schedules button action
     openSchedules.addEventListener('click', ()=>{ window.location.href = '/admins/adminschedule.html'; });
-    openLogs.addEventListener('click', ()=>{ window.location.href = '/admins/logs.html'; });
+    openNotifications.addEventListener('click', ()=> openNotificationsPanel(true));
+    closeNotifications.addEventListener('click', ()=> closeNotificationsPanel(true));
+
+    // ===== Notification Admin Form =====
+    const openNotifFormBtn    = document.getElementById('openNotifForm');
+    const notifForm           = document.getElementById('notifForm');
+    const notifImportance     = document.getElementById('notifImportance');
+    const notifTitleToggle    = document.getElementById('notifTitleToggle');
+    const notifTitleWrap      = document.getElementById('notifTitleWrap');
+    const notifTitleInput     = document.getElementById('notifTitle');
+    const notifTextArea       = document.getElementById('notifText');
+    const sendNotifBtn        = document.getElementById('sendNotifBtn');
+    const notifOk             = document.getElementById('notifOk');
+    const notifErr            = document.getElementById('notifErr');
+    const currentNotifDisplay = document.getElementById('currentNotifDisplay');
+
+    let notifFormOpen = false;
+
+    openNotifFormBtn.addEventListener('click', () => {
+      notifFormOpen = !notifFormOpen;
+      notifForm.classList.toggle('expanded', notifFormOpen);
+      openNotifFormBtn.querySelector('svg').style.transform = notifFormOpen ? 'rotate(45deg)' : '';
+    });
+
+    notifTitleToggle.addEventListener('change', () => {
+      notifTitleWrap.style.display = notifTitleToggle.checked ? '' : 'none';
+      if (notifTitleToggle.checked) notifTitleInput.focus();
+    });
+
+    sendNotifBtn.addEventListener('click', async () => {
+      const text = notifTextArea.value.trim();
+      if (!text) {
+        notifErr.textContent = 'يرجى كتابة نص الإشعار.';
+        notifErr.style.display = 'block';
+        notifOk.style.display = 'none';
+        return;
+      }
+      notifErr.style.display = 'none';
+      sendNotifBtn.disabled = true;
+      sendNotifBtn.textContent = 'جارٍ الإرسال...';
+      try {
+        const payload = {
+          text,
+          title: (notifTitleToggle.checked && notifTitleInput.value.trim()) ? notifTitleInput.value.trim() : null,
+          importance: notifImportance.value,
+          notifId: Date.now().toString(),
+          createdAt: serverTimestamp(),
+          active: true,
+        };
+        await setDoc(doc(db, 'site_notifications', 'current'), payload);
+        await setDoc(doc(db, 'site_notifications_history', payload.notifId), payload);
+        // Send Telegram broadcast (non-critical)
+        try {
+          const tgLines = [
+            payload.importance === 'important' ? '🔴 إشعار مهم' : '📢 إشعار جديد',
+            'ثانوية أحمد البشر الرومي',
+            '',
+            ...(payload.title ? [payload.title, ''] : []),
+            payload.text
+          ];
+          await fetch('https://abrschool-bot.onrender.com/api/telegram/broadcast', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: tgLines.join('\n') })
+          });
+        } catch { /* Telegram failure is non-critical */ }
+        notifOk.textContent = 'تم إرسال الإشعار بنجاح ✓';
+        notifOk.style.display = 'block';
+        setTimeout(() => { notifOk.style.display = 'none'; }, 4500);
+        // Reset form
+        notifTextArea.value = '';
+        notifTitleInput.value = '';
+        notifTitleToggle.checked = false;
+        notifTitleWrap.style.display = 'none';
+        notifImportance.value = 'normal';
+        notifFormOpen = false;
+        notifForm.classList.remove('expanded');
+        openNotifFormBtn.querySelector('svg').style.transform = '';
+        loadCurrentNotif();
+      } catch (e) {
+        notifErr.textContent = 'حدث خطأ أثناء الإرسال: ' + (e?.message || '');
+        notifErr.style.display = 'block';
+      } finally {
+        sendNotifBtn.disabled = false;
+        sendNotifBtn.textContent = 'إرسال الإشعار';
+      }
+    });
+
+    function escNotif(str) {
+      return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    async function loadCurrentNotif() {
+      try {
+        const snap = await getDoc(doc(db, 'site_notifications', 'current'));
+        if (!snap.exists() || !snap.data()?.active) {
+          currentNotifDisplay.innerHTML = '<div class="muted">لا يوجد إشعار نشط حالياً.</div>';
+          return;
+        }
+        const d = snap.data();
+        const isImportant = d.importance === 'important';
+        currentNotifDisplay.innerHTML = `
+          <div class="notif-current">
+            <div class="nc-badge${isImportant ? ' important' : ''}">${isImportant ? '🔴 مهم' : '📢 عادي'}</div>
+            ${d.title ? `<div class="nc-title">${escNotif(d.title)}</div>` : ''}
+            <div>${escNotif(d.text)}</div>
+          </div>
+        `;
+      } catch {
+        currentNotifDisplay.innerHTML = '<div class="muted">تعذّر تحميل الإشعار.</div>';
+      }
+    }
+
+    async function loadNotifHistory() {
+      const histEl = document.getElementById('notifHistory');
+      if (!histEl) return;
+      histEl.innerHTML = '<div class="muted" style="padding:4px 0;">جارٍ التحميل...</div>';
+      try {
+        const q = query(
+          collection(db, 'site_notifications_history'),
+          orderBy('createdAt', 'desc'),
+          limit(30)
+        );
+        const snap = await getDocs(q);
+        if (snap.empty) {
+          histEl.innerHTML = '<div class="muted">لا توجد إشعارات سابقة.</div>';
+          return;
+        }
+        const stack = document.createElement('div');
+        stack.className = 'notif-hist-stack';
+        snap.forEach(d => {
+          const hData = d.data();
+          const isImp = hData.importance === 'important';
+          const date  = hData.createdAt?.toDate ? hData.createdAt.toDate() : null;
+          const dateStr = date ? fmtDateTime(date) : '';
+          const card = document.createElement('div');
+          card.className = 'notif-hist-card';
+          const listId = 'seen-list-' + d.id;
+          card.innerHTML = `
+            <div class="notif-hist-header">
+              <div class="notif-hist-meta">
+                <div class="nc-badge${isImp ? ' important' : ''}">${isImp ? '🔴 مهم' : '📢 عادي'}</div>
+                ${hData.title ? `<div class="notif-hist-title">${escNotif(hData.title)}</div>` : ''}
+                <div class="notif-hist-preview">${escNotif(hData.text || '')}</div>
+                <div class="notif-hist-date">${dateStr}</div>
+              </div>
+              <button class="seen-count-btn" type="button" title="من شاهده">
+                <span class="scn">…</span> شاهده
+              </button>
+            </div>
+            <div class="notif-seen-list" id="${listId}"></div>
+          `;
+          stack.appendChild(card);
+          const seenListEl = card.querySelector('#' + listId);
+          const seenNum    = card.querySelector('.scn');
+          const seenBtn    = card.querySelector('.seen-count-btn');
+          // Load count asynchronously
+          getDocs(collection(db, 'site_notifications_history', d.id, 'seen'))
+            .then(s => { seenNum.textContent = s.size; })
+            .catch(() => { seenNum.textContent = '—'; });
+          // Toggle seen names list on click
+          let seenLoaded = false;
+          seenBtn.addEventListener('click', async () => {
+            const opening = !seenListEl.classList.contains('open');
+            seenListEl.classList.toggle('open', opening);
+            if (opening && !seenLoaded) {
+              seenLoaded = true;
+              seenListEl.innerHTML = '<div class="muted" style="font-size:.85rem;padding:4px 0;">جارٍ التحميل...</div>';
+              try {
+                const seenSnap = await getDocs(
+                  collection(db, 'site_notifications_history', d.id, 'seen')
+                );
+                if (seenSnap.empty) {
+                  seenListEl.innerHTML = '<div class="muted" style="font-size:.85rem;">لم يشاهده أحد بعد.</div>';
+                } else {
+                  seenListEl.innerHTML = '';
+                  seenSnap.forEach(sd => {
+                    const row = document.createElement('div');
+                    row.className = 'seen-name-item';
+                    row.innerHTML = `<span aria-hidden="true">👤</span><span>${escNotif(sd.data().name || 'مجهول')}</span>`;
+                    seenListEl.appendChild(row);
+                  });
+                }
+              } catch {
+                seenListEl.innerHTML = '<div class="muted" style="font-size:.85rem;">تعذّر التحميل.</div>';
+              }
+            }
+          });
+        });
+        histEl.innerHTML = '';
+        histEl.appendChild(stack);
+      } catch (e) {
+        histEl.innerHTML = '<div class="err" style="display:block;">تعذّر تحميل السجل.</div>';
+      }
+    }
+
+    window.addEventListener('hashchange', ()=>{
+      if(window.location.hash === NOTIFICATIONS_HASH){
+        if(sAdmin.classList.contains('active')) openNotificationsPanel(false);
+        return;
+      }
+      if(notificationsSheet.classList.contains('open')){
+        closeNotificationsPanel(false);
+      }
+    });
 
     // إدارة المشرفين
     function openAdminsPanel(){
@@ -1573,7 +1950,8 @@
 
     document.addEventListener('keydown', (e)=>{ 
       if(e.key==='Escape'){
-        [teachersSheet,subjectSheet,teacherSheet,adminsSheet,adminSheet].forEach(s=>s.classList.remove('open'));
+        [teachersSheet,subjectSheet,teacherSheet,adminsSheet,adminSheet,notificationsSheet].forEach(closeSheet);
+        if(window.location.hash === NOTIFICATIONS_HASH) clearHash();
         closeModal(absenceModal);
       } 
     });

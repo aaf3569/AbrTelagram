@@ -865,6 +865,7 @@
         } from "/shared/firebase.js";
         import { showActionPopup } from "/shared/action-popup.js";
         import { mountTelegramSettings } from "/shared/telegram-settings.js";
+        import { initNotificationPopup } from "/shared/notification-popup.js";
 
         
 
@@ -2149,6 +2150,7 @@
                 }, 100);
                 
                 show(sDash);
+                initNotificationPopup(db, { uid: user.uid, name: data?.name || '' });
             }catch(e){
                 console.error(e);
                 stopProfileNextLessonTicker();
