@@ -1627,6 +1627,86 @@ app.post("/api/telegram/request-students", async (req, res) => {
   }
 });
 
+app.post("/api/telegram/broadcast", async (req, res) => {
+  const adminUser = await requireAdminFromRequest(req, res);
+  if (!adminUser) return;
+
+  if (!TELEGRAM_BOT_TOKEN) {
+    return res.status(503).json({ ok: false, error: "telegram_token_missing" });
+  }
+
+  const message = String(req.body?.message || "").trim();
+  if (!message) {
+    return res.status(400).json({ ok: false, error: "missing_message" });
+  }
+  if (message.length > 4096) {
+    return res.status(400).json({ ok: false, error: "message_too_long" });
+  }
+
+  try {
+    const recipients = await loadConnectedTeachersForSweep();
+    if (!recipients.length) {
+      return res.status(404).json({ ok: false, error: "no_connected_teachers" });
+    }
+
+    let sentCount = 0;
+    const failures = [];
+
+    for (const recipient of recipients) {
+      const chatId = String(recipient.chatId || "").trim();
+      if (!chatId) continue;
+
+      try {
+        await sendTelegramMessage(chatId, message);
+        sentCount += 1;
+      } catch (error) {
+        failures.push({
+          teacherUid: String(recipient.teacherUid || ""),
+          status: Number(error?.status) || null,
+          code: String(error?.code || ""),
+        });
+        console.error(
+          `[telegram] broadcast send failed userId=${recipient.teacherUid || "unknown"}: ${error.message}`
+        );
+      }
+    }
+
+    const result = {
+      ok: sentCount > 0,
+      totalRecipients: recipients.length,
+      sentCount,
+      failedCount: failures.length,
+    };
+    if (failures.length) {
+      result.failures = failures.slice(0, 20);
+    }
+
+    if (isFirebaseReady()) {
+      try {
+        await db.collection("telegramBroadcastLog").add({
+          requestedByUid: adminUser.uid,
+          requestedByName: adminUser.name || null,
+          totalRecipients: result.totalRecipients,
+          sentCount: result.sentCount,
+          failedCount: result.failedCount,
+          messagePreview: message.slice(0, 200),
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+      } catch (error) {
+        console.error(`[telegram] broadcast log write failed: ${error.message}`);
+      }
+    }
+
+    if (!sentCount) {
+      return res.status(502).json({ ...result, error: "broadcast_send_failed" });
+    }
+    return res.json(result);
+  } catch (error) {
+    console.error(`[telegram] broadcast failed: ${error.message}`);
+    return res.status(500).json({ ok: false, error: "broadcast_failed" });
+  }
+});
+
 app.post("/api/telegram/run-reminder-sweep", async (req, res) => {
   try {
     await runReminderSweep();

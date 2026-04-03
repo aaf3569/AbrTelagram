@@ -880,6 +880,21 @@
 
     const auth = getAuth(app);
 
+    const TELEGRAM_BACKEND_BASE_URL = (() => {
+      const fromWindow = String(window.__TELEGRAM_BACKEND_BASE_URL || '').trim();
+      if (fromWindow) return fromWindow.replace(/\/+$/, '');
+
+      const fromStorage = String(localStorage.getItem('telegramBackendBaseUrl') || '').trim();
+      if (fromStorage) return fromStorage.replace(/\/+$/, '');
+
+      return 'https://abrschool-bot.onrender.com';
+    })();
+
+    function telegramApiUrl(path) {
+      const cleanPath = `/${String(path || '').replace(/^\/+/, '')}`;
+      return `${TELEGRAM_BACKEND_BASE_URL}${cleanPath}`;
+    }
+
     // تطبيق مساعد لإنشاء المستخدمين الجدد
     const helperApp = getApps().some(a => a.name === "AdminHelper")
       ? getApp("AdminHelper")
@@ -1763,6 +1778,16 @@
       if (notifTitleToggle.checked) notifTitleInput.focus();
     });
 
+    async function getTelegramAdminHeaders() {
+      const user = auth.currentUser;
+      if (!user) throw new Error('unauthorized');
+      const token = await user.getIdToken();
+      return {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      };
+    }
+
     sendNotifBtn.addEventListener('click', async () => {
       const text = notifTextArea.value.trim();
       if (!text) {
@@ -1794,11 +1819,16 @@
             ...(payload.title ? [payload.title, ''] : []),
             payload.text
           ];
-          await fetch('https://abrschool-bot.onrender.com/api/telegram/broadcast', {
+          const headers = await getTelegramAdminHeaders();
+          const tgResponse = await fetch(telegramApiUrl('/api/telegram/broadcast'), {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers,
             body: JSON.stringify({ message: tgLines.join('\n') })
           });
+          if (!tgResponse.ok) {
+            const tgBody = await tgResponse.json().catch(() => ({}));
+            console.warn('[telegram] broadcast failed:', tgResponse.status, tgBody?.error || tgBody);
+          }
         } catch { /* Telegram failure is non-critical */ }
         notifOk.textContent = 'تم إرسال الإشعار بنجاح ✓';
         notifOk.style.display = 'block';
