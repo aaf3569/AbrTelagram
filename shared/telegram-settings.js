@@ -107,10 +107,6 @@ function createModal() {
     <section class="tg-settings-card" role="dialog" aria-modal="true" aria-label="User Settings">
       <h3 class="tg-settings-title">User Settings</h3>
       <div class="tg-settings-row">
-        <div class="tg-settings-label">User name</div>
-        <div class="tg-settings-value" data-field="name">-</div>
-      </div>
-      <div class="tg-settings-row">
         <div class="tg-settings-label">Telegram status</div>
         <div class="tg-settings-value" data-field="status">Loading...</div>
       </div>
@@ -123,7 +119,6 @@ function createModal() {
   `;
 
   const card = overlay.querySelector(".tg-settings-card");
-  const nameField = overlay.querySelector('[data-field="name"]');
   const statusField = overlay.querySelector('[data-field="status"]');
   const connectBtn = overlay.querySelector('[data-action="connect"]');
   const disconnectBtn = overlay.querySelector('[data-action="disconnect"]');
@@ -132,7 +127,6 @@ function createModal() {
   return {
     overlay,
     card,
-    nameField,
     statusField,
     connectBtn,
     disconnectBtn,
@@ -172,7 +166,7 @@ export async function getTelegramConnectLink(userId = "teacher123") {
   return url;
 }
 
-export function mountTelegramSettings({ auth, getDisplayName } = {}) {
+export function mountTelegramSettings({ auth } = {}) {
   const trigger = document.getElementById("telegramSettingsBtn");
   if (!trigger || trigger.dataset.telegramMounted === "1") return;
   trigger.dataset.telegramMounted = "1";
@@ -192,17 +186,11 @@ export function mountTelegramSettings({ auth, getDisplayName } = {}) {
   async function fetchConnectInfo() {
     const user = auth?.currentUser || null;
     if (!user) {
-      parts.nameField.textContent = "-";
       parts.statusField.textContent = "Please log in first.";
       parts.connectBtn.disabled = false;
       parts.disconnectBtn.disabled = true;
       return;
     }
-
-    const fallbackName = user.displayName || user.email || user.uid;
-    const renderedName =
-      typeof getDisplayName === "function" ? String(getDisplayName() || "").trim() : "";
-    parts.nameField.textContent = renderedName || fallbackName;
 
     parts.statusField.textContent = "Tap Connect Telegram to link this user.";
     parts.connectBtn.textContent = "Connect Telegram";
