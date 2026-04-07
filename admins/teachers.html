@@ -151,6 +151,13 @@
     .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;z-index:100;opacity:0;visibility:hidden;transition:opacity .3s ease,visibility .3s ease}
     .modal-overlay.active{opacity:1;visibility:visible}.modal{background:#fff;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.3);width:min(90vw,500px);max-height:90vh;overflow-y:auto;transform:scale(.9);opacity:0;transition:transform .3s ease,opacity .3s ease}.modal.active{transform:scale(1);opacity:1}.modal-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}.modal-title{margin:0;font-size:1.2rem;font-weight:800;color:var(--primary)}.close-modal{background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--muted);width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:50%}.modal-body{padding:20px}.modal-footer{padding:16px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px}
     #addTeacherModal .modal{width:min(92vw,560px)}
+    #supervisorGradeModal .modal{width:min(92vw,420px)}
+    .supervisor-grade-body{display:flex;flex-direction:column;gap:10px}
+    .supervisor-grade-hint{margin:0;font-size:.9rem;font-weight:700;color:#475569}
+    .supervisor-grade-options{display:flex;flex-direction:column;gap:10px}
+    .supervisor-grade-option{width:100%;min-height:48px;padding:10px 14px;border-radius:12px;border:1px solid rgba(3,60,84,.2);background:#fff;color:#0f2743;font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;font-weight:900;cursor:pointer;transition:.14s ease;text-align:right}
+    .supervisor-grade-option:hover{border-color:rgba(3,60,84,.45);box-shadow:0 10px 24px rgba(3,60,84,.12);transform:translateY(-1px)}
+    .supervisor-grade-option:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
     .add-teacher-body{display:flex;flex-direction:column;gap:12px}
     .add-teacher-body .field{margin:0}
     .add-teacher-full{grid-column:auto}
@@ -244,12 +251,11 @@
             <h4 class="profile-card-title">البيانات الأساسية</h4>
             <div class="info-grid">
               <div class="field"><label class="label" for="edTName">الاسم الكامل</label><div class="plain-value view-only"><span id="vEdTName" class="view-value">—</span></div><div class="input-wrap edit-only"><input id="edTName" class="input" type="text"></div></div>
-              <div class="field"><label class="label" for="edTEmail">البريد الإلكتروني</label><div class="plain-value view-only"><span id="vEdTEmail" class="view-value">—</span></div><div class="input-wrap edit-only"><input id="edTEmail" class="input" type="email"></div></div>
+              <div class="field"><label class="label" for="edTEmail">رقم البطاقة</label><div class="plain-value view-only"><span id="vEdTEmail" class="view-value">—</span></div><div class="input-wrap edit-only"><input id="edTEmail" class="input" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="مثال: 298040100633"></div></div>
               <div class="field"><label class="label" for="edTPhone">رقم الهاتف</label><div class="plain-value view-only"><span id="vEdTPhone" class="view-value">—</span></div><div class="input-wrap edit-only"><input id="edTPhone" class="input" type="tel"></div></div>
               <div class="field"><label class="label" for="edTTeams">رابط Teams</label><div class="plain-value view-only"><span id="vEdTTeams" class="view-value">—</span></div><div class="input-wrap edit-only"><input id="edTTeams" class="input" type="url"></div></div>
               <div class="field"><label class="label" for="edTDisplayedPassword">كلمة المرور الظاهرة</label><div class="plain-value view-only"><span id="vEdTDisplayedPassword" class="view-value">—</span></div><div class="input-wrap edit-only password-field"><input id="edTDisplayedPassword" class="input" type="password" autocomplete="off" dir="ltr"><button id="toggleDisplayedPasswordBtn" class="eye-toggle" type="button" aria-label="إظهار كلمة المرور الظاهرة" title="إظهار كلمة المرور الظاهرة"><span aria-hidden="true">👁</span></button></div></div>
               <div class="field"><label class="label" for="edTRole">الدور</label><div class="plain-value view-only"><span id="vEdTRole" class="view-value">—</span></div><div class="input-wrap edit-only"><select id="edTRole" class="input"><option value="user">مدرس</option><option value="head">رئيس القسم</option></select></div></div>
-              <div class="field"><label class="label">الصلاحية</label><div class="plain-value view-only"><span id="vEdTSupervisor" class="view-value">—</span></div><div class="input-wrap edit-only"><div class="checkbox-wrap"><input type="checkbox" id="edTIsSupervisor"><label for="edTIsSupervisor" class="label" style="margin:0;">تعيين كمشرف</label></div></div></div>
             </div>
           </section>
 
@@ -266,6 +272,7 @@
             <h4 class="profile-card-title">صلاحيات المستخدم</h4>
             <div id="permissionsView" class="permissions-view view-only"></div>
             <div class="permissions-editor edit-only">
+              <div class="checkbox-wrap"><input type="checkbox" id="edTIsSupervisor"><label id="edTIsSupervisorLabel" for="edTIsSupervisor" class="label" style="margin:0;">تعيين كمشرف</label></div>
               <div class="checkbox-wrap"><input type="checkbox" id="edTAllowEditSchedule"><label for="edTAllowEditSchedule" class="label" style="margin:0;">السماح بتعديل الجدول</label></div>
               <div class="checkbox-wrap"><input type="checkbox" id="edTAllowMorningLate"><label for="edTAllowMorningLate" class="label" style="margin:0;">تسجيل تأخير الصباح</label></div>
               <div class="checkbox-wrap"><input type="checkbox" id="edTAllowSupervisorStudents"><label for="edTAllowSupervisorStudents" class="label" style="margin:0;">ملفات الطلاب</label></div>
@@ -297,13 +304,28 @@
         <div class="field"><label class="label" for="teacherPhone">رقم الهاتف</label><div class="input-wrap"><input id="teacherPhone" class="input" type="tel"></div></div>
         <div class="field"><label class="label" for="teacherRole">الدور</label><div class="input-wrap"><select id="teacherRole" class="input"><option value="user">مدرس</option><option value="head">رئيس القسم</option></select></div></div>
         <div id="teacherSpecializationField" class="field" hidden><label class="label" for="teacherSpecialization">التخصص داخل القسم</label><div class="input-wrap"><select id="teacherSpecialization" class="input"><option value="الفيزياء">الفيزياء</option><option value="الكيمياء">الكيمياء</option></select></div></div>
-        <div class="field add-teacher-full"><div class="checkbox-wrap"><input type="checkbox" id="teacherIsSupervisor"><label for="teacherIsSupervisor" class="label" style="margin:0;">تعيين كمشرف</label></div></div>
+        <div class="field add-teacher-full"><div class="checkbox-wrap"><input type="checkbox" id="teacherIsSupervisor"><label id="teacherIsSupervisorLabel" for="teacherIsSupervisor" class="label" style="margin:0;">تعيين كمشرف</label></div></div>
         <div class="field add-teacher-full"><div class="checkbox-wrap"><input type="checkbox" id="teacherAllowEditSchedule"><label for="teacherAllowEditSchedule" class="label" style="margin:0;">السماح بتعديل الجدول</label></div></div>
         <div class="field add-teacher-full"><div class="checkbox-wrap"><input type="checkbox" id="teacherAllowMorningLate"><label for="teacherAllowMorningLate" class="label" style="margin:0;">تسجيل تأخير الصباح</label></div></div>
         <div class="field add-teacher-full"><div class="checkbox-wrap"><input type="checkbox" id="teacherAllowSupervisorStudents"><label for="teacherAllowSupervisorStudents" class="label" style="margin:0;">ملفات الطلاب</label></div></div>
         <div class="field add-teacher-full"><label class="label">الفصول (Classes)</label><div id="auClasses" class="classes-list"></div><div class="inline-add"><button id="auAddClass" class="add" type="button">+ إضافة</button></div></div>
       </div>
       <div class="modal-footer"><button id="cancelAddTeacher" class="btn ghost" type="button">إلغاء</button><button id="createTeacherBtn" class="btn primary" type="button">إنشاء الحساب</button></div>
+    </div>
+  </div>
+
+  <div id="supervisorGradeModal" class="modal-overlay" aria-hidden="true">
+    <div class="modal supervisor-grade-modal" role="dialog" aria-modal="true" aria-labelledby="supervisorGradeTitle">
+      <div class="modal-header"><h3 id="supervisorGradeTitle" class="modal-title">اختيار صف الإشراف</h3><button id="closeSupervisorGradeModal" class="close-modal" aria-label="إغلاق">×</button></div>
+      <div class="modal-body supervisor-grade-body">
+        <p class="supervisor-grade-hint">اختر الصف الذي سيُشرف عليه هذا المعلّم:</p>
+        <div class="supervisor-grade-options">
+          <button class="supervisor-grade-option" type="button" data-grade="10">مشرف الصف العاشر</button>
+          <button class="supervisor-grade-option" type="button" data-grade="11">مشرف الصف الحادي عشر</button>
+          <button class="supervisor-grade-option" type="button" data-grade="12">مشرف الصف الثاني عشر</button>
+        </div>
+      </div>
+      <div class="modal-footer"><button id="cancelSupervisorGradeBtn" class="btn ghost" type="button">إلغاء</button></div>
     </div>
   </div>
 
@@ -360,7 +382,6 @@
     const vEdTTeams=document.getElementById('vEdTTeams');
     const vEdTDisplayedPassword=document.getElementById('vEdTDisplayedPassword');
     const vEdTRole=document.getElementById('vEdTRole');
-    const vEdTSupervisor=document.getElementById('vEdTSupervisor');
     const permissionsView=document.getElementById('permissionsView');
     const classesView=document.getElementById('classesView');
     const classesEditorWrap=document.getElementById('classesEditorWrap');
@@ -372,6 +393,7 @@
     const toggleDisplayedPasswordBtn=document.getElementById('toggleDisplayedPasswordBtn');
     const edTRole=document.getElementById('edTRole');
     const edTIsSupervisor=document.getElementById('edTIsSupervisor');
+    const edTIsSupervisorLabel=document.getElementById('edTIsSupervisorLabel');
     const edTAllowEditSchedule=document.getElementById('edTAllowEditSchedule');
     const edTAllowMorningLate=document.getElementById('edTAllowMorningLate');
     const edTAllowSupervisorStudents=document.getElementById('edTAllowSupervisorStudents');
@@ -395,12 +417,17 @@
     const teacherSpecializationField=document.getElementById('teacherSpecializationField');
     const teacherSpecialization=document.getElementById('teacherSpecialization');
     const teacherIsSupervisor=document.getElementById('teacherIsSupervisor');
+    const teacherIsSupervisorLabel=document.getElementById('teacherIsSupervisorLabel');
     const teacherAllowEditSchedule=document.getElementById('teacherAllowEditSchedule');
     const teacherAllowMorningLate=document.getElementById('teacherAllowMorningLate');
     const teacherAllowSupervisorStudents=document.getElementById('teacherAllowSupervisorStudents');
     const createTeacherBtn=document.getElementById('createTeacherBtn');
     const auClasses=document.getElementById('auClasses');
     const auAddClass=document.getElementById('auAddClass');
+    const supervisorGradeModal=document.getElementById('supervisorGradeModal');
+    const closeSupervisorGradeModal=document.getElementById('closeSupervisorGradeModal');
+    const cancelSupervisorGradeBtn=document.getElementById('cancelSupervisorGradeBtn');
+    const supervisorGradeOptions=Array.from(document.querySelectorAll('#supervisorGradeModal [data-grade]'));
     const successModal=document.getElementById('successModal');
     const closeSuccessModal=document.getElementById('closeSuccessModal');
 
@@ -419,6 +446,11 @@
     const HIST_GEO_DEPARTMENT = "التاريخ والجغرافيا";
     const HIST_GEO_SUBJECTS = ["التاريخ","الجغرافيا"];
     const HIST_GEO_SUBJECT_MATCHES = ["التاريخ","الجغرافيا","جغرافيا"];
+    const SUPERVISOR_GRADE_MAP = {
+      "10":"مشرف الصف العاشر",
+      "11":"مشرف الصف الحادي عشر",
+      "12":"مشرف الصف الثاني عشر"
+    };
 
     function getRouteTeacherId(){
       return window.location.hash.startsWith(TEACHER_HASH_PREFIX)
@@ -437,7 +469,7 @@
 
     let lastFocusedBeforeSuccessModal=null;
     function syncBodyScrollLock(){
-      const anyOverlayOpen=addTeacherModal.classList.contains('active') || successModal.classList.contains('show');
+      const anyOverlayOpen=addTeacherModal.classList.contains('active') || supervisorGradeModal.classList.contains('active') || successModal.classList.contains('show');
       document.body.style.overflow=anyOverlayOpen?'hidden':'';
     }
     function focusIfPossible(el){
@@ -456,8 +488,8 @@
       setTimeout(()=>m.querySelector('.modal').classList.add('active'),10);
       syncBodyScrollLock();
     };
-    const closeModal=(m)=>{
-      moveFocusOutside(m, openAddUser);
+    const closeModal=(m,{ fallbackFocus=openAddUser }={})=>{
+      moveFocusOutside(m, fallbackFocus);
       m.querySelector('.modal').classList.remove('active');
       setTimeout(()=>{
         m.classList.remove('active');
@@ -602,6 +634,9 @@
     let teacherEditMode=false;
     let displayedPasswordRevealed=false;
     let isCurrentUserAdmin=false;
+    let editSupervisorGrade='';
+    let addSupervisorGrade='';
+    let supervisorGradeModalState=null;
     const MASKED_PASSWORD='••••••••';
 
     function getInitials(name,email,uid){
@@ -635,6 +670,7 @@
     function renderPermissionsPreview(permissions){
       permissionsView.innerHTML='';
       const active=[];
+      if(permissions.isSupervisor) active.push(getSupervisorStatusLabel(true, permissions.supervisorGrade));
       if(permissions.allowEditSchedule) active.push('السماح بتعديل الجدول');
       if(permissions.allowMorningLate) active.push('تسجيل تأخير الصباح');
       if(permissions.allowSupervisorStudents) active.push('ملفات الطلاب');
@@ -666,6 +702,119 @@
       if(!data || typeof data!=='object') return '';
       const value=data.displayedPassword ?? data.viewedPassword;
       return value==null ? '' : String(value);
+    }
+    function buildTeacherEmailFromCivilId(civilId){
+      const digits=(civilId||'').toString().replace(/\D+/g,'');
+      return digits ? `t${digits}@gmail.com` : '';
+    }
+    function extractCivilIdFromTeacherEmail(email){
+      const normalized=(email||'').toString().trim();
+      if(!normalized) return '';
+      if(/^\d+$/.test(normalized)) return normalized;
+      const match=normalized.match(/^t(\d+)@gmail\.com$/i);
+      return match ? match[1] : '';
+    }
+    function getTeacherCivilId(data){
+      const storedCivilId=(data&&typeof data==='object'&&data.civilId!=null)?String(data.civilId).replace(/\D+/g,''):'';
+      if(storedCivilId) return storedCivilId;
+      const storedEmail=(data&&typeof data==='object')?data.email:'';
+      return extractCivilIdFromTeacherEmail(storedEmail);
+    }
+    function normalizeAsciiDigits(value){
+      return String(value ?? '').replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d));
+    }
+    function normalizeSupervisorGrade(value){
+      const normalized=normalizeAsciiDigits(String(value ?? '').trim());
+      return Object.prototype.hasOwnProperty.call(SUPERVISOR_GRADE_MAP, normalized) ? normalized : '';
+    }
+    function formatSupervisorSuffix(grade){
+      const normalized=normalizeSupervisorGrade(grade);
+      return normalized ? ` | ${normalized}` : '';
+    }
+    function getSupervisorStatusLabel(isSupervisor, grade){
+      if(!isSupervisor) return '';
+      return `مشرف${formatSupervisorSuffix(grade)}`;
+    }
+    function getSupervisorPillLabel(isSupervisor, grade){
+      if(!isSupervisor) return '';
+      return `⭐ مشرف${formatSupervisorSuffix(grade)}`;
+    }
+    function updateSupervisorCheckboxLabels(){
+      if(edTIsSupervisorLabel){
+        edTIsSupervisorLabel.textContent=`تعيين كمشرف${edTIsSupervisor.checked ? formatSupervisorSuffix(editSupervisorGrade) : ''}`;
+      }
+      if(teacherIsSupervisorLabel){
+        teacherIsSupervisorLabel.textContent=`تعيين كمشرف${teacherIsSupervisor.checked ? formatSupervisorSuffix(addSupervisorGrade) : ''}`;
+      }
+    }
+    function openSupervisorGradePicker(context){
+      const isEditContext=context==='edit';
+      const previousChecked=isEditContext ? !!edTIsSupervisor.checked : !!teacherIsSupervisor.checked;
+      const previousGrade=isEditContext ? editSupervisorGrade : addSupervisorGrade;
+      const restoreFocus=isEditContext ? edTIsSupervisor : teacherIsSupervisor;
+      supervisorGradeModalState={context,previousChecked,previousGrade,restoreFocus};
+      openModal(supervisorGradeModal);
+      requestAnimationFrame(()=>focusIfPossible(supervisorGradeOptions[0]||closeSupervisorGradeModal));
+    }
+    function closeSupervisorGradePicker({restorePrevious=false}={}){
+      const state=supervisorGradeModalState;
+      if(restorePrevious && state){
+        if(state.context==='edit'){
+          edTIsSupervisor.checked=!!state.previousChecked;
+          editSupervisorGrade=normalizeSupervisorGrade(state.previousGrade);
+          updateProfileSummary();
+        }else{
+          teacherIsSupervisor.checked=!!state.previousChecked;
+          addSupervisorGrade=normalizeSupervisorGrade(state.previousGrade);
+        }
+        updateSupervisorCheckboxLabels();
+      }
+      const fallbackFocus=state?.restoreFocus || openAddUser;
+      supervisorGradeModalState=null;
+      closeModal(supervisorGradeModal,{ fallbackFocus });
+    }
+    function applySupervisorGradeSelection(grade){
+      const state=supervisorGradeModalState;
+      if(!state) return;
+      const normalizedGrade=normalizeSupervisorGrade(grade);
+      if(!normalizedGrade) return;
+      if(state.context==='edit'){
+        edTIsSupervisor.checked=true;
+        editSupervisorGrade=normalizedGrade;
+        updateProfileSummary();
+      }else{
+        teacherIsSupervisor.checked=true;
+        addSupervisorGrade=normalizedGrade;
+      }
+      updateSupervisorCheckboxLabels();
+      closeSupervisorGradePicker();
+    }
+    function onSupervisorCheckboxChange(context){
+      if(context==='edit'){
+        if(!edTIsSupervisor.checked){
+          editSupervisorGrade='';
+          updateSupervisorCheckboxLabels();
+          updateProfileSummary();
+          return;
+        }
+        if(!normalizeSupervisorGrade(editSupervisorGrade)){
+          openSupervisorGradePicker('edit');
+          return;
+        }
+        updateSupervisorCheckboxLabels();
+        updateProfileSummary();
+        return;
+      }
+      if(!teacherIsSupervisor.checked){
+        addSupervisorGrade='';
+        updateSupervisorCheckboxLabels();
+        return;
+      }
+      if(!normalizeSupervisorGrade(addSupervisorGrade)){
+        openSupervisorGradePicker('add');
+        return;
+      }
+      updateSupervisorCheckboxLabels();
     }
     function setDisplayedPasswordPreview(value){
       const normalized=String(value ?? '');
@@ -701,30 +850,32 @@
     }
     function updateProfileSummary(){
       const name=edTName.value.trim() || currentTeacher?.data?.name || currentTeacher?.uid || '—';
-      const email=edTEmail.value.trim() || currentTeacher?.data?.email || '—';
+      const civilId=(edTEmail.value||'').replace(/\D+/g,'') || getTeacherCivilId(currentTeacher?.data) || '—';
       const phone=edTPhone.value.trim() || '—';
       const teams=edTTeams.value.trim() || '—';
       const displayedPassword=edTDisplayedPassword.value;
       const role=(edTRole.value||'user').toLowerCase();
       const isSupervisor=!!edTIsSupervisor.checked;
+      const supervisorGrade=isSupervisor ? normalizeSupervisorGrade(editSupervisorGrade) : '';
       const allowEditSchedule=!!edTAllowEditSchedule.checked;
       const allowMorningLate=!!edTAllowMorningLate.checked;
       const allowSupervisorStudents=!!edTAllowSupervisorStudents.checked;
       profileName.textContent=name;
-      profileEmail.textContent=email;
-      teacherAvatar.textContent=getInitials(name,email,currentTeacher?.uid);
+      profileEmail.textContent=civilId;
+      teacherAvatar.textContent=getInitials(name,civilId,currentTeacher?.uid);
       profileRolePill.textContent=role==='head'?'👑 رئيس القسم':'مدرس';
       profileRolePill.classList.toggle('role-head', role==='head');
       profileSupervisorPill.hidden=!isSupervisor;
+      profileSupervisorPill.textContent=getSupervisorPillLabel(isSupervisor, supervisorGrade);
       setViewValue(vEdTName,name);
-      setViewValue(vEdTEmail,email);
+      setViewValue(vEdTEmail,civilId);
       setViewValue(vEdTPhone,phone);
       setViewValue(vEdTTeams,teams);
       setDisplayedPasswordPreview(displayedPassword);
       setViewValue(vEdTRole,role==='head'?'رئيس القسم':'مدرس');
-      setViewValue(vEdTSupervisor,isSupervisor?'مشرف':'غير مشرف');
-      renderPermissionsPreview({ allowEditSchedule, allowMorningLate, allowSupervisorStudents });
+      renderPermissionsPreview({ isSupervisor, supervisorGrade, allowEditSchedule, allowMorningLate, allowSupervisorStudents });
       renderClassesPreview(getClassesFrom(edClasses));
+      updateSupervisorCheckboxLabels();
     }
     function setTeacherEditMode(isEdit){
       teacherEditMode=!!isEdit;
@@ -771,13 +922,14 @@
     cancelTeacherEditBtn.addEventListener('click',()=>{
       const d=currentTeacher.data||{};
       edTName.value=d.name||'';
-      edTEmail.value=d.email||'';
+      edTEmail.value=getTeacherCivilId(d);
       edTPhone.value=d.phone||'';
       edTTeams.value=d.teams||'';
       edTDisplayedPassword.value=getStoredDisplayedPassword(d);
       setDisplayedPasswordVisibility(false);
       edTRole.value=d.role||'user';
       edTIsSupervisor.checked=!!d.isSupervisor;
+      editSupervisorGrade=edTIsSupervisor.checked ? normalizeSupervisorGrade(d.supervisorGrade) : '';
       edTAllowEditSchedule.checked=!!normalizePermissions(d).allowEditSchedule;
       edTAllowMorningLate.checked=!!normalizePermissions(d).allowMorningLate;
       edTAllowSupervisorStudents.checked=!!normalizePermissions(d).allowSupervisorStudents;
@@ -814,9 +966,19 @@
       }
     });
     edAddClass.addEventListener('click',()=>{edClasses.appendChild(makeClassRow(""));updateProfileSummary();});
-    [edTName,edTEmail,edTPhone,edTTeams,edTDisplayedPassword,edTRole,edTIsSupervisor,edTAllowEditSchedule,edTAllowMorningLate,edTAllowSupervisorStudents].forEach(el=>{
+    [edTName,edTEmail,edTPhone,edTTeams,edTDisplayedPassword,edTRole,edTAllowEditSchedule,edTAllowMorningLate,edTAllowSupervisorStudents].forEach(el=>{
       const ev=el.tagName==='SELECT'||el.type==='checkbox'?'change':'input';
       el.addEventListener(ev, updateProfileSummary);
+    });
+    edTIsSupervisor.addEventListener('change',()=>onSupervisorCheckboxChange('edit'));
+    teacherIsSupervisor.addEventListener('change',()=>onSupervisorCheckboxChange('add'));
+    closeSupervisorGradeModal.addEventListener('click',()=>closeSupervisorGradePicker({ restorePrevious:true }));
+    cancelSupervisorGradeBtn.addEventListener('click',()=>closeSupervisorGradePicker({ restorePrevious:true }));
+    supervisorGradeOptions.forEach(btn=>{
+      btn.addEventListener('click',()=>applySupervisorGradeSelection(btn.dataset.grade||''));
+    });
+    supervisorGradeModal.addEventListener('click',(e)=>{
+      if(e.target===supervisorGradeModal) closeSupervisorGradePicker({ restorePrevious:true });
     });
     refreshTeachers.addEventListener('click',()=>{if(selectedSubject)loadTeachers(selectedSubject);});
 
@@ -828,12 +990,14 @@
       teacherPhone.value='';
       teacherRole.value='user';
       teacherIsSupervisor.checked=false;
+      addSupervisorGrade='';
       teacherAllowEditSchedule.checked=false;
       teacherAllowMorningLate.checked=false;
       teacherAllowSupervisorStudents.checked=false;
       auClasses.innerHTML='';
       auClasses.appendChild(makeClassRow(""));
       syncAddTeacherSpecializationField();
+      updateSupervisorCheckboxLabels();
     }
 
     openAddUser.addEventListener('click',()=>{
@@ -845,9 +1009,11 @@
     cancelAddTeacher.addEventListener('click',()=>closeModal(addTeacherModal));
     auAddClass.addEventListener('click',()=>auClasses.appendChild(makeClassRow("")));
     closeSuccessModal.addEventListener('click', closeSuccessModalFn);
+    edTEmail.addEventListener('input',()=>{const digits=edTEmail.value.replace(/\D+/g,''); if(edTEmail.value!==digits) edTEmail.value=digits;});
     teacherEmail.addEventListener('input',()=>{const digits=teacherEmail.value.replace(/\D+/g,''); if(teacherEmail.value!==digits) teacherEmail.value=digits;});
     teacherPassword.addEventListener('input', syncDisplayedPasswordMirror);
     successModal.addEventListener('click',(e)=>{if(e.target===successModal)closeSuccessModalFn();});
+    updateSupervisorCheckboxLabels();
 
     async function loadTeachers(subject){
       teachersList.innerHTML='';
@@ -873,16 +1039,20 @@
           }
           const el=document.createElement('div');el.className='teacher-item';
           const isHead = (t.role || '').toString().toLowerCase() === 'head';
+          const isSupervisor=!!t.isSupervisor;
+          const supervisorGrade=normalizeSupervisorGrade(t.supervisorGrade);
+          const teacherCivilId=getTeacherCivilId(t);
           const teacherSubject=(t.subject||'').toString().trim();
           const mergedSubjects=getMergedSubjectsForDepartment(subject);
           const showTeacherSubject=mergedSubjects.length>0 && !!teacherSubject && teacherSubject!==subject;
-          const meta=[t.email||'', isHead?'رئيس القسم':'مدرس'];
+          const meta=[teacherCivilId||t.email||'', isHead?'رئيس القسم':'مدرس'];
+          if(isSupervisor) meta.push(getSupervisorStatusLabel(true, supervisorGrade));
           if(showTeacherSubject) meta.push(teacherSubject);
           const nameLine = isHead
-            ? `<div style="display:flex;align-items:center;gap:8px;"><span aria-hidden="true" title="رئيس القسم">👑</span><span>${t.name||t.email||t.uid}</span></div>`
-            : `<div>${t.name||t.email||t.uid}</div>`;
+            ? `<div style="display:flex;align-items:center;gap:8px;"><span aria-hidden="true" title="رئيس القسم">👑</span><span>${t.name||teacherCivilId||t.email||t.uid}</span></div>`
+            : `<div>${t.name||teacherCivilId||t.email||t.uid}</div>`;
           let html=`<div>${nameLine}<div class="teacher-sub">${meta.filter(Boolean).join(' | ')}</div></div>`;
-          if(t.isSupervisor){html=`<div style="display:flex;align-items:center;gap:8px;"><span style="color:gold">⭐</span>${html}</div>`;}
+          if(isSupervisor){html=`<div style="display:flex;align-items:center;gap:8px;"><span style="color:gold">⭐</span>${html}</div>`;}
           el.innerHTML=html + `<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>`;
           el.addEventListener('click',()=>openTeacherEditor(t.uid,{ syncRoute:true }));teachersList.appendChild(el);
         });
@@ -897,13 +1067,14 @@
         const d=s.data();currentTeacher={uid,data:d};
         selectedSubject = mapTeacherSubjectToDepartment(d.subject) || selectedSubject;
         edTName.value=d.name||'';
-        edTEmail.value=d.email||'';
+        edTEmail.value=getTeacherCivilId(d);
         edTPhone.value=d.phone||'';
         edTTeams.value=d.teams||'';
         edTDisplayedPassword.value=getStoredDisplayedPassword(d);
         setDisplayedPasswordVisibility(false);
         edTRole.value=d.role||'user';
         edTIsSupervisor.checked=!!d.isSupervisor;
+        editSupervisorGrade=edTIsSupervisor.checked ? normalizeSupervisorGrade(d.supervisorGrade) : '';
         edTAllowEditSchedule.checked=!!normalizePermissions(d).allowEditSchedule;
         edTAllowMorningLate.checked=!!normalizePermissions(d).allowMorningLate;
         edTAllowSupervisorStudents.checked=!!normalizePermissions(d).allowSupervisorStudents;
@@ -920,16 +1091,21 @@
       edOk.style.display='none';edErr.style.display='none';
       try{
         const {uid}=currentTeacher;if(!uid) throw new Error('لم يتم اختيار معلّم.');
-        const name=edTName.value.trim(), email=edTEmail.value.trim(), phone=edTPhone.value.trim(), teams=edTTeams.value.trim();
+        const name=edTName.value.trim(), civilId=edTEmail.value.trim().replace(/\D+/g,''), phone=edTPhone.value.trim(), teams=edTTeams.value.trim();
+        const email=buildTeacherEmailFromCivilId(civilId);
         const displayedPassword=edTDisplayedPassword.value;
         const role=edTRole.value, isSupervisor=edTIsSupervisor.checked, classes=getClassesFrom(edClasses);
+        const supervisorGrade=isSupervisor ? normalizeSupervisorGrade(editSupervisorGrade) : '';
         const teacherDepartment=mapTeacherSubjectToDepartment((currentTeacher?.data?.subject || '').toString().trim()) || mapTeacherSubjectToDepartment(selectedSubject) || selectedSubject;
         const prevPermissions=(currentTeacher?.data?.permissions&&typeof currentTeacher.data.permissions==='object')?currentTeacher.data.permissions:{};
         const permissions={...prevPermissions,allowEditSchedule:!!edTAllowEditSchedule.checked,allowMorningLate:!!edTAllowMorningLate.checked,allowSupervisorStudents:!!edTAllowSupervisorStudents.checked};
-        if(!name) throw new Error('أدخل الاسم.'); if(!emailRx.test(email)) throw new Error('أدخل بريدًا صالحًا.');
+        if(!name) throw new Error('أدخل الاسم.');
+        if(!civilId) throw new Error('أدخل رقم البطاقة بالأرقام فقط.');
+        if(!emailRx.test(email)) throw new Error('تعذّر توليد البريد الإلكتروني من رقم البطاقة.');
+        if(isSupervisor && !supervisorGrade) throw new Error('اختر صف الإشراف للمشرف.');
         if(role==='head') await ensureSingleHeadForDepartment(teacherDepartment,{ excludeUid: uid });
-        await updateDoc(doc(db,'teachers',uid),{name,email,phone,teams,displayedPassword,role,isSupervisor,classes,permissions});
-        currentTeacher.data={...(currentTeacher.data||{}),name,email,phone,teams,displayedPassword,role,isSupervisor,classes,permissions};
+        await updateDoc(doc(db,'teachers',uid),{name,email,civilId,phone,teams,displayedPassword,role,isSupervisor,supervisorGrade:isSupervisor?supervisorGrade:null,classes,permissions});
+        currentTeacher.data={...(currentTeacher.data||{}),name,email,civilId,phone,teams,displayedPassword,role,isSupervisor,supervisorGrade:isSupervisor?supervisorGrade:null,classes,permissions};
         setTeacherEditMode(false);
         edOk.textContent='تم حفظ التعديلات.';edOk.style.display='block';setTimeout(()=>{edOk.style.display='none';closeTeacherView();},900);
         if(selectedSubject) await loadTeachers(selectedSubject);
@@ -951,6 +1127,7 @@
         const name=teacherName.value.trim(), civilId=teacherEmail.value.trim().replace(/\D+/g,''), email=civilId?`t${civilId}@gmail.com`:'', password=teacherPassword.value, phone=teacherPhone.value.trim();
         const displayedPassword=teacherDisplayedPassword.value||password;
         const role=teacherRole.value, isSupervisor=teacherIsSupervisor.checked, classes=getClassesFrom(auClasses);
+        const supervisorGrade=isSupervisor ? normalizeSupervisorGrade(addSupervisorGrade) : '';
         const permissions={allowEditSchedule:!!teacherAllowEditSchedule.checked,allowMorningLate:!!teacherAllowMorningLate.checked,allowSupervisorStudents:!!teacherAllowSupervisorStudents.checked};
         const selectedSpecialization=(teacherSpecialization.value||'').trim();
         const mergedSubjects=getMergedSubjectsForDepartment(selectedSubject);
@@ -961,10 +1138,11 @@
         if(!emailRx.test(email)) throw new Error('تعذّر توليد البريد الإلكتروني من رقم البطاقة المدنية.');
         if(!password||password.length<6) throw new Error('كلمة المرور ٦ أحرف على الأقل.');
         if(!subjectToSave) throw new Error('اختر القسم أولاً.');
+        if(isSupervisor && !supervisorGrade) throw new Error('اختر صف الإشراف للمشرف.');
         if(isMergedDepartment(selectedSubject) && !mergedSubjects.includes(subjectToSave)) throw new Error(getMergedDepartmentSpecializationMessage(selectedSubject));
         if(role==='head') await ensureSingleHeadForDepartment(departmentToSave);
         const cred=await createUserWithEmailAndPassword(helperAuth,email,password); const newUid=cred.user.uid;
-        await setDoc(doc(db,'teachers',newUid),{uid:newUid,name,email,civilId,phone,displayedPassword,role,isSupervisor,subject:subjectToSave,department:departmentToSave,classes,permissions,createdAt:serverTimestamp()},{merge:true});
+        await setDoc(doc(db,'teachers',newUid),{uid:newUid,name,email,civilId,phone,displayedPassword,role,isSupervisor,supervisorGrade:isSupervisor?supervisorGrade:null,subject:subjectToSave,department:departmentToSave,classes,permissions,createdAt:serverTimestamp()},{merge:true});
         try{await signOut(helperAuth);}catch{}
         closeModal(addTeacherModal);openSuccessModal();
         await loadTeachers(selectedSubject);
@@ -997,6 +1175,10 @@
     window.addEventListener('hashchange', ()=>{ applyTeacherRoute(); });
     document.addEventListener('keydown',(e)=>{
       if(e.key==='Escape'){
+        if(supervisorGradeModal.classList.contains('active')){
+          closeSupervisorGradePicker({ restorePrevious:true });
+          return;
+        }
         [subjectSheet,teacherSheet].forEach(s=>closeSheet(s));
         if(addTeacherModal.classList.contains('active')) closeModal(addTeacherModal);
         if(successModal.classList.contains('show')) closeSuccessModalFn();
