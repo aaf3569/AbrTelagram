@@ -346,7 +346,7 @@
     import { firebaseConfig } from "/shared/firebase.js";
     import { initializeApp, getApp, getApps } from "/shared/firebase.js";
     import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signOut, EmailAuthProvider, reauthenticateWithCredential } from "/shared/firebase.js";
-    import { initializeFirestore, collection, getDocs, query, where, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp } from "/shared/firebase.js";
+    import { initializeFirestore, collection, getDocs, query, where, doc, getDoc, setDoc, updateDoc, deleteDoc, deleteField, serverTimestamp } from "/shared/firebase.js";
 
     
     const app=getApps().length?getApp():initializeApp(firebaseConfig);
@@ -1062,15 +1062,22 @@
     async function openTeacherEditor(uid,{ syncRoute=true } = {}){
       edOk.style.display='none';edErr.style.display='none';
       try{
-        const s=await getDoc(doc(db,'teachers',uid));
+        const [s, privSnap] = await Promise.all([
+          getDoc(doc(db,'teachers',uid)),
+          getDoc(doc(db,'teachers',uid,'private','credentials'))
+        ]);
         if(!s.exists()){alert('الملف غير موجود.');return;}
-        const d=s.data();currentTeacher={uid,data:d};
+        const d=s.data();
+        const privData=privSnap.exists()?privSnap.data():null;
+        // Load displayedPassword from private subcollection; fall back to main doc for legacy records
+        const storedDisplayedPassword=(privData!=null&&privData.displayedPassword!=null)?String(privData.displayedPassword):getStoredDisplayedPassword(d);
+        currentTeacher={uid,data:d,displayedPassword:storedDisplayedPassword};
         selectedSubject = mapTeacherSubjectToDepartment(d.subject) || selectedSubject;
         edTName.value=d.name||'';
         edTEmail.value=getTeacherCivilId(d);
         edTPhone.value=d.phone||'';
         edTTeams.value=d.teams||'';
-        edTDisplayedPassword.value=getStoredDisplayedPassword(d);
+        edTDisplayedPassword.value=storedDisplayedPassword;
         setDisplayedPasswordVisibility(false);
         edTRole.value=d.role||'user';
         edTIsSupervisor.checked=!!d.isSupervisor;
@@ -1104,8 +1111,12 @@
         if(!emailRx.test(email)) throw new Error('تعذّر توليد البريد الإلكتروني من رقم البطاقة.');
         if(isSupervisor && !supervisorGrade) throw new Error('اختر صف الإشراف للمشرف.');
         if(role==='head') await ensureSingleHeadForDepartment(teacherDepartment,{ excludeUid: uid });
-        await updateDoc(doc(db,'teachers',uid),{name,email,civilId,phone,teams,displayedPassword,role,isSupervisor,supervisorGrade:isSupervisor?supervisorGrade:null,classes,permissions});
-        currentTeacher.data={...(currentTeacher.data||{}),name,email,civilId,phone,teams,displayedPassword,role,isSupervisor,supervisorGrade:isSupervisor?supervisorGrade:null,classes,permissions};
+        await Promise.all([
+          updateDoc(doc(db,'teachers',uid),{name,email,civilId,phone,teams,role,isSupervisor,supervisorGrade:isSupervisor?supervisorGrade:null,classes,permissions,displayedPassword:deleteField(),viewedPassword:deleteField()}),
+          setDoc(doc(db,'teachers',uid,'private','credentials'),{displayedPassword},{merge:true})
+        ]);
+        currentTeacher.data={...(currentTeacher.data||{}),name,email,civilId,phone,teams,role,isSupervisor,supervisorGrade:isSupervisor?supervisorGrade:null,classes,permissions};
+        currentTeacher.displayedPassword=displayedPassword;
         setTeacherEditMode(false);
         edOk.textContent='تم حفظ التعديلات.';edOk.style.display='block';setTimeout(()=>{edOk.style.display='none';closeTeacherView();},900);
         if(selectedSubject) await loadTeachers(selectedSubject);
@@ -1142,7 +1153,10 @@
         if(isMergedDepartment(selectedSubject) && !mergedSubjects.includes(subjectToSave)) throw new Error(getMergedDepartmentSpecializationMessage(selectedSubject));
         if(role==='head') await ensureSingleHeadForDepartment(departmentToSave);
         const cred=await createUserWithEmailAndPassword(helperAuth,email,password); const newUid=cred.user.uid;
-        await setDoc(doc(db,'teachers',newUid),{uid:newUid,name,email,civilId,phone,displayedPassword,role,isSupervisor,supervisorGrade:isSupervisor?supervisorGrade:null,subject:subjectToSave,department:departmentToSave,classes,permissions,createdAt:serverTimestamp()},{merge:true});
+        await Promise.all([
+          setDoc(doc(db,'teachers',newUid),{uid:newUid,name,email,civilId,phone,role,isSupervisor,supervisorGrade:isSupervisor?supervisorGrade:null,subject:subjectToSave,department:departmentToSave,classes,permissions,createdAt:serverTimestamp()},{merge:true}),
+          setDoc(doc(db,'teachers',newUid,'private','credentials'),{displayedPassword})
+        ]);
         try{await signOut(helperAuth);}catch{}
         closeModal(addTeacherModal);openSuccessModal();
         await loadTeachers(selectedSubject);
