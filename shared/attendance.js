@@ -1,0 +1,1024 @@
+import {
+  doc, getDoc, getDocs, collection, query, where,
+  serverTimestamp, writeBatch, setDoc, Timestamp,
+} from "/shared/firebase.js";
+
+const STYLE_ID = "attendance-sheet-style";
+const ATTENDANCE_SESSIONS_COLLECTION = "attendanceSessions";
+const ATTENDANCE_RECORDS_SUBCOLLECTION = "attendanceRecords";
+
+const STYLES = `
+  /* Attendance sheet — bundled by /shared/attendance.js */
+  /* Relies on host page providing .sheet, .modal, .btn, .btn.primary, .btn.cancel chrome. */
+  #attendanceSheet .att-list{display:flex;flex-direction:column;gap:16px}
+  #attendanceSheet .att-card{padding:16px;border:1px solid var(--border);border-radius:16px;background:#fff;box-shadow:var(--shadow-1);display:flex;flex-direction:column;gap:12px;transition:var(--transition)}
+  #attendanceSheet .att-card:hover{box-shadow:0 10px 25px rgba(3,60,84,.12)}
+  #attendanceSheet .att-card.special-case{background-color:var(--special-case-bg,#fff8e1);border:2px solid var(--special-case-border,#ffd54f);box-shadow:0 8px 22px rgba(255,213,79,.25)}
+  #attendanceSheet .att-card.special-case.tint-late,#attendanceSheet .att-card.special-case.tint-absent{background-color:rgba(255,248,225,.9);border:2px solid var(--special-case-border,#ffd54f)}
+  #attendanceSheet .att-card.tint-late{background:rgba(160,109,0,.10);border-color:rgba(160,109,0,.25)}
+  #attendanceSheet .att-card.tint-absent{background:rgba(180,35,24,.10);border-color:rgba(180,35,24,.25)}
+  #attendanceSheet .att-name{font-weight:900;color:var(--text);line-height:1.4;word-break:break-word;display:flex;align-items:center;justify-content:space-between;gap:10px}
+  #attendanceSheet .att-student-info{display:flex;align-items:center;gap:8px;flex:1}
+  #attendanceSheet .att-number-badge{background:var(--primary-extra-light,#eef5fb);color:var(--primary);font-size:.8rem;font-weight:700;padding:2px 8px;border-radius:10px;border:1px solid rgba(3,60,84,.15);flex-shrink:0}
+  #attendanceSheet .att-lesson-dots{display:flex;justify-content:flex-end;gap:6px;flex-wrap:wrap;margin-top:-4px;margin-bottom:2px}
+  #attendanceSheet .att-lesson-dot{width:22px;height:22px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:900;border:1px solid transparent;line-height:1}
+  #attendanceSheet .att-lesson-dot.present{background:var(--greenBg,rgba(26,127,55,.08));color:var(--green,#1a7f37);border-color:rgba(26,127,55,.25)}
+  #attendanceSheet .att-lesson-dot.late{background:var(--yellowBg,rgba(160,109,0,.10));color:var(--yellow,#a06d00);border-color:rgba(160,109,0,.25)}
+  #attendanceSheet .att-lesson-dot.absent{background:var(--redBg,rgba(180,35,24,.10));color:var(--red,#b42318);border-color:rgba(180,35,24,.25)}
+  #attendanceSheet .special-case-icon{width:18px;height:18px;margin-inline-start:8px;flex-shrink:0}
+  #attendanceSheet .att-hero{border:2px dashed rgba(3,60,84,.2);background:var(--blueGlass,rgba(3,60,84,.08));border-radius:20px;padding:24px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+  #attendanceSheet .att-class{margin:0;font-size:clamp(1.3rem,4vw,1.8rem);color:var(--primary);font-weight:900}
+  #attendanceSheet .att-row{display:flex;gap:12px;flex-wrap:wrap}
+  #attendanceSheet .seg{display:flex;align-items:center;border:1px solid var(--border);border-radius:14px;overflow:hidden;background:#fff;box-shadow:var(--shadow-1)}
+  #attendanceSheet .seg button{flex:1 1 0;min-height:48px;padding:12px 10px;background:transparent;border:0;cursor:pointer;font-weight:900;font-size:1rem;font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;transition:var(--transition)}
+  #attendanceSheet .seg .sep{width:1px;height:32px;background:var(--border)}
+  #attendanceSheet .seg .present{color:var(--green,#1a7f37)}
+  #attendanceSheet .seg .late{color:var(--yellow,#a06d00)}
+  #attendanceSheet .seg .absent{color:var(--red,#b42318)}
+  #attendanceSheet .seg button.active.present{background:var(--greenBg,rgba(26,127,55,.08))}
+  #attendanceSheet .seg button.active.late{background:var(--yellowBg,rgba(160,109,0,.10))}
+  #attendanceSheet .seg button.active.absent{background:var(--redBg,rgba(180,35,24,.10))}
+  #attendanceSheet .seg button:disabled{opacity:.5;cursor:not-allowed;box-shadow:none;transform:none}
+  #attendanceSheet .stats{padding:20px;border:1px solid var(--border);border-radius:16px;background:#fff;box-shadow:var(--shadow-1);display:flex;flex-direction:column;gap:16px}
+  #attendanceSheet .chips{display:flex;gap:10px;flex-wrap:wrap}
+  #attendanceSheet .pill{background:var(--chip,#eef5fb);color:var(--text);border:1px solid var(--border);padding:8px 14px;border-radius:999px;font-size:.92rem;font-weight:800;display:inline-flex;align-items:center;gap:6px}
+  #attendanceSheet .pill.g{color:var(--green,#1a7f37);border-color:var(--greenBg,rgba(26,127,55,.08));background:var(--greenBg,rgba(26,127,55,.08))}
+  #attendanceSheet .pill.y{color:var(--yellow,#a06d00);border-color:var(--yellowBg,rgba(160,109,0,.10));background:var(--yellowBg,rgba(160,109,0,.10))}
+  #attendanceSheet .pill.r{color:var(--red,#b42318);border-color:var(--redBg,rgba(180,35,24,.10));background:var(--redBg,rgba(180,35,24,.10))}
+  #attendanceSheet .submit-row{display:flex;justify-content:flex-start}
+  #attendanceSheet .btn.submit{min-height:60px;padding-inline:26px;border-radius:16px;box-shadow:0 16px 40px rgba(3,60,84,.32);background:linear-gradient(145deg,var(--primary-light),var(--primary));color:#fff;border:none}
+  #attendanceSheet .btn.submit:hover{transform:translateY(-2px)}
+  #attendanceSheet .btn.submit:disabled{opacity:.5;cursor:not-allowed;box-shadow:none;transform:none}
+  #attendanceSheet .lesson-controls{width:100%;display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+  #attendanceSheet .lesson-controls .select-wrap{flex:1 1 320px}
+  #attendanceSheet .mini-ghost{min-height:52px;padding:12px 16px;border-radius:16px;font-weight:900;border:1px solid rgba(3,60,84,.2);background:#fff;color:var(--primary);cursor:pointer;box-shadow:var(--shadow-1);transition:var(--transition);display:inline-flex;align-items:center;gap:10px}
+  #attendanceSheet .mini-ghost:hover{transform:translateY(-2px);box-shadow:0 18px 40px rgba(3,60,84,.16);border-color:rgba(3,60,84,.35)}
+  #attendanceSheet .mini-ghost:disabled{opacity:.6;cursor:not-allowed;transform:none;box-shadow:none}
+  #attendanceSheet .select-wrap{position:relative;max-width:380px;width:100%}
+  #attendanceSheet .select{appearance:none;-webkit-appearance:none;-moz-appearance:none;width:100%;min-height:52px;padding:12px 16px;padding-inline-end:44px;border-radius:16px;font-weight:800;font-size:1rem;cursor:pointer;border:1px solid rgba(3,60,84,.15);background:linear-gradient(145deg,var(--primary),var(--primary-light));color:#fff;box-shadow:0 14px 32px rgba(3,60,84,.25);transition:var(--transition);font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif}
+  #attendanceSheet .select:hover{transform:translateY(-2px);box-shadow:0 18px 40px rgba(3,60,84,.32)}
+  #attendanceSheet .select:focus{outline:none;box-shadow:0 0 0 3px rgba(3,60,84,.18), 0 18px 40px rgba(3,60,84,.32)}
+  #attendanceSheet .select-wrap::after{content:"";position:absolute;top:50%;transform:translateY(-50%);inset-inline-start:14px;width:22px;height:22px;pointer-events:none;opacity:.95;background:url('data:image/svg+xml;utf8,<svg fill="%23ffffff" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>') no-repeat center / 20px 20px;filter:drop-shadow(0 1px 0 rgba(0,0,0,.15))}
+  #attendanceSheet .hint{font-weight:800;color:var(--muted)}
+  #attConfirmModal .filter-buttons{display:flex;gap:10px;margin-bottom:16px;justify-content:center}
+  #attConfirmModal .filter-btn{flex:1;min-height:50px;border-radius:12px;font-weight:800;border:2px solid var(--border);background:#fff;color:var(--primary);cursor:pointer;transition:var(--transition)}
+  #attConfirmModal .filter-btn.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+  #attConfirmModal .names-list{border:1px dashed var(--border);border-radius:14px;background:#fafcff;padding:12px;max-height:320px;overflow:auto}
+  #attConfirmModal .names-list ul{margin:0;padding-inline-start:18px}
+  #attConfirmModal .names-list li{margin:6px 0;font-weight:800}
+  /* Module-owned blocked modal (red X animation) */
+  #attBlockedModal.modal.blocked-modal .overlay{background:rgba(15,23,42,.45);backdrop-filter:blur(6px)}
+  #attBlockedModal .blocked-card{position:relative;z-index:1;width:min(360px,92vw);background:linear-gradient(180deg,#ffffff 0%,#fff7f7 100%);border:1px solid rgba(185,28,28,.20);border-radius:18px;box-shadow:0 24px 60px rgba(185,28,28,.24);padding:18px;display:grid;justify-items:center;gap:12px;text-align:center}
+  #attBlockedModal .blocked-close{position:absolute;top:8px;left:8px;width:32px;height:32px;border-radius:999px;border:1px solid rgba(185,28,28,.18);background:#fff;color:#7f1d1d;font-weight:900;cursor:pointer}
+  #attBlockedModal .blocked-icon{width:96px;height:96px;display:grid;place-items:center}
+  #attBlockedModal .blocked-icon svg{width:96px;height:96px;overflow:visible}
+  #attBlockedModal .blocked-icon circle{fill:none;stroke:#dc2626;stroke-width:6;stroke-dasharray:220;stroke-dashoffset:220;animation:attBlockedRingDraw 1.2s ease-in-out infinite}
+  #attBlockedModal .blocked-icon path{fill:none;stroke:#dc2626;stroke-width:7;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:56;stroke-dashoffset:56;animation:attBlockedXDraw 1.2s ease-in-out infinite}
+  #attBlockedModal .blocked-title{margin:0;color:#991b1b;font-weight:900;font-size:1.06rem}
+  #attBlockedModal .blocked-msg{margin:0;color:#7f1d1d;font-weight:800;font-size:.95rem;line-height:1.7}
+  #attBlockedModal .blocked-actions{width:100%;display:flex;justify-content:center}
+  #attBlockedModal .blocked-actions .btn{max-width:180px;min-height:52px}
+  #attBlockedModal.open .blocked-card{animation:attBlockedCardIn .2s ease}
+  /* Module-owned toast */
+  #attToast{position:fixed;inset-inline:0;bottom:20px;display:flex;justify-content:center;pointer-events:none;z-index:1300}
+  #attToast .inner{pointer-events:auto;background:#fff;border:1px solid var(--border);border-radius:16px;box-shadow:0 20px 50px rgba(3,60,84,.25);padding:14px 18px;min-width:min(520px,92vw);display:flex;flex-direction:column;gap:6px}
+  #attToast .title{font-weight:900;color:var(--green,#1a7f37)}
+  #attToast .sub{color:var(--text);font-weight:800}
+  #attToast .close{align-self:flex-end;margin-top:4px;background:#fff;border:1px solid var(--border);border-radius:12px;padding:6px 10px;cursor:pointer;color:var(--primary);font-weight:800}
+  #attToast.hidden{display:none}
+  @keyframes attBlockedCardIn{from{transform:translateY(8px) scale(.98);opacity:.7}to{transform:translateY(0) scale(1);opacity:1}}
+  @keyframes attBlockedRingDraw{0%{stroke-dashoffset:220;opacity:.5}30%{stroke-dashoffset:0;opacity:1}70%{stroke-dashoffset:0;opacity:1}100%{stroke-dashoffset:220;opacity:.5}}
+  @keyframes attBlockedXDraw{0%{stroke-dashoffset:56;opacity:0}25%{stroke-dashoffset:56;opacity:0}45%{stroke-dashoffset:0;opacity:1}70%{stroke-dashoffset:0;opacity:1}100%{stroke-dashoffset:56;opacity:0}}
+  @media(max-width:640px){
+    #attendanceSheet .att-hero{padding:18px;gap:12px}
+    #attendanceSheet .att-row{width:100%}
+    #attendanceSheet .lesson-controls{gap:10px}
+    #attendanceSheet .mini-ghost{flex:1 1 auto;justify-content:center}
+  }
+`;
+
+const SHEET_HTML = `
+  <section id="attendanceSheet" class="sheet" aria-hidden="true">
+    <div class="sheet-header">
+      <button id="attCloseBtn" class="back-btn" type="button" aria-label="رجوع">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        رجوع
+      </button>
+      <h3 class="sheet-title">تسجيل الغياب</h3>
+    </div>
+    <div class="sheet-body">
+      <div class="att-hero">
+        <h2 id="attendanceClassName" class="att-class">—</h2>
+        <div class="att-row" style="width:100%">
+          <div class="lesson-controls">
+            <div class="select-wrap">
+              <select id="attLessonSelect" class="select" aria-label="اختر الحصة"></select>
+            </div>
+            <button id="attAutoLessonBtn" class="mini-ghost" type="button" title="إعادة الاختيار تلقائيًا">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v7h-7"/></svg>
+              اختيار تلقائي
+            </button>
+            <div id="attLessonHint" class="hint"></div>
+          </div>
+        </div>
+      </div>
+      <div id="attendanceList" class="att-list"></div>
+      <div class="stats">
+        <div class="chips">
+          <span id="attCountPresent" class="pill g">حضور: 0</span>
+          <span id="attCountLate" class="pill y">تأخير: 0</span>
+          <details id="attAbsentDetails">
+            <summary class="pill r" id="attCountAbsent">غياب: 0</summary>
+            <div id="attAbsentNames" class="lead" style="margin-top:8px"></div>
+          </details>
+        </div>
+        <div class="submit-row">
+          <button id="attSubmitBtn" class="btn submit" type="button">حفظ التقرير</button>
+        </div>
+      </div>
+    </div>
+  </section>
+  <div id="attConfirmModal" class="modal" aria-hidden="true">
+    <div class="overlay"></div>
+    <div class="card" role="dialog" aria-modal="true" aria-labelledby="attConfirmTitle">
+      <h3 id="attConfirmTitle">تأكيد حفظ التقرير | الحصة</h3>
+      <p>سيتم حفظ الغياب للحصّة المحددة.</p>
+      <div class="filter-buttons">
+        <button id="attFilterAbsent" class="filter-btn active" type="button">الغياب</button>
+        <button id="attFilterLate" class="filter-btn" type="button">التاخير</button>
+      </div>
+      <div class="names-list">
+        <ul id="attConfirmAbsentList"></ul>
+        <ul id="attConfirmLateList" style="display:none;"></ul>
+      </div>
+      <div class="row">
+        <button id="attConfirmCancel" class="btn cancel" type="button">رجوع</button>
+        <button id="attConfirmSave" class="btn primary" type="button">حفظ</button>
+      </div>
+    </div>
+  </div>
+  <div id="attErrorModal" class="modal" aria-hidden="true">
+    <div class="overlay"></div>
+    <div class="card error" role="alertdialog" aria-modal="true" aria-labelledby="attErrorTitle">
+      <h3 id="attErrorTitle">تعذّر الحفظ</h3>
+      <p id="attErrorBody">حدث خطأ غير متوقع.</p>
+      <div class="row">
+        <button id="attErrorOk" class="btn primary" type="button">حسناً</button>
+      </div>
+    </div>
+  </div>
+  <div id="attBlockedModal" class="modal blocked-modal" aria-hidden="true">
+    <div class="overlay"></div>
+    <div class="blocked-card" role="alertdialog" aria-modal="true" aria-labelledby="attBlockedTitle">
+      <button id="attBlockedClose" type="button" class="blocked-close" aria-label="إغلاق">&times;</button>
+      <div class="blocked-icon" aria-hidden="true">
+        <svg viewBox="0 0 100 100">
+          <circle cx="50" cy="50" r="35"></circle>
+          <path d="M35 35 L65 65"></path>
+          <path d="M65 35 L35 65"></path>
+        </svg>
+      </div>
+      <h3 id="attBlockedTitle" class="blocked-title">غير مسموح</h3>
+      <p id="attBlockedBody" class="blocked-msg">ليس وقت الحصص الآن.</p>
+      <div class="blocked-actions">
+        <button id="attBlockedOk" class="btn primary" type="button">إغلاق</button>
+      </div>
+    </div>
+  </div>
+  <div id="attToast" class="hidden" aria-live="polite">
+    <div class="inner">
+      <div class="title" id="attToastTitle">تم تسجيل الغياب بنجاح</div>
+      <div class="sub" id="attToastSub">للحصة: —</div>
+      <button id="attToastClose" class="close" type="button">إغلاق</button>
+    </div>
+  </div>
+`;
+
+const DEFAULT_LESSON_TIMES = [
+  { index: 1, label: "الحصة الأولى", start: "07:55", end: "08:40" },
+  { index: 2, label: "الحصة الثانية", start: "08:45", end: "09:30" },
+  { index: 3, label: "الحصة الثالثة", start: "09:35", end: "10:20" },
+  { index: 4, label: "الحصة الرابعة", start: "10:35", end: "11:20" },
+  { index: 5, label: "الحصة الخامسة", start: "11:25", end: "12:10" },
+  { index: 6, label: "الحصة السادسة", start: "12:25", end: "13:10" },
+  { index: 7, label: "الحصة السابعة", start: "13:15", end: "13:55" },
+];
+
+const DAY_AR_BY_INDEX = ["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس"];
+const CUSTOM_SCHEDULE_CACHE_MS = 30000;
+
+function parseTimeToMinutes(t) {
+  if (!t) return 0;
+  const [h, m] = t.split(":").map(Number);
+  return h * 60 + m;
+}
+
+function kuwaitTodayISO() {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kuwait", year: "numeric", month: "2-digit", day: "2-digit",
+  }).formatToParts(new Date());
+  const y = parts.find(p => p.type === "year").value;
+  const mo = parts.find(p => p.type === "month").value;
+  const d = parts.find(p => p.type === "day").value;
+  return `${y}-${mo}-${d}`;
+}
+
+function getCurrentKuwaitMinutes() {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Kuwait", hour: "2-digit", minute: "2-digit", hour12: false,
+  }).formatToParts(new Date());
+  const h = parseInt(parts.find(p => p.type === "hour").value, 10) || 0;
+  const m = parseInt(parts.find(p => p.type === "minute").value, 10) || 0;
+  return h * 60 + m;
+}
+
+function kuwaitDateTimeToDate(dateISO, hhmm) {
+  return new Date(`${dateISO}T${hhmm}:00+03:00`);
+}
+
+function addMinutesToDate(d, minutes) {
+  const x = new Date(d.getTime());
+  x.setMinutes(x.getMinutes() + minutes);
+  return x;
+}
+
+function getKuwaitWeekday() {
+  return new Intl.DateTimeFormat("en-US", { weekday: "long", timeZone: "Asia/Kuwait" }).format(new Date());
+}
+
+function getKuwaitDayIndexSunThu() {
+  const wd = getKuwaitWeekday();
+  if (wd === "Sunday") return 0;
+  if (wd === "Monday") return 1;
+  if (wd === "Tuesday") return 2;
+  if (wd === "Wednesday") return 3;
+  if (wd === "Thursday") return 4;
+  return -1;
+}
+
+function toArabicDigits(num) {
+  const ar = ["٠","١","٢","٣","٤","٥","٦","٧","٨","٩"];
+  return String(num).replace(/\d/g, d => ar[parseInt(d)]);
+}
+
+function formatClassLabel(label) {
+  return toArabicDigits(label || "");
+}
+
+function getStudentNumber(student) {
+  const fields = ["studentNumber","number","no","roll","idNumber","studentNo"];
+  for (const f of fields) {
+    if (student[f] != null) {
+      const n = parseInt(student[f]);
+      if (!isNaN(n) && Number.isFinite(n)) return n;
+    }
+  }
+  return Infinity;
+}
+
+function sortStudentsByStudentNumberOnly(students) {
+  return [...students].sort((a, b) => {
+    const A = getStudentNumber(a), B = getStudentNumber(b);
+    if (A !== Infinity && B !== Infinity) return A - B;
+    if (A !== Infinity) return -1;
+    if (B !== Infinity) return 1;
+    return 0;
+  });
+}
+
+function createAttendanceSessionId(dateISO, lesson, classKey) {
+  const k = classKey.replace(/\s+/g, "_").replace(/\//g, "-").replace(/[^\w\-]/g, "");
+  return `${dateISO}_${lesson}_${k}`;
+}
+
+function ensureStyles() {
+  if (document.getElementById(STYLE_ID)) return;
+  const el = document.createElement("style");
+  el.id = STYLE_ID;
+  el.textContent = STYLES;
+  document.head.appendChild(el);
+}
+
+function injectMarkup() {
+  if (document.getElementById("attendanceSheet")) return;
+  const wrap = document.createElement("div");
+  wrap.innerHTML = SHEET_HTML.trim();
+  while (wrap.firstChild) document.body.appendChild(wrap.firstChild);
+}
+
+function lockBodyScroll(state) {
+  if (state.locked) return;
+  state.scrollY = window.scrollY || document.documentElement.scrollTop || 0;
+  document.documentElement.classList.add("no-scroll");
+  document.body.classList.add("no-scroll");
+  document.body.style.top = `-${state.scrollY}px`;
+  state.locked = true;
+}
+
+function unlockBodyScroll(state) {
+  if (!state.locked) return;
+  document.documentElement.classList.remove("no-scroll");
+  document.body.classList.remove("no-scroll");
+  document.body.style.top = "";
+  window.scrollTo(0, state.scrollY || 0);
+  state.locked = false;
+}
+
+export function mountAttendanceSheet({ db, auth, onSaved } = {}) {
+  if (!db || !auth) {
+    throw new Error("mountAttendanceSheet requires { db, auth }");
+  }
+
+  ensureStyles();
+  injectMarkup();
+
+  const els = {
+    sheet: document.getElementById("attendanceSheet"),
+    closeBtn: document.getElementById("attCloseBtn"),
+    className: document.getElementById("attendanceClassName"),
+    lessonSelect: document.getElementById("attLessonSelect"),
+    autoLessonBtn: document.getElementById("attAutoLessonBtn"),
+    lessonHint: document.getElementById("attLessonHint"),
+    attList: document.getElementById("attendanceList"),
+    countPresent: document.getElementById("attCountPresent"),
+    countLate: document.getElementById("attCountLate"),
+    countAbsent: document.getElementById("attCountAbsent"),
+    absentDetails: document.getElementById("attAbsentDetails"),
+    absentNames: document.getElementById("attAbsentNames"),
+    submitBtn: document.getElementById("attSubmitBtn"),
+    confirmModal: document.getElementById("attConfirmModal"),
+    confirmTitle: document.getElementById("attConfirmTitle"),
+    confirmAbsentList: document.getElementById("attConfirmAbsentList"),
+    confirmLateList: document.getElementById("attConfirmLateList"),
+    filterAbsent: document.getElementById("attFilterAbsent"),
+    filterLate: document.getElementById("attFilterLate"),
+    confirmCancel: document.getElementById("attConfirmCancel"),
+    confirmSave: document.getElementById("attConfirmSave"),
+    errorModal: document.getElementById("attErrorModal"),
+    errorTitle: document.getElementById("attErrorTitle"),
+    errorBody: document.getElementById("attErrorBody"),
+    errorOk: document.getElementById("attErrorOk"),
+    blockedModal: document.getElementById("attBlockedModal"),
+    blockedTitle: document.getElementById("attBlockedTitle"),
+    blockedBody: document.getElementById("attBlockedBody"),
+    blockedClose: document.getElementById("attBlockedClose"),
+    blockedOk: document.getElementById("attBlockedOk"),
+    toast: document.getElementById("attToast"),
+    toastTitle: document.getElementById("attToastTitle"),
+    toastSub: document.getElementById("attToastSub"),
+    toastClose: document.getElementById("attToastClose"),
+  };
+
+  let LESSON_TIMES = DEFAULT_LESSON_TIMES.map(t => ({ ...t }));
+  let customScheduleCache = { key: "", at: 0, rows: [] };
+  const scrollState = { locked: false, scrollY: 0 };
+
+  let attStatuses = {};
+  let attStudentList = [];
+  let takenLessonsByStudent = new Map();
+  let pendingSave = null;
+  let currentMeta = null;
+  let toastTimer = null;
+
+  // Sheet/modal helpers (operate on this module's elements only)
+  function openSheet(el) {
+    el.classList.add("open");
+    el.setAttribute("aria-hidden", "false");
+    lockBodyScroll(scrollState);
+    document.querySelector("main")?.setAttribute("inert", "");
+    document.querySelector(".site-header")?.setAttribute("inert", "");
+  }
+  function closeSheet(el) {
+    el.classList.remove("open");
+    el.setAttribute("aria-hidden", "true");
+    if (!document.querySelector(".sheet.open, .modal.open")) {
+      unlockBodyScroll(scrollState);
+      document.querySelector("main")?.removeAttribute("inert");
+      document.querySelector(".site-header")?.removeAttribute("inert");
+    }
+  }
+  function openModal(el) {
+    el.classList.add("open");
+    el.setAttribute("aria-hidden", "false");
+    lockBodyScroll(scrollState);
+    document.querySelector("main")?.setAttribute("inert", "");
+    document.querySelector(".site-header")?.setAttribute("inert", "");
+  }
+  function closeModal(el) {
+    const a = document.activeElement;
+    if (a && el.contains(a) && a instanceof HTMLElement) a.blur();
+    el.classList.remove("open");
+    el.setAttribute("aria-hidden", "true");
+    if (!document.querySelector(".sheet.open, .modal.open")) {
+      unlockBodyScroll(scrollState);
+      document.querySelector("main")?.removeAttribute("inert");
+      document.querySelector(".site-header")?.removeAttribute("inert");
+    }
+  }
+
+  function showError(title, body) {
+    els.errorTitle.textContent = title || "خطأ";
+    els.errorBody.textContent = body || "حدث خطأ غير متوقع.";
+    openModal(els.errorModal);
+  }
+
+  function showBlocked(reason) {
+    let m;
+    switch (reason) {
+      case "outside_lessons":
+      case "not_my_lesson":
+        m = "يمكنك تسجيل الغياب فقط أثناء حصتك الحالية."; break;
+      case "time_locked":
+        m = "انتهى وقت تسجيل الغياب لهذه الحصة."; break;
+      case "not_logged_in":
+        m = "يرجى تسجيل الدخول أولاً."; break;
+      default:
+        m = "يمكنك تسجيل الغياب فقط أثناء حصتك الحالية.";
+    }
+    els.blockedBody.textContent = m;
+    openModal(els.blockedModal);
+  }
+
+  function showToast(title, sub) {
+    els.toastTitle.textContent = title || "تم";
+    els.toastSub.textContent = sub || "";
+    els.toast.classList.remove("hidden");
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => els.toast.classList.add("hidden"), 5000);
+  }
+
+  // Lesson time loading
+  async function fetchLessonTimes() {
+    try {
+      const snap = await getDoc(doc(db, "settings", "lessonTimes"));
+      if (snap.exists()) {
+        const data = snap.data() || {};
+        if (Array.isArray(data.times) && data.times.length === 7) {
+          LESSON_TIMES = data.times.map((t, i) => ({
+            index: i + 1,
+            label: DEFAULT_LESSON_TIMES[i]?.label || `الحصة ${i + 1}`,
+            start: (t?.start || DEFAULT_LESSON_TIMES[i]?.start || "00:00").toString(),
+            end: (t?.end || DEFAULT_LESSON_TIMES[i]?.end || "00:00").toString(),
+          }));
+        }
+      }
+    } catch (e) {
+      console.error("[attendance] fetchLessonTimes:", e);
+    }
+  }
+
+  function getActiveLessonIndex() {
+    const now = getCurrentKuwaitMinutes();
+    for (const l of LESSON_TIMES) {
+      const s = parseTimeToMinutes(l.start);
+      const e = parseTimeToMinutes(l.end);
+      if (now >= s && now <= e) return l.index;
+    }
+    return null;
+  }
+
+  function getLessonWindowStatus(lessonIndex) {
+    const l = LESSON_TIMES.find(x => x.index === lessonIndex);
+    if (!l) return { ok: false, reason: "invalid_lesson" };
+    const now = getCurrentKuwaitMinutes();
+    const s = parseTimeToMinutes(l.start);
+    const e = parseTimeToMinutes(l.end);
+    const cutoff = e + 5;
+    return { ok: now >= s && now <= cutoff, reason: now >= s && now <= cutoff ? "within_window" : "outside_window" };
+  }
+
+  async function buildTodayMapWithOverrides(teacherUid, dateISO) {
+    const map = new Map();
+    try {
+      const todayWeekday = getKuwaitWeekday();
+      const schedSnap = await getDocs(query(collection(db, "schedules"), where("teacherUid", "==", teacherUid)));
+      schedSnap.forEach(d => {
+        const data = d.data();
+        if (!data.lesson) return;
+        const key = String(data.lesson);
+        let applies = data.date === dateISO || data.weekday === todayWeekday || data.day === todayWeekday || data.dow === todayWeekday;
+        if (applies && !map.has(key)) {
+          map.set(key, { ...data, _source: "normal", _coveredAway: false });
+        }
+      });
+      const ovSnap = await getDocs(query(collection(db, "scheduleOverrides"), where("date", "==", dateISO)));
+      ovSnap.forEach(d => {
+        const ov = d.data();
+        const key = String(ov.lesson);
+        if (ov.kind === "new" && ov.newTeacherUid === teacherUid) {
+          map.set(key, { ...ov, _source: "override_new", _coveredAway: false });
+        } else if (ov.kind === "original" && ov.originalTeacherUid === teacherUid) {
+          if (map.has(key)) map.set(key, { ...map.get(key), _coveredAway: true });
+        }
+      });
+    } catch (e) {
+      console.error("[attendance] buildTodayMap:", e);
+    }
+    return map;
+  }
+
+  async function getCustomSchedulesForToday(dayIndex) {
+    const key = `day:${dayIndex}`;
+    const now = Date.now();
+    if (customScheduleCache.key === key && now - customScheduleCache.at < CUSTOM_SCHEDULE_CACHE_MS) {
+      return customScheduleCache.rows;
+    }
+    const rowsById = new Map();
+    try {
+      const s1 = await getDocs(query(collection(db, "customDaySchedules"), where("dayIndex", "==", dayIndex)));
+      s1.forEach(ds => {
+        const x = ds.data() || {};
+        if (x.deletedAt || x.enabled !== true) return;
+        rowsById.set(ds.id, x);
+      });
+      const dayAr = DAY_AR_BY_INDEX[dayIndex];
+      if (dayAr) {
+        const s2 = await getDocs(query(collection(db, "customDaySchedules"), where("day", "==", dayAr)));
+        s2.forEach(ds => {
+          const x = ds.data() || {};
+          if (x.deletedAt || x.enabled !== true) return;
+          rowsById.set(ds.id, x);
+        });
+      }
+    } catch (e) {
+      console.error("[attendance] getCustomSchedules:", e);
+    }
+    const rows = Array.from(rowsById.values());
+    customScheduleCache = { key, at: now, rows };
+    return rows;
+  }
+
+  async function getMyActiveCustomLessonMetaForNow(teacherUid, dateISO) {
+    const dayIndex = getKuwaitDayIndexSunThu();
+    if (dayIndex < 0) return null;
+    const nowMin = getCurrentKuwaitMinutes();
+    const rows = await getCustomSchedulesForToday(dayIndex);
+    for (const row of rows) {
+      const lessons = Array.isArray(row.lessons) ? row.lessons : [];
+      const times = Array.isArray(row.times) ? row.times : [];
+      const max = Math.min(7, Number(row.lessonCount) || lessons.length || times.length || 7);
+      for (let i = 0; i < max; i++) {
+        const lesson = lessons[i] || {};
+        if ((lesson.teacherUid || "").toString() !== teacherUid) continue;
+        const fb = LESSON_TIMES[i] || { start: "00:00", end: "00:00" };
+        const slot = times[i] || {};
+        const sMin = parseTimeToMinutes((slot.start || fb.start || "00:00").toString());
+        const eMin = parseTimeToMinutes((slot.end || fb.end || "00:00").toString());
+        if (nowMin < sMin || nowMin > eMin + 5) continue;
+        let classKey = (row.classKey || "").toString().trim() || (lesson.classKey || "").toString().trim();
+        if (!classKey && row.grade && row.section) {
+          classKey = `${row.grade} / ${row.section}${row.track ? ` ${row.track}` : ""}`;
+        }
+        return {
+          ok: true,
+          lesson: i + 1,
+          date: dateISO,
+          classKey,
+          subject: (lesson.subject || "").toString(),
+          activeStart: (slot.start || fb.start || "00:00").toString(),
+          activeEnd: (slot.end || fb.end || "00:00").toString(),
+          teacherUid,
+          scheduleData: { ...lesson, ...row, _source: "custom_weekly", _coveredAway: false },
+        };
+      }
+    }
+    return null;
+  }
+
+  async function getMyActiveLessonMetaForNow() {
+    const user = auth.currentUser;
+    if (!user) return { ok: false, reason: "not_logged_in" };
+    const todayISO = kuwaitTodayISO();
+    const customHit = await getMyActiveCustomLessonMetaForNow(user.uid, todayISO);
+    if (customHit?.ok) return customHit;
+    const L = getActiveLessonIndex();
+    if (L === null) return { ok: false, reason: "outside_lessons" };
+    const map = await buildTodayMapWithOverrides(user.uid, todayISO);
+    const hit = map.get(String(L));
+    if (!hit || hit._coveredAway === true) return { ok: false, reason: "not_my_lesson" };
+    const w = getLessonWindowStatus(L);
+    if (!w.ok) return { ok: false, reason: "time_locked" };
+    const lesson = LESSON_TIMES.find(l => l.index === L);
+    let classKey = "";
+    if (hit.classKey) classKey = hit.classKey;
+    else if (hit.grade && hit.section) classKey = `${hit.grade} / ${hit.section}${hit.track ? ` ${hit.track}` : ""}`;
+    else classKey = hit.class || "";
+    return {
+      ok: true, lesson: L, date: todayISO, classKey,
+      subject: hit.subject || "", activeStart: lesson?.start || "00:00",
+      activeEnd: lesson?.end || "00:00", teacherUid: user.uid, scheduleData: hit,
+    };
+  }
+
+  async function checkAllowed(showFeedback = true) {
+    const meta = await getMyActiveLessonMetaForNow();
+    if (!meta.ok) {
+      if (showFeedback) showBlocked(meta.reason);
+      return { allowed: false, meta };
+    }
+    return { allowed: true, meta };
+  }
+
+  async function tryQueryStudents(path, cls) {
+    try {
+      const parts = path.split("/");
+      if (parts.length === 1) {
+        const snap = await getDocs(query(collection(db, parts[0]), where("class", "==", cls)));
+        if (snap.empty) return [];
+        const out = [];
+        snap.forEach(d => {
+          const s = d.data() || {};
+          out.push({
+            name: s.name || s.fullName || d.id,
+            uid: d.id,
+            class: s.class || s.className || "",
+            specialCase: s.specialCase || false,
+            studentNumber: s.studentNumber || s.number || s.no || s.roll || s.idNumber || s.studentNo,
+            orderIndex: s.orderIndex,
+          });
+        });
+        return out;
+      } else if (parts.length === 2) {
+        const ms = await getDoc(doc(db, parts[0], parts[1]));
+        if (ms.exists() && ms.data()) {
+          const arr = Object.values(ms.data() || {}).filter(Boolean);
+          return arr
+            .filter(s => (s.class || s.className) === cls)
+            .map(s => ({
+              name: s.name || s.fullName || "",
+              uid: s.uid || "",
+              class: s.class || s.className || "",
+              specialCase: s.specialCase || false,
+              studentNumber: s.studentNumber || s.number || s.no || s.roll || s.idNumber || s.studentNo,
+              orderIndex: s.orderIndex,
+            }));
+        }
+        return [];
+      }
+      return [];
+    } catch (e) {
+      console.warn("[attendance] tryQueryStudents", path, e?.message);
+      return [];
+    }
+  }
+
+  function setControlsEnabled(enabled) {
+    els.sheet.querySelectorAll(".seg button").forEach(b => (b.disabled = !enabled));
+    if (els.submitBtn) els.submitBtn.disabled = !enabled;
+  }
+
+  function buildLessonOption(currentLessonIndex) {
+    els.lessonSelect.innerHTML = "";
+    const l = LESSON_TIMES.find(x => x.index === currentLessonIndex);
+    if (!l) {
+      els.lessonHint.textContent = "الحصة غير متاحة";
+      setControlsEnabled(false);
+      return;
+    }
+    const opt = document.createElement("option");
+    opt.value = String(currentLessonIndex);
+    opt.textContent = `${l.label} — ${l.start} – ${l.end}`;
+    opt.selected = true;
+    opt.disabled = true;
+    els.lessonSelect.appendChild(opt);
+    els.lessonSelect.disabled = true;
+    if (els.autoLessonBtn) els.autoLessonBtn.style.display = "none";
+    els.lessonHint.textContent = `${l.label} (الحصة الحالية)`;
+    setControlsEnabled(true);
+  }
+
+  async function loadTakenLessonsForClass(dateISO, classKey) {
+    const out = new Map();
+    if (!dateISO || !classKey) return out;
+    try {
+      const sessSnap = await getDocs(query(
+        collection(db, ATTENDANCE_SESSIONS_COLLECTION),
+        where("date", "==", dateISO),
+        where("classKey", "==", classKey),
+      ));
+      const sessions = [];
+      sessSnap.forEach(ds => {
+        const x = ds.data() || {};
+        const lesson = Number(x.lesson);
+        if (!Number.isFinite(lesson) || lesson < 1 || lesson > 7) return;
+        sessions.push({ id: ds.id, lesson });
+      });
+      sessions.sort((a, b) => a.lesson - b.lesson);
+      await Promise.all(sessions.map(async s => {
+        const recs = await getDocs(collection(db, ATTENDANCE_SESSIONS_COLLECTION, s.id, ATTENDANCE_RECORDS_SUBCOLLECTION));
+        recs.forEach(rd => {
+          const uid = (rd.id || "").toString();
+          if (!uid) return;
+          const raw = (rd.data()?.status || "present").toString();
+          const status = raw === "late" || raw === "absent" ? raw : "present";
+          if (!out.has(uid)) out.set(uid, []);
+          out.get(uid).push({ lesson: s.lesson, status });
+        });
+      }));
+      out.forEach(items => items.sort((a, b) => a.lesson - b.lesson));
+    } catch (e) {
+      console.error("[attendance] loadTakenLessons:", e);
+    }
+    return out;
+  }
+
+  function recalcStats() {
+    const vals = Object.values(attStatuses);
+    const present = vals.filter(v => v === "present").length;
+    const late = vals.filter(v => v === "late").length;
+    const absent = vals.filter(v => v === "absent").length;
+    els.countPresent.textContent = `حضور: ${present}`;
+    els.countLate.textContent = `تأخير: ${late}`;
+    els.countAbsent.textContent = `غياب: ${absent}`;
+    const names = attStudentList
+      .filter(s => attStatuses[s.uid || s.name] === "absent")
+      .map(s => s.name)
+      .join("، ");
+    els.absentNames.textContent = names || "—";
+    if (!names) els.absentDetails.open = false;
+  }
+
+  function setStatus(student, status, btnP, btnL, btnA, card) {
+    const k = student.uid || student.name;
+    attStatuses[k] = status;
+    btnP.classList.toggle("active", status === "present");
+    btnL.classList.toggle("active", status === "late");
+    btnA.classList.toggle("active", status === "absent");
+    if (card) {
+      card.classList.remove("tint-late", "tint-absent");
+      if (status === "late") card.classList.add("tint-late");
+      if (status === "absent") card.classList.add("tint-absent");
+    }
+    recalcStats();
+  }
+
+  function renderList(list) {
+    els.attList.innerHTML = "";
+    if (list.length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "error";
+      empty.textContent = "لا يوجد طلاب.";
+      els.attList.appendChild(empty);
+      return;
+    }
+    list.forEach(s => {
+      const card = document.createElement("div");
+      card.className = "att-card";
+      if (s.specialCase) card.classList.add("special-case");
+
+      const name = document.createElement("div");
+      name.className = "att-name";
+
+      const info = document.createElement("div");
+      info.className = "att-student-info";
+      if (s.specialCase) {
+        const wrap = document.createElement("div");
+        wrap.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e6b800" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="special-case-icon"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>`;
+        info.appendChild(wrap.firstElementChild);
+      }
+      info.appendChild(document.createTextNode(s.name || "—"));
+      name.appendChild(info);
+
+      const badge = document.createElement("span");
+      badge.className = "att-number-badge";
+      const sn = getStudentNumber(s);
+      badge.textContent = sn === Infinity ? "—" : toArabicDigits(sn);
+      name.appendChild(badge);
+
+      const dots = document.createElement("div");
+      dots.className = "att-lesson-dots";
+      const taken = takenLessonsByStudent.get((s.uid || "").toString()) || [];
+      taken.forEach(item => {
+        const dot = document.createElement("span");
+        dot.className = `att-lesson-dot ${item.status}`;
+        dot.textContent = toArabicDigits(item.lesson);
+        dots.appendChild(dot);
+      });
+
+      const seg = document.createElement("div");
+      seg.className = "seg";
+      const bP = document.createElement("button");
+      bP.className = "present"; bP.textContent = "حضور";
+      const sep1 = document.createElement("div"); sep1.className = "sep";
+      const bL = document.createElement("button");
+      bL.className = "late"; bL.textContent = "تأخير";
+      const sep2 = document.createElement("div"); sep2.className = "sep";
+      const bA = document.createElement("button");
+      bA.className = "absent"; bA.textContent = "غياب";
+
+      const cur = attStatuses[s.uid || s.name] || "present";
+      if (cur === "present") bP.classList.add("active");
+      if (cur === "late") bL.classList.add("active");
+      if (cur === "absent") bA.classList.add("active");
+      card.classList.remove("tint-late", "tint-absent");
+      if (cur === "late") card.classList.add("tint-late");
+      if (cur === "absent") card.classList.add("tint-absent");
+
+      bP.onclick = () => setStatus(s, "present", bP, bL, bA, card);
+      bL.onclick = () => setStatus(s, "late", bP, bL, bA, card);
+      bA.onclick = () => setStatus(s, "absent", bP, bL, bA, card);
+
+      seg.append(bP, sep1, bL, sep2, bA);
+      card.appendChild(name);
+      if (dots.childElementCount > 0) card.appendChild(dots);
+      card.appendChild(seg);
+      els.attList.appendChild(card);
+    });
+    setControlsEnabled(!!els.lessonSelect.value);
+    recalcStats();
+  }
+
+  async function loadStudentsForClass(cls) {
+    attStudentList = [];
+    attStatuses = {};
+    takenLessonsByStudent = new Map();
+    let students = await tryQueryStudents("students", cls);
+    if (students.length === 0) {
+      const nested = await tryQueryStudents("students/uids", cls);
+      if (nested.length > 0) students = nested;
+    }
+    students = sortStudentsByStudentNumberOnly(students);
+    attStudentList = students;
+    const dateISO = currentMeta?.date || kuwaitTodayISO();
+    takenLessonsByStudent = await loadTakenLessonsForClass(dateISO, cls);
+    students.forEach(s => { if (s.uid) attStatuses[s.uid] = "present"; });
+    renderList(students);
+    recalcStats();
+  }
+
+  function openWithMeta(meta) {
+    if (!meta || !meta.ok) {
+      showBlocked("not_my_lesson");
+      return;
+    }
+    currentMeta = meta;
+    els.className.textContent = formatClassLabel(meta.classKey);
+    buildLessonOption(meta.lesson);
+    loadStudentsForClass(meta.classKey);
+    openSheet(els.sheet);
+  }
+
+  // Submit handlers
+  els.submitBtn.addEventListener("click", async () => {
+    const c = await checkAllowed();
+    if (!c.allowed) return;
+    if (!currentMeta?.classKey) {
+      showError("تعذّر الحفظ", "اختر فصلًا أولاً.");
+      return;
+    }
+    if (!els.lessonSelect.value) {
+      showError("تعذّر الحفظ", "يرجى اختيار الحصة أولاً.");
+      return;
+    }
+    const present = [], late = [], absent = [];
+    const absNames = [], lateNames = [];
+    attStudentList.forEach(s => {
+      const k = s.uid || s.name;
+      const st = attStatuses[k];
+      const has = !!s.uid;
+      if (st === "present" && has) present.push(s.uid);
+      else if (st === "late") { if (has) late.push(s.uid); lateNames.push(s.name); }
+      else if (st === "absent") { if (has) absent.push(s.uid); absNames.push(s.name); }
+    });
+    const lessonIndex = parseInt(els.lessonSelect.value, 10);
+    const lesson = LESSON_TIMES.find(l => l.index === lessonIndex);
+    const lessonLabel = lesson ? lesson.label : `الحصة ${lessonIndex}`;
+    els.confirmTitle.textContent = `تأكيد حفظ التقرير | ${lessonLabel}`;
+    els.confirmAbsentList.innerHTML = "";
+    els.confirmLateList.innerHTML = "";
+    if (absNames.length) {
+      absNames.forEach(n => { const li = document.createElement("li"); li.textContent = n; els.confirmAbsentList.appendChild(li); });
+    } else {
+      const li = document.createElement("li"); li.textContent = "لا يوجد طلاب غائبون."; els.confirmAbsentList.appendChild(li);
+    }
+    if (lateNames.length) {
+      lateNames.forEach(n => { const li = document.createElement("li"); li.textContent = n; els.confirmLateList.appendChild(li); });
+    } else {
+      const li = document.createElement("li"); li.textContent = "لا يوجد طلاب متأخرون."; els.confirmLateList.appendChild(li);
+    }
+    els.filterAbsent.click();
+    pendingSave = { present, late, absent, dateKW: kuwaitTodayISO(), lessonIndex, lessonLabel, classKey: currentMeta.classKey };
+    openModal(els.confirmModal);
+    setTimeout(() => els.confirmSave.focus(), 0);
+  });
+
+  els.confirmCancel.addEventListener("click", () => closeModal(els.confirmModal));
+
+  els.confirmSave.addEventListener("click", async () => {
+    try {
+      if (!auth.currentUser) {
+        showError("تعذّر الحفظ", "يرجى تسجيل الدخول.");
+        return;
+      }
+      if (!pendingSave) {
+        closeModal(els.confirmModal);
+        return;
+      }
+      const c = await checkAllowed();
+      if (!c.allowed) {
+        closeModal(els.confirmModal);
+        return;
+      }
+      const activeMeta = c.meta || {};
+      const uid = auth.currentUser.uid;
+      const { present, late, absent, dateKW, lessonIndex, lessonLabel, classKey } = pendingSave;
+      const sessionId = createAttendanceSessionId(dateKW, lessonIndex, classKey);
+      const sessionRef = doc(db, ATTENDANCE_SESSIONS_COLLECTION, sessionId);
+      const existing = await getDoc(sessionRef);
+      if (existing.exists()) {
+        closeModal(els.confirmModal);
+        showError("تعذّر الحفظ", "تم تسجيل غياب هذه الحصّة مسبقًا.");
+        pendingSave = null;
+        return;
+      }
+      const lessonTime = LESSON_TIMES.find(l => l.index === lessonIndex);
+      const startHHMM = (activeMeta.activeStart || lessonTime?.start || "00:00").toString();
+      const endHHMM = (activeMeta.activeEnd || lessonTime?.end || "00:00").toString();
+      const sessionStartTs = kuwaitDateTimeToDate(dateKW, startHHMM);
+      const sessionCutoffTs = addMinutesToDate(kuwaitDateTimeToDate(dateKW, endHHMM), 5);
+      await setDoc(sessionRef, {
+        date: dateKW,
+        lesson: lessonIndex,
+        classKey,
+        teacherUid: uid,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        sessionStartTs: Timestamp.fromDate(sessionStartTs),
+        sessionCutoffTs: Timestamp.fromDate(sessionCutoffTs),
+        locked: false,
+      });
+      const all = [
+        ...present.map(u => ({ uid: u, status: "present" })),
+        ...late.map(u => ({ uid: u, status: "late" })),
+        ...absent.map(u => ({ uid: u, status: "absent" })),
+      ];
+      const batch = writeBatch(db);
+      const nameByUid = {};
+      attStudentList.forEach(s => { if (s.uid) nameByUid[s.uid] = s.name; });
+      all.forEach(({ uid: u, status }) => {
+        if (!u) return;
+        const ref = doc(db, ATTENDANCE_SESSIONS_COLLECTION, sessionId, ATTENDANCE_RECORDS_SUBCOLLECTION, u);
+        batch.set(ref, {
+          status,
+          updatedAt: serverTimestamp(),
+          updatedBy: auth.currentUser.uid,
+          studentName: nameByUid[u] || null,
+        });
+      });
+      await batch.commit();
+      closeModal(els.confirmModal);
+      showToast("تم تسجيل الغياب بنجاح", `للحصة: ${lessonLabel}`);
+      closeSheet(els.sheet);
+      if (typeof onSaved === "function") {
+        try {
+          onSaved({ classKey, lesson: lessonIndex, lessonLabel, date: dateKW, counts: { present: present.length, late: late.length, absent: absent.length } });
+        } catch (e) {
+          console.error("[attendance] onSaved threw:", e);
+        }
+      }
+    } catch (e) {
+      console.error("[attendance] save:", e);
+      closeModal(els.confirmModal);
+      showError("تعذّر الحفظ", "حدث خطأ أثناء حفظ البيانات.");
+    } finally {
+      pendingSave = null;
+    }
+  });
+
+  els.filterAbsent.addEventListener("click", () => {
+    els.filterAbsent.classList.add("active");
+    els.filterLate.classList.remove("active");
+    els.confirmAbsentList.style.display = "block";
+    els.confirmLateList.style.display = "none";
+  });
+  els.filterLate.addEventListener("click", () => {
+    els.filterLate.classList.add("active");
+    els.filterAbsent.classList.remove("active");
+    els.confirmAbsentList.style.display = "none";
+    els.confirmLateList.style.display = "block";
+  });
+
+  els.closeBtn.addEventListener("click", () => closeSheet(els.sheet));
+  els.errorOk.addEventListener("click", () => closeModal(els.errorModal));
+  els.blockedClose.addEventListener("click", () => closeModal(els.blockedModal));
+  els.blockedOk.addEventListener("click", () => closeModal(els.blockedModal));
+  els.toastClose.addEventListener("click", () => els.toast.classList.add("hidden"));
+
+  els.confirmModal.querySelector(".overlay").addEventListener("click", () => closeModal(els.confirmModal));
+  els.errorModal.querySelector(".overlay").addEventListener("click", () => closeModal(els.errorModal));
+  els.blockedModal.querySelector(".overlay").addEventListener("click", () => closeModal(els.blockedModal));
+
+  // Boot: load lesson times on first mount
+  fetchLessonTimes();
+
+  return {
+    async start() {
+      const c = await checkAllowed(true);
+      if (!c.allowed) return;
+      openWithMeta(c.meta);
+    },
+    open: openWithMeta,
+    close() { closeSheet(els.sheet); },
+    refreshLessonTimes: fetchLessonTimes,
+  };
+}
