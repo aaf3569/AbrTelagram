@@ -217,15 +217,31 @@
         .site-header{position:sticky;top:0;z-index:100;background:rgba(255,255,255,.95);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);color:var(--primary);padding:16px 24px;display:flex;align-items:center;justify-content:center;border-bottom:1px solid rgba(3,60,84,.1);box-shadow:0 2px 15px rgba(3,60,84,.08)}
         .site-title{margin:0;font-weight:900;letter-spacing:.2px;font-size:clamp(1.2rem,2.5vw,1.6rem);text-shadow:0 1px 0 rgba(255,255,255,.6)}
         main{flex:1;padding:24px 16px 40px;display:flex;width:100%}
-        .credits-footer{width:100%;display:flex;justify-content:center;padding:20px 16px 28px}
-        .credits-card{width:100%;background:#fff;border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow-1);padding:18px 16px;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif}
-        .credits-logo{width:112px;height:112px;object-fit:contain}
-        .credits-line{margin:0;font-size:.92rem;font-weight:700;color:var(--muted);line-height:1.7}
-        .credits-label{color:var(--primary);font-weight:900}
+        .credits-footer{width:100%;display:flex;justify-content:center;padding:28px 16px 36px}
+        .credits-card{position:relative;width:100%;background:linear-gradient(180deg,#ffffff 0%,#fafcfe 100%);border:1px solid var(--border);border-radius:24px;box-shadow:0 14px 36px rgba(3,60,84,.10),0 2px 6px rgba(3,60,84,.05);padding:30px 22px 26px;display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center;overflow:hidden;font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif}
+        .credits-card::before{content:'';position:absolute;top:0;left:0;right:0;height:5px;background:linear-gradient(90deg,var(--primary) 0%,var(--primary-light) 50%,var(--primary) 100%)}
+        .credits-card::after{content:'';position:absolute;top:-60px;left:-60px;width:180px;height:180px;border-radius:50%;background:radial-gradient(circle,rgba(3,60,84,.06),transparent 70%);pointer-events:none}
+        .credits-logo-wrap{position:relative;width:130px;height:130px;border-radius:50%;background:linear-gradient(145deg,#f3f9fc,#e7f2f9);display:grid;place-items:center;padding:14px;box-shadow:inset 0 0 0 1px rgba(3,60,84,.08),0 10px 26px rgba(3,60,84,.12);margin-top:4px;z-index:1}
+        .credits-logo-wrap::before{content:'';position:absolute;inset:-3px;border-radius:50%;background:linear-gradient(135deg,var(--primary),transparent 60%);opacity:.18;z-index:-1}
+        .credits-logo{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 2px 4px rgba(3,60,84,.08))}
+        .credits-school-name{margin:4px 0 0;font-size:1.06rem;font-weight:900;color:var(--primary);letter-spacing:.2px;line-height:1.5;z-index:1}
+        .credits-divider{width:64px;height:3px;border-radius:3px;background:linear-gradient(90deg,transparent,var(--primary-light),transparent);margin:2px 0 6px;z-index:1}
+        .credits-info{width:100%;display:flex;flex-direction:column;gap:10px;margin-top:4px;z-index:1}
+        .credits-row{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;background:linear-gradient(145deg,#f8fbfd 0%,#eff6fa 100%);border:1px solid rgba(3,60,84,.08);transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease}
+        .credits-row:hover{transform:translateY(-2px);box-shadow:0 10px 22px rgba(3,60,84,.10);border-color:rgba(3,60,84,.16)}
+        .credits-icon{flex-shrink:0;width:40px;height:40px;border-radius:12px;background:linear-gradient(145deg,var(--primary),var(--primary-light));color:#fff;display:grid;place-items:center;box-shadow:0 6px 14px rgba(3,60,84,.22)}
+        .credits-icon svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+        .credits-text{flex:1;display:flex;flex-direction:column;gap:2px;text-align:start;min-width:0}
+        .credits-label{font-size:.72rem;font-weight:800;color:var(--muted);letter-spacing:.3px}
+        .credits-value{font-size:.96rem;font-weight:800;color:var(--text);line-height:1.45;word-break:break-word}
         @media(max-width:480px){
-            .credits-card{padding:16px 12px}
-            .credits-logo{width:90px;height:90px}
-            .credits-line{font-size:.86rem}
+            .credits-card{padding:24px 14px 20px;border-radius:20px}
+            .credits-logo-wrap{width:108px;height:108px;padding:12px}
+            .credits-school-name{font-size:.98rem}
+            .credits-row{padding:10px 12px;gap:10px}
+            .credits-icon{width:36px;height:36px;border-radius:11px}
+            .credits-icon svg{width:16px;height:16px}
+            .credits-value{font-size:.9rem}
         }
         .column{width:min(1100px,100%);margin:0 auto;display:flex;flex-direction:column;align-items:center;gap:20px}
         .panel{width:100%;background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:24px 20px;box-shadow:var(--shadow-1);transition:var(--transition)}
@@ -629,9 +645,31 @@
     </main>
     <footer class="credits-footer" aria-label="اعتمادات الموقع">
         <div class="credits-card">
-            <img class="credits-logo" src="/images/schoollogo.png" alt="شعار المدرسة" loading="lazy">
-            <p class="credits-line"><span class="credits-label">مدير المدرسة:</span> أ/ صلاح الناصر</p>
-            <p class="credits-line"><span class="credits-label">تصميم و برمجة:</span> الطالب عبدالله الصايغ</p>
+            <div class="credits-logo-wrap">
+                <img class="credits-logo" src="/images/schoollogo.png" alt="شعار المدرسة" loading="lazy">
+            </div>
+            <h3 class="credits-school-name">ثانوية أحمد البشر الرومي</h3>
+            <div class="credits-divider" aria-hidden="true"></div>
+            <div class="credits-info">
+                <div class="credits-row">
+                    <span class="credits-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    </span>
+                    <div class="credits-text">
+                        <span class="credits-label">مدير المدرسة</span>
+                        <span class="credits-value">أ/ صلاح الناصر</span>
+                    </div>
+                </div>
+                <div class="credits-row">
+                    <span class="credits-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                    </span>
+                    <div class="credits-text">
+                        <span class="credits-label">تصميم و برمجة</span>
+                        <span class="credits-value">الطالب عبدالله الصايغ</span>
+                    </div>
+                </div>
+            </div>
         </div>
     </footer>
 
