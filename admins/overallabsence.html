@@ -53,10 +53,7 @@
 
     body{
       margin:0;
-      background:
-        radial-gradient(1200px 600px at 80% -20%, rgba(3,60,84,.08), transparent 60%),
-        radial-gradient(900px 500px at -10% 120%, rgba(3,60,84,.06), transparent 60%),
-        var(--page);
+      background: var(--page);
       color:var(--text);
       font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
       display:flex; flex-direction:column; min-height:100vh;
@@ -476,6 +473,7 @@
     /* Main */
     main{
       flex:1;
+      min-height:0;
       padding:0;
       display:flex;
       flex-direction:column;
@@ -522,6 +520,8 @@
       height:100%;
       overflow:auto;
       -webkit-overflow-scrolling:touch;
+      overscroll-behavior:contain;
+      touch-action:pan-x pan-y;
       position:relative;
     }
 
@@ -918,6 +918,12 @@
       .mobile-date-input { font-size: 16px !important; }
       .modal-body {
         max-height: 60vh;
+      }
+      /* iOS Safari: 100vh includes collapsed address bar, making the shell
+         too tall and trapping rows below the real visible area.
+         svh = "small viewport height" = always the safe, smaller value. */
+      .table-shell {
+        height: calc(100svh - var(--headerH) - 10px);
       }
     }
   </style>
@@ -1506,7 +1512,9 @@
       if (!GRID[className][lessonIndex]) {
         GRID[className][lessonIndex] = {
           count: 0,
-          students: [], // Will store objects with id, name, and className
+          students: [],
+          lateCount: 0,
+          lateStudents: [],
           teacherUids: new Set(),
           hasAnyRecord: false,
           missed: false,
@@ -1572,6 +1580,8 @@
           GRID[cn][i] = {
             count: 0,
             students: [],
+            lateCount: 0,
+            lateStudents: [],
             teacherUids: new Set(),
             hasAnyRecord: false,
             missed: false,
@@ -1940,7 +1950,12 @@
         modalSubtitle.textContent = `التاريخ: ${niceDate}`;
 
         modalBody.innerHTML = `
-          <div id="originalModalContent">
+          <div class="tabs">
+            <button class="tab-btn active" id="tabAbsent">الغياب (${toArabicDigits(cell.count)})</button>
+            <button class="tab-btn" id="tabLates">المتأخرون (${toArabicDigits(cell.lateCount)})</button>
+          </div>
+
+          <div class="tab-content active" id="panelAbsent">
             <div class="section">
               <div class="sec-title">
                 <span>المعلّم</span>
@@ -1959,13 +1974,54 @@
               <div class="list" id="studentsList"></div>
             </div>
           </div>
+
+          <div class="tab-content" id="panelLates"></div>
         `;
 
+        // Wire up tabs
+        const tabAbsent = modalBody.querySelector('#tabAbsent');
+        const tabLates  = modalBody.querySelector('#tabLates');
+        const panelAbsent = modalBody.querySelector('#panelAbsent');
+        const panelLates  = modalBody.querySelector('#panelLates');
+        tabAbsent.addEventListener('click', () => {
+          tabAbsent.classList.add('active'); tabLates.classList.remove('active');
+          panelAbsent.classList.add('active'); panelLates.classList.remove('active');
+        });
+        tabLates.addEventListener('click', () => {
+          tabLates.classList.add('active'); tabAbsent.classList.remove('active');
+          panelLates.classList.add('active'); panelAbsent.classList.remove('active');
+        });
+
+        // Populate lates panel (students marked late during attendance)
+        if (cell.lateCount > 0) {
+          const latesList = document.createElement('div');
+          latesList.className = 'list';
+          const lateStudents = [...cell.lateStudents].sort((a, b) => arabicSort(a.name, b.name));
+          lateStudents.forEach(student => {
+            const row = document.createElement('div');
+            row.className = 'li';
+            row.dataset.studentId = student.id;
+            row.dataset.studentClass = student.className || className;
+            row.innerHTML = `
+              <div class="name">${student.name}</div>
+              <div class="meta">متأخر</div>
+            `;
+            row.addEventListener('click', () => {
+              window.location.href = `students.html?studentId=${encodeURIComponent(student.id)}&class=${encodeURIComponent(student.className || className)}`;
+            });
+            getStudentWarningLevel(student.id).then(w => row.classList.add(`warning-${w}`)).catch(() => row.classList.add('warning-0'));
+            latesList.appendChild(row);
+          });
+          panelLates.appendChild(latesList);
+        } else {
+          panelLates.innerHTML = `<p class="muted" style="text-align:center;padding:24px 0">لا يوجد متأخرون في هذه الحصة</p>`;
+        }
+
         const stWrap = modalBody.querySelector('#studentsList');
-        
+
         // Sort students by name
         const students = [...cell.students].sort((a,b) => arabicSort(a.name, b.name));
-        
+
         // Create student rows and fetch warning levels
         for (const student of students){
           const row = document.createElement('div');
@@ -1976,16 +2032,16 @@
             <div class="name">${student.name}</div>
             <div class="meta">غائب</div>
           `;
-          
+
           // Add click event for redirect
           row.addEventListener('click', () => {
             const studentId = row.dataset.studentId;
             const studentClass = row.dataset.studentClass || "";
             window.location.href = `students.html?studentId=${encodeURIComponent(studentId)}&class=${encodeURIComponent(studentClass)}`;
           });
-          
+
           stWrap.appendChild(row);
-          
+
           // Fetch and apply warning level asynchronously
           getStudentWarningLevel(student.id).then(warningLevel => {
             row.classList.add(`warning-${warningLevel}`);
@@ -2155,11 +2211,17 @@
         });
       });
 
-      const absentSeenByCell = new Map(); // `${className}__L${lessonIndex}` => Set(studentKey)
+      const absentSeenByCell = new Map();
+      const lateSeenByCell   = new Map();
       const getAbsentSet = (className, lessonIndex) => {
         const k = `${className}__L${lessonIndex}`;
         if (!absentSeenByCell.has(k)) absentSeenByCell.set(k, new Set());
         return absentSeenByCell.get(k);
+      };
+      const getLateSet = (className, lessonIndex) => {
+        const k = `${className}__L${lessonIndex}`;
+        if (!lateSeenByCell.has(k)) lateSeenByCell.set(k, new Set());
+        return lateSeenByCell.get(k);
       };
 
       const markAttendanceTaken = (className, lessonIndex) => {
@@ -2184,11 +2246,23 @@
         seen.add(dedupeKey);
 
         cell.count += 1;
-        cell.students.push({
-          id: sid,
-          name,
-          className: student?.className || className
-        });
+        cell.students.push({ id: sid, name, className: student?.className || className });
+      };
+
+      const addLateStudentToCell = (className, lessonIndex, student, teacherUid = null) => {
+        const cell = markAttendanceTaken(className, lessonIndex);
+        if (!cell) return;
+        if (teacherUid) cell.teacherUids.add(teacherUid);
+
+        const sid = (student?.id || '').toString().trim();
+        const name = (student?.name || '—').toString();
+        const dedupeKey = sid ? `id:${sid}` : `name:${name}`;
+        const seen = getLateSet(className, lessonIndex);
+        if (seen.has(dedupeKey)) return;
+        seen.add(dedupeKey);
+
+        cell.lateCount += 1;
+        cell.lateStudents.push({ id: sid, name, className: student?.className || className });
       };
 
       // Legacy top-level attendance sessions
@@ -2255,17 +2329,19 @@
 
           recordsSnap.forEach((recordSnap) => {
             const rec = recordSnap.data() || {};
-            if ((rec.status || '').toString() !== 'absent') return;
+            const status = (rec.status || '').toString();
+            if (status !== 'absent' && status !== 'late') return;
 
             const uid = (recordSnap.id || rec.uid || '').toString().trim();
             const linked = uid ? studentsById.get(uid) : null;
             const name = (linked?.name || rec.studentName || uid || '—').toString();
             const recTeacherUid = (rec.updatedBy || rec.createdBy || teacherUid || '').toString().trim() || null;
-            addAbsentStudentToCell(className, lessonIndex, {
-              id: uid,
-              name,
-              className: linked?.className || className
-            }, recTeacherUid);
+            const studentObj = { id: uid, name, className: linked?.className || className };
+            if (status === 'absent') {
+              addAbsentStudentToCell(className, lessonIndex, studentObj, recTeacherUid);
+            } else {
+              addLateStudentToCell(className, lessonIndex, studentObj, recTeacherUid);
+            }
           });
         }, 10);
       } catch (error) {
@@ -2290,12 +2366,18 @@
         if (!cell) return;
         if (teacherUid) cell.teacherUids.add(teacherUid);
 
-        if ((rec.status || '').toString() !== 'absent') return;
-        addAbsentStudentToCell(className, lessonIndex, {
+        const legStatus = (rec.status || '').toString();
+        if (legStatus !== 'absent' && legStatus !== 'late') return;
+        const legStudent = {
           id: studentId,
           name: (linked?.name || rec.studentName || studentId || '—').toString(),
           className: linked?.className || className
-        }, teacherUid);
+        };
+        if (legStatus === 'absent') {
+          addAbsentStudentToCell(className, lessonIndex, legStudent, teacherUid);
+        } else {
+          addLateStudentToCell(className, lessonIndex, legStudent, teacherUid);
+        }
       };
 
       // Legacy student attendance records (date field)

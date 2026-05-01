@@ -67,10 +67,13 @@ app.use((req, res, next) => {
   }
   return next();
 });
-app.use(express.json());
+app.use(express.json({ limit: "256kb" }));
 app.use((error, req, res, next) => {
   if (error?.type === "entity.parse.failed") {
     return res.status(400).json({ ok: false, error: "invalid_json" });
+  }
+  if (error?.type === "entity.too.large") {
+    return res.status(413).json({ ok: false, error: "payload_too_large" });
   }
   return next(error);
 });
@@ -1437,7 +1440,21 @@ app.get("/api/health", (req, res) => {
   });
 });
 
+function isLoopbackRequest(req) {
+  const ip = String(req.ip || req.connection?.remoteAddress || "");
+  return ip === "127.0.0.1" || ip === "::1" || ip === "::ffff:127.0.0.1";
+}
+
+function denyIfNotLoopback(req, res) {
+  if (!isLoopbackRequest(req)) {
+    res.status(404).json({ ok: false, error: "not_found" });
+    return true;
+  }
+  return false;
+}
+
 app.get("/api/telegram/debug-env", (req, res) => {
+  if (denyIfNotLoopback(req, res)) return;
   return res.json({
     hasFirebaseEnv: Boolean(process.env.FIREBASE_SERVICE_ACCOUNT_JSON),
     hasGoogleApplicationCredentials: Boolean(process.env.GOOGLE_APPLICATION_CREDENTIALS),
@@ -1449,6 +1466,7 @@ app.get("/api/telegram/debug-env", (req, res) => {
 });
 
 app.get("/api/telegram/debug-status", async (req, res) => {
+  if (denyIfNotLoopback(req, res)) return;
   const out = {
     ok: true,
     nowIso: new Date().toISOString(),
@@ -1522,11 +1540,11 @@ app.post("/api/telegram/request-students", async (req, res) => {
 
   const classKey = normalizeClassKey(req.body?.classKey);
   const studentNames = Array.isArray(req.body?.studentNames)
-    ? req.body.studentNames.map((x) => String(x || "").trim()).filter(Boolean)
+    ? req.body.studentNames.map((x) => String(x || "").trim().slice(0, 200)).filter(Boolean)
     : [];
-  const destinationType = String(req.body?.destinationType || "").trim();
-  const destinationLabelInput = String(req.body?.destinationLabel || "").trim();
-  const destinationDetails = String(req.body?.destinationDetails || "").trim();
+  const destinationType = String(req.body?.destinationType || "").trim().slice(0, 64);
+  const destinationLabelInput = String(req.body?.destinationLabel || "").trim().slice(0, 200);
+  const destinationDetails = String(req.body?.destinationDetails || "").trim().slice(0, 500);
   const withBag = Boolean(req.body?.withBag);
 
   if (!classKey) {
@@ -1534,6 +1552,9 @@ app.post("/api/telegram/request-students", async (req, res) => {
   }
   if (!studentNames.length) {
     return res.status(400).json({ ok: false, error: "missing_students" });
+  }
+  if (studentNames.length > 200) {
+    return res.status(400).json({ ok: false, error: "too_many_students" });
   }
   if (!destinationType) {
     return res.status(400).json({ ok: false, error: "missing_destination_type" });
@@ -1932,6 +1953,15 @@ app.get("/api/telegram/debug-reminders", async (req, res) => {
 });
 
 app.post("/api/telegram-webhook", async (req, res) => {
+  const expectedWebhookSecret = process.env.TELEGRAM_WEBHOOK_SECRET || "";
+  if (expectedWebhookSecret) {
+    const providedSecret = String(req.get("X-Telegram-Bot-Api-Secret-Token") || "");
+    if (providedSecret !== expectedWebhookSecret) {
+      console.warn("[telegram] webhook rejected: secret token mismatch");
+      return res.status(401).json({ ok: false, error: "unauthorized" });
+    }
+  }
+
   const update = req.body || {};
   const chatId = update?.message?.chat?.id;
   const text = String(update?.message?.text || "").trim();
@@ -2043,6 +2073,12 @@ app.post("/api/telegram-webhook", async (req, res) => {
 
 app.get("/", (req, res) => {
   res.send("Telegram notification server is running.");
+});
+
+app.use((error, req, res, next) => {
+  console.error(`[server] unhandled error path=${req.path}: ${error?.message || error}`);
+  if (res.headersSent) return next(error);
+  return res.status(500).json({ ok: false, error: "internal_error" });
 });
 
 app.listen(PORT, () => {
