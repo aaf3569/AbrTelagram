@@ -388,6 +388,10 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
       case "outside_lessons":
       case "not_my_lesson":
         m = "يمكنك تسجيل الغياب فقط أثناء حصتك الحالية."; break;
+      case "not_my_class":
+        m = "ليس لديك حصة في هذا الفصل اليوم بحسب الجدول."; break;
+      case "no_lessons_left":
+        m = "لقد سجّلت الغياب لجميع حصصك في هذا الفصل اليوم بالفعل."; break;
       case "time_locked":
         m = "انتهى وقت تسجيل الغياب لهذه الحصة."; break;
       case "not_logged_in":
@@ -699,6 +703,56 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
     setControlsEnabled(true);
   }
 
+  function normalizeClassKeyForCompare(s) {
+    return String(s || "").replace(/\s+/g, " ").trim().toLowerCase();
+  }
+
+  function classKeyFromScheduleRow(row) {
+    const direct = (row.classKey || row.class || "").toString().trim();
+    if (direct) return direct;
+    if (row.grade && row.section) {
+      return `${row.grade} / ${row.section}${row.track ? ` ${row.track}` : ""}`;
+    }
+    return "";
+  }
+
+  // Which lessons (1-7) is this teacher actually assigned to teach `classKey`
+  // today, per the schedule (main weekly schedule + any custom/extra schedule)?
+  // Attendance may only ever be taken for a real, scheduled lesson — never an
+  // arbitrary slot nobody was assigned to teach.
+  async function getMyScheduledLessonsForClass(teacherUid, classKey, dateISO) {
+    const target = normalizeClassKeyForCompare(classKey);
+    const result = new Set();
+    if (!teacherUid || !target) return result;
+
+    const todayMap = await buildTodayMapWithOverrides(teacherUid, dateISO);
+    todayMap.forEach((hit, lessonKey) => {
+      if (hit._coveredAway) return;
+      if (normalizeClassKeyForCompare(classKeyFromScheduleRow(hit)) === target) {
+        result.add(Number(lessonKey));
+      }
+    });
+
+    const dayIndex = getKuwaitDayIndexSunSat();
+    if (dayIndex >= 0) {
+      const rows = await getCustomSchedulesForToday(dayIndex);
+      rows.forEach(row => {
+        const lessons = Array.isArray(row.lessons) ? row.lessons : [];
+        const max = Math.min(7, Number(row.lessonCount) || lessons.length || 7);
+        for (let i = 0; i < max; i++) {
+          const lesson = lessons[i] || {};
+          if ((lesson.teacherUid || "").toString() !== teacherUid) continue;
+          const rowClassKey = classKeyFromScheduleRow(row) || classKeyFromScheduleRow(lesson);
+          if (normalizeClassKeyForCompare(rowClassKey) === target) {
+            result.add(i + 1);
+          }
+        }
+      });
+    }
+
+    return result;
+  }
+
   async function getTakenLessonIndicesForClass(dateISO, classKey) {
     const set = new Set();
     if (!dateISO || !classKey) return set;
@@ -916,9 +970,24 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
 
   async function openForClass(classKey) {
     if (!classKey) return;
+    if (!auth.currentUser) {
+      showBlocked("not_logged_in");
+      return;
+    }
     const dateISO = kuwaitTodayISO();
+    // Attendance may only be taken for a lesson you're actually scheduled to
+    // teach today — not an arbitrary slot nobody assigned to this class.
+    const myLessons = await getMyScheduledLessonsForClass(auth.currentUser.uid, classKey, dateISO);
+    if (myLessons.size === 0) {
+      showBlocked("not_my_class");
+      return;
+    }
     const takenSet = await getTakenLessonIndicesForClass(dateISO, classKey);
-    const available = LESSON_TIMES.filter(l => !takenSet.has(l.index));
+    const available = LESSON_TIMES.filter(l => myLessons.has(l.index) && !takenSet.has(l.index));
+    if (available.length === 0) {
+      showBlocked("no_lessons_left");
+      return;
+    }
     currentMeta = { ok: true, mode: "any", date: dateISO, classKey, lesson: null };
     els.className.textContent = formatClassLabel(classKey);
     buildManualLessonOptions(available);
@@ -1082,6 +1151,14 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
           return;
         }
         activeMeta = c.meta || {};
+      } else if (mode === "any") {
+        // Re-check against the schedule in case it changed since the sheet was opened.
+        const myLessons = await getMyScheduledLessonsForClass(uid, classKey, dateKW);
+        if (!myLessons.has(lessonIndex)) {
+          closeModal(els.confirmModal);
+          showBlocked("not_my_class");
+          return;
+        }
       }
       const newSessionId = createAttendanceSessionId(dateKW, lessonIndex, classKey);
       const sessionRef = doc(db, ATTENDANCE_SESSIONS_COLLECTION, newSessionId);

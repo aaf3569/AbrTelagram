@@ -18,6 +18,7 @@
 
   <link rel="stylesheet" href="/shared/base.css" />
   <style>
+    @property --border-angle{syntax:'<angle>';inherits:false;initial-value:0turn}
     :root {
       --primary: #022b42;
       --primary-2: #044563;
@@ -371,6 +372,11 @@
     .btn.ghost:hover{transform:translateY(-2px);box-shadow:var(--shadow-2)}
     .btn.class-btn,.btn.attend,.btn.submit,.btn.primary{background:linear-gradient(145deg,var(--primary-2),var(--primary));color:#fff;box-shadow:var(--shadow-2)}
     .btn.class-btn:hover,.btn.attend:hover,.btn.submit:hover{transform:translateY(-2px)}
+    /* Subtle indicator: this class currently has a lesson in progress */
+    .btn.class-btn.current-lesson{position:relative;isolation:isolate;box-shadow:0 0 0 1.5px rgba(2,43,66,.28),0 0 14px rgba(2,43,66,.16),0 22px 48px rgba(3,60,84,.40);animation:classLessonPulse 3.6s ease-in-out infinite}
+    .btn.class-btn.current-lesson::before{content:"";position:absolute;inset:0;border-radius:16px;padding:1.5px;background:conic-gradient(from var(--border-angle),transparent 0%,transparent 78%,rgba(148,197,255,.55) 89%,rgba(219,234,254,.9) 94%,rgba(148,197,255,.55) 99%,transparent 100%);-webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);mask-composite:exclude;pointer-events:none;animation:borderChase 4s linear infinite}
+    @keyframes classLessonPulse{0%,100%{box-shadow:0 0 0 1.5px rgba(2,43,66,.24),0 0 10px rgba(2,43,66,.12),0 22px 48px rgba(3,60,84,.40)}50%{box-shadow:0 0 0 2px rgba(2,43,66,.34),0 0 16px rgba(2,43,66,.2),0 22px 48px rgba(3,60,84,.40)}}
+    @keyframes borderChase{to{--border-angle:1turn}}
     .btn.cancel{background:#fff;color:var(--primary);border:1px solid rgba(2,43,66,.22)}
     .sheet{position:fixed;inset:0;z-index:1000;background:#fff;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .3s cubic-bezier(.22,.7,.25,1);overflow:hidden}
     .sheet.open{transform:translateX(0)}
@@ -920,12 +926,136 @@
         return String(s).replace(/[^\w\-]+/g,'_');
     }
 
+    /* ========= Current-lesson class-button highlight ========= */
+    const CLASS_HIGHLIGHT_REFRESH_MS = 30000;
+    let classHighlightTimer = null;
+    let classHighlightInFlight = false;
+
+    function weekdayEnglishToSunIndex(weekday){
+        const w = String(weekday || '').trim().toLowerCase();
+        if (w === 'sunday') return 0;
+        if (w === 'monday') return 1;
+        if (w === 'tuesday') return 2;
+        if (w === 'wednesday') return 3;
+        if (w === 'thursday') return 4;
+        if (w === 'friday') return 5;
+        if (w === 'saturday') return 6;
+        return -1;
+    }
+
+    function getKuwaitWeekdayName(timeZone){
+        return new Intl.DateTimeFormat('en-US', { weekday: 'long', timeZone }).format(new Date());
+    }
+
+    function getActiveLessonIndex(){
+        const nowMin = getMinutesNowInTZ(TZ);
+        for (const l of LESSONS){
+            if (nowMin >= l.startMinutes && nowMin <= l.endMinutes) return l.index;
+        }
+        return null;
+    }
+
+    function normClassKeyForHighlight(s){
+        return String(s || '').replace(/\s+/g, ' ').trim();
+    }
+
+    async function getTeacherScheduleForToday(teacherUid){
+        const dayIndex = weekdayEnglishToSunIndex(getKuwaitWeekdayName(TZ));
+        const scheduleMap = new Map();
+        if (dayIndex < 0) return scheduleMap;
+        try {
+            if (dayIndex <= 4) {
+                const snap = await getDocs(query(
+                    collection(db, 'schedules'),
+                    where('teacherUid', '==', teacherUid),
+                    where('dayIndex', '==', dayIndex)
+                ));
+                snap.forEach(ds => {
+                    const data = ds.data() || {};
+                    const lesson = Number(data.lesson);
+                    if (!(lesson >= 1 && lesson <= 7)) return;
+                    let classKey = (data.classKey || '').toString().trim();
+                    if (!classKey && data.grade && data.section) {
+                        classKey = `${data.grade} / ${data.section}${data.track ? ` ${data.track}` : ''}`;
+                    }
+                    if (!classKey) return;
+                    scheduleMap.set(String(lesson), { classKey });
+                });
+            }
+
+            // Custom/extra schedules (e.g. exam days, or Fri/Sat schedules) aren't in
+            // the main 'schedules' collection above, so check those separately.
+            const customSnap = await getDocs(query(
+                collection(db, 'customDaySchedules'),
+                where('dayIndex', '==', dayIndex)
+            ));
+            customSnap.forEach(ds => {
+                const row = ds.data() || {};
+                if (row.deletedAt || row.enabled !== true) return;
+                const lessonsArr = Array.isArray(row.lessons) ? row.lessons : [];
+                const max = Math.min(7, Number(row.lessonCount) || lessonsArr.length || 7);
+                for (let i = 0; i < max; i++) {
+                    const lessonRow = lessonsArr[i] || {};
+                    if ((lessonRow.teacherUid || '').toString() !== teacherUid) continue;
+                    const lessonKey = String(i + 1);
+                    if (scheduleMap.has(lessonKey)) continue;
+                    let classKey = (row.classKey || lessonRow.classKey || '').toString().trim();
+                    if (!classKey && row.grade && row.section) {
+                        classKey = `${row.grade} / ${row.section}${row.track ? ` ${row.track}` : ''}`;
+                    }
+                    if (!classKey) continue;
+                    scheduleMap.set(lessonKey, { classKey });
+                }
+            });
+        } catch (e) {
+            console.error('[class-highlight] schedule fetch failed:', e);
+        }
+        return scheduleMap;
+    }
+
+    async function updateCurrentClassButtonHighlight(){
+        if (classHighlightInFlight) return;
+        classHighlightInFlight = true;
+        try {
+            const buttons = [...classesButtons.querySelectorAll('.btn.class-btn')];
+            buttons.forEach(btn => btn.classList.remove('current-lesson'));
+            if (!auth.currentUser) return;
+            const lessonIndex = getActiveLessonIndex();
+            if (!lessonIndex) return;
+            const scheduleMap = await getTeacherScheduleForToday(auth.currentUser.uid);
+            const entry = scheduleMap.get(String(lessonIndex));
+            if (!entry?.classKey) return;
+            const target = normClassKeyForHighlight(entry.classKey);
+            buttons.forEach(btn => {
+                if (normClassKeyForHighlight(btn.dataset.classKey || '') === target) {
+                    btn.classList.add('current-lesson');
+                }
+            });
+        } catch (e) {
+            console.error('[class-highlight] update failed:', e);
+        } finally {
+            classHighlightInFlight = false;
+        }
+    }
+
+    function startClassHighlightTicker(){
+        if (classHighlightTimer) clearInterval(classHighlightTimer);
+        classHighlightTimer = setInterval(updateCurrentClassButtonHighlight, CLASS_HIGHLIGHT_REFRESH_MS);
+        updateCurrentClassButtonHighlight();
+    }
+
+    function stopClassHighlightTicker(){
+        if (classHighlightTimer) { clearInterval(classHighlightTimer); classHighlightTimer = null; }
+        classesButtons.querySelectorAll('.btn.class-btn.current-lesson').forEach(btn => btn.classList.remove('current-lesson'));
+    }
+
     /* ========= Gate ========= */
     show(sLoading);
     let currentUserData = null;
 
     onAuthStateChanged(auth, async (user)=>{
         if(!user){
+            stopClassHighlightTicker();
             show(sNotLog);
             return;
         }
@@ -955,6 +1085,7 @@
                 document.querySelectorAll('.lazy-load').forEach(el => el.classList.add('loaded'));
             }, 100);
             show(sDash);
+            startClassHighlightTicker();
         }catch(e){
             console.error(e);
             show(sDenied);
@@ -978,9 +1109,11 @@
             btn.type = 'button';
             btn.className = 'btn class-btn';
             btn.textContent = cls;
+            btn.dataset.classKey = cls;
             btn.addEventListener('click', ()=> openClassView(cls));
             classesButtons.appendChild(btn);
         });
+        updateCurrentClassButtonHighlight();
     }
 
     /* ========= MORE ========= */

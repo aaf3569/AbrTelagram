@@ -119,9 +119,9 @@
         .btn.ghost:hover{transform:translateY(-3px);box-shadow:0 18px 40px rgba(3,60,84,.22);border-color:rgba(3,60,84,.4)}
         .btn.class-btn{background:linear-gradient(145deg,var(--primary),var(--primary-light));color:#fff;box-shadow:0 18px 40px rgba(3,60,84,.32)}
         .btn.class-btn:hover{transform:translateY(-3px);box-shadow:0 22px 48px rgba(3,60,84,.38)}
-        .btn.class-btn.current-lesson{isolation:isolate;box-shadow:0 0 0 1.5px rgba(59,130,246,.35),0 0 16px rgba(59,130,246,.4),0 22px 48px rgba(3,60,84,.40);animation:classLessonPulse 3s ease-in-out infinite}
-        .btn.class-btn.current-lesson::before{content:"";position:absolute;inset:0;border-radius:18px;padding:2.5px;background:conic-gradient(from var(--border-angle),rgba(59,130,246,.08) 0%,rgba(59,130,246,.08) 55%,rgba(96,165,250,.6) 70%,#fff 76%,rgba(147,197,253,1) 81%,rgba(59,130,246,.3) 90%,rgba(59,130,246,.08) 100%);-webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);mask-composite:exclude;pointer-events:none;animation:borderChase 2.2s linear infinite;filter:drop-shadow(0 0 5px rgba(96,165,250,.9)) drop-shadow(0 0 14px rgba(59,130,246,.6))}
-        @keyframes classLessonPulse{0%,100%{box-shadow:0 0 0 1.5px rgba(59,130,246,.35),0 0 12px rgba(59,130,246,.3),0 22px 48px rgba(3,60,84,.40)}50%{box-shadow:0 0 0 2px rgba(96,165,250,.7),0 0 22px rgba(59,130,246,.55),0 0 42px rgba(96,165,250,.2),0 22px 48px rgba(3,60,84,.40)}}
+        .btn.class-btn.current-lesson{isolation:isolate;box-shadow:0 0 0 1.5px rgba(3,60,84,.28),0 0 14px rgba(3,60,84,.16),0 22px 48px rgba(3,60,84,.40);animation:classLessonPulse 3.6s ease-in-out infinite}
+        .btn.class-btn.current-lesson::before{content:"";position:absolute;inset:0;border-radius:18px;padding:1.5px;background:conic-gradient(from var(--border-angle),transparent 0%,transparent 78%,rgba(148,197,255,.55) 89%,rgba(219,234,254,.9) 94%,rgba(148,197,255,.55) 99%,transparent 100%);-webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);mask-composite:exclude;pointer-events:none;animation:borderChase 4s linear infinite}
+        @keyframes classLessonPulse{0%,100%{box-shadow:0 0 0 1.5px rgba(3,60,84,.24),0 0 10px rgba(3,60,84,.12),0 22px 48px rgba(3,60,84,.40)}50%{box-shadow:0 0 0 2px rgba(3,60,84,.34),0 0 16px rgba(3,60,84,.2),0 22px 48px rgba(3,60,84,.40)}}
         @keyframes borderChase{to{--border-angle:1turn}}
 
         /* Rest of your existing CSS remains the same */
@@ -1663,6 +1663,7 @@
         async function getTeacherLessonsForProfileToday(teacherUid){
             const dateKW = dateInTZ('Asia/Kuwait');
             const weekday = kuwaitWeekdayEnglish();
+            const dayIndex = weekdayEnglishToSunIndex(weekday);
             const intervals = getDailyLessonIntervals();
             const intervalByIndex = new Map(intervals.map(iv => [iv.index, iv]));
             const cacheKey = `${teacherUid}__${dateKW}__${weekday}__${intervals.map(iv => `${iv.index}:${iv.start}-${iv.end}`).join('|')}`;
@@ -1705,6 +1706,46 @@
                 });
             }catch(error){
                 console.error('Error loading profile next lessons:', error);
+            }
+
+            // Custom/extra schedules (e.g. exam days, or Fri/Sat schedules) aren't in
+            // the main 'schedules' collection above, so check those separately.
+            if (dayIndex >= 0) {
+                try{
+                    const qCustom = query(collection(db, 'customDaySchedules'), where('dayIndex', '==', dayIndex));
+                    const customSnap = await getDocs(qCustom);
+                    customSnap.forEach(ds => {
+                        const row = ds.data() || {};
+                        if (row.deletedAt || row.enabled !== true) return;
+                        const lessons = Array.isArray(row.lessons) ? row.lessons : [];
+                        const times = Array.isArray(row.times) ? row.times : [];
+                        const max = Math.min(7, Number(row.lessonCount) || lessons.length || times.length || 7);
+                        for (let i = 0; i < max; i++) {
+                            const lessonRow = lessons[i] || {};
+                            if ((lessonRow.teacherUid || '').toString() !== teacherUid) continue;
+                            const lesson = i + 1;
+                            const classKey = (row.classKey || lessonRow.classKey || '').toString().trim()
+                                || (row.grade && row.section ? `${row.grade} / ${row.section}${row.track ? ` ${row.track}` : ''}` : '');
+                            if (!classKey) continue;
+                            const interval = intervalByIndex.get(lesson);
+                            const slot = times[i] || {};
+                            const startMin = slot.start ? parseHHMMtoMin(slot.start) : interval?.start;
+                            const endMin = slot.end ? parseHHMMtoMin(slot.end) : interval?.end;
+                            if (startMin == null || endMin == null) continue;
+                            const slotKey = `${lesson}|${normalizeClassKey(classKey)}`;
+                            if (bySlot.has(slotKey)) continue;
+                            bySlot.set(slotKey, {
+                                lesson,
+                                classKey,
+                                label: interval?.label || `الحصة ${toArabicDigits(lesson)}`,
+                                startMin,
+                                endMin
+                            });
+                        }
+                    });
+                }catch(error){
+                    console.error('Error loading custom schedules for profile lessons:', error);
+                }
             }
 
             const lessons = Array.from(bySlot.values()).sort((a,b) => {

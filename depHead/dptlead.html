@@ -246,9 +246,9 @@
         .btn.ghost:hover{transform:translateY(-3px);box-shadow:0 18px 40px rgba(3,60,84,.22);border-color:rgba(3,60,84,.4)}
         .btn.class-btn{background:linear-gradient(145deg,var(--primary),var(--primary-light));color:#fff;box-shadow:0 18px 40px rgba(3,60,84,.32)}
         .btn.class-btn:hover{transform:translateY(-3px);box-shadow:0 22px 48px rgba(3,60,84,.38)}
-        .btn.class-btn.current-lesson{isolation:isolate;box-shadow:0 0 0 1.5px rgba(59,130,246,.35),0 0 16px rgba(59,130,246,.4),0 22px 48px rgba(3,60,84,.40);animation:classLessonPulse 3s ease-in-out infinite}
-        .btn.class-btn.current-lesson::before{content:"";position:absolute;inset:0;border-radius:18px;padding:2.5px;background:conic-gradient(from var(--border-angle),rgba(59,130,246,.08) 0%,rgba(59,130,246,.08) 55%,rgba(96,165,250,.6) 70%,#fff 76%,rgba(147,197,253,1) 81%,rgba(59,130,246,.3) 90%,rgba(59,130,246,.08) 100%);-webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);mask-composite:exclude;pointer-events:none;animation:borderChase 2.2s linear infinite;filter:drop-shadow(0 0 5px rgba(96,165,250,.9)) drop-shadow(0 0 14px rgba(59,130,246,.6))}
-        @keyframes classLessonPulse{0%,100%{box-shadow:0 0 0 1.5px rgba(59,130,246,.35),0 0 12px rgba(59,130,246,.3),0 22px 48px rgba(3,60,84,.40)}50%{box-shadow:0 0 0 2px rgba(96,165,250,.7),0 0 22px rgba(59,130,246,.55),0 0 42px rgba(96,165,250,.2),0 22px 48px rgba(3,60,84,.40)}}
+        .btn.class-btn.current-lesson{isolation:isolate;box-shadow:0 0 0 1.5px rgba(3,60,84,.28),0 0 14px rgba(3,60,84,.16),0 22px 48px rgba(3,60,84,.40);animation:classLessonPulse 3.6s ease-in-out infinite}
+        .btn.class-btn.current-lesson::before{content:"";position:absolute;inset:0;border-radius:18px;padding:1.5px;background:conic-gradient(from var(--border-angle),transparent 0%,transparent 78%,rgba(148,197,255,.55) 89%,rgba(219,234,254,.9) 94%,rgba(148,197,255,.55) 99%,transparent 100%);-webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);mask-composite:exclude;pointer-events:none;animation:borderChase 4s linear infinite}
+        @keyframes classLessonPulse{0%,100%{box-shadow:0 0 0 1.5px rgba(3,60,84,.24),0 0 10px rgba(3,60,84,.12),0 22px 48px rgba(3,60,84,.40)}50%{box-shadow:0 0 0 2px rgba(3,60,84,.34),0 0 16px rgba(3,60,84,.2),0 22px 48px rgba(3,60,84,.40)}}
         @keyframes borderChase{to{--border-angle:1turn}}
 
         /* Disable styles */
@@ -1135,11 +1135,41 @@
                 originalOverrideSnap.forEach(doc => {
                     const data = doc.data();
                     const lessonKey = data.lesson.toString();
-                    
+
                     // Remove lesson from schedule (covered away)
                     scheduleMap.delete(lessonKey);
                 });
-                
+
+                // Custom/extra schedules (e.g. exam days, or Fri/Sat schedules) aren't in
+                // the main 'schedules' collection above, so check those separately.
+                try {
+                    const customQuery = query(
+                        collection(db, 'customDaySchedules'),
+                        where('dayIndex', '==', dayIndexForISO(today))
+                    );
+                    const customSnap = await getDocs(customQuery);
+                    customSnap.forEach(doc => {
+                        const row = doc.data() || {};
+                        if (row.deletedAt || row.enabled !== true) return;
+                        const lessonsArr = Array.isArray(row.lessons) ? row.lessons : [];
+                        const max = Math.min(7, Number(row.lessonCount) || lessonsArr.length || 7);
+                        for (let i = 0; i < max; i++) {
+                            const lessonRow = lessonsArr[i] || {};
+                            if ((lessonRow.teacherUid || '').toString() !== teacherUid) continue;
+                            const lessonKey = String(i + 1);
+                            if (scheduleMap.has(lessonKey)) continue;
+                            let classKey = (row.classKey || lessonRow.classKey || '').toString().trim();
+                            if (!classKey && row.grade && row.section) {
+                                classKey = `${row.grade} / ${row.section}${row.track ? ` ${row.track}` : ''}`;
+                            }
+                            if (!classKey) continue;
+                            scheduleMap.set(lessonKey, { ...lessonRow, classKey, isCustom: true });
+                        }
+                    });
+                } catch (error) {
+                    console.error('Error fetching custom schedules:', error);
+                }
+
                 return scheduleMap;
             } catch (error) {
                 console.error('Error fetching schedule:', error);
