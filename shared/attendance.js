@@ -31,13 +31,17 @@ const STYLES = `
   #attendanceSheet .att-student-info{display:flex;align-items:center;gap:8px;flex:1}
   #attendanceSheet .att-number-badge{background:var(--primary-extra-light,#eef5fb);color:var(--primary);font-size:.8rem;font-weight:700;padding:2px 8px;border-radius:10px;border:1px solid rgba(3,60,84,.15);flex-shrink:0}
   #attendanceSheet .att-lesson-dots{display:flex;justify-content:flex-end;gap:6px;flex-wrap:wrap;margin-top:-4px;margin-bottom:2px}
-  #attendanceSheet .att-lesson-dot{width:22px;height:22px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:900;border:1px solid transparent;line-height:1}
+  #attendanceSheet .att-lesson-dot{width:24px;height:24px;padding:0;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;font-size:.76rem;font-weight:900;border:1px solid transparent;line-height:1;font-family:inherit;transition:var(--transition);cursor:pointer}
+  #attendanceSheet .att-lesson-dot:hover{transform:scale(1.14)}
   #attendanceSheet .att-lesson-dot.present{background:var(--greenBg,rgba(26,127,55,.08));color:var(--green,#1a7f37);border-color:rgba(26,127,55,.25)}
   #attendanceSheet .att-lesson-dot.late{background:var(--yellowBg,rgba(160,109,0,.10));color:var(--yellow,#a06d00);border-color:rgba(160,109,0,.25)}
   #attendanceSheet .att-lesson-dot.absent{background:var(--redBg,rgba(180,35,24,.10));color:var(--red,#b42318);border-color:rgba(180,35,24,.25)}
+  #attendanceSheet .att-lesson-dot.missing{background:rgba(234,88,12,.12);color:#c2410c;border-color:rgba(234,88,12,.3)}
+  #attendanceSheet .att-lesson-dot.future{background:rgba(148,163,184,.10);color:#94a3b8;border-color:rgba(148,163,184,.25);opacity:.65;cursor:default}
+  #attendanceSheet .att-lesson-dot.future:hover{transform:none}
   #attendanceSheet .special-case-icon{width:18px;height:18px;margin-inline-start:8px;flex-shrink:0}
-  #attendanceSheet .att-hero{border:2px dashed rgba(3,60,84,.2);background:var(--blueGlass,rgba(3,60,84,.08));border-radius:20px;padding:24px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
-  #attendanceSheet .att-class{margin:0;font-size:clamp(1.3rem,4vw,1.8rem);color:var(--primary);font-weight:900}
+  #attendanceSheet .sheet-header .sheet-title{flex:1;text-align:center}
+  #attendanceSheet .lesson-picker{width:100%}
   #attendanceSheet .att-row{display:flex;gap:12px;flex-wrap:wrap}
   #attendanceSheet .seg{display:flex;align-items:center;border:1px solid var(--border);border-radius:14px;overflow:hidden;background:#fff;box-shadow:var(--shadow-1)}
   #attendanceSheet .seg button{flex:1 1 0;min-height:48px;padding:12px 10px;background:transparent;border:0;cursor:pointer;font-weight:900;font-size:1rem;font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;transition:var(--transition)}
@@ -61,9 +65,6 @@ const STYLES = `
   #attendanceSheet .btn.submit:disabled{opacity:.5;cursor:not-allowed;box-shadow:none;transform:none}
   #attendanceSheet .lesson-controls{width:100%;display:flex;gap:12px;flex-wrap:wrap;align-items:center}
   #attendanceSheet .lesson-controls .select-wrap{flex:1 1 320px}
-  #attendanceSheet .mini-ghost{min-height:52px;padding:12px 16px;border-radius:16px;font-weight:900;border:1px solid rgba(3,60,84,.2);background:#fff;color:var(--primary);cursor:pointer;box-shadow:var(--shadow-1);transition:var(--transition);display:inline-flex;align-items:center;gap:10px}
-  #attendanceSheet .mini-ghost:hover{transform:translateY(-2px);box-shadow:0 18px 40px rgba(3,60,84,.16);border-color:rgba(3,60,84,.35)}
-  #attendanceSheet .mini-ghost:disabled{opacity:.6;cursor:not-allowed;transform:none;box-shadow:none}
   #attendanceSheet .select-wrap{position:relative;max-width:380px;width:100%}
   #attendanceSheet .select{appearance:none;-webkit-appearance:none;-moz-appearance:none;width:100%;min-height:52px;padding:12px 16px;padding-inline-end:44px;border-radius:16px;font-weight:800;font-size:1rem;cursor:pointer;border:1px solid rgba(3,60,84,.15);background:linear-gradient(145deg,var(--primary),var(--primary-light));color:#fff;box-shadow:0 14px 32px rgba(3,60,84,.25);transition:var(--transition);font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif}
   #attendanceSheet .select:hover{transform:translateY(-2px);box-shadow:0 18px 40px rgba(3,60,84,.32)}
@@ -100,11 +101,20 @@ const STYLES = `
   @keyframes attBlockedRingDraw{0%{stroke-dashoffset:220;opacity:.5}30%{stroke-dashoffset:0;opacity:1}70%{stroke-dashoffset:0;opacity:1}100%{stroke-dashoffset:220;opacity:.5}}
   @keyframes attBlockedXDraw{0%{stroke-dashoffset:56;opacity:0}25%{stroke-dashoffset:56;opacity:0}45%{stroke-dashoffset:0;opacity:1}70%{stroke-dashoffset:0;opacity:1}100%{stroke-dashoffset:56;opacity:0}}
   @media(max-width:640px){
-    #attendanceSheet .att-hero{padding:18px;gap:12px}
     #attendanceSheet .att-row{width:100%}
     #attendanceSheet .lesson-controls{gap:10px}
-    #attendanceSheet .mini-ghost{flex:1 1 auto;justify-content:center}
   }
+  /* Lesson detail popup */
+  #attLessonDetailModal .detail-rows{display:grid;gap:10px;margin:14px 0}
+  #attLessonDetailModal .detail-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 14px;border:1px solid var(--border);border-radius:12px;background:#fafcff}
+  #attLessonDetailModal .detail-row .k{color:var(--muted);font-weight:800;font-size:.9rem}
+  #attLessonDetailModal .detail-row .v{font-weight:900;color:var(--text)}
+  #attLessonDetailModal .detail-status{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:999px;font-weight:900;font-size:.88rem}
+  #attLessonDetailModal .detail-status.present{color:var(--green,#1a7f37);background:var(--greenBg,rgba(26,127,55,.08))}
+  #attLessonDetailModal .detail-status.late{color:var(--yellow,#a06d00);background:var(--yellowBg,rgba(160,109,0,.10))}
+  #attLessonDetailModal .detail-status.absent{color:var(--red,#b42318);background:var(--redBg,rgba(180,35,24,.10))}
+  #attLessonDetailModal .detail-status.missing{color:#c2410c;background:rgba(234,88,12,.12)}
+  #attLessonDetailModal .detail-empty{color:var(--muted);font-weight:700;text-align:center;padding:8px 0}
 `;
 
 const SHEET_HTML = `
@@ -114,22 +124,15 @@ const SHEET_HTML = `
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
         رجوع
       </button>
-      <h3 class="sheet-title">تسجيل الغياب</h3>
+      <h3 id="attSheetTitle" class="sheet-title">تسجيل الغياب</h3>
     </div>
     <div class="sheet-body">
-      <div class="att-hero">
-        <h2 id="attendanceClassName" class="att-class">—</h2>
-        <div class="att-row" style="width:100%">
-          <div class="lesson-controls">
-            <div class="select-wrap">
-              <select id="attLessonSelect" class="select" aria-label="اختر الحصة"></select>
-            </div>
-            <button id="attAutoLessonBtn" class="mini-ghost" type="button" title="إعادة الاختيار تلقائيًا">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v7h-7"/></svg>
-              اختيار تلقائي
-            </button>
-            <div id="attLessonHint" class="hint"></div>
+      <div id="attLessonPicker" class="lesson-picker" style="display:none">
+        <div class="lesson-controls">
+          <div class="select-wrap">
+            <select id="attLessonSelect" class="select" aria-label="اختر الحصة"></select>
           </div>
+          <div id="attLessonHint" class="hint"></div>
         </div>
       </div>
       <div id="attendanceList" class="att-list"></div>
@@ -200,6 +203,16 @@ const SHEET_HTML = `
       <div class="title" id="attToastTitle">تم تسجيل الغياب بنجاح</div>
       <div class="sub" id="attToastSub">للحصة: —</div>
       <button id="attToastClose" class="close" type="button">إغلاق</button>
+    </div>
+  </div>
+  <div id="attLessonDetailModal" class="modal" aria-hidden="true">
+    <div class="overlay"></div>
+    <div class="card" role="dialog" aria-modal="true" aria-labelledby="attLessonDetailTitle">
+      <h3 id="attLessonDetailTitle">تفاصيل الحضور</h3>
+      <div id="attLessonDetailBody" class="detail-rows"></div>
+      <div class="row">
+        <button id="attLessonDetailClose" class="btn primary" type="button">إغلاق</button>
+      </div>
     </div>
   </div>
 `;
@@ -295,9 +308,9 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
   const els = {
     sheet: document.getElementById("attendanceSheet"),
     closeBtn: document.getElementById("attCloseBtn"),
-    className: document.getElementById("attendanceClassName"),
+    sheetTitle: document.getElementById("attSheetTitle"),
+    lessonPicker: document.getElementById("attLessonPicker"),
     lessonSelect: document.getElementById("attLessonSelect"),
-    autoLessonBtn: document.getElementById("attAutoLessonBtn"),
     lessonHint: document.getElementById("attLessonHint"),
     attList: document.getElementById("attendanceList"),
     countPresent: document.getElementById("attCountPresent"),
@@ -327,7 +340,13 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
     toastTitle: document.getElementById("attToastTitle"),
     toastSub: document.getElementById("attToastSub"),
     toastClose: document.getElementById("attToastClose"),
+    lessonDetailModal: document.getElementById("attLessonDetailModal"),
+    lessonDetailTitle: document.getElementById("attLessonDetailTitle"),
+    lessonDetailBody: document.getElementById("attLessonDetailBody"),
+    lessonDetailClose: document.getElementById("attLessonDetailClose"),
   };
+
+  const DEFAULT_SHEET_TITLE = "تسجيل الغياب";
 
   let LESSON_TIMES = DEFAULT_LESSON_TIMES.map(t => ({ ...t }));
   let customScheduleCache = { key: "", at: 0, rows: [] };
@@ -336,6 +355,7 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
   let attStatuses = {};
   let attStudentList = [];
   let takenLessonsByStudent = new Map();
+  let takenLessonNumbers = new Set();
   let pendingSave = null;
   let currentMeta = null;
   let toastTimer = null;
@@ -351,6 +371,7 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
   function closeSheet(el) {
     el.classList.remove("open");
     el.setAttribute("aria-hidden", "true");
+    if (el === els.sheet) els.sheetTitle.textContent = DEFAULT_SHEET_TITLE;
     if (!document.querySelector(".sheet.open, .modal.open")) {
       unlockBodyScroll(scrollState);
       document.querySelector("main")?.removeAttribute("inert");
@@ -449,6 +470,19 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
     const e = parseTimeToMinutes(l.end);
     const cutoff = e + 5;
     return { ok: now >= s && now <= cutoff, reason: now >= s && now <= cutoff ? "within_window" : "outside_window" };
+  }
+
+  // Has this lesson's time slot already ended? Used to tell a genuinely
+  // missing attendance record (should have been taken, wasn't — "!") apart
+  // from a lesson that simply hasn't happened yet today (nothing to flag).
+  // A session for any date other than today (editing a past day) is always
+  // treated as past.
+  function isLessonInPast(lessonIndex) {
+    const l = LESSON_TIMES.find(x => x.index === lessonIndex);
+    if (!l) return true;
+    const sessionDate = currentMeta?.date;
+    if (sessionDate && sessionDate !== kuwaitTodayISO()) return true;
+    return getCurrentKuwaitMinutes() > parseTimeToMinutes(l.end);
   }
 
   async function buildTodayMapWithOverrides(teacherUid, dateISO) {
@@ -635,11 +669,19 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
     if (els.submitBtn) els.submitBtn.disabled = !enabled;
   }
 
+  function updateSheetTitle(lessonLabel) {
+    const classText = currentMeta?.classKey ? formatClassLabel(currentMeta.classKey) : "";
+    els.sheetTitle.textContent = lessonLabel && classText
+      ? `${lessonLabel} | ${classText}`
+      : (classText || DEFAULT_SHEET_TITLE);
+  }
+
   function buildLessonOption(currentLessonIndex) {
+    els.lessonPicker.style.display = "none";
     els.lessonSelect.innerHTML = "";
     const l = LESSON_TIMES.find(x => x.index === currentLessonIndex);
     if (!l) {
-      els.lessonHint.textContent = "الحصة غير متاحة";
+      updateSheetTitle();
       setControlsEnabled(false);
       return;
     }
@@ -650,17 +692,17 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
     opt.disabled = true;
     els.lessonSelect.appendChild(opt);
     els.lessonSelect.disabled = true;
-    if (els.autoLessonBtn) els.autoLessonBtn.style.display = "none";
-    els.lessonHint.textContent = `${l.label} (الحصة الحالية)`;
+    updateSheetTitle(l.label);
     setControlsEnabled(true);
   }
 
   function buildManualLessonOptions(available) {
+    els.lessonPicker.style.display = "";
     els.lessonSelect.innerHTML = "";
-    if (els.autoLessonBtn) els.autoLessonBtn.style.display = "none";
     if (!available.length) {
       els.lessonHint.textContent = "لا توجد حصص متاحة للتسجيل اليوم.";
       els.lessonSelect.disabled = true;
+      updateSheetTitle();
       setControlsEnabled(false);
       return;
     }
@@ -679,17 +721,19 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
     });
     els.lessonSelect.disabled = false;
     els.lessonHint.textContent = "يرجى اختيار الحصة.";
+    updateSheetTitle();
     els.lessonSelect.onchange = () => {
       const chosen = available.find(l => String(l.index) === els.lessonSelect.value);
       setControlsEnabled(!!chosen);
       els.lessonHint.textContent = chosen ? `${chosen.label} — ${chosen.start} – ${chosen.end}` : "يرجى اختيار الحصة.";
+      updateSheetTitle(chosen?.label);
     };
     setControlsEnabled(false);
   }
 
   function buildFixedLessonOption(lessonIndex, lessonLabel) {
+    els.lessonPicker.style.display = "none";
     els.lessonSelect.innerHTML = "";
-    if (els.autoLessonBtn) els.autoLessonBtn.style.display = "none";
     const l = LESSON_TIMES.find(x => x.index === lessonIndex);
     const label = lessonLabel || l?.label || `حصة ${lessonIndex}`;
     const opt = document.createElement("option");
@@ -699,7 +743,7 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
     opt.disabled = true;
     els.lessonSelect.appendChild(opt);
     els.lessonSelect.disabled = true;
-    els.lessonHint.textContent = `تعديل: ${label}`;
+    updateSheetTitle(`تعديل: ${label}`);
     setControlsEnabled(true);
   }
 
@@ -797,9 +841,15 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
     }
   }
 
+  // Returns { byStudent: Map<uid, Map<lessonNum, status>>, takenLessons: Set<lessonNum> }.
+  // takenLessons tracks which lesson numbers have a session at all for this
+  // class/date (regardless of whether a given student has a record in it),
+  // so the per-student lesson dots can distinguish "not taken yet" from
+  // "taken, and this student was marked present/late/absent".
   async function loadTakenLessonsForClass(dateISO, classKey) {
-    const out = new Map();
-    if (!dateISO || !classKey) return out;
+    const byStudent = new Map();
+    const takenLessons = new Set();
+    if (!dateISO || !classKey) return { byStudent, takenLessons };
     try {
       const sessSnap = await getDocs(query(
         collection(db, ATTENDANCE_SESSIONS_COLLECTION),
@@ -812,8 +862,8 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
         const lesson = Number(x.lesson);
         if (!Number.isFinite(lesson) || lesson < 1 || lesson > 7) return;
         sessions.push({ id: ds.id, lesson });
+        takenLessons.add(lesson);
       });
-      sessions.sort((a, b) => a.lesson - b.lesson);
       await Promise.all(sessions.map(async s => {
         const recs = await getDocs(collection(db, ATTENDANCE_SESSIONS_COLLECTION, s.id, ATTENDANCE_RECORDS_SUBCOLLECTION));
         recs.forEach(rd => {
@@ -821,15 +871,14 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
           if (!uid) return;
           const raw = (rd.data()?.status || "present").toString();
           const status = raw === "late" || raw === "absent" ? raw : "present";
-          if (!out.has(uid)) out.set(uid, []);
-          out.get(uid).push({ lesson: s.lesson, status });
+          if (!byStudent.has(uid)) byStudent.set(uid, new Map());
+          byStudent.get(uid).set(s.lesson, status);
         });
       }));
-      out.forEach(items => items.sort((a, b) => a.lesson - b.lesson));
     } catch (e) {
       console.error("[attendance] loadTakenLessons:", e);
     }
-    return out;
+    return { byStudent, takenLessons };
   }
 
   function recalcStats() {
@@ -897,13 +946,38 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
 
       const dots = document.createElement("div");
       dots.className = "att-lesson-dots";
-      const taken = takenLessonsByStudent.get((s.uid || "").toString()) || [];
-      taken.forEach(item => {
-        const dot = document.createElement("span");
-        dot.className = `att-lesson-dot ${item.status}`;
-        dot.textContent = toArabicDigits(item.lesson);
-        dots.appendChild(dot);
-      });
+      if (s.uid) {
+        const studentUid = s.uid;
+        const statusByLesson = takenLessonsByStudent.get(studentUid) || new Map();
+        LESSON_TIMES.forEach(l => {
+          const status = statusByLesson.get(l.index);
+          const dot = document.createElement("button");
+          dot.type = "button";
+          if (status) {
+            dot.className = `att-lesson-dot ${status}`;
+            dot.textContent = toArabicDigits(l.index);
+            dot.title = `${l.label}`;
+            dot.addEventListener("click", (e) => {
+              e.stopPropagation();
+              openLessonDetailPopup(studentUid, s.name, l.index, status);
+            });
+          } else if (isLessonInPast(l.index)) {
+            dot.className = "att-lesson-dot missing";
+            dot.textContent = "!";
+            dot.title = `${l.label} — لم يُسجَّل بعد`;
+            dot.addEventListener("click", (e) => {
+              e.stopPropagation();
+              openLessonDetailPopup(studentUid, s.name, l.index, null);
+            });
+          } else {
+            dot.className = "att-lesson-dot future";
+            dot.textContent = toArabicDigits(l.index);
+            dot.title = `${l.label} — لم تبدأ بعد`;
+            dot.disabled = true;
+          }
+          dots.appendChild(dot);
+        });
+      }
 
       const seg = document.createElement("div");
       seg.className = "seg";
@@ -942,6 +1016,7 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
     attStudentList = [];
     attStatuses = {};
     takenLessonsByStudent = new Map();
+    takenLessonNumbers = new Set();
     let students = await tryQueryStudents("students", cls);
     if (students.length === 0) {
       const nested = await tryQueryStudents("students/uids", cls);
@@ -950,7 +1025,9 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
     students = sortStudentsByStudentNumberOnly(students);
     attStudentList = students;
     const dateISO = currentMeta?.date || kuwaitTodayISO();
-    takenLessonsByStudent = await loadTakenLessonsForClass(dateISO, cls);
+    const taken = await loadTakenLessonsForClass(dateISO, cls);
+    takenLessonsByStudent = taken.byStudent;
+    takenLessonNumbers = taken.takenLessons;
     students.forEach(s => { if (s.uid) attStatuses[s.uid] = "present"; });
     renderList(students);
     recalcStats();
@@ -962,7 +1039,6 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
       return;
     }
     currentMeta = { ...meta, mode: "self" };
-    els.className.textContent = formatClassLabel(meta.classKey);
     buildLessonOption(meta.lesson);
     loadStudentsForClass(meta.classKey);
     openSheet(els.sheet);
@@ -989,7 +1065,6 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
       return;
     }
     currentMeta = { ok: true, mode: "any", date: dateISO, classKey, lesson: null };
-    els.className.textContent = formatClassLabel(classKey);
     buildManualLessonOptions(available);
     loadStudentsForClass(classKey);
     openSheet(els.sheet);
@@ -1016,7 +1091,6 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
       ok: true, mode: "edit", date: data.date || kuwaitTodayISO(),
       classKey, lesson: lessonIndex, sessionId, createdAt,
     };
-    els.className.textContent = formatClassLabel(classKey);
     buildFixedLessonOption(lessonIndex, lessonLabel);
     await loadStudentsForClass(classKey);
     await prefillStatusesFromSession(sessionId);
@@ -1242,15 +1316,66 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
     els.confirmLateList.style.display = "block";
   });
 
+  const STATUS_LABELS_AR = { present: "حاضر", late: "متأخر", absent: "غائب" };
+
+  function detailRow(k, vHtml) {
+    return `<div class="detail-row"><span class="k">${k}</span><span class="v">${vHtml}</span></div>`;
+  }
+
+  async function openLessonDetailPopup(studentUid, studentName, lessonIndex, status) {
+    const l = LESSON_TIMES.find(x => x.index === lessonIndex);
+    const lessonLabel = l ? `${l.label} — ${l.start} – ${l.end}` : `الحصة ${toArabicDigits(lessonIndex)}`;
+    els.lessonDetailBody.innerHTML = `<div class="detail-empty">جاري التحميل...</div>`;
+    openModal(els.lessonDetailModal);
+
+    if (!status) {
+      els.lessonDetailTitle.textContent = "لم يُسجَّل الحضور بعد";
+      els.lessonDetailBody.innerHTML =
+        detailRow("الطالب", studentName || "—") +
+        detailRow("الحصة", lessonLabel) +
+        `<div class="detail-empty">لم يتم تسجيل حضور/غياب هذا الطالب في هذه الحصة.</div>`;
+      return;
+    }
+
+    els.lessonDetailTitle.textContent = "تفاصيل الحضور";
+    try {
+      const dateISO = currentMeta?.date || kuwaitTodayISO();
+      const classKey = currentMeta?.classKey || "";
+      const sessionId = createAttendanceSessionId(dateISO, lessonIndex, classKey);
+      const sessSnap = await getDoc(doc(db, ATTENDANCE_SESSIONS_COLLECTION, sessionId));
+      const sessData = sessSnap.exists() ? sessSnap.data() : {};
+      let recordedBy = "—";
+      if (sessData.teacherUid) {
+        try {
+          const tSnap = await getDoc(doc(db, "teachers", sessData.teacherUid));
+          if (tSnap.exists()) recordedBy = (tSnap.data() || {}).name || recordedBy;
+        } catch (e) {
+          console.warn("[attendance] teacher lookup failed:", e?.message);
+        }
+      }
+      const statusLabel = STATUS_LABELS_AR[status] || status;
+      els.lessonDetailBody.innerHTML =
+        detailRow("الطالب", studentName || "—") +
+        detailRow("الحصة", lessonLabel) +
+        detailRow("الحالة", `<span class="detail-status ${status}">${statusLabel}</span>`) +
+        detailRow("سجّلها", recordedBy);
+    } catch (e) {
+      console.error("[attendance] lesson detail failed:", e);
+      els.lessonDetailBody.innerHTML = `<div class="detail-empty">تعذّر تحميل التفاصيل.</div>`;
+    }
+  }
+
   els.closeBtn.addEventListener("click", () => closeSheet(els.sheet));
   els.errorOk.addEventListener("click", () => closeModal(els.errorModal));
   els.blockedClose.addEventListener("click", () => closeModal(els.blockedModal));
   els.blockedOk.addEventListener("click", () => closeModal(els.blockedModal));
   els.toastClose.addEventListener("click", () => els.toast.classList.add("hidden"));
+  els.lessonDetailClose.addEventListener("click", () => closeModal(els.lessonDetailModal));
 
   els.confirmModal.querySelector(".overlay").addEventListener("click", () => closeModal(els.confirmModal));
   els.errorModal.querySelector(".overlay").addEventListener("click", () => closeModal(els.errorModal));
   els.blockedModal.querySelector(".overlay").addEventListener("click", () => closeModal(els.blockedModal));
+  els.lessonDetailModal.querySelector(".overlay").addEventListener("click", () => closeModal(els.lessonDetailModal));
 
   // Boot: load lesson times on first mount
   fetchLessonTimes();
