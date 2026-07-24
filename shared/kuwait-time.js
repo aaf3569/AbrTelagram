@@ -1,5 +1,7 @@
 const TIME_ZONE = "Asia/Kuwait";
-export const DAY_AR_BY_INDEX = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس"];
+// Indices 0-4 (Sun-Thu) are the main weekly schedule's days; 5-6 (Fri/Sat)
+// only ever apply to custom/extra schedules.
+export const DAY_AR_BY_INDEX = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
 
 export function parseTimeToMinutes(t) {
   if (!t) return 0;
@@ -53,4 +55,18 @@ export function getKuwaitDayIndexSunThu() {
 export function getKuwaitDayNameSunThu() {
   const idx = getKuwaitDayIndexSunThu();
   return idx >= 0 ? DAY_AR_BY_INDEX[idx] : null;
+}
+
+// Full week (0=Sun..6=Sat) — for custom/extra schedules, which unlike the main
+// weekly schedule can be created for Friday/Saturday too.
+export function getKuwaitDayIndexSunSat() {
+  const wd = getKuwaitWeekday();
+  if (wd === "Sunday") return 0;
+  if (wd === "Monday") return 1;
+  if (wd === "Tuesday") return 2;
+  if (wd === "Wednesday") return 3;
+  if (wd === "Thursday") return 4;
+  if (wd === "Friday") return 5;
+  if (wd === "Saturday") return 6;
+  return -1;
 }

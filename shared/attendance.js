@@ -10,6 +10,7 @@ import {
   kuwaitDateTimeToDate,
   addMinutesToDate,
   getKuwaitDayIndexSunThu,
+  getKuwaitDayIndexSunSat,
 } from "/shared/kuwait-time.js";
 
 const STYLE_ID = "attendance-sheet-style";
@@ -510,7 +511,9 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
   }
 
   async function getMyActiveCustomLessonMetaForNow(teacherUid, dateISO) {
-    const dayIndex = getKuwaitDayIndexSunThu();
+    // Custom/extra schedules can be created for any day including Fri/Sat,
+    // unlike the main weekly schedule (school days only) below.
+    const dayIndex = getKuwaitDayIndexSunSat();
     if (dayIndex < 0) return null;
     const nowMin = getCurrentKuwaitMinutes();
     const rows = await getCustomSchedulesForToday(dayIndex);
