@@ -1,0 +1,26 @@
+# Secrets / credentials — never commit these
+.netlify.env
+.env
+.env.*
+*.pem
+*serviceAccount*.json
+*credentials*.json
+firebase-adminsdk*.json
+
+# Dependencies — installed via npm install, shouldn't be tracked
+node_modules/
+
+# Netlify CLI local state
+.netlify/
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Editor folders
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*

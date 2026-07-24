@@ -1,0 +1,11 @@
+# Files here must never end up in a Netlify static deploy of the repo root.
+node_modules/
+.git/
+.netlify/
+.netlify.env
+.claude/
+index.js
+package.json
+package-lock.json
+.gitignore
+.netlifyignore
