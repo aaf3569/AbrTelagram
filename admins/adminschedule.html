@@ -1231,6 +1231,27 @@
     const createScheduleConfirmBtn = document.getElementById('createScheduleConfirmBtn');
 
     /* ========= State ========= */
+    // Remember the last-viewed grade/class across page reloads — otherwise every
+    // refresh silently jumps back to "10 / 1", making it look like whatever you
+    // were just editing on another class vanished.
+    const LAST_CLASS_STORAGE_KEY = 'adminschedule:lastSelectedClass';
+    function saveLastSelectedClass(grade, classKey){
+      try{ localStorage.setItem(LAST_CLASS_STORAGE_KEY, JSON.stringify({ grade, classKey })); }catch(_){}
+    }
+    function loadLastSelectedClass(){
+      try{
+        const raw = localStorage.getItem(LAST_CLASS_STORAGE_KEY);
+        if(!raw) return null;
+        const parsed = JSON.parse(raw);
+        const grade = parsed?.grade;
+        const classKey = parsed?.classKey;
+        if(grade && classKey && (CLASSES_BY_GRADE[grade]||[]).includes(classKey)){
+          return { grade, classKey };
+        }
+      }catch(_){}
+      return null;
+    }
+
     let selectedGrade = '10';
     let selectedClassKey = '10 / 1';
     let weekDates = []; // ISO strings (Sun→Thu)
@@ -2545,6 +2566,8 @@
       previousGrade = e.target.value;
       selectedGrade = e.target.value;
       selectedClassKey = (CLASSES_BY_GRADE[selectedGrade] && CLASSES_BY_GRADE[selectedGrade][0]) ? CLASSES_BY_GRADE[selectedGrade][0] : selectedClassKey;
+      previousClass = selectedClassKey;
+      saveLastSelectedClass(selectedGrade, selectedClassKey);
       renderSelectors();
       initWeek();
       renderGridFull();
@@ -2562,10 +2585,11 @@
           return;
         }
       }
-      
+
       setLoading(true, "جاري تحميل بيانات الفصل...");
       previousClass = e.target.value;
       selectedClassKey = e.target.value;
+      saveLastSelectedClass(selectedGrade, selectedClassKey);
       initWeek();
       renderGridFull();
       await warmTeachersCache();
@@ -2947,8 +2971,9 @@
           return;
         }
 
-        selectedGrade = '10';
-        selectedClassKey = '10 / 1';
+        const lastSelected = loadLastSelectedClass();
+        selectedGrade = lastSelected?.grade || '10';
+        selectedClassKey = lastSelected?.classKey || '10 / 1';
         previousGrade = selectedGrade;
         previousClass = selectedClassKey;
         renderSelectors();

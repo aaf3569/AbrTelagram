@@ -30,7 +30,7 @@ const STYLES = `
   #attendanceSheet .att-name{font-weight:900;color:var(--text);line-height:1.4;word-break:break-word;display:flex;align-items:center;justify-content:space-between;gap:10px}
   #attendanceSheet .att-student-info{display:flex;align-items:center;gap:8px;flex:1}
   #attendanceSheet .att-number-badge{background:var(--primary-extra-light,#eef5fb);color:var(--primary);font-size:.8rem;font-weight:700;padding:2px 8px;border-radius:10px;border:1px solid rgba(3,60,84,.15);flex-shrink:0}
-  #attendanceSheet .att-lesson-dots{display:flex;justify-content:flex-end;gap:6px;flex-wrap:wrap;margin-top:-4px;margin-bottom:2px}
+  #attendanceSheet .att-lesson-dots{display:flex;justify-content:flex-start;gap:6px;flex-wrap:wrap;margin-top:-4px;margin-bottom:2px}
   #attendanceSheet .att-lesson-dot{width:24px;height:24px;padding:0;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;font-size:.76rem;font-weight:900;border:1px solid transparent;line-height:1;font-family:inherit;transition:var(--transition);cursor:pointer}
   #attendanceSheet .att-lesson-dot:hover{transform:scale(1.14)}
   #attendanceSheet .att-lesson-dot.present{background:var(--greenBg,rgba(26,127,55,.08));color:var(--green,#1a7f37);border-color:rgba(26,127,55,.25)}
