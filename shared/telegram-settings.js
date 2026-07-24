@@ -3,6 +3,17 @@ import { getFirestore, doc, onSnapshot, getDoc } from "/shared/firebase.js";
 const STYLE_ID = "telegram-settings-style";
 const TELEGRAM_BACKEND_BASE_URL = "https://abrschool-bot.onrender.com";
 
+// Render's free tier sleeps the backend after ~15min idle, so the first
+// connect/disconnect request after a gap can take 30-60s. Pinging a
+// lightweight health route as soon as this module loads (well before the
+// user actually clicks connect/disconnect) gives it a head start waking up.
+let backendWarmupStarted = false;
+function warmBackend() {
+  if (backendWarmupStarted) return;
+  backendWarmupStarted = true;
+  fetch(`${TELEGRAM_BACKEND_BASE_URL}/api/health`, { method: "GET" }).catch(() => {});
+}
+
 function ensureStyles() {
   if (document.getElementById(STYLE_ID)) return;
 
@@ -407,10 +418,32 @@ function isConnectedDoc(data) {
   return chatId.length > 0;
 }
 
-export function mountTelegramSettings({ auth } = {}) {
-  const trigger = document.getElementById("telegramSettingsBtn");
-  if (!trigger || trigger.dataset.telegramMounted === "1") return;
-  trigger.dataset.telegramMounted = "1";
+function resolveTrigger({ slotId = "telegramSettingsSlot", extraClass = "" } = {}) {
+  const slot = document.getElementById(slotId);
+  if (slot) {
+    if (slot.dataset.telegramMounted === "1") return null;
+    slot.dataset.telegramMounted = "1";
+    const button = document.createElement("button");
+    button.type = "button";
+    button.id = "telegramSettingsBtn";
+    button.className = ["btn", "ghost", extraClass].filter(Boolean).join(" ");
+    button.textContent = "إعدادات المستخدم";
+    slot.replaceWith(button);
+    return button;
+  }
+
+  // Legacy fallback: pages that still hand-write the <button> tag themselves.
+  const legacyButton = document.getElementById("telegramSettingsBtn");
+  if (!legacyButton || legacyButton.dataset.telegramMounted === "1") return null;
+  legacyButton.dataset.telegramMounted = "1";
+  return legacyButton;
+}
+
+export function mountTelegramSettings({ auth, slotId, extraClass } = {}) {
+  warmBackend();
+
+  const trigger = resolveTrigger({ slotId, extraClass });
+  if (!trigger) return;
 
   ensureStyles();
   const parts = createModal();

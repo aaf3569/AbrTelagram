@@ -544,6 +544,15 @@
       return fmt.format(new Date());
     }
 
+    // Schedule entries recur weekly (identified by weekday, not calendar date),
+    // so lookups match by dayIndex (0=Sun..4=Thu) rather than an exact date.
+    function dayIndexForISO(iso){
+      const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec((iso || '').toString());
+      if(!m) return -1;
+      const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+      return d.getDay();
+    }
+
     function displayTeacherNameFromDoc(data){
       const d = data || {};
       const name = d.name || d.fullName || d.teacherName || d.displayName || d.username || d.email || d.phone || '';
@@ -683,7 +692,7 @@
         try{
           const q1 = query(
             collection(db,'schedules'),
-            where('date','==', todayISO),
+            where('dayIndex','==', dayIndexForISO(todayISO)),
             where('teacherUid','in', ch)
           );
           const snap = await getDocs(q1);
@@ -694,7 +703,7 @@
             try{
               const q2 = query(
                 collection(db,'schedules'),
-                where('date','==', todayISO),
+                where('dayIndex','==', dayIndexForISO(todayISO)),
                 where('teacherUid','==', uid),
                 limit(50)
               );

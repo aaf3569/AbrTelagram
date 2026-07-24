@@ -93,7 +93,7 @@
     .filter-btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-2); border-color: rgba(2, 43, 66, 0.4); }
     .filter-btn:active { transform: translateY(0); }
     .filter-btn.active { background: linear-gradient(135deg, var(--primary-2), var(--primary)); color: var(--headerText); border-color: var(--primary); }
-    .filter-btn[disabled] { opacity: 0.6; cursor: not-allowed; }
+    .filter-btn[disabled], .view-toggle-btn[disabled] { opacity: 0.6; cursor: not-allowed; }
 
     .btn-solid {
       background: linear-gradient(135deg, var(--primary-2), var(--primary));
@@ -112,8 +112,54 @@
       color: var(--primary);
     }
 
+    /* Day/Week segmented toggle */
+    .view-toggle {
+      display: inline-flex;
+      padding: 4px;
+      gap: 2px;
+      background: rgba(2, 43, 66, 0.06);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+    }
+    .view-toggle-btn {
+      height: 38px; padding: 0 16px; border: 0; border-radius: 9px;
+      background: transparent; color: var(--text-light);
+      font-weight: 800; font-size: 0.88rem; cursor: pointer; transition: var(--transition);
+      display: inline-flex; align-items: center; gap: 8px;
+      font-family: "Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+    .view-toggle-btn:hover { color: var(--primary); }
+    .view-toggle-btn.active {
+      background: var(--card-bg); color: var(--primary);
+      box-shadow: var(--shadow-1);
+    }
+
+    /* Floating back button */
+    .fab-back {
+      position: fixed;
+      top: 50%;
+      right: 18px;
+      transform: translateY(-50%);
+      z-index: 30;
+      height: 48px; padding: 0 18px 0 20px;
+      border-radius: 999px;
+      border: 1px solid rgba(2, 43, 66, 0.16);
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+      color: var(--primary);
+      font-weight: 900; font-size: 0.92rem; cursor: pointer;
+      box-shadow: var(--shadow-2);
+      transition: var(--transition);
+      display: inline-flex; align-items: center; gap: 10px;
+      font-family: "Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+    .fab-back:hover { transform: translateY(-50%) translateX(-3px); box-shadow: 0 14px 32px rgba(2, 43, 66, 0.2); border-color: rgba(2, 43, 66, 0.3); }
+    .fab-back:active { transform: translateY(-50%) scale(0.97); }
+    .fab-back i { font-size: 0.95em; }
+
     /* Loading dot */
-    .filter-btn.loading::after {
+    .filter-btn.loading, .view-toggle-btn.loading { position: relative; }
+    .filter-btn.loading::after, .view-toggle-btn.loading::after {
       content: ""; width: 10px; height: 10px; border-radius: 50%;
       border: 2px solid currentColor; border-top-color: transparent;
       position: absolute; left: 10px; animation: spin 0.8s linear infinite;
@@ -562,12 +608,16 @@
       .sheet-body { padding: 16px; }
       .top-info { gap: 8px; }
       .filter-btn { padding: 0 14px; font-size: 0.85rem; }
+      .view-toggle-btn { height: 36px; padding: 0 12px; font-size: 0.82rem; }
       .more-actions { flex-direction: column; }
       .table { display: none; }
       .compact-table { display: grid; }
       .header-full { grid-column: 1; }
       .info-grid, .split { grid-template-columns: 1fr; }
       .modal-card { border-radius: 18px; max-height: 85vh; }
+      .fab-back { top: auto; bottom: 18px; transform: none; height: 46px; padding: 0 16px 0 18px; }
+      .fab-back:hover { transform: translateX(-3px); }
+      .fab-back:active { transform: scale(0.97); }
       
       /* Mobile modal improvements */
       .modal { padding: 12px; }
@@ -659,33 +709,34 @@
         جدول المعلّم
       </h1>
       <div class="top-info">
-        <button id="btnBackMain" class="filter-btn btn-ghost" type="button">
-          <i class="fas fa-house"></i>
-          <span>الصفحة الرئيسية</span>
-        </button>
-
-        <button id="btnToday" class="filter-btn active" type="button" aria-label="عرض اليوم للمعلم">
-          <i class="fas fa-chalkboard-user"></i>
-          <span>عرض اليوم</span>
-        </button>
-
-        <button id="btnWeek" class="filter-btn" type="button">
-          <i class="fas fa-calendar-week"></i>
-          <span>الأسبوع كامل</span>
-        </button>
+        <div class="view-toggle" role="group" aria-label="طريقة العرض">
+          <button id="btnToday" class="view-toggle-btn active" type="button" aria-label="عرض اليوم للمعلم">
+            <i class="fas fa-chalkboard-user"></i>
+            <span>اليوم</span>
+          </button>
+          <button id="btnWeek" class="view-toggle-btn" type="button">
+            <i class="fas fa-calendar-week"></i>
+            <span>الأسبوع</span>
+          </button>
+        </div>
 
         <button id="btnDownloadPdf" class="filter-btn btn-solid" type="button">
           <i class="fas fa-file-pdf"></i>
           <span>تنزيل PDF</span>
         </button>
 
-        <button id="btnMore" class="filter-btn" type="button">
+        <button id="btnMore" class="filter-btn btn-ghost" type="button">
           <i class="fas fa-ellipsis-h"></i>
           <span>المزيد</span>
         </button>
       </div>
     </div>
   </header>
+
+  <button id="btnBackMain" class="fab-back" type="button" aria-label="الرجوع للصفحة الرئيسية">
+    <i class="fas fa-arrow-right"></i>
+    <span>رجوع</span>
+  </button>
 
   <main>
     <div class="board">
@@ -1622,12 +1673,21 @@
       }
     }
 
+    // Schedule entries recur weekly (identified by weekday, not calendar date),
+    // so lookups match by dayIndex (0=Sun..4=Thu) rather than an exact date.
+    function dayIndexForISO(iso){
+      const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec((iso || '').toString());
+      if(!m) return -1;
+      const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+      return d.getDay();
+    }
+
     /* ========= Data loaders ========= */
     async function fetchWeekDocsForTeacher(uid){
       const q1 = query(
         collection(db,'schedules'),
         where('teacherUid','==', uid),
-        where('date','in', weekDates)
+        where('dayIndex','in', [0,1,2,3,4])
       );
       return getDocs(q1);
     }
@@ -1643,13 +1703,13 @@
           collection(db,'schedules'),
           ...base,
           where('track','==', track),
-          where('date','in', weekDates)
+          where('dayIndex','in', [0,1,2,3,4])
         );
       } else {
         q1 = query(
           collection(db,'schedules'),
           ...base,
-          where('date','in', weekDates)
+          where('dayIndex','in', [0,1,2,3,4])
         );
       }
       return getDocs(q1);
@@ -1661,7 +1721,7 @@
       const q1 = query(
         collection(db,'schedules'),
         where('teacherUid','==', uid),
-        where('date','==', dateISO)
+        where('dayIndex','==', dayIndexForISO(dateISO))
       );
       const snap = await getDocs(q1);
       snap.forEach(d=>{
@@ -1796,7 +1856,11 @@
       const snap = await fetchWeekDocsForTeacher(uid);
       snap.forEach(d => {
         const x = d.data();
-        const iso = x.date;
+        // Standing schedule entries recur by weekday — resolve to *this* week's
+        // actual date for the matching weekday, not the (possibly stale) date
+        // the entry happens to have last been saved with.
+        const iso = weekDates[Number(x.dayIndex)];
+        if (iso === undefined) return;
         if (!map.has(iso)) map.set(iso, new Map());
         const classText = x.classKey || `${x.grade} / ${x.section}${x.track ? ' '+x.track : ''}`;
         map.get(iso).set(Number(x.lesson), classText);
@@ -2171,7 +2235,11 @@
         const x = d.data();
         const teacher = x.teacherName || x.teacherUid || '';
         const subj = x.subject || '—';
-        const iso = x.date;
+        // Standing schedule entries recur by weekday — resolve to *this* week's
+        // actual date for the matching weekday, not the (possibly stale) date
+        // the entry happens to have last been saved with.
+        const iso = weekDates[Number(x.dayIndex)];
+        if (iso === undefined) return;
         if (!map.has(iso)) map.set(iso, new Map());
         map.get(iso).set(Number(x.lesson), {
           subject: subj,

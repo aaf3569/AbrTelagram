@@ -11,6 +11,7 @@
 <link rel="preconnect" href="https://www.gstatic.com" crossorigin>    <title>لوحة المستخدم - ثانوية أحمد البشر الرومي</title>
     <!-- Noto Kufi Arabic -->
     <link href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/shared/base.css" />
   <style>
         @property --border-angle{syntax:'<angle>';inherits:false;initial-value:0turn}
@@ -714,7 +715,7 @@
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
                         </span>
                     </button>
-                    <button id="telegramSettingsBtn" class="btn ghost account-actions-start" type="button">إعدادات المستخدم</button>
+                    <div id="telegramSettingsSlot"></div>
                     <button id="logoutBtn" class="btn ghost" type="button">تسجيل الخروج</button>
                 </div>
             </section>
@@ -1110,7 +1111,8 @@
 
         mountTelegramSettings({
             auth,
-            getDisplayName: () => displayName?.textContent || ''
+            getDisplayName: () => displayName?.textContent || '',
+            extraClass: 'account-actions-start'
         });
 
         /* ========= Local Avatar (Per Account / Per Device) ========= */
@@ -1775,38 +1777,42 @@
             const map = new Map();
             
             try {
-                // Get today's weekday in English (e.g., "Sunday", "Monday")
-                const todayWeekday = getKuwaitWeekday();
-                
+                // Today's weekday index (0=Sun..4=Thu) — the standing schedule's
+                // real identity field — plus the Arabic name for legacy documents
+                // that predate the dayIndex field.
+                const todayDayIndex = getKuwaitDayIndexSunThu();
+                const todayWeekdayArabic = getKuwaitWeekdayArabic();
+
                 // 1. Get all schedules for this teacher
                 const schedulesQuery = query(
                     collection(db, 'schedules'),
                     where('teacherUid', '==', teacherUid)
                 );
                 const schedulesSnapshot = await getDocs(schedulesQuery);
-                
+
                 schedulesSnapshot.forEach(docSnap => {
                     const data = docSnap.data();
                     const lessonNum = data.lesson;
                     if (!lessonNum) return;
-                    
+
                     const lessonKey = String(lessonNum);
-                    
+
                     // Check if this schedule applies to today
                     let appliesToday = false;
-                    
-                    // Case A: Date-based schedule (exact date match)
-                    if (data.date === dateISO) {
+
+                    // Case A: standing weekly schedule, matched by weekday index (recurs forever)
+                    if (todayDayIndex >= 0 && Number(data.dayIndex) === todayDayIndex) {
                         appliesToday = true;
                     }
-                    // Case B: Weekly schedule (weekday match)
-                    // Check multiple possible field names: weekday, day, dow
-                    else if (data.weekday === todayWeekday || 
-                             data.day === todayWeekday || 
-                             data.dow === todayWeekday) {
+                    // Case B: legacy documents with an Arabic day name but no dayIndex yet
+                    else if (data.day === todayWeekdayArabic) {
                         appliesToday = true;
                     }
-                    
+                    // Case C: legacy exact-date entries from before the schedule was recurring
+                    else if (data.date === dateISO) {
+                        appliesToday = true;
+                    }
+
                     if (appliesToday) {
                         // Add to map, but don't overwrite if already exists (date-based takes precedence)
                         if (!map.has(lessonKey)) {

@@ -11,6 +11,7 @@
 <link rel="preconnect" href="https://www.gstatic.com" crossorigin>    <title>لوحة قائد القسم - ثانوية أحمد البشر الرومي</title>
     <!-- Noto Kufi Arabic -->
     <link href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/shared/base.css" />
   <style>
         @property --border-angle{syntax:'<angle>';inherits:false;initial-value:0turn}
@@ -611,7 +612,7 @@
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
                         </span>
                     </button>
-                    <button id="telegramSettingsBtn" class="btn ghost" type="button">إعدادات المستخدم</button>
+                    <div id="telegramSettingsSlot"></div>
                     <button id="logoutBtn" class="btn ghost" type="button">تسجيل الخروج</button>
                 </div>
             </section>
@@ -963,6 +964,15 @@
             return now.toLocaleDateString('en-CA', { timeZone: TZ });
         }
 
+        // Schedule entries recur weekly (identified by weekday, not calendar date),
+        // so lookups match by dayIndex (0=Sun..4=Thu) rather than an exact date.
+        function dayIndexForISO(iso) {
+            const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec((iso || '').toString());
+            if (!m) return -1;
+            const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+            return d.getDay();
+        }
+
         function getCurrentKuwaitMinutes() {
             const now = new Date();
             const timeStr = now.toLocaleTimeString('en-US', { 
@@ -1044,7 +1054,7 @@
                 const scheduleQuery = query(
                     collection(db, 'schedules'),
                     where('teacherUid', '==', teacherUid),
-                    where('date', '==', today)
+                    where('dayIndex', '==', dayIndexForISO(today))
                 );
                 
                 const scheduleSnapshot = await getDocs(scheduleQuery);

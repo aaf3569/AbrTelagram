@@ -347,6 +347,95 @@
       .link-btn { width: 40px; justify-content: center; padding: 0; }
       .site-title { font-size: 1.1rem; }
     }
+
+    /* ========= Dashboard / sheets / modals (class browser + attendance-taking) ========= */
+    .no-scroll { overflow: hidden !important; }
+    [inert] { pointer-events: none; }
+    .panel{width:100%;background:var(--card-bg);border:1px solid var(--border);border-radius:var(--radius);padding:24px 20px;box-shadow:var(--shadow-1)}
+    .state{display:none}
+    .state.active{display:block;animation:fadeIn .3s ease}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+    .loading{display:grid;place-items:center;gap:16px;padding:32px 24px}
+    .spinner{width:48px;height:48px;border-radius:50%;border:4px solid rgba(2,43,66,.15);border-top-color:var(--primary);animation:spin 1s linear infinite;margin-inline:auto}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .center{display:flex;flex-direction:column;align-items:center;gap:12px;margin-top:10px;text-align:center;width:100%}
+    .avatar{width:120px;height:120px;border-radius:50%;background:linear-gradient(145deg,var(--primary),var(--primary-2));display:grid;place-items:center;border:3px solid #fff;box-shadow:var(--shadow-1);overflow:hidden}
+    .avatar svg{width:60px;height:60px;stroke:#fff;fill:none;stroke-width:2}
+    .name{font-size:1.3rem;font-weight:900;color:var(--primary);margin-top:8px}
+    .created{font-size:.92rem;color:var(--muted)}
+    .divider{width:100%;height:1px;background:var(--border);margin:20px 0;border-radius:1px}
+    .stack{width:100%;display:flex;flex-direction:column;gap:16px;margin-top:16px;align-items:center}
+    .stack.wide .btn{width:100%}
+    .btn{font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;width:100%;min-height:64px;border:none;border-radius:16px;cursor:pointer;font-weight:800;font-size:1.05rem;padding:16px 22px;transition:var(--transition);display:flex;align-items:center;justify-content:center;gap:10px}
+    .btn.ghost{background:#fff;color:var(--primary);border:1px solid rgba(2,43,66,.22);box-shadow:var(--shadow-1)}
+    .btn.ghost:hover{transform:translateY(-2px);box-shadow:var(--shadow-2)}
+    .btn.class-btn,.btn.attend,.btn.submit,.btn.primary{background:linear-gradient(145deg,var(--primary-2),var(--primary));color:#fff;box-shadow:var(--shadow-2)}
+    .btn.class-btn:hover,.btn.attend:hover,.btn.submit:hover{transform:translateY(-2px)}
+    .btn.cancel{background:#fff;color:var(--primary);border:1px solid rgba(2,43,66,.22)}
+    .sheet{position:fixed;inset:0;z-index:1000;background:#fff;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .3s cubic-bezier(.22,.7,.25,1);overflow:hidden}
+    .sheet.open{transform:translateX(0)}
+    .sheet-header{background:#fff;border-bottom:1px solid var(--border);padding:18px 20px;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:10;box-shadow:var(--shadow-1)}
+    .back-btn{height:44px;padding:0 18px;border-radius:12px;border:1px solid rgba(2,43,66,.2);background:#fff;color:var(--primary);font-weight:800;cursor:pointer;box-shadow:var(--shadow-1);display:flex;align-items:center;gap:8px}
+    .sheet-title{margin:0;font-size:1.15rem;font-weight:900;color:var(--primary)}
+    .sheet-body{flex:1 1 auto;overflow:auto;padding:22px 20px;width:min(1100px,100%);margin:0 auto;display:flex;flex-direction:column;gap:18px}
+    details{border:1px solid var(--border);border-radius:var(--radius);background:#fff;box-shadow:var(--shadow-1);overflow:hidden}
+    summary{list-style:none;cursor:pointer;padding:18px;font-weight:900;color:var(--primary);display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .grade-list{padding:14px 18px;display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+    .mini.class-btn{min-height:56px;border-radius:12px;font-weight:800;padding:14px}
+    .class-hero{border:2px dashed rgba(2,43,66,.2);background:var(--primary-light);border-radius:var(--radius);padding:22px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+    .class-name{margin:0;font-size:clamp(1.2rem,4vw,1.7rem);color:var(--primary);font-weight:900}
+    .action-row{display:flex;gap:12px;flex-wrap:wrap}
+    .input-wrap{display:flex;align-items:center;gap:10px;min-height:52px;padding:0 16px;background:#fff;border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-1)}
+    .input{flex:1;height:50px;border:none;outline:none;background:transparent;font-size:16px;color:var(--text);font-family:inherit}
+    .student-grid{display:grid;gap:14px;grid-template-columns:1fr}
+    @media(min-width:600px){.student-grid{grid-template-columns:repeat(2,1fr)}}
+    @media(min-width:900px){.student-grid{grid-template-columns:repeat(3,1fr)}}
+    .student-item{width:100%;min-height:56px;padding:16px 18px;border:1px solid var(--border);border-radius:14px;background:#fff;box-shadow:var(--shadow-1);font-weight:800;color:var(--text);cursor:pointer}
+    .student-item-content{display:flex;align-items:center;justify-content:space-between;width:100%;gap:10px}
+    .student-name-container{display:flex;align-items:center;gap:8px;flex:1;min-width:0}
+    .student-number-badge{background:var(--primary-light);color:var(--primary);font-size:.8rem;font-weight:700;padding:3px 9px;border-radius:10px;border:1px solid rgba(2,43,66,.15);margin-inline-start:auto}
+    .special-case-icon{width:18px;height:18px;margin-inline-start:8px;flex-shrink:0}
+    .log-list{display:flex;flex-direction:column;gap:14px}
+    .log-item{padding:16px 18px;border:1px solid var(--border);border-radius:14px;background:#fff;box-shadow:var(--shadow-1);cursor:pointer}
+    .log-title{font-weight:900;color:var(--primary);margin:0 0 6px}
+    .log-sub{color:var(--muted);font-weight:700;font-size:.92rem}
+    .warn{color:#a06d00;font-weight:800;font-size:.9rem}
+    .ok{color:#1a7f37;font-weight:800;font-size:.9rem}
+    .modal{position:fixed;inset:0;z-index:1100;display:none}
+    .modal.open{display:grid;place-items:center}
+    .modal .overlay{position:absolute;inset:0;background:rgba(15,23,42,.35);backdrop-filter:blur(4px)}
+    .modal .card{position:relative;z-index:1;width:min(560px,92vw);background:#fff;border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow-2);padding:20px}
+    .modal h3{margin:0 0 8px;font-size:1.1rem;color:var(--primary);font-weight:900}
+    .modal p{margin:0 0 12px;color:var(--muted);font-weight:700}
+    .modal .row{display:flex;gap:10px;justify-content:flex-start;margin-top:16px;flex-wrap:wrap}
+    .toast{position:fixed;inset-inline:0;bottom:20px;display:flex;justify-content:center;pointer-events:none;z-index:1200}
+    .toast .inner{pointer-events:auto;background:#fff;border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow-2);padding:14px 18px;min-width:min(520px,92vw);display:flex;flex-direction:column;gap:6px}
+    .toast .title{font-weight:900;color:#1a7f37}
+    .toast .sub{color:var(--text);font-weight:700}
+    .toast .close{align-self:flex-end;margin-top:4px;background:#fff;border:1px solid var(--border);border-radius:12px;padding:6px 10px;cursor:pointer;color:var(--primary);font-weight:700}
+    .toast.hidden{display:none}
+
+    /* Attendance edit sheet (legacy reports) — mirrors the shared module's own #attendanceSheet styling */
+    .hint{font-weight:800;color:var(--muted)}
+    .att-list{display:flex;flex-direction:column;gap:16px}
+    .att-card{padding:16px;border:1px solid var(--border);border-radius:16px;background:#fff;box-shadow:var(--shadow-1);display:flex;flex-direction:column;gap:12px}
+    .att-name{font-weight:900;color:var(--text);line-height:1.4;word-break:break-word}
+    .seg{display:flex;align-items:center;border:1px solid var(--border);border-radius:14px;overflow:hidden;background:#fff;box-shadow:var(--shadow-1)}
+    .seg button{flex:1 1 0;min-height:48px;padding:12px 10px;background:transparent;border:0;cursor:pointer;font-weight:900;font-size:1rem;font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif}
+    .seg .sep{width:1px;height:32px;background:var(--border)}
+    .seg .present{color:#1a7f37}
+    .seg .late{color:#a06d00}
+    .seg .absent{color:#b42318}
+    .seg button.active.present{background:rgba(26,127,55,.08)}
+    .seg button.active.late{background:rgba(160,109,0,.10)}
+    .seg button.active.absent{background:rgba(180,35,24,.10)}
+    .stats{padding:20px;border:1px solid var(--border);border-radius:16px;background:#fff;box-shadow:var(--shadow-1);display:flex;flex-direction:column;gap:16px}
+    .chips{display:flex;gap:10px;flex-wrap:wrap}
+    .pill{background:var(--primary-light);color:var(--text);border:1px solid var(--border);padding:8px 14px;border-radius:999px;font-size:.92rem;font-weight:800;display:inline-flex;align-items:center;gap:6px}
+    .pill.g{color:#1a7f37;border-color:rgba(26,127,55,.08);background:rgba(26,127,55,.08)}
+    .pill.y{color:#a06d00;border-color:rgba(160,109,0,.10);background:rgba(160,109,0,.10)}
+    .pill.r{color:#b42318;border-color:rgba(180,35,24,.10);background:rgba(180,35,24,.10)}
+    .submit-row{display:flex;justify-content:flex-start}
   </style>
 
   <!-- iOS home screen icon -->
@@ -386,7 +475,7 @@
           لوحة خاصة للإدارة فقط
         </span>
         <!-- Link back to teacher schedule page (adjust filename if needed) -->
-        <a href="/Teachers/teacherschedule.html" class="link-btn">
+        <a id="teacherScheduleBtn" href="/Teachers/teacherschedule.html" class="link-btn">
           <i class="fas fa-calendar-alt"></i>
           <span>جدول المعلّم</span>
         </a>
@@ -395,56 +484,212 @@
   </header>
 
   <main>
-    <div class="board">
-      <div class="card">
-        <div id="status" class="status-message">
-          <i class="fas fa-circle-notch fa-spin"></i>
-          <span>جاري تحميل بيانات التأخّر...</span>
+    <div class="column">
+      <!-- Loading / gate -->
+      <div id="stateLoading" class="state active panel">
+        <div class="loading">
+          <div class="spinner"></div>
+          <div class="muted">جاري التحقق من تسجيل الدخول والصلاحيات…</div>
         </div>
-
-        <div class="filters-row">
-          <div class="filters-row-title">
-            <i class="fas fa-sliders-h"></i>
-            <span>الترتيب</span>
-          </div>
-
-          <button id="btnSortRecent" class="pill-btn active" type="button">
-            <i class="fas fa-sort-amount-down"></i>
-            <span>الأحدث أولاً</span>
-          </button>
-
-          <button id="btnSortOldest" class="pill-btn" type="button">
-            <i class="fas fa-sort-amount-up"></i>
-            <span>الأقدم أولاً</span>
-          </button>
-
-          <button id="btnSortLesson" class="pill-btn" type="button">
-            <i class="fas fa-list-ol"></i>
-            <span>حسب رقم الحصة (1 → 7)</span>
-          </button>
-
-          <div class="lesson-filter">
-            <span class="filters-row-title" style="margin-inline-end: 4px;">
-              <i class="far fa-clock"></i>
-              <span>فلترة بالحصة</span>
-            </span>
-            <select id="lessonFilter" class="select">
-              <option value="all">كل الحصص</option>
-              <option value="1">الحصة الأولى</option>
-              <option value="2">الحصة الثانية</option>
-              <option value="3">الحصة الثالثة</option>
-              <option value="4">الحصة الرابعة</option>
-              <option value="5">الحصة الخامسة</option>
-              <option value="6">الحصة السادسة</option>
-              <option value="7">الحصة السابعة</option>
-            </select>
-          </div>
-        </div>
-
-        <div id="lateList" class="late-list"></div>
       </div>
+      <div id="stateNotLogged" class="state panel">
+        <div class="msg error">يرجى تسجيل الدخول أولاً.</div>
+        <p class="muted" style="text-align:center; margin:12px 0 0;">لا توجد جلسة نشطة. <a href="/index.html">انتقل إلى تسجيل الدخول</a>.</p>
+      </div>
+      <div id="stateDenied" class="state panel">
+        <div class="msg error">تم رفض الوصول - هذه الصفحة مخصصة للإدارة فقط.</div>
+      </div>
+      <!-- Dashboard -->
+      <section id="stateDashboard" class="state" aria-label="لوحة الإدارة">
+        <div class="panel center">
+          <div class="avatar"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.2"></circle><path d="M5 19c0-3.3 3.1-5.5 7-5.5s7 2.2 7 5.5"></path></svg></div>
+          <div id="displayName" class="name">—</div>
+          <div id="createdAtText" class="created">—</div>
+        </div>
+        <div class="divider" aria-hidden="true"></div>
+        <div class="panel">
+          <div id="classesButtons" class="stack wide"></div>
+          <div class="stack wide">
+            <button id="moreBtn" class="btn ghost" type="button">أُخرى</button>
+            <button id="logBtn" class="btn ghost" type="button">سجلي</button>
+            <button id="logoutBtn" class="btn ghost" type="button">تسجيل الخروج</button>
+          </div>
+        </div>
+        <div class="card">
+          <div id="status" class="status-message">
+            <i class="fas fa-circle-notch fa-spin"></i>
+            <span>جاري تحميل بيانات التأخّر...</span>
+          </div>
+
+          <div class="filters-row">
+            <div class="filters-row-title">
+              <i class="fas fa-sliders-h"></i>
+              <span>الترتيب</span>
+            </div>
+
+            <button id="btnSortRecent" class="pill-btn active" type="button">
+              <i class="fas fa-sort-amount-down"></i>
+              <span>الأحدث أولاً</span>
+            </button>
+
+            <button id="btnSortOldest" class="pill-btn" type="button">
+              <i class="fas fa-sort-amount-up"></i>
+              <span>الأقدم أولاً</span>
+            </button>
+
+            <button id="btnSortLesson" class="pill-btn" type="button">
+              <i class="fas fa-list-ol"></i>
+              <span>حسب رقم الحصة (1 → 7)</span>
+            </button>
+
+            <div class="lesson-filter">
+              <span class="filters-row-title" style="margin-inline-end: 4px;">
+                <i class="far fa-clock"></i>
+                <span>فلترة بالحصة</span>
+              </span>
+              <select id="lessonFilter" class="select">
+                <option value="all">كل الحصص</option>
+                <option value="1">الحصة الأولى</option>
+                <option value="2">الحصة الثانية</option>
+                <option value="3">الحصة الثالثة</option>
+                <option value="4">الحصة الرابعة</option>
+                <option value="5">الحصة الخامسة</option>
+                <option value="6">الحصة السادسة</option>
+                <option value="7">الحصة السابعة</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="lateList" class="late-list"></div>
+        </div>
+      </section>
     </div>
   </main>
+
+  <!-- "More/Other" grade browser sheet -->
+  <section id="moreSheet" class="sheet" aria-hidden="true">
+    <div class="sheet-header">
+      <button id="closeMore" class="back-btn" type="button" aria-label="رجوع">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        رجوع
+      </button>
+      <h3 class="sheet-title">اختر الصف</h3>
+    </div>
+    <div class="sheet-body">
+      <p class="lead" style="font-weight:800">اختر الصف ثم اضغط على الفصل لعرض الطلاب.</p>
+      <details>
+        <summary>
+          <span>الصف العاشر</span>
+          <span class="chev" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#6b7f9f" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"></path></svg></span>
+        </summary>
+        <div class="grade-list" id="g10List"></div>
+      </details>
+      <details>
+        <summary>
+          <span>الصف الحادي عشر</span>
+          <span class="chev" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#6b7f9f" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"></path></svg></span>
+        </summary>
+        <div class="grade-list" id="g11List"></div>
+      </details>
+      <details>
+        <summary>
+          <span>الصف الثاني عشر</span>
+          <span class="chev" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#6b7f9f" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"></path></svg></span>
+        </summary>
+        <div class="grade-list" id="g12List"></div>
+      </details>
+    </div>
+  </section>
+
+  <!-- Class roster sheet -->
+  <section id="classSheet" class="sheet" aria-hidden="true">
+    <div class="sheet-header">
+      <button id="closeClass" class="back-btn" type="button" aria-label="رجوع">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        رجوع
+      </button>
+      <h3 class="sheet-title">الطلاب</h3>
+    </div>
+    <div class="sheet-body">
+      <div class="class-hero">
+        <h2 id="classHeroName" class="class-name">—</h2>
+        <div class="action-row">
+          <button id="attendBtn" class="btn attend" type="button">تسجيل الغياب</button>
+        </div>
+      </div>
+      <div class="input-wrap">
+        <input id="studentSearch" class="input" type="text" placeholder="ابحث بالاسم…">
+      </div>
+      <div id="studentsList" class="student-grid"></div>
+    </div>
+  </section>
+
+  <!-- Attendance log sheet -->
+  <section id="logSheet" class="sheet" aria-hidden="true">
+    <div class="sheet-header">
+      <button id="closeLog" class="back-btn" type="button" aria-label="رجوع">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        رجوع
+      </button>
+      <h3 class="sheet-title">تقارير الغياب</h3>
+    </div>
+    <div class="sheet-body">
+      <div id="logList" class="log-list"></div>
+    </div>
+  </section>
+
+  <!-- Attendance detail / edit sheet (legacy-schema reports only) -->
+  <section id="logDetailSheet" class="sheet" aria-hidden="true">
+    <div class="sheet-header">
+      <button id="closeLogDetail" class="back-btn" type="button" aria-label="رجوع">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        رجوع
+      </button>
+      <h3 class="sheet-title" id="detailTitle">تعديل التقرير</h3>
+    </div>
+    <div class="sheet-body">
+      <div class="class-hero">
+        <h2 id="detailClass" class="class-name">—</h2>
+        <div class="action-row">
+          <div class="hint" id="detailMeta">—</div>
+          <div class="hint" id="editWindowHint"></div>
+        </div>
+      </div>
+      <div id="detailList" class="att-list"></div>
+      <div class="stats">
+        <div class="chips">
+          <span id="dCountPresent" class="pill g">حضور: 0</span>
+          <span id="dCountLate" class="pill y">تأخير: 0</span>
+          <span id="dCountAbsent" class="pill r">غياب: 0</span>
+        </div>
+        <div class="submit-row">
+          <button id="saveDetail" class="btn submit" type="button">حفظ التعديلات</button>
+        </div>
+        <div id="detailLockMsg" class="warn" style="display:none;">انتهت مهلة التعديل (45 دقيقة).</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Error modal -->
+  <div id="errorModal" class="modal" aria-hidden="true">
+    <div class="overlay"></div>
+    <div class="card error" role="alertdialog" aria-modal="true" aria-labelledby="errorTitle">
+      <h3 id="errorTitle">تعذّر الحفظ</h3>
+      <p id="errorBody">حدث خطأ غير متوقع.</p>
+      <div class="row">
+        <button id="errorOk" class="btn primary" type="button">حسناً</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="toast hidden" aria-live="polite">
+    <div class="inner">
+      <div class="title" id="toastTitle">تم</div>
+      <div class="sub" id="toastSub">—</div>
+      <button id="toastClose" class="close" type="button">إغلاق</button>
+    </div>
+  </div>
 
   <script type="module">
     import { firebaseConfig } from "/shared/firebase.js";
@@ -464,12 +709,20 @@
         writeBatch
     } from "/shared/firebase.js";
     import { showActionPopup } from "/shared/action-popup.js";
+    import { mountAttendanceSheet } from "/shared/attendance.js";
 
-    
+
 
     const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
     const db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true, useFetchStreams: false });
     const auth = getAuth(app);
+
+    const attendance = mountAttendanceSheet({
+        db,
+        auth,
+        onSaved: () => { closeSheet(classSheet); show(sDash); },
+        onLateSubmit: (meta) => { handleLateAttendanceSubmit(meta); },
+    });
 
     /* ========= Static Class Options ========= */
     const CLASS_OPTIONS_RAW = [
@@ -518,28 +771,7 @@
     const classHeroName = document.getElementById('classHeroName');
     const studentSearch = document.getElementById('studentSearch');
     const studentsList = document.getElementById('studentsList');
-    // Attendance create
-    const attSheet = document.getElementById('attSheet');
-    const closeAtt = document.getElementById('closeAtt');
-    const attClassName = document.getElementById('attClassName');
-    const lessonSelect = document.getElementById('lessonSelect');
-    const lessonHint = document.getElementById('lessonHint');
-    const attList = document.getElementById('attList');
-    const countPresent = document.getElementById('countPresent');
-    const countLate = document.getElementById('countLate');
-    const countAbsent = document.getElementById('countAbsent');
-    const absentDetails = document.getElementById('absentDetails');
-    const absentNames = document.getElementById('absentNames');
-    const submitAtt = document.getElementById('submitAtt');
-    // Confirm / error / toast
-    const confirmModal = document.getElementById('confirmModal');
-    const confirmTitle = document.getElementById('confirmTitle');
-    const confirmAbsentList = document.getElementById('confirmAbsentList');
-    const confirmLateList = document.getElementById('confirmLateList');
-    const filterAbsent = document.getElementById('filterAbsent');
-    const filterLate = document.getElementById('filterLate');
-    const confirmCancel = document.getElementById('confirmCancel');
-    const confirmSave = document.getElementById('confirmSave');
+    // Error / toast
     const errorModal = document.getElementById('errorModal');
     const errorBody = document.getElementById('errorBody');
     const errorOk = document.getElementById('errorOk');
@@ -926,417 +1158,26 @@
         });
     }
 
-    /* ========= Attendance (Create) ========= */
-    document.getElementById('attendBtn').addEventListener('click', ()=> openAttendanceSheet());
-    closeAtt.addEventListener('click', ()=> closeSheet(attSheet));
+    /* ========= Attendance (Create) — via shared attendance module ========= */
+    document.getElementById('attendBtn').addEventListener('click', ()=> attendance.openForClass(currentClass));
 
-    let attStatuses = {}; // uid -> 'present'|'late'|'absent'
-    let attStudentList = []; // [{uid,name}]
-    let pendingSave = null; // cache for confirm modal
-
-    function setAttendanceControlsEnabled(enabled) {
-        document.querySelectorAll('.seg button').forEach(b => b.disabled = !enabled);
-        if (submitAtt) submitAtt.disabled = !enabled;
-    }
-
-    function openAttendanceSheet(){
-        if(!currentClass){
-            return;
-        }
-        cachedTakenLessons = null; // Invalidate cache when opening
-        attClassName.textContent = currentClass;
-        buildLessons();
-        attStudentList = (cachedStudents || []).slice().sort((a,b)=> (a.name||'').localeCompare((b.name||''), 'ar-KW', {sensitivity:'base'}));
-        attStatuses = {};
-        renderAttendanceList(attStudentList);
-        recalcStats();
-        openSheet(attSheet);
-    }
-
-    async function buildLessons(){
-        if(!currentClass) return;
-
-        // Convert LESSONS to intervals with minutes
-        const intervals = LESSONS.map(l => ({
-            index: l.index,
-            label: l.label,
-            start: l.startMinutes,
-            end: l.endMinutes
-        }));
-
-        const currentDate = dateInTZ(TZ);
-        const now = Date.now();
-        if (!cachedTakenLessons || lastClassCached !== currentClass || lastDateCached !== currentDate || (now - (cachedTakenLessons.timestamp || 0) > 30000)) {
-            const availableLessons = await filterTakenLessons(intervals);
-            cachedTakenLessons = { lessons: availableLessons, timestamp: now };
-            lastClassCached = currentClass;
-            lastDateCached = currentDate;
-        }
-
-        // Build the select with a placeholder (no auto-selection)
-        lessonSelect.innerHTML = '';
-        const ph = document.createElement('option');
-        ph.value = '';
-        ph.textContent = 'اختر الحصة';
-        ph.disabled = true;
-        ph.selected = true;
-        ph.hidden = true;
-        lessonSelect.appendChild(ph);
-
-        cachedTakenLessons.lessons.forEach(iv=>{
-            const o = document.createElement('option');
-            o.value = String(iv.index);
-            const startStr = minToStr(iv.start);
-            const endStr = minToStr(iv.end);
-            o.textContent = `${iv.label} — ${startStr} – ${endStr}`;
-            lessonSelect.appendChild(o);
-        });
-
-        updateLessonHint(cachedTakenLessons.lessons);
-        setAttendanceControlsEnabled(false);   // block UI until a lesson is selected
-        setTimeout(()=>lessonSelect.focus(), 0);
-
-        lessonSelect.onchange = ()=>{
-            const hasSelection = !!lessonSelect.value;
-            setAttendanceControlsEnabled(hasSelection);
-            updateLessonHint(cachedTakenLessons.lessons);
-        };
-
-        if (cachedTakenLessons.lessons.length === 0) {
-            lessonHint.textContent = 'لا توجد حصص متاحة للتسجيل اليوم.';
-            setAttendanceControlsEnabled(false);
-        }
-    }
-
-    // Query all attendance for this class/date (global — not per-teacher), and exclude those lessons
-    async function filterTakenLessons(intervals) {
-        if (!currentClass) return intervals;
-        const dateKW = dateInTZ(TZ);
-        try {
-            const [legacySnap, modernSnap] = await Promise.all([
-                getDocs(query(
-                    collection(db, 'attendance'),
-                    where('class', '==', currentClass),
-                    where('date', '==', dateKW)
-                )),
-                getDocs(query(
-                    collection(db, 'attendanceSessions'),
-                    where('classKey', '==', currentClass),
-                    where('date', '==', dateKW)
-                ))
-            ]);
-            const takenLessonIndices = [];
-            legacySnap.forEach(docSnap => {
-                const data = docSnap.data();
-                if (data.lessonIndex) takenLessonIndices.push(data.lessonIndex);
-            });
-            modernSnap.forEach(docSnap => {
-                const data = docSnap.data();
-                if (data.lesson) takenLessonIndices.push(data.lesson);
-                else if (data.lessonIndex) takenLessonIndices.push(data.lessonIndex);
-            });
-            const takenSet = new Set(takenLessonIndices);
-            return intervals.filter(iv => !takenSet.has(iv.index));
-        } catch (error) {
-            console.error('Error filtering taken lessons:', error);
-            return intervals;
-        }
-    }
-
-    function updateLessonHint(intervals){
-        const val = parseInt(lessonSelect.value || '0', 10);
-        const iv = intervals.find(x=>x.index===val);
-        lessonHint.textContent = iv
-            ? `${iv.label} — ${minToStr(iv.start)} – ${minToStr(iv.end)} (اختيار يدوي)`
-            : 'يرجى اختيار الحصة.';
-    }
-
-    function renderAttendanceList(list){
-        attList.innerHTML = '';
-        if(list.length===0){
-            const empty = document.createElement('div');
-            empty.className = 'error';
-            empty.textContent = 'لا يوجد طلاب.';
-            attList.appendChild(empty);
-            return;
-        }
-        list.forEach(s=>{
-            const card = document.createElement('div');
-            card.className = 'att-card';
-            const name = document.createElement('div');
-            name.className = 'att-name';
-
-            if (s.specialCase) {
-                const icon = document.createElement('img');
-                icon.src = 'https://cdn-icons-png.freepik.com/256/8984/8984792.png?semt=ais_white_label';
-                icon.alt = 'خاص';
-                icon.className = 'special-case-icon';
-                name.appendChild(icon);
-            }
-
-            const nameText = document.createTextNode(s.name || '—');
-            name.appendChild(nameText);
-
-            const seg = document.createElement('div');
-            seg.className = 'seg';
-            const bPres = document.createElement('button');
-            bPres.className = 'present';
-            bPres.textContent = 'حضور';
-            const sep1 = document.createElement('div');
-            sep1.className = 'sep';
-            const bLate = document.createElement('button');
-            bLate.className = 'late';
-            bLate.textContent = 'تأخير';
-            const sep2 = document.createElement('div');
-            sep2.className = 'sep';
-            const bAbs = document.createElement('button');
-            bAbs.className = 'absent';
-            bAbs.textContent = 'غياب';
-
-            // default = حضور
-            attStatuses[s.uid || s.name] = 'present';
-            bPres.classList.add('active');
-            card.classList.remove('tint-late','tint-absent');
-
-            bPres.onclick = ()=> setStatus(s, 'present', bPres, bLate, bAbs, card);
-            bLate.onclick = ()=> setStatus(s, 'late', bPres, bLate, bAbs, card);
-            bAbs.onclick = ()=> setStatus(s, 'absent', bPres, bLate, bAbs, card);
-
-            seg.appendChild(bPres);
-            seg.appendChild(sep1);
-            seg.appendChild(bLate);
-            seg.appendChild(sep2);
-            seg.appendChild(bAbs);
-            card.appendChild(name);
-            card.appendChild(seg);
-            attList.appendChild(card);
-        });
-
-        // initially disabled; will be enabled after lesson selection
-        setAttendanceControlsEnabled(false);
-        recalcStats();
-    }
-
-    function setStatus(student, status, btnP, btnL, btnA, card){
-        const key = student.uid || student.name;
-        attStatuses[key] = status;
-        btnP.classList.toggle('active', status==='present');
-        btnL.classList.toggle('active', status==='late');
-        btnA.classList.toggle('active', status==='absent');
-        if(card){
-            card.classList.remove('tint-late','tint-absent');
-            if(status==='late') card.classList.add('tint-late');
-            if(status==='absent') card.classList.add('tint-absent');
-        }
-        recalcStats();
-    }
-
-    function recalcStats(){
-        const vals = Object.values(attStatuses);
-        const present = vals.filter(v=>v==='present').length;
-        const late = vals.filter(v=>v==='late').length;
-        const absent = vals.filter(v=>v==='absent').length;
-        countPresent.textContent = `حضور: ${present}`;
-        countLate.textContent = `تأخير: ${late}`;
-        countAbsent.textContent = `غياب: ${absent}`;
-        const namesAbsent = attStudentList
-            .filter(s=> attStatuses[s.uid || s.name] === 'absent')
-            .map(s=> s.name)
-            .join('، ');
-        absentNames.textContent = namesAbsent || '—';
-        if(!namesAbsent){
-            absentDetails.open = false;
-        }
-    }
-
-    // Filter buttons in confirm modal
-    filterAbsent.addEventListener('click', () => {
-        filterAbsent.classList.add('active');
-        filterLate.classList.remove('active');
-        confirmAbsentList.style.display = 'block';
-        confirmLateList.style.display = 'none';
-    });
-    filterLate.addEventListener('click', () => {
-        filterLate.classList.add('active');
-        filterAbsent.classList.remove('active');
-        confirmAbsentList.style.display = 'none';
-        confirmLateList.style.display = 'block';
-    });
-
-    /* ===== Submit attendance with Confirm Modal ===== */
-    submitAtt.addEventListener('click', ()=>{
-        if(!currentClass){
-            openError('تعذّر الحفظ','اختر فصلًا أولاً.');
-            return;
-        }
-        if (lessonSelect.options.length === 0) {
-            openError('تعذّر الحفظ', 'لا توجد حصص متاحة للتسجيل اليوم.');
-            return;
-        }
-        if (!lessonSelect.value) {
-            openError('تعذّر الحفظ', 'يرجى اختيار الحصة أولاً.');
-            return;
-        }
-
-        // Build arrays preview (only count if UID exists)
-        const present = [], late = [], absent = [];
-        const absNames = [], lateNames = [];
-
-        attStudentList.forEach(s=>{
-            const key = s.uid || s.name;
-            const st = attStatuses[key];
-            const hasUid = !!s.uid;
-            if(st==='present') {
-                if (hasUid) present.push(s.uid);
-            } else if(st==='late') {
-                if (hasUid) late.push(s.uid);
-                lateNames.push(s.name);
-            } else if(st==='absent'){
-                if (hasUid) absent.push(s.uid);
-                absNames.push(s.name);
-            }
-        });
-
-        // Update modal title with lesson name
-        const lessonLabel = lessonSelect.options[lessonSelect.selectedIndex]?.textContent?.split(' — ')?.[0] || '';
-        confirmTitle.textContent = `تأكيد حفظ التقرير | ${lessonLabel}`;
-
-        // Fill modal lists
-        confirmAbsentList.innerHTML = '';
-        confirmLateList.innerHTML = '';
-
-        if(absNames.length){
-            absNames.forEach(n=>{
-                const li = document.createElement('li');
-                li.textContent = n;
-                confirmAbsentList.appendChild(li);
-            });
-        }else{
-            const li = document.createElement('li');
-            li.textContent = 'لا يوجد طلاب غائبون.';
-            confirmAbsentList.appendChild(li);
-        }
-
-        if(lateNames.length){
-            lateNames.forEach(n=>{
-                const li = document.createElement('li');
-                li.textContent = n;
-                confirmLateList.appendChild(li);
-            });
-        }else{
-            const li = document.createElement('li');
-            li.textContent = 'لا يوجد طلاب متأخرون.';
-            confirmLateList.appendChild(li);
-        }
-
-        // Default to absent tab
-        filterAbsent.click();
-
-        const dateKW = dateInTZ(TZ);
-        const lessonIndex = parseInt(lessonSelect.value,10);
-        const lessonLabel2 = lessonLabel;
-        pendingSave = { present, late, absent, dateKW, lessonIndex, lessonLabel: lessonLabel2 };
-        openModal(confirmModal);
-        // focus primary for a11y
-        setTimeout(()=>confirmSave.focus(), 0);
-    });
-
-    confirmCancel.addEventListener('click', ()=> closeModal(confirmModal));
-
-    confirmSave.addEventListener('click', async ()=>{
-        let latePayload = null; // for API
+    async function handleLateAttendanceSubmit(meta){
         try{
-            if(!auth.currentUser){
-                openError('تعذّر الحفظ','يرجى تسجيل الدخول.');
-                return;
-            }
-            if(!currentClass || !pendingSave){
-                closeModal(confirmModal);
-                return;
-            }
-            const uid = auth.currentUser.uid;
-            const { present, late, absent, dateKW, lessonIndex, lessonLabel } = pendingSave;
-            const total = present.length + late.length + absent.length;
-
-            // check if this submission is LATE (بعد نهاية الحصة + ٥ دقائق)
-            const isLateFlag = isLessonLate(lessonIndex, TZ);
-
-            // Unique per teacher to avoid collisions
-            const sessionId = `${dateKW}__${sanitizeId(currentClass)}__L${lessonIndex}__T${uid}`;
-            const sessionRef = doc(db, 'attendance', sessionId);
-
-            // Pre-check
-            const existing = await getDoc(sessionRef);
-            if (existing.exists()) {
-                closeModal(confirmModal);
-                openError('تعذّر الحفظ', 'تم تسجيل غياب هذه الحصّة مسبقًا.');
-                pendingSave = null;
-                return;
-            }
-
-            const batch = writeBatch(db);
-
-            // main attendance session
-            batch.set(sessionRef, {
-                class: currentClass,
-                date: dateKW,
-                lessonIndex,
-                lessonLabel,
-                present,
-                late,
-                absent,
-                counts: { present: present.length, late: late.length, absent: absent.length, total },
-                createdAt: serverTimestamp(),
-                createdBy: uid
-            });
-
-            // If late -> also log to attendanceLate collection
-            if (isLateFlag) {
-                const lateRef = doc(collection(db, 'attendanceLate'));
-                const teacherName = (currentUserData && currentUserData.name)
-                    ? currentUserData.name
-                    : (auth.currentUser.email ? auth.currentUser.email.split('@')[0] : 'معلم');
-                latePayload = {
-                    teacherUid: uid,
-                    teacherName,
-                    date: dateKW,
-                    lesson: lessonIndex,
-                    classKey: currentClass,
-                    reason: 'late', // "نسي / تأخر" (took attendance after the lesson)
-                    createdAt: nowDateTimeStringInTZ(TZ)
-                };
-                batch.set(lateRef, latePayload);
-            }
-
-            // per-student fan-out
-            const all = [
-                ...present.map(u=>({u,status:'present'})),
-                ...late.map(u=>({u,status:'late'})),
-                ...absent.map(u=>({u,status:'absent'}))
-            ];
-            const nameByUid = {};
-            attStudentList.forEach(s=>{ nameByUid[s.uid] = s.name; });
-            all.forEach(({u,status})=>{
-                if(!u) return;
-                const subRef = doc(db, 'students', u, 'attendance', sessionId);
-                batch.set(subRef, {
-                    sessionId,
-                    class: currentClass,
-                    date: dateKW,
-                    lessonIndex,
-                    lessonLabel,
-                    status,
-                    createdAt: serverTimestamp(),
-                    createdBy: uid,
-                    sessionPath: sessionRef.path,
-                    studentName: nameByUid[u] || null
-                });
-            });
-
-            await batch.commit();
-
-            // After Firestore succeeds, send to external API (if configured) – non-blocking
-            if (latePayload && LATE_API_ENDPOINT) {
+            const teacherName = (currentUserData && currentUserData.name)
+                ? currentUserData.name
+                : (auth.currentUser?.email ? auth.currentUser.email.split('@')[0] : 'معلم');
+            const latePayload = {
+                teacherUid: auth.currentUser?.uid || null,
+                teacherName,
+                date: meta.date,
+                lesson: meta.lesson,
+                classKey: meta.classKey,
+                reason: 'late',
+                createdAt: nowDateTimeStringInTZ(TZ)
+            };
+            const lateRef = doc(collection(db, 'attendanceLate'));
+            await setDoc(lateRef, latePayload);
+            if (LATE_API_ENDPOINT) {
                 try{
                     await fetch(LATE_API_ENDPOINT, {
                         method: 'POST',
@@ -1347,21 +1188,12 @@
                     console.error('[attendanceLate API] error:', apiErr);
                 }
             }
-
-            cachedTakenLessons = null; // bust lesson cache
-            closeModal(confirmModal);
-            goHomeAndToast(`تم تسجيل الغياب بنجاح`, `للحصة: ${lessonLabel || ('حصة '+lessonIndex)}`);
         }catch(e){
-            console.error(e);
-            closeModal(confirmModal);
-            openError('تعذّر الحفظ', 'تم تسجيل غياب هذه الحصّة مسبقًا أو لا تملك الصلاحية.');
-        }finally{
-            pendingSave = null;
+            console.error('[attendanceLate] log failed:', e);
         }
-    });
+    }
 
     function goHomeAndToast(title, sub){
-        closeSheet(attSheet);
         closeSheet(classSheet);
         show(sDash);
         toastTitle.textContent = title || 'تم';
@@ -1380,12 +1212,10 @@
                 e.preventDefault();
                 closeSheet(openSheets.at(-1));
             }
-            closeModal(confirmModal);
             closeModal(errorModal);
         }
     });
 
-    confirmModal.querySelector('.overlay').addEventListener('click', ()=> closeModal(confirmModal));
     errorModal.querySelector('.overlay').addEventListener('click', ()=> closeModal(errorModal));
     errorOk.addEventListener('click', ()=> closeModal(errorModal));
 
@@ -1472,7 +1302,10 @@
                 <div class="log-sub">التاريخ: ${item.date || '—'} — ${item.lessonLabel || ('حصة '+(item.lessonIndex||''))}</div>
                 <div class="${canEdit ? 'ok':'warn'}">${canEdit ? 'متاح للتعديل خلال 45 دقيقة' : 'انتهت مهلة التعديل'}</div>
             `;
-            div.addEventListener('click', ()=> openLogDetail(item.id, item.source || 'attendance'));
+            div.addEventListener('click', ()=> {
+                if (item.source === 'attendanceSessions') attendance.openForEdit(item.id);
+                else openLogDetail(item.id);
+            });
             logList.appendChild(div);
         });
     }
@@ -1502,32 +1335,20 @@
         return list;
     }
 
-    async function openLogDetail(sessionId, source = 'attendance'){
-        let data = null;
-
-        if (source === 'attendanceSessions') {
-            const sRef = doc(db, 'attendanceSessions', sessionId);
-            const sSnap = await getDoc(sRef);
-            if(!sSnap.exists()){
-                openError('غير موجود','التقرير غير موجود.');
-                return;
-            }
-            data = sSnap.data() || {};
-            data.class = data.classKey || data.class || currentClass;
-            data.lessonIndex = data.lesson || data.lessonIndex || 0;
-        } else {
-            const sRef = doc(db, 'attendance', sessionId);
-            const sSnap = await getDoc(sRef);
-            if(!sSnap.exists()){
-                openError('غير موجود','التقرير غير موجود.');
-                return;
-            }
-            data = sSnap.data() || {};
-            data.class = data.class || currentClass;
-            data.lessonIndex = data.lessonIndex || data.lesson || 0;
+    async function openLogDetail(sessionId){
+        // Legacy schema only — modern (attendanceSessions) reports are edited via
+        // the shared attendance module's attendance.openForEdit(sessionId) instead.
+        const sRef = doc(db, 'attendance', sessionId);
+        const sSnap = await getDoc(sRef);
+        if(!sSnap.exists()){
+            openError('غير موجود','التقرير غير موجود.');
+            return;
         }
+        const data = sSnap.data() || {};
+        data.class = data.class || currentClass;
+        data.lessonIndex = data.lessonIndex || data.lesson || 0;
 
-        detailSession = { id: sessionId, data, source };
+        detailSession = { id: sessionId, data, source: 'attendance' };
         detailTitle.textContent = 'تعديل التقرير';
         detailClass.textContent = data.class || '—';
         detailMeta.textContent = `التاريخ: ${data.date || '—'} — ${data.lessonLabel || ('حصة '+(data.lessonIndex||''))}`;
@@ -1537,22 +1358,9 @@
         dStudents.forEach(s=> nameByUid[s.uid] = s.name);
         dStatuses = {};
 
-        if (source === 'attendanceSessions') {
-            const recordsSnap = await getDocs(collection(db, 'attendanceSessions', sessionId, 'attendanceRecords'));
-            recordsSnap.forEach(docSnap => {
-                const rec = docSnap.data() || {};
-                const uid = docSnap.id;
-                const st = (rec.status || '').toString();
-                if (uid && (st === 'present' || st === 'late' || st === 'absent')) {
-                    dStatuses[uid] = st;
-                    if (!nameByUid[uid] && rec.studentName) nameByUid[uid] = rec.studentName;
-                }
-            });
-        } else {
-            (data.present||[]).forEach(u=> dStatuses[u]='present');
-            (data.late||[]).forEach(u=> dStatuses[u]='late');
-            (data.absent||[]).forEach(u=> dStatuses[u]='absent');
-        }
+        (data.present||[]).forEach(u=> dStatuses[u]='present');
+        (data.late||[]).forEach(u=> dStatuses[u]='late');
+        (data.absent||[]).forEach(u=> dStatuses[u]='absent');
 
         // Ensure all class students appear even if no record exists yet.
         dStudents.forEach(s => {
@@ -1679,11 +1487,21 @@
             });
 
             const data = detailSession.data;
-            const source = detailSession.source || 'attendance';
             const lessonIndex = data.lessonIndex || data.lesson || 0;
             const lessonLabel = data.lessonLabel || ('حصة ' + lessonIndex);
             const classKey = data.class || data.classKey || currentClass || '';
             const dateVal = data.date || dateInTZ(TZ);
+
+            // Legacy schema only — modern (attendanceSessions) reports are edited via
+            // the shared attendance module's attendance.openForEdit(sessionId) instead.
+            const batch = writeBatch(db);
+            const sessionRef = doc(db, 'attendance', detailSession.id);
+            batch.set(sessionRef, {
+                present,
+                late,
+                absent,
+                counts: { present: present.length, late: late.length, absent: absent.length, total: present.length+late.length+absent.length }
+            }, { merge: true });
 
             const all = [
                 ...present.map(u=>({u,status:'present'})),
@@ -1692,71 +1510,22 @@
             ];
             const nameByUid = {};
             dStudents.forEach(s=> nameByUid[s.uid] = s.name);
-
-            const batch = writeBatch(db);
-
-            if (source === 'attendanceSessions') {
-                const sessionRef = doc(db, 'attendanceSessions', detailSession.id);
-                batch.set(sessionRef, {
-                    classKey,
+            all.forEach(({u,status})=>{
+                if(!u) return;
+                const subRef = doc(db, 'students', u, 'attendance', detailSession.id);
+                batch.set(subRef, {
+                    sessionId: detailSession.id,
+                    class: classKey,
                     date: dateVal,
-                    lesson: lessonIndex,
+                    lessonIndex,
                     lessonLabel,
-                    counts: { present: present.length, late: late.length, absent: absent.length, total: present.length+late.length+absent.length },
+                    status,
                     updatedAt: serverTimestamp(),
-                    updatedBy: auth.currentUser.uid
+                    updatedBy: auth.currentUser.uid,
+                    sessionPath: sessionRef.path,
+                    studentName: nameByUid[u] || null
                 }, { merge: true });
-
-                all.forEach(({u,status})=>{
-                    if(!u) return;
-                    const recRef = doc(db, 'attendanceSessions', detailSession.id, 'attendanceRecords', u);
-                    batch.set(recRef, {
-                        status,
-                        updatedAt: serverTimestamp(),
-                        updatedBy: auth.currentUser.uid,
-                        studentName: nameByUid[u] || null
-                    }, { merge: true });
-
-                    const subRef = doc(db, 'students', u, 'attendance', detailSession.id);
-                    batch.set(subRef, {
-                        sessionId: detailSession.id,
-                        class: classKey,
-                        date: dateVal,
-                        lessonIndex,
-                        lessonLabel,
-                        status,
-                        updatedAt: serverTimestamp(),
-                        updatedBy: auth.currentUser.uid,
-                        sessionPath: sessionRef.path,
-                        studentName: nameByUid[u] || null
-                    }, { merge: true });
-                });
-            } else {
-                const sessionRef = doc(db, 'attendance', detailSession.id);
-                batch.set(sessionRef, {
-                    present,
-                    late,
-                    absent,
-                    counts: { present: present.length, late: late.length, absent: absent.length, total: present.length+late.length+absent.length }
-                }, { merge: true });
-
-                all.forEach(({u,status})=>{
-                    if(!u) return;
-                    const subRef = doc(db, 'students', u, 'attendance', detailSession.id);
-                    batch.set(subRef, {
-                        sessionId: detailSession.id,
-                        class: classKey,
-                        date: dateVal,
-                        lessonIndex,
-                        lessonLabel,
-                        status,
-                        updatedAt: serverTimestamp(),
-                        updatedBy: auth.currentUser.uid,
-                        sessionPath: sessionRef.path,
-                        studentName: nameByUid[u] || null
-                    }, { merge: true });
-                });
-            }
+            });
 
             await batch.commit();
             cachedTakenLessons = null; // bust cache

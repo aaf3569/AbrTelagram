@@ -2,7 +2,11 @@
   "permissions": {
     "allow": [
       "Bash(awk '{print $5, $9}')",
-      "Bash(grep -A 10 \"innerHTML.*\\\\$\\\\|innerHTML.*template\\\\|innerHTML.*classKey\\\\|innerHTML.*\\\\+\\\\|innerHTML.*class=\" \"C:/Users/User/Desktop/AbrTelagram/admins/students.html\")"
+      "Bash(grep -A 10 \"innerHTML.*\\\\$\\\\|innerHTML.*template\\\\|innerHTML.*classKey\\\\|innerHTML.*\\\\+\\\\|innerHTML.*class=\" \"C:/Users/User/Desktop/AbrTelagram/admins/students.html\")",
+      "Bash(git commit *)",
+      "Bash(node -e ' *)",
+      "Bash(node --check \"./_as_check.mjs\")",
+      "Bash(rm -f ./_as_check.mjs)"
     ]
   }
 }

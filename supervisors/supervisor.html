@@ -534,7 +534,7 @@
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
                         </span>
                     </button>
-                    <button id="telegramSettingsBtn" class="btn ghost" type="button">إعدادات المستخدم</button>
+                    <div id="telegramSettingsSlot"></div>
                     <button id="logoutBtn" class="btn ghost" type="button">تسجيل الخروج</button>
                 </div>
             </section>
@@ -1641,8 +1641,8 @@
                     if(!Number.isFinite(lesson) || lesson < 1 || lesson > 7) return;
 
                     const rowDate = (data.date || '').toString();
-                    const rowWeekday = (data.weekday || data.day || data.dow || '').toString();
-                    const appliesToday = (rowDate === dateKW) || (rowWeekday === weekday);
+                    const rowWeekday = data.weekday ?? data.day ?? data.dow ?? data.dayIndex ?? '';
+                    const appliesToday = (rowDate === dateKW) || weekdayMatchesToday(rowWeekday, weekday);
                     if(!appliesToday) return;
 
                     if(!classMatchesScheduleRow(data, normalizedClass)) return;
@@ -2707,15 +2707,21 @@
             loadingEl.innerHTML = '<div class="spinner"></div><div class="muted">جاري تحميل سجل الغيابات...</div>';
             logList.appendChild(loadingEl);
 
-            // MODIFIED: Add class filter and teacher filter
-            const qRef = query(
-                collection(db, 'attendance'), 
-                where('class', '==', currentClass),
-                where('createdBy', '==', auth.currentUser.uid)
-            );
-            
-            const snap = await getDocs(qRef);
-            if(snap.empty){
+            // MODIFIED: Add class filter and teacher filter, unioned with the modern
+            // attendanceSessions schema (written by the shared attendance module).
+            const [legacySnap, modernSnap] = await Promise.all([
+                getDocs(query(
+                    collection(db, 'attendance'),
+                    where('class', '==', currentClass),
+                    where('createdBy', '==', auth.currentUser.uid)
+                )),
+                getDocs(query(
+                    collection(db, 'attendanceSessions'),
+                    where('classKey', '==', currentClass),
+                    where('teacherUid', '==', auth.currentUser.uid)
+                )),
+            ]);
+            if(legacySnap.empty && modernSnap.empty){
                 logList.innerHTML = '';
                 const empty = document.createElement('div');
                 empty.className = 'error';
@@ -2724,34 +2730,57 @@
                 return;
             }
             const items = [];
-            snap.forEach(d=>{
+            legacySnap.forEach(d=>{
                 const data = d.data() || {};
-                items.push({ id: d.id, ...data });
+                items.push({ id: d.id, source: 'attendance', ...data });
+            });
+            modernSnap.forEach(d=>{
+                const data = d.data() || {};
+                items.push({
+                    id: d.id,
+                    source: 'attendanceSessions',
+                    class: data.classKey || currentClass,
+                    lessonIndex: data.lesson || 0,
+                    ...data,
+                });
             });
             items.sort((a,b)=>{
                 if(a.date === b.date) return (b.lessonIndex||0) - (a.lessonIndex||0);
                 return a.date < b.date ? 1 : -1;
             });
             logList.innerHTML = '';
-            
+
             // NEW: Use document fragment for better performance
             const fragment = document.createDocumentFragment();
-            
+
             items.forEach(item=>{
                 const div = document.createElement('div');
-                const canEdit = canEditByTime(item.createdAt);
+                const canEdit = item.source === 'attendanceSessions'
+                    ? canEditAttendanceSessionByTime(item.createdAt)
+                    : canEditByTime(item.createdAt);
                 const classLabel = item.class ? formatClassLabel(item.class) : '—';
                 div.className = 'log-item';
                 div.innerHTML = `
                     <h4 class="log-title">${classLabel}</h4>
                     <div class="log-sub">التاريخ: ${item.date || '—'} — ${item.lessonLabel || ('حصة '+(item.lessonIndex||''))}</div>
-                    <div class="${canEdit ? 'ok':'warn'}">${canEdit ? 'متاح للتعديل خلال 24 ساعة' : 'انتهت مهلة التعديل'}</div>
+                    <div class="${canEdit ? 'ok':'warn'}">${canEdit ? 'متاح للتعديل' : 'انتهت مهلة التعديل'}</div>
                 `;
-                div.addEventListener('click', ()=> requestAnimationFrame(() => openLogDetail(item.id)));
+                div.addEventListener('click', ()=> requestAnimationFrame(() => {
+                    if (item.source === 'attendanceSessions') attendance.openForEdit(item.id);
+                    else openLogDetail(item.id);
+                }));
                 fragment.appendChild(div);
             });
-            
+
             logList.appendChild(fragment);
+        }
+        function canEditAttendanceSessionByTime(createdAtField){
+            if(!createdAtField) return false;
+            let created = null;
+            if (createdAtField?.toDate) created = createdAtField.toDate();
+            else if (createdAtField?.seconds) created = new Date(createdAtField.seconds*1000);
+            if(!created) return false;
+            return (Date.now() - created.getTime()) <= 45*60*1000;
         }
         function canEditByTime(createdAtField){
             if(!createdAtField) return false;

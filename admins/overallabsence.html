@@ -1112,6 +1112,7 @@
       initializeFirestore, collection, collectionGroup, getDocs, query, where,
       doc, getDoc, Timestamp
     } from "/shared/firebase.js";
+    import { kuwaitTodayISO, getCurrentKuwaitMinutes } from "/shared/kuwait-time.js";
 
     
 
@@ -1209,21 +1210,6 @@
       return new Date(y, (mo || 1) - 1, d || 1);
     }
 
-    // Kuwait timezone functions
-    function kuwaitTodayISO() {
-      const now = new Date();
-      const kuwaitTime = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Kuwait" }));
-      const y = kuwaitTime.getFullYear();
-      const m = String(kuwaitTime.getMonth() + 1).padStart(2, '0');
-      const d = String(kuwaitTime.getDate()).padStart(2, '0');
-      return `${y}-${m}-${d}`;
-    }
-
-    function getKuwaitTime() {
-      const now = new Date();
-      return new Date(now.toLocaleString("en-US", { timeZone: "Asia/Kuwait" }));
-    }
-
     function timeToMinutes(timeStr) {
       const [h, m] = timeStr.split(':').map(Number);
       return h * 60 + (m || 0);
@@ -1267,8 +1253,7 @@
       // Check if there's a scheduled lesson
       if (!scheduleExists) return false;
 
-      const kuwaitNow = getKuwaitTime();
-      const currentMinutes = kuwaitNow.getHours() * 60 + kuwaitNow.getMinutes();
+      const currentMinutes = getCurrentKuwaitMinutes();
       const lessonEndMinutes = timeToMinutes(LESSON_TIMES[lessonIndex - 1].end);
 
       // Only missed if lesson has ended and attendance not taken
@@ -1419,8 +1404,11 @@
     async function loadScheduleForDate(dateObj){
       scheduleMap = Object.create(null);
       const iso = toInputDate(dateObj);
+      const dayIndexForMain = weekdayFromISO(iso);
 
-      const qy = query(collection(db, 'schedules'), where('date', '==', iso));
+      // Schedule entries recur weekly (identified by weekday, not calendar date),
+      // so this matches by dayIndex rather than the exact date.
+      const qy = query(collection(db, 'schedules'), where('dayIndex', '==', dayIndexForMain));
       let snap;
       try { snap = await getDocs(qy); }
       catch { return; }
@@ -1441,7 +1429,7 @@
       });
 
       // Merge enabled weekly custom schedules for this weekday as fallback.
-      // Date-specific rows from 'schedules' always take precedence.
+      // The standing weekly schedule ('schedules') always takes precedence.
       const dayIndex = weekdayFromISO(iso);
       try {
         const qCustom = query(collection(db, 'customDaySchedules'), where('dayIndex', '==', dayIndex));
@@ -1926,8 +1914,7 @@
           lateBtn.innerHTML = '<i class="fas fa-user-clock"></i> عرض المتأخرين';
           
           // Check if lesson is currently running or in future
-          const kuwaitNow = getKuwaitTime();
-          const currentMinutes = kuwaitNow.getHours() * 60 + kuwaitNow.getMinutes();
+          const currentMinutes = getCurrentKuwaitMinutes();
           const lessonStartMinutes = timeToMinutes(LESSON_TIMES[lessonIndex - 1].start);
           const lessonEndMinutes = timeToMinutes(LESSON_TIMES[lessonIndex - 1].end);
           
@@ -2087,9 +2074,9 @@
       
       // Update current Kuwait time
       const updateTime = () => {
-        const kuwaitNow = getKuwaitTime();
-        const hours = String(kuwaitNow.getHours()).padStart(2, '0');
-        const minutes = String(kuwaitNow.getMinutes()).padStart(2, '0');
+        const totalMin = getCurrentKuwaitMinutes();
+        const hours = String(Math.floor(totalMin / 60)).padStart(2, '0');
+        const minutes = String(totalMin % 60).padStart(2, '0');
         const timeElement = document.getElementById('currentKuwaitTime');
         if (timeElement) {
           timeElement.textContent = `${hours}:${minutes}`;
@@ -2104,8 +2091,7 @@
       const dateISO = toInputDate(selectedDate);
       const isToday = dateISO === todayISO;
       
-      const kuwaitNow = getKuwaitTime();
-      const currentMinutes = kuwaitNow.getHours() * 60 + kuwaitNow.getMinutes();
+      const currentMinutes = getCurrentKuwaitMinutes();
       const lessonStartMinutes = timeToMinutes(LESSON_TIMES[lessonIndex - 1].start);
       const lessonEndMinutes = timeToMinutes(LESSON_TIMES[lessonIndex - 1].end);
       

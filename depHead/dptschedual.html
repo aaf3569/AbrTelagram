@@ -773,13 +773,15 @@
       }
     }
 
-    // Load schedules for date
+    // Load schedules for date. Schedule entries recur weekly (identified by
+    // weekday, not calendar date), so this matches by `dayIndex` (0=Sun..4=Thu),
+    // not by the exact date.
     async function loadScheduleForDate(dateObj){
       scheduleMap = Object.create(null);
-      const iso = toInputDate(dateObj);
+      const dayIndex = dateObj.getDay();
 
       try {
-        const q = query(collection(db, 'schedules'), where('date', '==', iso));
+        const q = query(collection(db, 'schedules'), where('dayIndex', '==', dayIndex));
         const snap = await getDocs(q);
         
         snap.forEach(docSnap => {

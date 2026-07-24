@@ -13,6 +13,7 @@
 
   <!-- Noto Kufi Arabic -->
   <link href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
   <link rel="stylesheet" href="/shared/base.css" />
   <style>
@@ -492,7 +493,7 @@
           <button id="openSchedules" class="btn ghost" type="button" aria-label="الجداول">الجداول</button>
           <button id="openNotifications" class="btn ghost" type="button" aria-label="الإشعارات">الإشعارات</button>
           <!-- /NEW -->
-          <button id="telegramSettingsBtn" class="btn ghost section-break" type="button" aria-label="إعدادات المستخدم">إعدادات المستخدم</button>
+          <div id="telegramSettingsSlot"></div>
           <button id="logoutBtn" class="btn ghost section-break" type="button" aria-label="تسجيل الخروج">تسجيل الخروج</button>
           <button id="deleteBtn" class="btn danger" type="button" aria-label="حذف الحساب">حذف الحساب</button>
         </div>
@@ -892,7 +893,6 @@
     const profileAvatar = document.getElementById('profileAvatar');
     const adminName     = document.getElementById('adminName');
     const createdAtText = document.getElementById('createdAtText');
-    const telegramSettingsBtn = document.getElementById('telegramSettingsBtn');
 
     const openAbsence  = document.getElementById('openAbsence');
     const openTeachers = document.getElementById('openTeachers');
@@ -907,7 +907,8 @@
 
     mountTelegramSettings({
       auth,
-      getDisplayName: () => adminName?.textContent || ''
+      getDisplayName: () => adminName?.textContent || '',
+      extraClass: 'section-break'
     });
 
     // NEW: Absence modal refs

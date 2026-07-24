@@ -1153,7 +1153,11 @@
     const auth = getAuth(app);
 
     /* ========= Constants ========= */
-    const DAYS_AR = ["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس"]; // Sun→Thu
+    const DAYS_AR = ["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس"]; // Sun→Thu — main weekly schedule (school days only)
+    // Custom/extra schedules (e.g. exam days, special events) may also be created for
+    // Friday/Saturday, so they get their own extended day list — the main weekly
+    // schedule above intentionally stays Sun→Thu only.
+    const CUSTOM_DAYS_AR = [...DAYS_AR, "الجمعة", "السبت"]; // Sun→Sat
     const LESSONS_AR = ["الحصة الأولى","الحصة الثانية","الحصة الثالثة","الحصة الرابعة","الحصة الخامسة","الحصة السادسة","الحصة السابعة"];
     const FIXED_LESSON_COUNT = 7;
 
@@ -1355,16 +1359,22 @@
 
     const trackKeyOf = (track)=> (track && track.trim()) ? track.trim() : "_";
 
+    // Identity is by weekday slot (grade/section/track/dayIndex/lesson), NOT by calendar
+    // date — this is what makes an entered lesson recur forever instead of expiring
+    // after the week it was entered in. `date` is only used here to resolve which
+    // weekday (0=Sun..4=Thu) of the currently-displayed week it corresponds to.
     const docIdFor = (date, classKey, lessonNumber)=>{
       const {grade, section, track} = parseClassKey(classKey);
       const trackSafe = trackKeyOf(track); // always non-empty
-      return `${date}-${grade}-${section}-${encodeURIComponent(trackSafe)}-L${lessonNumber}`;
+      const dayIndex = weekDates.indexOf(date);
+      const dayPart = dayIndex >= 0 ? `D${dayIndex}` : `DATE${date}`;
+      return `${grade}-${section}-${encodeURIComponent(trackSafe)}-${dayPart}-L${lessonNumber}`;
     };
     const safeDocKey = (v)=> encodeURIComponent((v || '').toString().trim());
     const customDocIdFor = (classKey, scheduleId)=> `${safeDocKey(classKey)}__${safeDocKey(scheduleId)}`;
 
     const customScheduleId = () => `cs-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
-    const dayOptionsHTML = () => DAYS_AR.map((d, i)=>`<option value="${i}">${d}</option>`).join('');
+    const dayOptionsHTML = () => CUSTOM_DAYS_AR.map((d, i)=>`<option value="${i}">${d}</option>`).join('');
     const gradeFromClassKey = (classKey)=>{
       const p = parseClassKey(classKey);
       const g = String(p.grade || '');
@@ -1988,7 +1998,8 @@
 
     async function fetchDayLessonsSeedByClass(iso){
       const byClass = new Map();
-      const qDay = query(collection(db, 'schedules'), where('date', '==', iso));
+      const dayIndex = weekDates.indexOf(iso);
+      const qDay = query(collection(db, 'schedules'), where('dayIndex', '==', dayIndex));
       const snap = await getDocs(qDay);
 
       snap.forEach((d)=>{
@@ -2017,7 +2028,7 @@
 
     async function createSchoolWideCustomSchedule({ name, dayIndex }){
       const safeName = (name || '').trim() || 'جدول إضافي';
-      if(!Number.isInteger(dayIndex) || dayIndex < 0 || dayIndex >= DAYS_AR.length){
+      if(!Number.isInteger(dayIndex) || dayIndex < 0 || dayIndex >= CUSTOM_DAYS_AR.length){
         throw new Error('invalid-day-index');
       }
 
@@ -2050,7 +2061,7 @@
           track: track || "",
           trackKey,
           dayIndex,
-          day: DAYS_AR[dayIndex] || "",
+          day: CUSTOM_DAYS_AR[dayIndex] || "",
           enabled: false,
           lessonCount: FIXED_LESSON_COUNT,
           lessons,
@@ -2065,7 +2076,7 @@
 
       await batch.commit();
       await fetchCustomSchedules();
-      setStatusHTML(`<div class="ok">تم إنشاء الجدول (${safeName}) ليوم ${DAYS_AR[dayIndex]} لجميع فصول المدرسة.</div>`);
+      setStatusHTML(`<div class="ok">تم إنشاء الجدول (${safeName}) ليوم ${CUSTOM_DAYS_AR[dayIndex]} لجميع فصول المدرسة.</div>`);
     }
 
     function buildMainTimesSeed(lessonCount = FIXED_LESSON_COUNT){
@@ -2159,7 +2170,7 @@
         const filled = !!((schedule.values[i - 1]?.subject || '').trim() && (schedule.values[i - 1]?.teacherUid || '').trim());
         btn.classList.toggle('filled', filled);
         btn.addEventListener('click', async ()=>{
-          const dayNameLocal = Number.isInteger(schedule.dayIndex) ? DAYS_AR[schedule.dayIndex] : '—';
+          const dayNameLocal = Number.isInteger(schedule.dayIndex) ? CUSTOM_DAYS_AR[schedule.dayIndex] : '—';
           await openAssignmentEditor({
             title: `${dayNameLocal} • ${lessonLabel(i)}`,
             classKey: schedule.classKey,
@@ -2180,7 +2191,7 @@
 
       const dayCell = document.createElement('div');
       dayCell.className = 'td day-col';
-      const dayName = Number.isInteger(schedule.dayIndex) ? DAYS_AR[schedule.dayIndex] : '—';
+      const dayName = Number.isInteger(schedule.dayIndex) ? CUSTOM_DAYS_AR[schedule.dayIndex] : '—';
       dayCell.innerHTML = `<div style="font-weight:950; color:var(--primary)">${dayName}</div>`;
       g.appendChild(dayCell);
 
@@ -2211,7 +2222,7 @@
           track: track || "",
           trackKey,
           dayIndex: schedule.dayIndex,
-          day: DAYS_AR[schedule.dayIndex] || "",
+          day: CUSTOM_DAYS_AR[schedule.dayIndex] || "",
           enabled: !!schedule.enabled,
           lessonCount: schedule.lessonCount,
           lessons: schedule.values.slice(0, schedule.lessonCount).map(v => normalizeLesson(v)),
@@ -2588,54 +2599,58 @@
         const {grade, section, track} = parseClassKey(selectedClassKey);
         const trackKey = trackKeyOf(track);
 
-        // Fire all 5 day queries in parallel
-        const daySnaps = await Promise.all(weekDates.map(iso =>
-          getDocs(query(
-            collection(db,'schedules'),
-            where('date','==', iso),
-            where('grade','==', String(grade)),
-            where('section','==', String(section))
-          ))
+        // Standing (recurring) schedule — identity is by weekday slot, not calendar
+        // date, so this single query finds every lesson ever entered for this
+        // class/section regardless of which week it was originally entered in.
+        const snap = await getDocs(query(
+          collection(db,'schedules'),
+          where('grade','==', String(grade)),
+          where('section','==', String(section))
         ));
 
-        daySnaps.forEach((snap, r) => {
+        snap.forEach(d=>{
+          const x = d.data() || {};
+          const li = Number((x.lesson || '').toString());
+          if(!(li >= 1 && li <= FIXED_LESSON_COUNT)) return;
+          const di = Number(x.dayIndex);
+          if(!(di >= 0 && di <= 4)) return;
+
+          const xClassKey = (x.classKey || '').toString();
+          const xTrack = (x.track || '').toString();
+          const xTrackKey = (x.trackKey || '').toString();
+
+          const matchByClassKey = xClassKey && xClassKey === selectedClassKey;
+          const matchByTrack =
+            (track === "" && (xTrack === "" || xTrack === "_" || xTrackKey === "_" || !("track" in x))) ||
+            (track !== "" && (xTrack === track || xTrackKey === trackKey));
+
+          if(!matchByClassKey && !matchByTrack) return;
+
+          const iso = weekDates[di];
+          if(!iso) return;
+          const key = `${iso}#${li}`;
+          existingMap.set(key, { id: d.id, ...x });
+          gridValues[key] = {
+            subject: (x.subject || '').toString(),
+            teacherUid: (x.teacherUid || '').toString(),
+            teacherName: (x.teacherName || '').toString(),
+            notes: (x.notes || '').toString()
+          };
+        });
+
+        for(let r=0;r<5;r++){
           const iso = weekDates[r];
-          snap.forEach(d=>{
-            const x = d.data() || {};
-            const li = Number((x.lesson || '').toString());
-            if(!(li >= 1 && li <= FIXED_LESSON_COUNT)) return;
-
-            const xClassKey = (x.classKey || '').toString();
-            const xTrack = (x.track || '').toString();
-            const xTrackKey = (x.trackKey || '').toString();
-
-            const matchByClassKey = xClassKey && xClassKey === selectedClassKey;
-            const matchByTrack =
-              (track === "" && (xTrack === "" || xTrack === "_" || xTrackKey === "_" || !("track" in x))) ||
-              (track !== "" && (xTrack === track || xTrackKey === trackKey));
-
-            if(!matchByClassKey && !matchByTrack) return;
-
-            const key = `${iso}#${li}`;
-            existingMap.set(key, { id: d.id, ...x });
-            gridValues[key] = {
-              subject: (x.subject || '').toString(),
-              teacherUid: (x.teacherUid || '').toString(),
-              teacherName: (x.teacherName || '').toString(),
-              notes: (x.notes || '').toString()
-            };
-          });
-
           for(let l=1;l<=FIXED_LESSON_COUNT;l++){
             const k = `${iso}#${l}`;
             if(!gridValues[k]) gridValues[k] = {subject:'', teacherUid:'', teacherName:'', notes:''};
           }
-        });
+        }
 
-        // If current week is completely empty, auto-inherit from the most recent week that has data
+        // If this class has no standing schedule yet, migrate it once from the most
+        // recent legacy (pre-fix, date-keyed) week so nothing has to be re-entered.
         const hasAnyLesson = Object.values(gridValues).some(v => v.subject);
         if(!hasAnyLesson){
-          await inheritFromPreviousWeek(grade, section, track, trackKey);
+          await migrateLegacyWeeklySchedule(grade, section, track, trackKey);
         } else {
           renderGridFull();
           setDirty(false);
@@ -2649,9 +2664,11 @@
       }
     }
 
-    /* ======= Auto-inherit schedule from previous weeks ======= */
-    async function inheritFromPreviousWeek(grade, section, track, trackKey){
-      for(let w = 1; w <= 8; w++){
+    /* ======= One-time migration: recover the most recent legacy (date-keyed) week
+       into the new standing (dayIndex-keyed) schedule, so nothing has to be
+       re-entered. Only runs when this class has no standing schedule yet. ======= */
+    async function migrateLegacyWeeklySchedule(grade, section, track, trackKey){
+      for(let w = 0; w <= 8; w++){
         const prevDates = [0,1,2,3,4].map(i => addDaysISO(weekDates[0], -(w * 7) + i));
         let inherited = false;
 
@@ -2707,6 +2724,7 @@
                 const id2 = docIdFor(iso2, selectedClassKey, l2);
                 const ref2 = doc(db, 'schedules', id2);
                 const payload2 = {
+                  dayIndex: r2,
                   date: iso2,
                   day: DAYS_AR[r2],
                   classKey: selectedClassKey,
@@ -2729,7 +2747,7 @@
             }
             await batch.commit();
           }catch(saveErr){
-            console.error("[inheritFromPreviousWeek auto-save]", saveErr);
+            console.error("[migrateLegacyWeeklySchedule auto-save]", saveErr);
           }
           renderGridFull();
           setDirty(false);
@@ -2748,8 +2766,11 @@
     async function buildWeekConflictMap(){
       const conflictMap = new Map();
 
-      for(const iso of weekDates){
-        const qDay = query(collection(db,'schedules'), where('date','==', iso));
+      // Standing conflicts — is this teacher already assigned elsewhere at the
+      // same weekday/lesson slot, regardless of which week that was entered in.
+      for(let r=0; r<5; r++){
+        const iso = weekDates[r];
+        const qDay = query(collection(db,'schedules'), where('dayIndex','==', r));
         const snap = await getDocs(qDay);
         snap.forEach(d=>{
           const x = d.data() || {};
@@ -2799,6 +2820,7 @@
               if(exists){
                 const ref = doc(db, 'schedules', exists.id);
                 batch.set(ref, {
+                  dayIndex: r,
                   date: iso,
                   day: DAYS_AR[r],
                   classKey: selectedClassKey,
@@ -2832,6 +2854,7 @@
             }
 
             const payload = {
+              dayIndex: r,
               date: iso,
               day: DAYS_AR[r],
               classKey: selectedClassKey,

@@ -874,6 +874,15 @@
       "12 / 1 ع","12 / 2 ع","12 / 3 ع","12 / 4 ع","12 / 5 ع","12 / 1 د"
     ];
 
+    // Schedule entries recur weekly (identified by weekday, not calendar date),
+    // so lookups match by dayIndex (0=Sun..4=Thu) rather than an exact date.
+    function dayIndexForISO(iso){
+      const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec((iso || '').toString());
+      if(!m) return -1;
+      const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+      return d.getDay();
+    }
+
     /* ========= Elements ========= */
     const containerMain = document.getElementById('containerMain');
     const statusEl = document.getElementById('status');
@@ -1419,7 +1428,7 @@
       const q1 = query(
         collection(db,'schedules'),
         where('teacherUid','==', uid),
-        where('date','==', dateISO)
+        where('dayIndex','==', dayIndexForISO(dateISO))
       );
       const snap = await getDocs(q1);
       snap.forEach(d=>{
@@ -1632,7 +1641,7 @@
       const q1 = query(
         collection(db,'schedules'),
         where('teacherUid','==', uid),
-        where('date','in', weekDates)
+        where('dayIndex','in', [0,1,2,3,4])
       );
       return getDocs(q1);
     }
@@ -1729,7 +1738,11 @@
         for(const iso of weekDates){ map.set(iso, new Map()); }
         snap.forEach(d=>{
           const x = d.data();
-          const iso = x.date;
+          // Standing schedule entries recur by weekday — resolve to *this* week's
+          // actual date for the matching weekday, not the (possibly stale) date
+          // the entry happens to have last been saved with.
+          const iso = weekDates[Number(x.dayIndex)];
+          if (iso === undefined) return;
           if (!map.has(iso)) map.set(iso, new Map());
           const classText = x.classKey || `${x.grade} / ${x.section}${x.track ? ' '+x.track : ''}`;
           map.get(iso).set(Number(x.lesson), classText);
@@ -2867,11 +2880,15 @@
           where('grade','==', String(grade)),
           where('section','==', String(section)),
           ...(track ? [where('track','==', track)] : []),
-          where('date','in', weekDates)
+          where('dayIndex','in', [0,1,2,3,4])
         ));
         snap.forEach(d=>{
           const x=d.data();
-          const iso = x.date;
+          // Standing schedule entries recur by weekday — resolve to *this* week's
+          // actual date for the matching weekday, not the (possibly stale) date
+          // the entry happens to have last been saved with.
+          const iso = weekDates[Number(x.dayIndex)];
+          if (iso === undefined) return;
           if (!map.has(iso)) map.set(iso, new Map());
           map.get(iso).set(Number(x.lesson), x.subject || '—');
         });

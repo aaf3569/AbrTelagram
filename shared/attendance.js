@@ -2,6 +2,15 @@ import {
   doc, getDoc, getDocs, collection, query, where,
   serverTimestamp, writeBatch, setDoc, Timestamp,
 } from "/shared/firebase.js";
+import {
+  DAY_AR_BY_INDEX,
+  parseTimeToMinutes,
+  kuwaitTodayISO,
+  getCurrentKuwaitMinutes,
+  kuwaitDateTimeToDate,
+  addMinutesToDate,
+  getKuwaitDayIndexSunThu,
+} from "/shared/kuwait-time.js";
 
 const STYLE_ID = "attendance-sheet-style";
 const ATTENDANCE_SESSIONS_COLLECTION = "attendanceSessions";
@@ -204,57 +213,7 @@ const DEFAULT_LESSON_TIMES = [
   { index: 7, label: "الحصة السابعة", start: "13:15", end: "13:55" },
 ];
 
-const DAY_AR_BY_INDEX = ["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس"];
 const CUSTOM_SCHEDULE_CACHE_MS = 30000;
-
-function parseTimeToMinutes(t) {
-  if (!t) return 0;
-  const [h, m] = t.split(":").map(Number);
-  return h * 60 + m;
-}
-
-function kuwaitTodayISO() {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Kuwait", year: "numeric", month: "2-digit", day: "2-digit",
-  }).formatToParts(new Date());
-  const y = parts.find(p => p.type === "year").value;
-  const mo = parts.find(p => p.type === "month").value;
-  const d = parts.find(p => p.type === "day").value;
-  return `${y}-${mo}-${d}`;
-}
-
-function getCurrentKuwaitMinutes() {
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: "Asia/Kuwait", hour: "2-digit", minute: "2-digit", hour12: false,
-  }).formatToParts(new Date());
-  const h = parseInt(parts.find(p => p.type === "hour").value, 10) || 0;
-  const m = parseInt(parts.find(p => p.type === "minute").value, 10) || 0;
-  return h * 60 + m;
-}
-
-function kuwaitDateTimeToDate(dateISO, hhmm) {
-  return new Date(`${dateISO}T${hhmm}:00+03:00`);
-}
-
-function addMinutesToDate(d, minutes) {
-  const x = new Date(d.getTime());
-  x.setMinutes(x.getMinutes() + minutes);
-  return x;
-}
-
-function getKuwaitWeekday() {
-  return new Intl.DateTimeFormat("en-US", { weekday: "long", timeZone: "Asia/Kuwait" }).format(new Date());
-}
-
-function getKuwaitDayIndexSunThu() {
-  const wd = getKuwaitWeekday();
-  if (wd === "Sunday") return 0;
-  if (wd === "Monday") return 1;
-  if (wd === "Tuesday") return 2;
-  if (wd === "Wednesday") return 3;
-  if (wd === "Thursday") return 4;
-  return -1;
-}
 
 function toArabicDigits(num) {
   const ar = ["٠","١","٢","٣","٤","٥","٦","٧","٨","٩"];
@@ -324,7 +283,7 @@ function unlockBodyScroll(state) {
   state.locked = false;
 }
 
-export function mountAttendanceSheet({ db, auth, onSaved } = {}) {
+export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
   if (!db || !auth) {
     throw new Error("mountAttendanceSheet requires { db, auth }");
   }
@@ -490,13 +449,15 @@ export function mountAttendanceSheet({ db, auth, onSaved } = {}) {
   async function buildTodayMapWithOverrides(teacherUid, dateISO) {
     const map = new Map();
     try {
-      const todayWeekday = getKuwaitWeekday();
+      const todayDayIndex = getKuwaitDayIndexSunThu();
       const schedSnap = await getDocs(query(collection(db, "schedules"), where("teacherUid", "==", teacherUid)));
       schedSnap.forEach(d => {
         const data = d.data();
         if (!data.lesson) return;
         const key = String(data.lesson);
-        let applies = data.date === dateISO || data.weekday === todayWeekday || data.day === todayWeekday || data.dow === todayWeekday;
+        // Primary: standing weekly schedule, matched by weekday index (recurs forever).
+        // Fallback: legacy date-keyed entries from before the schedule was made recurring.
+        let applies = (todayDayIndex >= 0 && Number(data.dayIndex) === todayDayIndex) || data.date === dateISO;
         if (applies && !map.has(key)) {
           map.set(key, { ...data, _source: "normal", _coveredAway: false });
         }
@@ -687,6 +648,98 @@ export function mountAttendanceSheet({ db, auth, onSaved } = {}) {
     setControlsEnabled(true);
   }
 
+  function buildManualLessonOptions(available) {
+    els.lessonSelect.innerHTML = "";
+    if (els.autoLessonBtn) els.autoLessonBtn.style.display = "none";
+    if (!available.length) {
+      els.lessonHint.textContent = "لا توجد حصص متاحة للتسجيل اليوم.";
+      els.lessonSelect.disabled = true;
+      setControlsEnabled(false);
+      return;
+    }
+    const ph = document.createElement("option");
+    ph.value = "";
+    ph.textContent = "اختر الحصة";
+    ph.disabled = true;
+    ph.selected = true;
+    ph.hidden = true;
+    els.lessonSelect.appendChild(ph);
+    available.forEach(l => {
+      const opt = document.createElement("option");
+      opt.value = String(l.index);
+      opt.textContent = `${l.label} — ${l.start} – ${l.end}`;
+      els.lessonSelect.appendChild(opt);
+    });
+    els.lessonSelect.disabled = false;
+    els.lessonHint.textContent = "يرجى اختيار الحصة.";
+    els.lessonSelect.onchange = () => {
+      const chosen = available.find(l => String(l.index) === els.lessonSelect.value);
+      setControlsEnabled(!!chosen);
+      els.lessonHint.textContent = chosen ? `${chosen.label} — ${chosen.start} – ${chosen.end}` : "يرجى اختيار الحصة.";
+    };
+    setControlsEnabled(false);
+  }
+
+  function buildFixedLessonOption(lessonIndex, lessonLabel) {
+    els.lessonSelect.innerHTML = "";
+    if (els.autoLessonBtn) els.autoLessonBtn.style.display = "none";
+    const l = LESSON_TIMES.find(x => x.index === lessonIndex);
+    const label = lessonLabel || l?.label || `حصة ${lessonIndex}`;
+    const opt = document.createElement("option");
+    opt.value = String(lessonIndex);
+    opt.textContent = l ? `${label} — ${l.start} – ${l.end}` : label;
+    opt.selected = true;
+    opt.disabled = true;
+    els.lessonSelect.appendChild(opt);
+    els.lessonSelect.disabled = true;
+    els.lessonHint.textContent = `تعديل: ${label}`;
+    setControlsEnabled(true);
+  }
+
+  async function getTakenLessonIndicesForClass(dateISO, classKey) {
+    const set = new Set();
+    if (!dateISO || !classKey) return set;
+    try {
+      const snap = await getDocs(query(
+        collection(db, ATTENDANCE_SESSIONS_COLLECTION),
+        where("date", "==", dateISO),
+        where("classKey", "==", classKey),
+      ));
+      snap.forEach(ds => {
+        const lesson = Number((ds.data() || {}).lesson);
+        if (Number.isFinite(lesson)) set.add(lesson);
+      });
+    } catch (e) {
+      console.error("[attendance] getTakenLessonIndices:", e);
+    }
+    return set;
+  }
+
+  function canEditSessionByTime(createdAtField) {
+    if (!createdAtField) return false;
+    let created = null;
+    if (createdAtField?.toDate) created = createdAtField.toDate();
+    else if (createdAtField?.seconds) created = new Date(createdAtField.seconds * 1000);
+    if (!created) return false;
+    return (Date.now() - created.getTime()) <= 45 * 60 * 1000;
+  }
+
+  async function prefillStatusesFromSession(sessionId) {
+    try {
+      const recSnap = await getDocs(collection(db, ATTENDANCE_SESSIONS_COLLECTION, sessionId, ATTENDANCE_RECORDS_SUBCOLLECTION));
+      recSnap.forEach(rd => {
+        const uid = rd.id;
+        const st = (rd.data()?.status || "").toString();
+        if (uid && (st === "present" || st === "late" || st === "absent")) {
+          attStatuses[uid] = st;
+        }
+      });
+      renderList(attStudentList);
+    } catch (e) {
+      console.error("[attendance] prefillStatuses:", e);
+    }
+  }
+
   async function loadTakenLessonsForClass(dateISO, classKey) {
     const out = new Map();
     if (!dateISO || !classKey) return out;
@@ -851,17 +904,64 @@ export function mountAttendanceSheet({ db, auth, onSaved } = {}) {
       showBlocked("not_my_lesson");
       return;
     }
-    currentMeta = meta;
+    currentMeta = { ...meta, mode: "self" };
     els.className.textContent = formatClassLabel(meta.classKey);
     buildLessonOption(meta.lesson);
     loadStudentsForClass(meta.classKey);
     openSheet(els.sheet);
   }
 
+  async function openForClass(classKey) {
+    if (!classKey) return;
+    const dateISO = kuwaitTodayISO();
+    const takenSet = await getTakenLessonIndicesForClass(dateISO, classKey);
+    const available = LESSON_TIMES.filter(l => !takenSet.has(l.index));
+    currentMeta = { ok: true, mode: "any", date: dateISO, classKey, lesson: null };
+    els.className.textContent = formatClassLabel(classKey);
+    buildManualLessonOptions(available);
+    loadStudentsForClass(classKey);
+    openSheet(els.sheet);
+  }
+
+  async function openForEdit(sessionId) {
+    if (!sessionId) return;
+    const sessionRef = doc(db, ATTENDANCE_SESSIONS_COLLECTION, sessionId);
+    const snap = await getDoc(sessionRef);
+    if (!snap.exists()) {
+      showError("غير موجود", "التقرير غير موجود.");
+      return;
+    }
+    const data = snap.data() || {};
+    const createdAt = data.createdAt || null;
+    if (!canEditSessionByTime(createdAt)) {
+      showError("تعذّر التعديل", "انتهت مهلة التعديل (45 دقيقة).");
+      return;
+    }
+    const classKey = data.classKey || "";
+    const lessonIndex = Number(data.lesson) || 0;
+    const lessonLabel = data.lessonLabel || null;
+    currentMeta = {
+      ok: true, mode: "edit", date: data.date || kuwaitTodayISO(),
+      classKey, lesson: lessonIndex, sessionId, createdAt,
+    };
+    els.className.textContent = formatClassLabel(classKey);
+    buildFixedLessonOption(lessonIndex, lessonLabel);
+    await loadStudentsForClass(classKey);
+    await prefillStatusesFromSession(sessionId);
+    openSheet(els.sheet);
+  }
+
   // Submit handlers
   els.submitBtn.addEventListener("click", async () => {
-    const c = await checkAllowed();
-    if (!c.allowed) return;
+    if (currentMeta?.mode === "edit") {
+      if (!canEditSessionByTime(currentMeta.createdAt)) {
+        showError("تعذّر الحفظ", "انتهت مهلة التعديل (45 دقيقة).");
+        return;
+      }
+    } else if (currentMeta?.mode !== "any") {
+      const c = await checkAllowed();
+      if (!c.allowed) return;
+    }
     if (!currentMeta?.classKey) {
       showError("تعذّر الحفظ", "اختر فصلًا أولاً.");
       return;
@@ -897,7 +997,14 @@ export function mountAttendanceSheet({ db, auth, onSaved } = {}) {
       const li = document.createElement("li"); li.textContent = "لا يوجد طلاب متأخرون."; els.confirmLateList.appendChild(li);
     }
     els.filterAbsent.click();
-    pendingSave = { present, late, absent, dateKW: kuwaitTodayISO(), lessonIndex, lessonLabel, classKey: currentMeta.classKey };
+    pendingSave = {
+      present, late, absent,
+      dateKW: currentMeta.date || kuwaitTodayISO(),
+      lessonIndex, lessonLabel,
+      classKey: currentMeta.classKey,
+      mode: currentMeta.mode,
+      sessionId: currentMeta.sessionId,
+    };
     openModal(els.confirmModal);
     setTimeout(() => els.confirmSave.focus(), 0);
   });
@@ -914,16 +1021,67 @@ export function mountAttendanceSheet({ db, auth, onSaved } = {}) {
         closeModal(els.confirmModal);
         return;
       }
-      const c = await checkAllowed();
-      if (!c.allowed) {
+      const uid = auth.currentUser.uid;
+      const { present, late, absent, dateKW, lessonIndex, lessonLabel, classKey, mode, sessionId } = pendingSave;
+      const nameByUid = {};
+      attStudentList.forEach(s => { if (s.uid) nameByUid[s.uid] = s.name; });
+      const all = [
+        ...present.map(u => ({ uid: u, status: "present" })),
+        ...late.map(u => ({ uid: u, status: "late" })),
+        ...absent.map(u => ({ uid: u, status: "absent" })),
+      ];
+
+      if (mode === "edit") {
+        if (!canEditSessionByTime(currentMeta?.createdAt)) {
+          closeModal(els.confirmModal);
+          showError("تعذّر الحفظ", "انتهت مهلة التعديل (45 دقيقة).");
+          pendingSave = null;
+          return;
+        }
+        const sessionRef = doc(db, ATTENDANCE_SESSIONS_COLLECTION, sessionId);
+        const batch = writeBatch(db);
+        batch.set(sessionRef, {
+          classKey, date: dateKW, lesson: lessonIndex, lessonLabel,
+          counts: { present: present.length, late: late.length, absent: absent.length, total: all.length },
+          updatedAt: serverTimestamp(),
+          updatedBy: uid,
+        }, { merge: true });
+        all.forEach(({ uid: u, status }) => {
+          if (!u) return;
+          const ref = doc(db, ATTENDANCE_SESSIONS_COLLECTION, sessionId, ATTENDANCE_RECORDS_SUBCOLLECTION, u);
+          batch.set(ref, {
+            status,
+            updatedAt: serverTimestamp(),
+            updatedBy: uid,
+            studentName: nameByUid[u] || null,
+          }, { merge: true });
+        });
+        await batch.commit();
         closeModal(els.confirmModal);
+        showToast("تم حفظ التعديلات", `للحصة: ${lessonLabel}`);
+        closeSheet(els.sheet);
+        if (typeof onSaved === "function") {
+          try {
+            onSaved({ classKey, lesson: lessonIndex, lessonLabel, date: dateKW, mode, counts: { present: present.length, late: late.length, absent: absent.length } });
+          } catch (e) {
+            console.error("[attendance] onSaved threw:", e);
+          }
+        }
         return;
       }
-      const activeMeta = c.meta || {};
-      const uid = auth.currentUser.uid;
-      const { present, late, absent, dateKW, lessonIndex, lessonLabel, classKey } = pendingSave;
-      const sessionId = createAttendanceSessionId(dateKW, lessonIndex, classKey);
-      const sessionRef = doc(db, ATTENDANCE_SESSIONS_COLLECTION, sessionId);
+
+      // Create flow: "self" (time-gated, own current lesson) or "any" (manual class/lesson pick)
+      let activeMeta = {};
+      if (mode === "self") {
+        const c = await checkAllowed();
+        if (!c.allowed) {
+          closeModal(els.confirmModal);
+          return;
+        }
+        activeMeta = c.meta || {};
+      }
+      const newSessionId = createAttendanceSessionId(dateKW, lessonIndex, classKey);
+      const sessionRef = doc(db, ATTENDANCE_SESSIONS_COLLECTION, newSessionId);
       const existing = await getDoc(sessionRef);
       if (existing.exists()) {
         closeModal(els.confirmModal);
@@ -947,21 +1105,14 @@ export function mountAttendanceSheet({ db, auth, onSaved } = {}) {
         sessionCutoffTs: Timestamp.fromDate(sessionCutoffTs),
         locked: false,
       });
-      const all = [
-        ...present.map(u => ({ uid: u, status: "present" })),
-        ...late.map(u => ({ uid: u, status: "late" })),
-        ...absent.map(u => ({ uid: u, status: "absent" })),
-      ];
       const batch = writeBatch(db);
-      const nameByUid = {};
-      attStudentList.forEach(s => { if (s.uid) nameByUid[s.uid] = s.name; });
       all.forEach(({ uid: u, status }) => {
         if (!u) return;
-        const ref = doc(db, ATTENDANCE_SESSIONS_COLLECTION, sessionId, ATTENDANCE_RECORDS_SUBCOLLECTION, u);
+        const ref = doc(db, ATTENDANCE_SESSIONS_COLLECTION, newSessionId, ATTENDANCE_RECORDS_SUBCOLLECTION, u);
         batch.set(ref, {
           status,
           updatedAt: serverTimestamp(),
-          updatedBy: auth.currentUser.uid,
+          updatedBy: uid,
           studentName: nameByUid[u] || null,
         });
       });
@@ -969,9 +1120,22 @@ export function mountAttendanceSheet({ db, auth, onSaved } = {}) {
       closeModal(els.confirmModal);
       showToast("تم تسجيل الغياب بنجاح", `للحصة: ${lessonLabel}`);
       closeSheet(els.sheet);
+
+      if (mode === "any" && typeof onLateSubmit === "function") {
+        const nowMin = getCurrentKuwaitMinutes();
+        const cutoffMin = parseTimeToMinutes(lessonTime?.end || "00:00") + 5;
+        if (nowMin > cutoffMin) {
+          try {
+            onLateSubmit({ classKey, lesson: lessonIndex, lessonLabel, date: dateKW });
+          } catch (e) {
+            console.error("[attendance] onLateSubmit threw:", e);
+          }
+        }
+      }
+
       if (typeof onSaved === "function") {
         try {
-          onSaved({ classKey, lesson: lessonIndex, lessonLabel, date: dateKW, counts: { present: present.length, late: late.length, absent: absent.length } });
+          onSaved({ classKey, lesson: lessonIndex, lessonLabel, date: dateKW, mode, counts: { present: present.length, late: late.length, absent: absent.length } });
         } catch (e) {
           console.error("[attendance] onSaved threw:", e);
         }
@@ -1018,6 +1182,8 @@ export function mountAttendanceSheet({ db, auth, onSaved } = {}) {
       openWithMeta(c.meta);
     },
     open: openWithMeta,
+    openForClass,
+    openForEdit,
     close() { closeSheet(els.sheet); },
     refreshLessonTimes: fetchLessonTimes,
   };
