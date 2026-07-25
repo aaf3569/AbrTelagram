@@ -616,42 +616,84 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 20px;
-      padding: 16px 24px;
-      background: rgba(3,60,84,0.97);
-      backdrop-filter: blur(12px);
-      box-shadow: 0 -4px 32px rgba(3,60,84,.35);
+      gap: 16px;
+      padding: 14px 24px;
+      background: rgba(255,255,255,.92);
+      border-top: 1px solid var(--border);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      box-shadow: 0 -6px 24px rgba(6,27,40,.08);
       transform: translateY(100%);
-      transition: transform .28s cubic-bezier(.4,0,.2,1);
+      transition: transform .25s cubic-bezier(.4,0,.2,1);
     }
     .floating-save-bar.visible{
       transform: translateY(0);
     }
     .floating-save-label{
-      color: rgba(255,255,255,.85);
-      font-size: 1rem;
-      font-weight: 600;
+      color: var(--text);
+      font-size: .95rem;
+      font-weight: 700;
       direction: rtl;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .floating-save-label::before{
+      content: "";
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--primary-3);
+      flex: 0 0 auto;
+    }
+    .floating-save-actions{
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .floating-discard-btn{
+      height: 46px;
+      padding: 0 22px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--muted);
+      font-size: .95rem;
+      font-weight: 800;
+      cursor: pointer;
+      transition: background .15s ease, border-color .15s ease, color .15s ease;
+    }
+    .floating-discard-btn:hover{
+      background: #fdf1f0;
+      border-color: rgba(180,35,24,.35);
+      color: var(--danger);
     }
     .floating-save-btn{
-      height: 54px;
-      padding: 0 36px;
-      border-radius: 14px;
-      border: none;
-      background: linear-gradient(135deg, #1de9b6, #00b8d4);
-      color: #003147;
-      font-size: 1.15rem;
-      font-weight: 900;
+      height: 46px;
+      padding: 0 28px;
+      border-radius: 12px;
+      border: 1px solid var(--primary);
+      background: var(--primary);
+      color: #ffffff;
+      font-size: .95rem;
+      font-weight: 800;
       cursor: pointer;
-      box-shadow: 0 6px 24px rgba(0,184,212,.45);
-      transition: transform .1s ease, box-shadow .15s ease;
+      box-shadow: var(--shadow);
+      transition: background .15s ease, box-shadow .15s ease;
       letter-spacing: .01em;
     }
     .floating-save-btn:hover{
-      transform: scale(1.04);
-      box-shadow: 0 8px 30px rgba(0,184,212,.6);
+      background: var(--primary-2);
+      box-shadow: var(--shadow-strong);
     }
-    .floating-save-btn:active{ transform: scale(.98); }
+    .floating-save-btn:active{ background: var(--primary); }
+    .floating-save-btn:disabled, .floating-discard-btn:disabled{
+      opacity: .55;
+      cursor: not-allowed;
+    }
+    @media (max-width: 640px){
+      .floating-save-bar{ flex-wrap: wrap; justify-content: center; gap: 10px; padding: 12px 16px; }
+      .floating-save-label{ width: 100%; justify-content: center; }
+    }
 
     /* ===== Unsaved changes modal ===== */
     .unsaved-modal{
@@ -1187,6 +1229,7 @@
     const breakAfterLesson2Sel = document.getElementById('breakAfterLesson2');
     const grid = document.getElementById('grid');
     const saveBtn = document.getElementById('saveBtn');
+    const discardBtn = document.getElementById('discardBtn');
     const floatingSaveBar = document.getElementById('floatingSaveBar');
     const unsavedModal = document.getElementById('unsavedModal');
     const unsavedLeaveBtn = document.getElementById('unsavedLeaveBtn');
@@ -1406,12 +1449,14 @@
     const setDirty = (v)=>{
       dirty = v;
       saveBtn.disabled = loading;
+      if(discardBtn) discardBtn.disabled = loading;
       floatingSaveBar?.classList.toggle('visible', !!(dirty && !loading));
     };
 
     const setLoading = (v, text = "جاري تحميل البيانات...")=>{
       loading = v;
       saveBtn.disabled = v;
+      if(discardBtn) discardBtn.disabled = v;
       if(dirty) floatingSaveBar?.classList.toggle('visible', !v);
       grid.classList.toggle('is-loading', v);
       if(loaderText) loaderText.textContent = text;
@@ -2958,7 +3003,21 @@
       }
     }
 
+    async function discardAllChanges(){
+      if(loading) return;
+      const confirmed = window.confirm('سيتم تجاهل كل التغييرات غير المحفوظة والعودة لآخر نسخة محفوظة. متابعة؟');
+      if(!confirmed) return;
+      setLoading(true, "جاري التراجع عن التغييرات...");
+      try{
+        await Promise.all([fetchExisting(), fetchCustomSchedules()]);
+      } finally{
+        setDirty(false);
+        setLoading(false);
+      }
+    }
+
     saveBtn.addEventListener('click', saveAll);
+    discardBtn.addEventListener('click', discardAllChanges);
     breakAfterLesson1Sel?.addEventListener('change', ()=> handleBreakSelectChange('first'));
     breakAfterLesson2Sel?.addEventListener('change', ()=> handleBreakSelectChange('second'));
 
@@ -3031,7 +3090,10 @@
   <!-- Floating save bar -->
   <div id="floatingSaveBar" class="floating-save-bar" aria-hidden="true">
     <span class="floating-save-label">لديك تغييرات غير محفوظة</span>
-    <button id="saveBtn" class="floating-save-btn" type="button">💾 حفظ كل التغييرات</button>
+    <div class="floating-save-actions">
+      <button id="discardBtn" class="floating-discard-btn" type="button">تجاهل التغييرات</button>
+      <button id="saveBtn" class="floating-save-btn" type="button">حفظ كل التغييرات</button>
+    </div>
   </div>
 
   <!-- Unsaved changes warning modal -->
