@@ -1080,7 +1080,8 @@
       overridesByTeacher: new Map(), // uid -> Map(date->Map(lesson->overrideObj))
       teacherNameByUid: new Map(),
       teacherList: null, // [{uid,name}]
-      weekKey: ""
+      weekKey: "",
+      customDayDocs: new Map() // "day:{dayIndex}" -> customDaySchedules rows
     };
 
     /* ========= Helpers ========= */
@@ -1418,7 +1419,13 @@
           where('active','==', true),
           where('date','in', targetDates)
         );
-        const sNew = await getDocs(qNew);
+        const qOld = query(
+          collection(db,'scheduleOverrides'),
+          where('originalTeacherUid','==', uid),
+          where('active','==', true),
+          where('date','in', targetDates)
+        );
+        const [sNew, sOld] = await Promise.all([getDocs(qNew), getDocs(qOld)]);
         sNew.forEach(d=>{
           const x = d.data();
           if(!x || !x.date) return;
@@ -1427,13 +1434,6 @@
           mapByDate.get(iso).set(Number(x.lesson), { ...x, _id: d.id, _kind: 'new' });
         });
 
-        const qOld = query(
-          collection(db,'scheduleOverrides'),
-          where('originalTeacherUid','==', uid),
-          where('active','==', true),
-          where('date','in', targetDates)
-        );
-        const sOld = await getDocs(qOld);
         sOld.forEach(d=>{
           const x = d.data();
           if(!x || !x.date) return;
@@ -1715,21 +1715,58 @@
       return getDocs(q1);
     }
 
+    async function fetchCustomScheduleDocsForDayIndex(dayIndex){
+      const cacheKey = `day:${dayIndex}`;
+      if(cache.customDayDocs.has(cacheKey)) return cache.customDayDocs.get(cacheKey);
+      let rows = [];
+      try{
+        const snap = await getDocs(query(collection(db,'customDaySchedules'), where('dayIndex','==', dayIndex)));
+        rows = snap.docs.map(d => d.data() || {}).filter(x => !x.deletedAt && x.enabled === true);
+      }catch(e){
+        console.error('[fetchCustomScheduleDocsForDayIndex]', e);
+      }
+      cache.customDayDocs.set(cacheKey, rows);
+      return rows;
+    }
+
+    function mergeCustomScheduleIntoMap(byLesson, uid, customRows){
+      customRows.forEach(row=>{
+        const lessonsArr = Array.isArray(row.lessons) ? row.lessons : [];
+        const max = Math.min(7, Number(row.lessonCount) || lessonsArr.length || 7);
+        for(let i=0;i<max;i++){
+          const lessonRow = lessonsArr[i] || {};
+          if((lessonRow.teacherUid || '').toString() !== uid) continue;
+          const key = String(i + 1);
+          if(byLesson.has(key)) continue;
+          let classKey = (row.classKey || lessonRow.classKey || '').toString().trim();
+          if(!classKey && row.grade && row.section){
+            classKey = `${row.grade} / ${row.section}${row.track ? ` ${row.track}` : ''}`;
+          }
+          if(!classKey) continue;
+          byLesson.set(key, { ...lessonRow, classKey, lesson: key, _source: 'custom' });
+        }
+      });
+    }
+
     async function buildTodayMapWithOverrides(uid, dateISO){
       const byLesson = new Map();
+      const dayIndex = dayIndexForISO(dateISO);
 
       const q1 = query(
         collection(db,'schedules'),
         where('teacherUid','==', uid),
-        where('dayIndex','==', dayIndexForISO(dateISO))
+        where('dayIndex','==', dayIndex)
       );
-      const snap = await getDocs(q1);
+      const [snap, , customRows] = await Promise.all([
+        getDocs(q1),
+        loadOverridesForTeacherInDates(uid, [dateISO]),
+        fetchCustomScheduleDocsForDayIndex(dayIndex)
+      ]);
       snap.forEach(d=>{
         const x=d.data();
         byLesson.set(String(x.lesson), x);
       });
 
-      await loadOverridesForTeacherInDates(uid, [dateISO]);
       const mapByDate = cache.overridesByTeacher.get(uid) || new Map();
       const dayMap = mapByDate.get(dateISO) || new Map();
 
@@ -1751,6 +1788,8 @@
           });
         }
       }
+
+      mergeCustomScheduleIntoMap(byLesson, uid, customRows);
 
       return byLesson;
     }
@@ -1853,7 +1892,10 @@
         map.set(iso, new Map());
       }
 
-      const snap = await fetchWeekDocsForTeacher(uid);
+      const [snap] = await Promise.all([
+        fetchWeekDocsForTeacher(uid),
+        loadOverridesForTeacherInDates(uid, weekDates)
+      ]);
       snap.forEach(d => {
         const x = d.data();
         // Standing schedule entries recur by weekday — resolve to *this* week's
@@ -1866,7 +1908,6 @@
         map.get(iso).set(Number(x.lesson), classText);
       });
 
-      await loadOverridesForTeacherInDates(uid, weekDates);
       const mapByDate = cache.overridesByTeacher.get(uid) || new Map();
       for (const iso of weekDates) {
         const dayOv = mapByDate.get(iso);
@@ -1881,6 +1922,30 @@
           }
         }
       }
+
+      const customRowsByDay = await Promise.all(
+        weekDates.map((iso, dayIdx) => fetchCustomScheduleDocsForDayIndex(dayIdx))
+      );
+      weekDates.forEach((iso, dayIdx) => {
+        const dayMap = map.get(iso);
+        const customRows = customRowsByDay[dayIdx];
+        customRows.forEach(row=>{
+          const lessonsArr = Array.isArray(row.lessons) ? row.lessons : [];
+          const max = Math.min(7, Number(row.lessonCount) || lessonsArr.length || 7);
+          for(let i=0;i<max;i++){
+            const lessonRow = lessonsArr[i] || {};
+            if((lessonRow.teacherUid || '').toString() !== uid) continue;
+            const lessonNum = i + 1;
+            if(dayMap.has(lessonNum)) continue;
+            let classKey = (row.classKey || lessonRow.classKey || '').toString().trim();
+            if(!classKey && row.grade && row.section){
+              classKey = `${row.grade} / ${row.section}${row.track ? ` ${row.track}` : ''}`;
+            }
+            if(!classKey) continue;
+            dayMap.set(lessonNum, classKey);
+          }
+        });
+      });
 
       cache.teacherWeek.set(cacheKey, map);
       return map;
@@ -3748,23 +3813,25 @@
 
       currentUser = user;
 
-      try{
-        const snap = await getDoc(doc(db,'teachers', user.uid));
-        if(snap.exists()){
-          currentTeacherProfile = snap.data();
-          currentRole = (currentTeacherProfile.role || '').toString().toLowerCase();
-        }
-      }catch(e){
-        console.error(e);
-      }
-
       setupLessonTimesListener();
       startCurrentLessonTimer();
       initWeek();
       initClassPicker();
-
       setFilterActive(btnToday);
-      await loadTodayForTeacher(user.uid);
+
+      const profilePromise = getDoc(doc(db,'teachers', user.uid))
+        .then(snap=>{
+          if(snap.exists()){
+            currentTeacherProfile = snap.data();
+            currentRole = (currentTeacherProfile.role || '').toString().toLowerCase();
+          }
+        })
+        .catch(e=> console.error(e));
+
+      await Promise.all([
+        profilePromise,
+        loadTodayForTeacher(user.uid)
+      ]);
 
       startPendingRequestsListener();
     });

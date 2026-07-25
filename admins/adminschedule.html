@@ -2198,10 +2198,12 @@
             current: normalizeLesson(schedule.values[i - 1]),
             onApply(next){
               schedule.values[i - 1] = normalizeLesson(next);
+              setDirty(true);
               renderCustomGrid(schedule, host, statusNode);
             },
             onClear(){
               schedule.values[i - 1] = normalizeLesson({});
+              setDirty(true);
               renderCustomGrid(schedule, host, statusNode);
             }
           });
@@ -2220,15 +2222,16 @@
     }
 
     async function saveCustomSchedule(schedule, statusNode){
-      statusNode.innerHTML = '';
+      const setStatus = (html)=>{ if(statusNode) statusNode.innerHTML = html; };
+      setStatus('');
 
       if(!Number.isInteger(schedule.dayIndex)){
-        statusNode.innerHTML = `<div class="err">اختيار اليوم إجباري لهذا الجدول.</div>`;
-        return;
+        setStatus(`<div class="err">اختيار اليوم إجباري لهذا الجدول.</div>`);
+        throw new Error('missing dayIndex');
       }
       if(!schedule.classKey){
-        statusNode.innerHTML = `<div class="err">اختر الصف والفصل قبل الحفظ.</div>`;
-        return;
+        setStatus(`<div class="err">اختر الصف والفصل قبل الحفظ.</div>`);
+        throw new Error('missing classKey');
       }
 
       try{
@@ -2266,10 +2269,11 @@
         }, { merge: true });
         schedule.docId = docId;
 
-        statusNode.innerHTML = `<div class="ok">تم حفظ الجدول الخاص بنجاح.</div>`;
+        setStatus(`<div class="ok">تم حفظ الجدول الخاص بنجاح.</div>`);
       }catch(e){
         console.error('[saveCustomSchedule]', e);
-        statusNode.innerHTML = `<div class="err">تعذّر حفظ الجدول الخاص.</div>`;
+        setStatus(`<div class="err">تعذّر حفظ الجدول الخاص.</div>`);
+        throw e;
       }
     }
 
@@ -2361,7 +2365,6 @@
             <div class="custom-toolbar" style="margin-top:18px">
               <button type="button" class="btn custom-add">${AR_ADD_LESSON}</button>
               <button type="button" class="btn custom-remove">${AR_REMOVE_LESSON}</button>
-              <button type="button" class="btn primary custom-save">حفظ هذا الجدول</button>
               <button type="button" class="btn danger custom-delete">حذف الجدول</button>
             </div>
 
@@ -2382,10 +2385,10 @@
       const classSelLocal = item.querySelector('.custom-class-select');
       const addBtn = item.querySelector('.custom-add');
       const remBtn = item.querySelector('.custom-remove');
-      const saveBtnLocal = item.querySelector('.custom-save');
       const deleteBtn = item.querySelector('.custom-delete');
       const gridHost = item.querySelector('.custom-grid-host');
       const statusNode = item.querySelector('.custom-status');
+      schedule._statusNode = statusNode;
 
       toggleBtn.addEventListener('click', ()=>{
         schedule.collapsed = !schedule.collapsed;
@@ -2393,7 +2396,9 @@
       });
 
       const applyName = ()=>{
-        schedule.name = (nameEdit.value || '').trim() || 'جدول إضافي';
+        const next = (nameEdit.value || '').trim() || 'جدول إضافي';
+        if(next !== schedule.name) setDirty(true);
+        schedule.name = next;
         toggleTitle.textContent = schedule.name;
         nameTrigger.textContent = schedule.name;
         nameTrigger.classList.remove('custom-hidden');
@@ -2418,12 +2423,14 @@
       daySel.addEventListener('change', ()=>{
         const v = daySel.value;
         schedule.dayIndex = v === '' ? '' : Number(v);
+        setDirty(true);
         renderCustomGrid(schedule, gridHost, statusNode);
       });
 
       enabledCb.checked = schedule.enabled;
       enabledCb.addEventListener('change', ()=>{
         schedule.enabled = !!enabledCb.checked;
+        setDirty(true);
       });
 
       gradeSelLocal.value = gradeValue;
@@ -2437,15 +2444,18 @@
         classSelLocal.innerHTML = (CLASSES_BY_GRADE[g] || []).map(c=>`<option value="${c}">${c}</option>`).join('');
         classSelLocal.value = (CLASSES_BY_GRADE[g] || [])[0] || '';
         schedule.classKey = classSelLocal.value;
+        setDirty(true);
       });
       classSelLocal.addEventListener('change', ()=>{
         schedule.classKey = classSelLocal.value;
+        setDirty(true);
       });
 
       addBtn.addEventListener('click', ()=>{
         schedule.lessonCount += 1;
         ensureCustomLessons(schedule);
         ensureCustomTimes(schedule);
+        setDirty(true);
         renderCustomGrid(schedule, gridHost, statusNode);
       });
       remBtn.addEventListener('click', ()=>{
@@ -2453,10 +2463,10 @@
         schedule.lessonCount -= 1;
         ensureCustomLessons(schedule);
         ensureCustomTimes(schedule);
+        setDirty(true);
         renderCustomGrid(schedule, gridHost, statusNode);
       });
 
-      saveBtnLocal.addEventListener('click', ()=> saveCustomSchedule(schedule, statusNode));
       deleteBtn.addEventListener('click', ()=> deleteCustomSchedule(schedule, item));
 
       renderCustomGrid(schedule, gridHost, statusNode);
@@ -2912,18 +2922,33 @@
           addStatusLine("warn", "تم إيقاف الحفظ لبعض الخانات بسبب التعارض. عدّل التعارض ثم احفظ مرة أخرى.");
         }
 
-        if(writeCount === 0){
+        if(writeCount > 0){
+          addStatusLine("warn", "جاري حفظ التغييرات...");
+          await batch.commit();
+          await fetchExisting();
+        }
+
+        let customFailCount = 0;
+        if(customSchedules.length){
+          const results = await Promise.allSettled(
+            customSchedules.map(s => saveCustomSchedule(s, s._statusNode))
+          );
+          customFailCount = results.filter(r => r.status === 'rejected').length;
+          if(customFailCount > 0){
+            addStatusLine("err", "تعذّر حفظ بعض الجداول الخاصة. راجع الحالة أسفل كل جدول.");
+          }
+          await fetchCustomSchedules();
+        }
+
+        if(writeCount === 0 && !customSchedules.length){
           addStatusLine("warn", "لا يوجد تغييرات قابلة للحفظ.");
-          setDirty(false);
           return;
         }
 
-        addStatusLine("warn", "جاري حفظ التغييرات...");
-        await batch.commit();
-
-        await fetchExisting();
-        setStatusHTML(`<div class="ok">تم الحفظ بنجاح.</div>`);
-        openSaveSuccessModal();
+        if(customFailCount === 0){
+          setStatusHTML(`<div class="ok">تم الحفظ بنجاح.</div>`);
+          openSaveSuccessModal();
+        }
       }catch(e){
         console.error("[saveAll]", e);
         setStatusHTML(`<div class="err">تعذّر الحفظ: ${(e && e.message) ? e.message : e}</div>`);
@@ -3006,7 +3031,7 @@
   <!-- Floating save bar -->
   <div id="floatingSaveBar" class="floating-save-bar" aria-hidden="true">
     <span class="floating-save-label">لديك تغييرات غير محفوظة</span>
-    <button id="saveBtn" class="floating-save-btn" type="button">💾 حفظ الجدول</button>
+    <button id="saveBtn" class="floating-save-btn" type="button">💾 حفظ كل التغييرات</button>
   </div>
 
   <!-- Unsaved changes warning modal -->
