@@ -1,0 +1,1075 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /* ---------- Helpers ---------- */
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function myTeacherDoc() {
+      return signedIn()
+        ? get(/databases/$(database)/documents/teachers/$(request.auth.uid)).data
+        : null;
+    }
+
+    function myRole() {
+      let d = myTeacherDoc();
+      return (d != null && d.role is string) ? d.role : "";
+    }
+
+    function canonicalDepartment(raw) {
+      let v = (raw is string) ? raw : "";
+      return (
+        (v == "الفيزياء" || v == "الكيمياء" || v == "الفيزياء والكيمياء") ? "الفيزياء والكيمياء" :
+        (v == "الجيولوجيا" || v == "الأحياء" || v == "الجيولوجيا والأحياء") ? "الجيولوجيا والأحياء" :
+        (v == "علم النفس" || v == "الفلسفة" || v == "علم النفس والفلسفة") ? "علم النفس والفلسفة" :
+        (v == "التاريخ" || v == "الجغرافيا" || v == "جغرافيا" || v == "التاريخ والجغرافيا") ? "التاريخ والجغرافيا" :
+        v
+      );
+    }
+
+    function isAdmin() {
+      return signedIn() && (
+        myRole() == "admin" ||
+        request.auth.token.admin == true
+      );
+    }
+
+    function isHead() {
+      return signedIn() && myRole() == "head";
+    }
+
+    function isSupervisor() {
+      let d = myTeacherDoc();
+      return signedIn() && d != null && (
+        (d.isSupervisor is bool   && d.isSupervisor == true) ||
+        (d.isSupervisor is string && d.isSupervisor == "true")
+      );
+    }
+
+    function hasSupervisorStudentsPermission() {
+      let d = myTeacherDoc();
+      return signedIn()
+        && d != null
+        && ('permissions' in d)
+        && (d.permissions is map)
+        && ('allowSupervisorStudents' in d.permissions)
+        && (d.permissions.allowSupervisorStudents is bool)
+        && d.permissions.allowSupervisorStudents == true;
+    }
+
+    function isTeacherOrAdmin() {
+      return signedIn() && (
+        isAdmin()
+        || exists(/databases/$(database)/documents/teachers/$(request.auth.uid))
+        || myRole() in ["user", "teacher", "head"]
+      );
+    }
+
+    function isTeacherSupervisorOrAdmin() {
+      return isTeacherOrAdmin() || isSupervisor() || hasSupervisorStudentsPermission();
+    }
+
+    function hasScheduleEditPermission() {
+      let d = myTeacherDoc();
+      return signedIn()
+        && d != null
+        && (
+          isAdmin() ||
+          (
+            ('permissions' in d)
+            && (d.permissions is map)
+            && ('allowEditSchedule' in d.permissions)
+            && (d.permissions.allowEditSchedule is bool)
+            && d.permissions.allowEditSchedule == true
+          )
+        );
+    }
+
+    function headDepartment() {
+      let d = myTeacherDoc();
+      let rawDept =
+        d != null
+          ? (
+              (('department' in d) && d.department is string) ? d.department
+              : ((('subject' in d) && d.subject is string) ? d.subject : "")
+            )
+          : "";
+      return canonicalDepartment(rawDept);
+    }
+
+    function teacherInHeadDepartment(teacherData) {
+      let rawDept =
+        teacherData != null
+          ? (
+              (('department' in teacherData) && teacherData.department is string) ? teacherData.department
+              : ((('subject' in teacherData) && teacherData.subject is string) ? teacherData.subject : "")
+            )
+          : "";
+      return canonicalDepartment(rawDept) == headDepartment();
+    }
+
+    /* ---------- Validators ---------- */
+
+    function isValidClass(c) {
+      return c is string
+        && c.matches('^(10|11|12)\\s*/\\s*(1|2|3|4|5|6|7)(\\s*(ع|د))?$');
+    }
+
+    function isValidClassKey(c) {
+      return isValidClass(c);
+    }
+
+    function isValidLessonIndex(i) {
+      return i is int && i >= 1 && i <= 7;
+    }
+
+    function isISODate(d) {
+      return d is string && d.matches('^\\d{4}-\\d{2}-\\d{2}$');
+    }
+
+    function isNullableISODate(d) {
+      return d == null || isISODate(d);
+    }
+
+    function isStatus(s) {
+      return s is string && (s == "present" || s == "late" || s == "absent");
+    }
+
+    function nonEmptyString(s) {
+      return s is string && s.size() > 0;
+    }
+
+    function isTimestamp(t) { return t is timestamp; }
+
+    function preserveOrInit(field) {
+      return (field in resource.data)
+        ? (!(field in request.resource.data) || request.resource.data[field] == resource.data[field])
+        : true;
+    }
+
+    function optionalValidClassIfPresent() {
+      return !('class' in request.resource.data)
+        || isValidClass(request.resource.data.class);
+    }
+
+    function isLesson(v) {
+      return (v is string) && (
+        v.matches('^[1-7]$') ||
+        v in [
+          'الحصة الأولى','الحصة الثانية','الحصة الثالثة',
+          'الحصة الرابعة','الحصة الخامسة','الحصة السادسة','الحصة السابعة'
+        ]
+      );
+    }
+
+    function isUserOrAdmin() {
+      return signedIn() && (myRole() in ["admin","user"] || isAdmin());
+    }
+
+    function isHHMM(t) {
+      return t is string && t.matches('^([01]\\d|2[0-3]):[0-5]\\d$');
+    }
+
+    function isDayIndex(i) {
+      return i is int && i >= 0 && i <= 6;
+    }
+
+    function isNullableString(v) {
+      return v == null || v is string;
+    }
+
+    function isLessonObj(v) {
+      return v is map
+        && (!('subject' in v) || v.subject is string)
+        && (!('teacherUid' in v) || v.teacherUid is string)
+        && (!('teacherName' in v) || v.teacherName is string)
+        && (!('notes' in v) || v.notes is string);
+    }
+
+    function isTimeObj(v) {
+      return v is map
+        && (!('start' in v) || isHHMM(v.start))
+        && (!('end' in v) || isHHMM(v.end));
+    }
+
+    function isLessonArr(v) {
+      return v is list && v.size() <= 14;
+    }
+
+    function isTimeArr(v) {
+      return v is list && v.size() <= 14;
+    }
+
+    function isSiteLogActor(v) {
+      return v == null
+        || (
+          v is map
+          && v.keys().hasOnly(['uid','email','authApp'])
+          && (!('uid' in v) || v.uid == null || v.uid is string)
+          && (!('email' in v) || v.email == null || v.email is string)
+          && (!('authApp' in v) || v.authApp == null || v.authApp is string)
+        );
+    }
+
+    function isSiteLogTarget(v) {
+      return v == null
+        || (
+          v is map
+          && v.keys().hasOnly(['path','collection','docId','isDocument'])
+          && (!('path' in v) || v.path == null || v.path is string)
+          && (!('collection' in v) || v.collection == null || v.collection is string)
+          && (!('docId' in v) || v.docId == null || v.docId is string)
+          && (!('isDocument' in v) || v.isDocument == null || v.isDocument is bool)
+        );
+    }
+
+    function isSiteLogError(v) {
+      return v == null
+        || (
+          v is map
+          && v.keys().hasOnly(['code','name','message'])
+          && (!('code' in v) || v.code == null || v.code is string)
+          && (!('name' in v) || v.name == null || v.name is string)
+          && (!('message' in v) || v.message == null || v.message is string)
+        );
+    }
+
+    function isSiteLogContext(v) {
+      return v == null
+        || (
+          v is map
+          && v.keys().hasOnly(['page','href'])
+          && (!('page' in v) || v.page == null || v.page is string)
+          && (!('href' in v) || v.href == null || v.href is string)
+        );
+    }
+
+    function isSiteLogDocValid() {
+      return request.resource.data.keys().hasOnly([
+          'domain','action','status',
+          'actor','target','change','changes','meta','error','context',
+          'ts','clientTs'
+        ])
+        && ('domain' in request.resource.data)
+        && (request.resource.data.domain is string)
+        && (request.resource.data.domain in ['firestore','auth'])
+        && ('action' in request.resource.data)
+        && (request.resource.data.action is string)
+        && (request.resource.data.action.size() > 0)
+        && (request.resource.data.action.size() <= 140)
+        && ('status' in request.resource.data)
+        && (request.resource.data.status is string)
+        && (request.resource.data.status in ['success','error'])
+        && ('ts' in request.resource.data)
+        && (request.resource.data.ts is timestamp)
+        && ('clientTs' in request.resource.data)
+        && ((request.resource.data.clientTs is int) || (request.resource.data.clientTs is float))
+        && (!('actor' in request.resource.data) || isSiteLogActor(request.resource.data.actor))
+        && (!('target' in request.resource.data) || isSiteLogTarget(request.resource.data.target))
+        && (!('error' in request.resource.data) || isSiteLogError(request.resource.data.error))
+        && (!('context' in request.resource.data) || isSiteLogContext(request.resource.data.context))
+        && (!('meta' in request.resource.data) || request.resource.data.meta == null || request.resource.data.meta is map)
+        && (!('change' in request.resource.data) || request.resource.data.change == null || request.resource.data.change is map)
+        && (!('changes' in request.resource.data) || (request.resource.data.changes is list && request.resource.data.changes.size() <= 150));
+    }
+
+    /* ---------- attendance (collection group) ---------- */
+    /* Required so collectionGroup('attendance') queries work across all   */
+    /* /students/{sid}/attendance sub-collections.                         */
+    match /{path=**}/attendance/{attId} {
+      allow read: if isTeacherSupervisorOrAdmin();
+    }
+
+    /* ---------- teachers ---------- */
+    match /teachers/{uid} {
+      allow get, list: if isTeacherOrAdmin();
+      allow create, update, delete: if isAdmin();
+
+      /* ---- private subcollection: admin-only (stores displayedPassword) ---- */
+      match /private/{docId} {
+        allow read, write: if isAdmin();
+      }
+    }
+
+    /* ---------- classes ---------- */
+    match /classes/{cid} {
+      allow read:   if isTeacherSupervisorOrAdmin();
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    /* ---------- students ---------- */
+    match /students/{sid} {
+      allow read:   if isTeacherSupervisorOrAdmin();
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+
+      match /attendance/{attId} {
+        allow read: if isTeacherSupervisorOrAdmin();
+
+        allow create: if
+          isTeacherSupervisorOrAdmin()
+          && isValidClass(request.resource.data.class)
+          && isISODate(request.resource.data.date)
+          && isValidLessonIndex(request.resource.data.lessonIndex)
+          && isStatus(request.resource.data.status)
+          && (
+            (('createdBy' in request.resource.data) && request.resource.data.createdBy == request.auth.uid)
+            || (('updatedBy' in request.resource.data) && request.resource.data.updatedBy == request.auth.uid)
+          );
+
+        allow update: if
+          isAdmin()
+          || (
+            isTeacherSupervisorOrAdmin()
+            && preserveOrInit('class')
+            && preserveOrInit('date')
+            && preserveOrInit('lessonIndex')
+            && preserveOrInit('createdBy')
+            && preserveOrInit('createdAt')
+            && (
+              !('status' in request.resource.data)
+              || isStatus(request.resource.data.status)
+            )
+          );
+
+        allow delete: if isAdmin();
+      }
+
+      match /commitments/{cid} {
+        allow read: if isTeacherSupervisorOrAdmin();
+
+        allow create: if
+          isTeacherSupervisorOrAdmin()
+          && nonEmptyString(request.resource.data.title)
+          && (request.resource.data.audience is string)
+          && optionalValidClassIfPresent()
+          && (
+            !('body' in request.resource.data)
+            || (request.resource.data.body is string)
+          )
+          && (
+            !('status' in request.resource.data)
+            || (request.resource.data.status is string)
+          )
+          && (
+            !('dueDate' in request.resource.data)
+            || isNullableISODate(request.resource.data.dueDate)
+          )
+          && request.resource.data.createdBy == request.auth.uid;
+
+        allow update: if
+          isTeacherSupervisorOrAdmin()
+          && optionalValidClassIfPresent()
+          && (
+            !('title' in request.resource.data)
+            || nonEmptyString(request.resource.data.title)
+          )
+          && (
+            !('body' in request.resource.data)
+            || (request.resource.data.body is string)
+          )
+          && (
+            !('audience' in request.resource.data)
+            || (request.resource.data.audience is string)
+          )
+          && (
+            !('status' in request.resource.data)
+            || (request.resource.data.status is string)
+          )
+          && (
+            !('dueDate' in request.resource.data)
+            || isNullableISODate(request.resource.data.dueDate)
+          )
+          && preserveOrInit('createdBy')
+          && preserveOrInit('createdAt');
+
+        allow delete: if isTeacherSupervisorOrAdmin();
+      }
+
+      match /enrollments/{eid} {
+        allow read: if isTeacherSupervisorOrAdmin();
+
+        allow create: if
+          isTeacherSupervisorOrAdmin()
+          && nonEmptyString(request.resource.data.title)
+          && (
+            !('reason' in request.resource.data)
+            || (request.resource.data.reason is string)
+          )
+          && (
+            !('lengthText' in request.resource.data)
+            || (request.resource.data.lengthText is string)
+          )
+          && (
+            !('from' in request.resource.data)
+            || isNullableISODate(request.resource.data.from)
+          )
+          && (
+            !('to' in request.resource.data)
+            || isNullableISODate(request.resource.data.to)
+          )
+          && optionalValidClassIfPresent()
+          && request.resource.data.createdBy == request.auth.uid;
+
+        allow update: if
+          isTeacherSupervisorOrAdmin()
+          && (
+            !('title' in request.resource.data)
+            || nonEmptyString(request.resource.data.title)
+          )
+          && (
+            !('reason' in request.resource.data)
+            || (request.resource.data.reason is string)
+          )
+          && (
+            !('lengthText' in request.resource.data)
+            || (request.resource.data.lengthText is string)
+          )
+          && (
+            !('from' in request.resource.data)
+            || isNullableISODate(request.resource.data.from)
+          )
+          && (
+            !('to' in request.resource.data)
+            || isNullableISODate(request.resource.data.to)
+          )
+          && optionalValidClassIfPresent()
+          && preserveOrInit('createdBy')
+          && preserveOrInit('createdAt');
+
+        allow delete: if isTeacherSupervisorOrAdmin();
+      }
+
+      match /reports/{rid} {
+        allow read: if isTeacherSupervisorOrAdmin();
+
+        allow create: if
+          isTeacherSupervisorOrAdmin()
+          && (request.resource.data.type is string)
+          && nonEmptyString(request.resource.data.title)
+          && (
+            !('reason' in request.resource.data)
+            || (request.resource.data.reason is string)
+          )
+          && isISODate(request.resource.data.date)
+          && optionalValidClassIfPresent()
+          && request.resource.data.createdBy == request.auth.uid;
+
+        allow update: if
+          isTeacherSupervisorOrAdmin()
+          && (
+            !('type' in request.resource.data)
+            || (request.resource.data.type is string)
+          )
+          && (
+            !('title' in request.resource.data)
+            || nonEmptyString(request.resource.data.title)
+          )
+          && (
+            !('reason' in request.resource.data)
+            || (request.resource.data.reason is string)
+          )
+          && (
+            !('date' in request.resource.data)
+            || isISODate(request.resource.data.date)
+          )
+          && optionalValidClassIfPresent()
+          && preserveOrInit('createdBy')
+          && preserveOrInit('createdAt');
+
+        allow delete: if isTeacherSupervisorOrAdmin();
+      }
+
+      match /notes/{noteId} {
+        allow read: if isTeacherSupervisorOrAdmin();
+
+        allow create: if isTeacherSupervisorOrAdmin()
+          && nonEmptyString(request.resource.data.body)
+          && (request.resource.data.type is string)
+          && ('pinned' in request.resource.data)
+          && ('createdBy' in request.resource.data)
+          && ('createdAt' in request.resource.data)
+          && isTimestamp(request.resource.data.createdAt);
+
+        allow update: if isTeacherSupervisorOrAdmin()
+          && (
+            !('body' in request.resource.data)
+            || nonEmptyString(request.resource.data.body)
+          )
+          && (
+            !('pinned' in request.resource.data)
+            || (request.resource.data.pinned is bool)
+          )
+          && preserveOrInit('createdBy')
+          && preserveOrInit('createdAt');
+
+        allow delete: if isTeacherSupervisorOrAdmin();
+      }
+
+      match /notes_by_teacher/{teacherId} {
+
+        function canReadAnyTeacherNotes() {
+          return isTeacherSupervisorOrAdmin();
+        }
+
+        function isOwnerOrAdminOrSupervisor() {
+          return signedIn() && (
+            teacherId == request.auth.uid ||
+            isAdmin() ||
+            isSupervisor() ||
+            hasSupervisorStudentsPermission()
+          );
+        }
+
+        function noteCreateValid() {
+          return nonEmptyString(request.resource.data.title)
+            && nonEmptyString(request.resource.data.description)
+            && nonEmptyString(request.resource.data.actionTaken)
+            && isTimestamp(request.resource.data.date);
+        }
+
+        function noteUpdateValid() {
+          return (
+            !('title' in request.resource.data)
+            || nonEmptyString(request.resource.data.title)
+          )
+          && (
+            !('description' in request.resource.data)
+            || nonEmptyString(request.resource.data.description)
+          )
+          && (
+            !('actionTaken' in request.resource.data)
+            || nonEmptyString(request.resource.data.actionTaken)
+          )
+          && (
+            !('date' in request.resource.data)
+            || isTimestamp(request.resource.data.date)
+          );
+        }
+
+        function timestampsValidOnWrite() {
+          return (
+            !('createdAt' in request.resource.data)
+            || isTimestamp(request.resource.data.createdAt)
+          )
+          && (
+            !('updatedAt' in request.resource.data)
+            || isTimestamp(request.resource.data.updatedAt)
+          );
+        }
+
+        match /positiveNotes/{noteId} {
+          allow read:   if canReadAnyTeacherNotes();
+          allow create: if isOwnerOrAdminOrSupervisor()
+            && noteCreateValid()
+            && timestampsValidOnWrite();
+          allow update: if isOwnerOrAdminOrSupervisor()
+            && noteUpdateValid()
+            && timestampsValidOnWrite()
+            && preserveOrInit('createdAt');
+          allow delete: if isOwnerOrAdminOrSupervisor();
+        }
+
+        match /negativeNotes/{noteId} {
+          allow read:   if canReadAnyTeacherNotes();
+          allow create: if isOwnerOrAdminOrSupervisor()
+            && noteCreateValid()
+            && timestampsValidOnWrite();
+          allow update: if isOwnerOrAdminOrSupervisor()
+            && noteUpdateValid()
+            && timestampsValidOnWrite()
+            && preserveOrInit('createdAt');
+          allow delete: if isOwnerOrAdminOrSupervisor();
+        }
+
+        match /generalNotes/{noteId} {
+          allow read:   if canReadAnyTeacherNotes();
+          allow create: if isOwnerOrAdminOrSupervisor()
+            && noteCreateValid()
+            && timestampsValidOnWrite();
+          allow update: if isOwnerOrAdminOrSupervisor()
+            && noteUpdateValid()
+            && timestampsValidOnWrite()
+            && preserveOrInit('createdAt');
+          allow delete: if isOwnerOrAdminOrSupervisor();
+        }
+      }
+    }
+
+    /* ---------- central attendance ---------- */
+    match /attendance/{rid} {
+      allow read: if isTeacherSupervisorOrAdmin();
+
+      allow create: if
+        isTeacherSupervisorOrAdmin()
+        && isValidClass(request.resource.data.class)
+        && isISODate(request.resource.data.date)
+        && isValidLessonIndex(request.resource.data.lessonIndex)
+        && request.resource.data.createdBy == request.auth.uid;
+
+      allow update: if
+        isAdmin()
+        || (
+          isTeacherSupervisorOrAdmin()
+          && preserveOrInit('class')
+          && preserveOrInit('date')
+          && preserveOrInit('lessonIndex')
+          && preserveOrInit('createdBy')
+          && preserveOrInit('createdAt')
+        );
+
+      allow delete: if isAdmin();
+    }
+
+    /* ---------- attendanceLate ---------- */
+    match /attendanceLate/{id} {
+      allow read: if isTeacherSupervisorOrAdmin();
+
+      allow create: if isTeacherSupervisorOrAdmin()
+        && request.resource.data.teacherUid == request.auth.uid
+        && isValidClassKey(request.resource.data.classKey)
+        && isISODate(request.resource.data.date)
+        && isValidLessonIndex(request.resource.data.lesson)
+        && (
+          !('createdAt' in request.resource.data)
+          || request.resource.data.createdAt is timestamp
+        );
+
+      allow update, delete: if isAdmin();
+    }
+
+    /* ---------- schedules ---------- */
+    /* Written only by admins/adminschedule.html. Every field is optional-if-  */
+    /* present so existing writes keep working, but malformed values are now   */
+    /* rejected like every other collection.                                   */
+    match /schedules/{sid} {
+      allow read: if isTeacherSupervisorOrAdmin();
+
+      allow create, update: if hasScheduleEditPermission()
+        && (!('dayIndex' in request.resource.data) || isDayIndex(request.resource.data.dayIndex))
+        && (!('date' in request.resource.data) || isISODate(request.resource.data.date))
+        && (
+          !('lesson' in request.resource.data)
+          || isLesson(request.resource.data.lesson)
+          || isValidLessonIndex(request.resource.data.lesson)
+        )
+        && (!('classKey' in request.resource.data) || isValidClassKey(request.resource.data.classKey))
+        && (!('day' in request.resource.data) || request.resource.data.day is string)
+        && (!('grade' in request.resource.data) || request.resource.data.grade is string || request.resource.data.grade is int)
+        && (!('section' in request.resource.data) || request.resource.data.section is string || request.resource.data.section is int)
+        && (!('track' in request.resource.data) || request.resource.data.track is string)
+        && (!('trackKey' in request.resource.data) || request.resource.data.trackKey is string)
+        && (!('subject' in request.resource.data) || request.resource.data.subject is string)
+        && (!('teacherUid' in request.resource.data) || request.resource.data.teacherUid is string)
+        && (!('teacherName' in request.resource.data) || request.resource.data.teacherName is string)
+        && (!('notes' in request.resource.data) || request.resource.data.notes is string);
+
+      allow delete: if hasScheduleEditPermission();
+    }
+
+    /* ---------- customDaySchedules ---------- */
+    match /customDaySchedules/{docId} {
+      allow read: if isTeacherSupervisorOrAdmin();
+
+      allow create, update, delete: if isAdmin()
+        && nonEmptyString(request.resource.data.classKey)
+        && isValidClassKey(request.resource.data.classKey)
+        && (!('grade' in request.resource.data) || request.resource.data.grade is string || request.resource.data.grade is int)
+        && (!('section' in request.resource.data) || request.resource.data.section is string || request.resource.data.section is int)
+        && (!('track' in request.resource.data) || request.resource.data.track is string)
+        && (!('trackKey' in request.resource.data) || request.resource.data.trackKey is string)
+        && (!('dayIndex' in request.resource.data) || isDayIndex(request.resource.data.dayIndex))
+        && (!('day' in request.resource.data) || request.resource.data.day is string)
+        && (!('enabled' in request.resource.data) || request.resource.data.enabled is bool)
+        && (!('lessonCount' in request.resource.data) || request.resource.data.lessonCount is int)
+        && (!('lessons' in request.resource.data) || isLessonArr(request.resource.data.lessons))
+        && (!('times' in request.resource.data) || isTimeArr(request.resource.data.times));
+    }
+
+    /* ---------- swapRequests ---------- */
+    match /swapRequests/{requestId} {
+
+      function isParticipant() {
+        return signedIn() && (
+          isAdmin()
+          || (resource.data.fromTeacherUid is string && resource.data.fromTeacherUid == request.auth.uid)
+          || (resource.data.toTeacherUid   is string && resource.data.toTeacherUid   == request.auth.uid)
+          || (resource.data.fromHeadUid    is string && resource.data.fromHeadUid    == request.auth.uid)
+          || (resource.data.toHeadUid      is string && resource.data.toHeadUid      == request.auth.uid)
+          || (resource.data.headUid        is string && resource.data.headUid        == request.auth.uid)
+        );
+      }
+
+      function isValidSwapStatus(s) {
+        return s is string && s in [
+          'pending_head_from',
+          'pending_head_to',
+          'pending_head',
+          'pending_teacher_to',
+          'accepted',
+          'denied'
+        ];
+      }
+
+      function isPendingSwapStatus(s) {
+        return s is string && s in [
+          'pending_head_from',
+          'pending_head_to',
+          'pending_head',
+          'pending_teacher_to'
+        ];
+      }
+
+      function swapCreateIsValid() {
+        return request.resource.data.type in ['swap','cover']
+          && isPendingSwapStatus(request.resource.data.status)
+          && isISODate(request.resource.data.date)
+          && isValidLessonIndex(request.resource.data.lesson)
+          && request.resource.data.fromTeacherUid == request.auth.uid
+          && (request.resource.data.toTeacherUid is string && request.resource.data.toTeacherUid.size() > 0)
+          && (request.resource.data.fromHeadUid is string && request.resource.data.fromHeadUid.size() > 0)
+          && (request.resource.data.toHeadUid is string && request.resource.data.toHeadUid.size() > 0)
+          && (request.resource.data.fromDepartment is string && request.resource.data.fromDepartment.size() > 0)
+          && (request.resource.data.toDepartment is string && request.resource.data.toDepartment.size() > 0)
+          && (
+            !('fromClassKey' in request.resource.data)
+            || isValidClassKey(request.resource.data.fromClassKey)
+          )
+          && (
+            !('toClassKey' in request.resource.data)
+            || request.resource.data.toClassKey == null
+            || request.resource.data.toClassKey is string
+          )
+          && (
+            !('createdAt' in request.resource.data)
+            || request.resource.data.createdAt is timestamp
+          )
+          && (
+            !('respondedAt' in request.resource.data)
+            || request.resource.data.respondedAt == null
+            || request.resource.data.respondedAt is timestamp
+          )
+          && (
+            !('message' in request.resource.data)
+            || request.resource.data.message == null
+            || request.resource.data.message is string
+          )
+          && (
+            !('fromTeacherName' in request.resource.data)
+            || request.resource.data.fromTeacherName is string
+          )
+          && (
+            !('toTeacherName' in request.resource.data)
+            || request.resource.data.toTeacherName is string
+          )
+          && (
+            !('fromHeadName' in request.resource.data)
+            || request.resource.data.fromHeadName is string
+          )
+          && (
+            !('toHeadName' in request.resource.data)
+            || request.resource.data.toHeadName is string
+          );
+      }
+
+      function swapUpdateKeysAreSafe() {
+        return request.resource.data.diff(resource.data).changedKeys().hasOnly([
+          'status',
+          'respondedAt',
+          'headStatus',
+          'headRespondedAt',
+          'headNote',
+          'toClassKey'
+        ]);
+      }
+
+      function swapTransitionAllowedForActor() {
+        let oldStatus = resource.data.status;
+        let newStatus = request.resource.data.status;
+
+        return
+          (
+            request.auth.uid == resource.data.fromHeadUid
+            && oldStatus == 'pending_head_from'
+            && newStatus in ['pending_head_to', 'accepted', 'denied']
+          )
+          ||
+          (
+            request.auth.uid == resource.data.toHeadUid
+            && oldStatus == 'pending_head_to'
+            && newStatus in ['accepted', 'denied']
+          )
+          ||
+          (
+            request.auth.uid == resource.data.toTeacherUid
+            && oldStatus == 'pending_teacher_to'
+            && newStatus in ['accepted', 'denied']
+          );
+      }
+
+      function swapUpdateValuesValid() {
+        return isValidSwapStatus(request.resource.data.status)
+          && (
+            !('respondedAt' in request.resource.data)
+            || request.resource.data.respondedAt == null
+            || request.resource.data.respondedAt is timestamp
+          )
+          && (
+            !('headRespondedAt' in request.resource.data)
+            || request.resource.data.headRespondedAt == null
+            || request.resource.data.headRespondedAt is timestamp
+          )
+          && (
+            !('headStatus' in request.resource.data)
+            || request.resource.data.headStatus is string
+          )
+          && (
+            !('headNote' in request.resource.data)
+            || request.resource.data.headNote == null
+            || request.resource.data.headNote is string
+          )
+          && (
+            !('toClassKey' in request.resource.data)
+            || request.resource.data.toClassKey == null
+            || request.resource.data.toClassKey is string
+          );
+      }
+
+      allow get, list: if isTeacherOrAdmin() && isParticipant();
+      allow create: if isTeacherOrAdmin() && swapCreateIsValid();
+
+      allow update: if
+        isAdmin()
+        || (
+          isTeacherOrAdmin()
+          && isParticipant()
+          && swapUpdateKeysAreSafe()
+          && swapUpdateValuesValid()
+          && swapTransitionAllowedForActor()
+        );
+
+      allow delete: if isAdmin();
+    }
+
+    /* ---------- scheduleOverrides ---------- */
+    match /scheduleOverrides/{overrideId} {
+
+      function linkedSwapRequestData() {
+        return (
+          ('swapRequestId' in request.resource.data)
+          && (request.resource.data.swapRequestId is string)
+          && exists(/databases/$(database)/documents/swapRequests/$(request.resource.data.swapRequestId))
+        )
+          ? get(/databases/$(database)/documents/swapRequests/$(request.resource.data.swapRequestId)).data
+          : null;
+      }
+
+      function canWriteOverrideFromSwapRequest() {
+        let req = linkedSwapRequestData();
+
+        return req != null
+          && signedIn()
+          && (
+            request.auth.uid == req.fromTeacherUid
+            || request.auth.uid == req.toTeacherUid
+            || request.auth.uid == req.fromHeadUid
+            || request.auth.uid == req.toHeadUid
+          )
+          && (req.status is string && req.status in ['pending_head_from','pending_head_to','pending_teacher_to','accepted'])
+          && isISODate(request.resource.data.date)
+          && request.resource.data.date == req.date
+          && isValidLessonIndex(request.resource.data.lesson)
+          && (request.resource.data.originalTeacherUid is string)
+          && (request.resource.data.newTeacherUid is string)
+          && (
+            (request.resource.data.originalTeacherUid == req.fromTeacherUid && request.resource.data.newTeacherUid == req.toTeacherUid)
+            || (request.resource.data.originalTeacherUid == req.toTeacherUid && request.resource.data.newTeacherUid == req.fromTeacherUid)
+          );
+      }
+
+      allow read: if isTeacherSupervisorOrAdmin();
+
+      allow create, update: if
+        (
+          hasScheduleEditPermission()
+          || isHead()
+          || canWriteOverrideFromSwapRequest()
+        )
+        && isISODate(request.resource.data.date)
+        && isValidLessonIndex(request.resource.data.lesson)
+        && nonEmptyString(request.resource.data.originalTeacherUid)
+        && nonEmptyString(request.resource.data.newTeacherUid)
+        && (request.resource.data.active is bool)
+        && (
+          !('createdAt' in request.resource.data)
+          || request.resource.data.createdAt is timestamp
+        )
+        && (
+          !('swapRequestId' in request.resource.data)
+          || request.resource.data.swapRequestId is string
+        )
+        && (
+          !('classKey' in request.resource.data)
+          || request.resource.data.classKey is string
+        );
+
+      allow delete: if isAdmin();
+    }
+
+    /* ---------- morningLates ---------- */
+    match /morningLates/{lateId} {
+      allow read: if isUserOrAdmin();
+
+      allow create: if isUserOrAdmin()
+        && (request.resource.data.type is string)
+        && isISODate(request.resource.data.date)
+        && (request.resource.data.dayName is string)
+        && isHHMM(request.resource.data.time)
+        && isValidClassKey(request.resource.data.classKey)
+        && (request.resource.data.grade is int && request.resource.data.grade >= 10 && request.resource.data.grade <= 12)
+        && (request.resource.data.section is string)
+        && nonEmptyString(request.resource.data.studentUid)
+        && (request.resource.data.studentName == null || request.resource.data.studentName is string)
+        && (request.resource.data.studentNumber == null || request.resource.data.studentNumber is int || request.resource.data.studentNumber is float)
+        && request.resource.data.createdByUid == request.auth.uid
+        && (request.resource.data.createdByName is string)
+        && (
+          !('createdAt' in request.resource.data)
+          || request.resource.data.createdAt is timestamp
+        );
+
+      allow update, delete: if isAdmin();
+    }
+
+    /* ---------- siteLogs ---------- */
+    match /siteLogs/{logId} {
+      allow read: if isAdmin();
+      allow create: if isTeacherSupervisorOrAdmin() && isSiteLogDocValid();
+      allow update: if false;
+      allow delete: if isAdmin();
+    }
+
+    /* ---------- settings ---------- */
+    match /settings/lessonTimes {
+      allow read: if isTeacherSupervisorOrAdmin();
+      allow write: if isAdmin();
+    }
+
+    /* ---------- attendanceSessions ---------- */
+    match /attendanceSessions/{sessionId} {
+
+      function sessionData() {
+        return resource.data;
+      }
+
+      function newSessionData() {
+        return request.resource.data;
+      }
+
+      function canWriteSessionTime(d) {
+        return (d.sessionCutoffTs is timestamp) && request.time <= d.sessionCutoffTs;
+      }
+
+      allow get, list: if isTeacherSupervisorOrAdmin();
+
+      allow create: if
+        isTeacherSupervisorOrAdmin()
+        && newSessionData().teacherUid == request.auth.uid
+        && isISODate(newSessionData().date)
+        && isValidLessonIndex(newSessionData().lesson)
+        && isValidClassKey(newSessionData().classKey)
+        && (newSessionData().sessionStartTs is timestamp)
+        && (newSessionData().sessionCutoffTs is timestamp)
+        && (newSessionData().locked is bool)
+        && canWriteSessionTime(newSessionData());
+
+      allow update: if
+        isTeacherSupervisorOrAdmin()
+        && sessionData().teacherUid == request.auth.uid
+        && canWriteSessionTime(sessionData())
+        && preserveOrInit('date')
+        && preserveOrInit('lesson')
+        && preserveOrInit('classKey')
+        && preserveOrInit('teacherUid')
+        && preserveOrInit('sessionStartTs')
+        && preserveOrInit('sessionCutoffTs')
+        && preserveOrInit('createdAt')
+        && (
+          !('locked' in request.resource.data)
+          || request.resource.data.locked == resource.data.locked
+        );
+
+      allow delete: if isAdmin();
+
+      match /attendanceRecords/{studentUid} {
+
+        function canWriteRecord() {
+          let p = /databases/$(database)/documents/attendanceSessions/$(sessionId);
+          let s = getAfter(p).data;
+          return existsAfter(p)
+            && s.teacherUid == request.auth.uid
+            && (s.sessionCutoffTs is timestamp)
+            && request.time <= s.sessionCutoffTs;
+        }
+
+        allow get, list: if isTeacherSupervisorOrAdmin();
+
+        allow create, update: if
+          isTeacherSupervisorOrAdmin()
+          && canWriteRecord()
+          && isStatus(request.resource.data.status)
+          && (
+            !('updatedBy' in request.resource.data)
+            || request.resource.data.updatedBy == request.auth.uid
+          )
+          && (
+            !('studentName' in request.resource.data)
+            || request.resource.data.studentName == null
+            || request.resource.data.studentName is string
+          );
+
+        allow delete: if isAdmin();
+      }
+    }
+
+    /* ---------- site_notifications ---------- */
+    match /site_notifications/{docId} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
+    /* ---------- site_notifications_history ---------- */
+    match /site_notifications_history/{notifId} {
+      allow read:   if isAdmin();
+      allow create: if isAdmin()
+        && nonEmptyString(request.resource.data.text)
+        && (request.resource.data.importance is string)
+        && (request.resource.data.importance in ['normal', 'important'])
+        && (request.resource.data.notifId is string)
+        && (request.resource.data.active is bool)
+        && (request.resource.data.createdAt is timestamp);
+      allow update, delete: if isAdmin();
+
+      match /seen/{uid} {
+        allow read:   if isAdmin();
+        allow create, update: if signedIn()
+          && uid == request.auth.uid
+          && (request.resource.data.name is string)
+          && (request.resource.data.seenAt is timestamp)
+          && request.resource.data.keys().hasOnly(['name', 'seenAt']);
+        allow delete: if isAdmin();
+      }
+    }
+
+    /* ---------- fallback ---------- */
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

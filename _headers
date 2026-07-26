@@ -1,0 +1,11 @@
+# Security headers for every page. The per-page CSP stays in each HTML file's
+# <meta> tag (they differ per page); these cover everything else.
+/*
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+
+# Images change rarely; let browsers keep them for a week.
+/images/*
+  Cache-Control: public, max-age=604800

@@ -383,14 +383,17 @@ function applyStatusUI(parts, state) {
   }
 }
 
-export async function getTelegramConnectLink(userId = "teacher123") {
-  const safeUserId = String(userId || "teacher123").trim() || "teacher123";
+export async function getTelegramConnectLink(userId, idToken) {
+  const safeUserId = String(userId || "").trim();
   const endpoint =
     `${TELEGRAM_BACKEND_BASE_URL}/api/telegram/connect-link?userId=${encodeURIComponent(safeUserId)}`;
 
+  const headers = {};
+  if (idToken) headers.Authorization = `Bearer ${idToken}`;
+
   let response;
   try {
-    response = await fetch(endpoint, { method: "GET" });
+    response = await fetch(endpoint, { method: "GET", headers });
   } catch (error) {
     throw new Error("NETWORK_ERROR");
   }
@@ -549,7 +552,8 @@ export function mountTelegramSettings({ auth, slotId, extraClass } = {}) {
     setMessage(parts, "جاري إنشاء رابط الربط مع التلجرام...", "info");
 
     try {
-      const url = await getTelegramConnectLink(user.uid);
+      const idToken = await user.getIdToken();
+      const url = await getTelegramConnectLink(user.uid, idToken);
       window.open(url, "_blank", "noopener,noreferrer");
       setMessage(
         parts,
@@ -590,9 +594,13 @@ export function mountTelegramSettings({ auth, slotId, extraClass } = {}) {
     setMessage(parts, "جاري إلغاء ربط التلجرام...", "info");
 
     try {
+      const idToken = await user.getIdToken();
       const response = await fetch(`${TELEGRAM_BACKEND_BASE_URL}/api/telegram/disconnect`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
         body: JSON.stringify({ userId: user.uid }),
       });
       if (!response.ok) {

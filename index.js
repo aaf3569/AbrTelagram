@@ -54,10 +54,17 @@ const DEFAULT_LESSON_TIMES = [
 ];
 
 const app = express();
+// Browser calls are only ever made from the deployed site (plus Netlify's
+// per-deploy preview URLs). Non-browser requests (Telegram webhook, curl,
+// uptime pings) send no Origin header and are unaffected by CORS.
+const ALLOWED_ORIGIN_PATTERN = /^https:\/\/([a-z0-9-]+--)?abrabsence\.netlify\.app$/;
 app.use((req, res, next) => {
   const requestedHeaders = String(req.headers["access-control-request-headers"] || "").trim();
   const allowHeaders = requestedHeaders || "Content-Type, Authorization";
-  res.setHeader("Access-Control-Allow-Origin", "*");
+  const origin = String(req.headers.origin || "").trim();
+  if (origin && ALLOWED_ORIGIN_PATTERN.test(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+  }
   res.setHeader("Vary", "Origin, Access-Control-Request-Headers");
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", allowHeaders);
@@ -964,6 +971,38 @@ async function requireAdminFromRequest(req, res) {
   }
 }
 
+// For endpoints that act on a specific teacher account (connect/disconnect):
+// the caller must be that teacher, or an admin. Returns the resolved target
+// uid, or null after writing an error response.
+async function requireSelfOrAdminFromRequest(req, res, targetUserId) {
+  if (!isFirebaseReady()) {
+    res.status(503).json({ ok: false, error: "firebase_unavailable" });
+    return null;
+  }
+
+  const decoded = await verifyFirebaseUser(req);
+  if (!decoded?.uid) {
+    res.status(401).json({ ok: false, error: "unauthorized" });
+    return null;
+  }
+
+  const target = String(targetUserId || "").trim() || decoded.uid;
+  if (target === decoded.uid) return target;
+
+  try {
+    const teacherSnap = await db.collection("teachers").doc(decoded.uid).get();
+    const role = String((teacherSnap.exists ? teacherSnap.data() || {} : {}).role || "").toLowerCase();
+    if (role === "admin" || role === "superadmin" || decoded.admin === true) return target;
+  } catch (error) {
+    console.error(`[firebase] requireSelfOrAdminFromRequest failed userId=${decoded.uid}: ${error.message}`);
+    res.status(500).json({ ok: false, error: "auth_check_failed" });
+    return null;
+  }
+
+  res.status(403).json({ ok: false, error: "forbidden" });
+  return null;
+}
+
 function buildStudentRequestMessage({
   studentNames,
   classKey,
@@ -1678,6 +1717,9 @@ app.post("/api/telegram/broadcast", async (req, res) => {
       if (!chatId) continue;
 
       try {
+        // Telegram caps bots at ~30 messages/second; pace sends so a large
+        // staff list can't trip the rate limit mid-broadcast.
+        if (sentCount > 0) await delay(50);
         await sendTelegramMessage(chatId, message);
         sentCount += 1;
       } catch (error) {
@@ -1729,6 +1771,8 @@ app.post("/api/telegram/broadcast", async (req, res) => {
 });
 
 app.post("/api/telegram/run-reminder-sweep", async (req, res) => {
+  const adminUser = await requireAdminFromRequest(req, res);
+  if (!adminUser) return;
   try {
     await runReminderSweep();
     return res.json({ ok: true });
@@ -1739,8 +1783,8 @@ app.post("/api/telegram/run-reminder-sweep", async (req, res) => {
 });
 
 app.get("/api/telegram/connect-link", async (req, res) => {
-  const userIdRaw = req.query.userId;
-  const userId = String(userIdRaw || "teacher123").trim() || "teacher123";
+  const userId = await requireSelfOrAdminFromRequest(req, res, req.query.userId);
+  if (!userId) return;
   const resolvedUsername = (await getBotUsername()) || TELEGRAM_BOT_USERNAME || "AbrSchool_bot";
   const url = `https://t.me/${resolvedUsername}?start=${encodeURIComponent(`connect_${userId}`)}`;
 
@@ -1749,7 +1793,8 @@ app.get("/api/telegram/connect-link", async (req, res) => {
 });
 
 app.post("/api/telegram/disconnect", async (req, res) => {
-  const userId = String(req.body?.userId || req.query?.userId || "teacher123").trim() || "teacher123";
+  const userId = await requireSelfOrAdminFromRequest(req, res, req.body?.userId || req.query?.userId);
+  if (!userId) return;
   delete users[userId];
   if (!isFirebaseReady()) {
     console.warn(`[firebase] disconnect skipped Firestore update userId=${userId}: Firebase unavailable`);
@@ -1776,7 +1821,9 @@ app.post("/api/telegram/disconnect", async (req, res) => {
 });
 
 app.get("/api/telegram/test-message", async (req, res) => {
-  const userId = String(req.query?.userId || "teacher123").trim() || "teacher123";
+  const adminUser = await requireAdminFromRequest(req, res);
+  if (!adminUser) return;
+  const userId = String(req.query?.userId || adminUser.uid).trim() || adminUser.uid;
   const memoryChatId = String(users[userId] || "").trim();
   let chatId = memoryChatId;
 
@@ -1821,7 +1868,9 @@ app.get("/api/telegram/test-message", async (req, res) => {
 });
 
 app.get("/api/telegram/debug-reminders", async (req, res) => {
-  const userId = String(req.query?.userId || "teacher123").trim() || "teacher123";
+  const adminUser = await requireAdminFromRequest(req, res);
+  if (!adminUser) return;
+  const userId = String(req.query?.userId || adminUser.uid).trim() || adminUser.uid;
 
   try {
     const now = kuwaitNowContext();
