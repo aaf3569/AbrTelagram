@@ -1109,15 +1109,20 @@
     import { initializeApp, getApp, getApps } from "/shared/firebase.js";
     import { getAuth, onAuthStateChanged } from "/shared/firebase.js";
     import {
-      initializeFirestore, collection, collectionGroup, getDocs, query, where,
+      initializeFirestore, persistentSingleTabManager, collection, collectionGroup, getDocs, query, where,
       doc, getDoc, Timestamp
     } from "/shared/firebase.js";
     import { kuwaitTodayISO, getCurrentKuwaitMinutes } from "/shared/kuwait-time.js";
 
-    
+
 
     const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-    const db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true, useFetchStreams: false });
+    let db;
+    try {
+      db = initializeFirestore(app, { localCache: persistentSingleTabManager(), experimentalAutoDetectLongPolling: true, useFetchStreams: false });
+    } catch (e) {
+      db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true, useFetchStreams: false });
+    }
     const auth = getAuth(app);
 
     const sLoading = document.getElementById('stateLoading');

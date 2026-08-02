@@ -382,8 +382,14 @@
     .sheet-header{background:#fff;border-bottom:1px solid var(--border);padding:18px 20px;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:10;box-shadow:var(--shadow-1)}
     .back-btn{height:44px;padding:0 18px;border-radius:12px;border:1px solid rgba(2,43,66,.2);background:#fff;color:var(--primary);font-weight:800;cursor:pointer;box-shadow:var(--shadow-1);display:flex;align-items:center;gap:8px}
     .sheet-title{margin:0;font-size:1.15rem;font-weight:900;color:var(--primary)}
+    #moreSheet .sheet-header{justify-content:center}
+    #moreSheet .sheet-title{flex:none;justify-content:center;text-align:center}
+    .sheet-fab-back{position:fixed;top:18px;right:18px;z-index:1010;height:46px;padding:0 18px 0 20px;border-radius:999px;border:1px solid rgba(3,60,84,.16);background:rgba(255,255,255,.92);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);color:var(--primary);font-weight:900;font-size:.92rem;cursor:pointer;box-shadow:var(--shadow-1);transition:var(--transition);display:flex;align-items:center;gap:8px}
+    .sheet-fab-back:hover{transform:translateX(-2px);box-shadow:0 14px 32px rgba(3,60,84,.18)}
+    .sheet-fab-back:active{transform:scale(.97)}
     .sheet-body{flex:1 1 auto;overflow:auto;padding:22px 20px;width:min(1100px,100%);margin:0 auto;display:flex;flex-direction:column;gap:18px}
-    details{border:1px solid var(--border);border-radius:var(--radius);background:#fff;box-shadow:var(--shadow-1);overflow:hidden}
+    details{border:1px solid var(--border);border-radius:var(--radius);background:#fff;box-shadow:var(--shadow-1)}
+    details:not([open]){overflow:hidden}
     summary{list-style:none;cursor:pointer;padding:18px;font-weight:900;color:var(--primary);display:flex;align-items:center;justify-content:space-between;gap:10px}
     .grade-list{padding:14px 18px;display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
     .mini.class-btn{min-height:56px;border-radius:12px;font-weight:800;padding:14px}
@@ -572,11 +578,11 @@
 
   <!-- "More/Other" grade browser sheet -->
   <section id="moreSheet" class="sheet" aria-hidden="true">
+    <button id="closeMore" class="sheet-fab-back" type="button" aria-label="رجوع">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      رجوع
+    </button>
     <div class="sheet-header">
-      <button id="closeMore" class="back-btn" type="button" aria-label="رجوع">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-        رجوع
-      </button>
       <h3 class="sheet-title">اختر الصف</h3>
     </div>
     <div class="sheet-body">
@@ -702,6 +708,7 @@
     import { getAuth, onAuthStateChanged, signOut } from "/shared/firebase.js";
     import {
         initializeFirestore,
+        persistentSingleTabManager,
         doc,
         getDoc,
         collection,
@@ -718,7 +725,12 @@
 
 
     const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-    const db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true, useFetchStreams: false });
+    let db;
+    try {
+      db = initializeFirestore(app, { localCache: persistentSingleTabManager(), experimentalAutoDetectLongPolling: true, useFetchStreams: false });
+    } catch (e) {
+      db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true, useFetchStreams: false });
+    }
     const auth = getAuth(app);
 
     const attendance = mountAttendanceSheet({

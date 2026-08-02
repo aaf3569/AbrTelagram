@@ -142,6 +142,11 @@
         .back-btn{height:48px;padding:0 20px;border-radius:14px;border:1px solid rgba(3,60,84,.2);background:#fff;color:var(--primary);font-weight:800;cursor:pointer;box-shadow:var(--shadow-1);transition:var(--transition);display:flex;align-items:center;gap:8px}
         .back-btn:hover{border-color:rgba(3,60,84,.4);transform:translateX(-2px)}
         .sheet-title{margin:0;font-size:1.2rem;font-weight:900;color:var(--primary);display:flex;align-items:center;gap:10px}
+        #moreSheet .sheet-header{justify-content:center}
+        #moreSheet .sheet-title{flex:none;justify-content:center;text-align:center}
+        .sheet-fab-back{position:fixed;top:18px;right:18px;z-index:1010;height:46px;padding:0 18px 0 20px;border-radius:999px;border:1px solid rgba(3,60,84,.16);background:rgba(255,255,255,.92);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);color:var(--primary);font-weight:900;font-size:.92rem;cursor:pointer;box-shadow:var(--shadow-1);transition:var(--transition);display:flex;align-items:center;gap:8px}
+        .sheet-fab-back:hover{transform:translateX(-2px);box-shadow:0 14px 32px rgba(3,60,84,.18)}
+        .sheet-fab-back:active{transform:scale(.97)}
         .sheet-body{
             flex:1 1 auto;
             overflow:auto;
@@ -155,7 +160,8 @@
             -webkit-overflow-scrolling: touch;
             will-change: transform;
         }
-        details{border:1px solid var(--border);border-radius:16px;background:#fff;box-shadow:var(--shadow-1);overflow:hidden;transition:var(--transition)}
+        details{border:1px solid var(--border);border-radius:16px;background:#fff;box-shadow:var(--shadow-1);transition:box-shadow .16s ease}
+        details:not([open]){overflow:hidden}
         details:hover{box-shadow:0 12px 30px rgba(3,60,84,.15)}
         summary{list-style:none;cursor:pointer;padding:20px;font-weight:900;color:var(--primary);display:flex;align-items:center;justify-content:space-between;gap:10px;transition:var(--transition)}
         summary:hover{background:var(--primary-extra-light)}
@@ -541,11 +547,11 @@
     <script src="/shared/credits-footer.js" defer></script>
     <!-- "More/Other" Sheet -->
     <section id="moreSheet" class="sheet" aria-hidden="true">
+        <button id="closeMore" class="sheet-fab-back" aria-label="رجوع">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            رجوع
+        </button>
         <div class="sheet-header">
-            <button id="closeMore" class="back-btn" aria-label="رجوع">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-                رجوع
-            </button>
             <h3 class="sheet-title">اختر الصف</h3>
         </div>
         <div class="sheet-body">
@@ -742,18 +748,28 @@
         /* ========= Firebase ========= */
         import { initializeApp, getApp, getApps } from "/shared/firebase.js";
         import { getAuth, onAuthStateChanged, signOut } from "/shared/firebase.js";
-        import { initializeFirestore, doc, getDoc, collection, getDocs, query, where, setDoc, serverTimestamp, writeBatch } from "/shared/firebase.js";
+        import { initializeFirestore, persistentSingleTabManager, doc, getDoc, collection, getDocs, query, where, setDoc, serverTimestamp, writeBatch } from "/shared/firebase.js";
         import { showActionPopup } from "/shared/action-popup.js";
         import { mountTelegramSettings } from "/shared/telegram-settings.js";
         import { initNotificationPopup } from "/shared/notification-popup.js";
         import { mountAttendanceSheet } from "/shared/attendance.js";
         
         const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-        // NEW: Optimized Firestore configuration
-        const db = initializeFirestore(app, { 
+        // Optimized Firestore configuration: local cache for near-instant repeat
+        // loads, long-polling for network compatibility.
+        let db;
+        try {
+          db = initializeFirestore(app, {
+            localCache: persistentSingleTabManager(),
             experimentalAutoDetectLongPolling: true,
-            useFetchStreams: false 
-        });
+            useFetchStreams: false
+          });
+        } catch (e) {
+          db = initializeFirestore(app, {
+            experimentalAutoDetectLongPolling: true,
+            useFetchStreams: false
+          });
+        }
         const auth = getAuth(app);
 
         const attendance = mountAttendanceSheet({

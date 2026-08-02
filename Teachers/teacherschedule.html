@@ -137,9 +137,8 @@
     /* Floating back button */
     .fab-back {
       position: fixed;
-      top: 50%;
+      top: 84px;
       right: 18px;
-      transform: translateY(-50%);
       z-index: 30;
       height: 48px; padding: 0 18px 0 20px;
       border-radius: 999px;
@@ -153,8 +152,8 @@
       display: inline-flex; align-items: center; gap: 10px;
       font-family: "Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
     }
-    .fab-back:hover { transform: translateY(-50%) translateX(-3px); box-shadow: 0 14px 32px rgba(2, 43, 66, 0.2); border-color: rgba(2, 43, 66, 0.3); }
-    .fab-back:active { transform: translateY(-50%) scale(0.97); }
+    .fab-back:hover { transform: translateX(-3px); box-shadow: 0 14px 32px rgba(2, 43, 66, 0.2); border-color: rgba(2, 43, 66, 0.3); }
+    .fab-back:active { transform: scale(0.97); }
     .fab-back i { font-size: 0.95em; }
 
     /* Loading dot */
@@ -624,9 +623,7 @@
       .header-full { grid-column: 1; }
       .info-grid, .split { grid-template-columns: 1fr; }
       .modal-card { border-radius: 18px; max-height: 85vh; }
-      .fab-back { top: auto; bottom: 18px; transform: none; height: 46px; padding: 0 16px 0 18px; }
-      .fab-back:hover { transform: translateX(-3px); }
-      .fab-back:active { transform: scale(0.97); }
+      .fab-back { top: 74px; right: 14px; height: 46px; padding: 0 16px 0 18px; }
       
       /* Mobile modal improvements */
       .modal { padding: 12px; }
@@ -818,8 +815,8 @@
   <!-- Toasts -->
   <div class="toast-wrap" id="toastWrap" aria-live="polite" aria-atomic="true"></div>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
 
   <script type="module">
     import { firebaseConfig } from "/shared/firebase.js";

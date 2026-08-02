@@ -845,7 +845,7 @@
       createUserWithEmailAndPassword
     } from "/shared/firebase.js";
     import {
-      initializeFirestore, collection, getDocs, query, where, orderBy, limit,
+      initializeFirestore, persistentSingleTabManager, collection, getDocs, query, where, orderBy, limit,
       doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp
     } from "/shared/firebase.js";
     import { showActionPopup } from "/shared/action-popup.js";
@@ -856,10 +856,19 @@
 
     const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
-    const db = initializeFirestore(app, {
-      experimentalAutoDetectLongPolling: true,
-      useFetchStreams: false
-    });
+    let db;
+    try {
+      db = initializeFirestore(app, {
+        localCache: persistentSingleTabManager(),
+        experimentalAutoDetectLongPolling: true,
+        useFetchStreams: false
+      });
+    } catch (e) {
+      db = initializeFirestore(app, {
+        experimentalAutoDetectLongPolling: true,
+        useFetchStreams: false
+      });
+    }
 
     const auth = getAuth(app);
 

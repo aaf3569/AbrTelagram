@@ -1288,13 +1288,13 @@ textarea.input{ height:100px; padding-block:14px; resize:vertical }
   </article>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
 <script type="module">
 /* ========= Firebase ========= */
 import { initializeApp, getApp, getApps } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
-import { initializeFirestore, collection, getDocs, query, where, orderBy, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
+import { initializeFirestore, persistentSingleTabManager, collection, getDocs, query, where, orderBy, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 import { getTeacherProfile, hasGuardAccess } from "/shared/auth-guard.js";
 
 const firebaseConfig = {
@@ -1308,7 +1308,12 @@ const firebaseConfig = {
 };
 
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-const db = initializeFirestore(app, { experimentalForceLongPolling: true, useFetchStreams: false });
+let db;
+try {
+  db = initializeFirestore(app, { localCache: persistentSingleTabManager(), experimentalForceLongPolling: true, useFetchStreams: false });
+} catch (e) {
+  db = initializeFirestore(app, { experimentalForceLongPolling: true, useFetchStreams: false });
+}
 const auth = getAuth(app);
 
 /* ========= UI refs ========= */
