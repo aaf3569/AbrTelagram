@@ -91,8 +91,7 @@
         .avatar:hover{transform:scale(1.03)}
         .avatar svg{width:70px;height:70px;stroke:#fff;fill:none;stroke-width:2}
         .name{font-size:1.4rem;font-weight:900;color:var(--primary);margin-top:8px}
-        .created{font-size:.95rem;color:var(--muted)}
-        .divider{width:100%;height:1px;background:linear-gradient(to right,transparent,var(--border),transparent);margin:20px 0;border-radius:1px}
+        .divider{width:100%;height:1px;background:linear-gradient(to right,transparent,var(--border),transparent);margin:20px 0 32px;border-radius:1px}
         .stack{width:100%;display:flex;flex-direction:column;gap:18px;margin-top:16px;align-items:center}
         .stack.wide .btn{width:100%}
         .btn{font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;width:100%;min-height:68px;border:none;border-radius:18px;cursor:pointer;font-weight:800;font-size:1.1rem;letter-spacing:.2px;padding:18px 24px;transition:var(--transition);user-select:none;display:flex;align-items:center;justify-content:center;gap:12px;position:relative;overflow:hidden}
@@ -668,7 +667,6 @@
                 <div class="center">
                     <div id="profileAvatar" class="avatar"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.2"></circle><path d="M5 19c0-3.3 3.1-5.5 7-5.5s7 2.2 7 5.5"></path></svg></div>
                     <div id="displayName" class="name">—</div>
-                    <div id="createdAtText" class="created">—</div>
                 </div>
                 <div class="divider" aria-hidden="true"></div>
                 <!-- Classes -->
@@ -1007,7 +1005,6 @@
         const sDash = document.getElementById('stateDashboard');
         const profileAvatar = document.getElementById('profileAvatar');
         const displayName = document.getElementById('displayName');
-        const createdAtText = document.getElementById('createdAtText');
         const classesButtons = document.getElementById('classesButtons');
         const moreBtn = document.getElementById('moreBtn');
         const moreSheet = document.getElementById('moreSheet');
@@ -1098,15 +1095,11 @@
         const CLASS_INFO_REFRESH_MS = 30000;
         const CLASS_INFO_LONG_PRESS_MS = 550;
         const DAY_LESSONS_CACHE_MS = 30000;
-        const PROFILE_NEXT_LESSON_REFRESH_MS = 1000;
         let classHighlightTimer = null;
         let classHighlightInFlight = false;
         let classInfoRefreshTimer = null;
         let classInfoContext = null;
         let teacherDayLessonsCache = { key: '', at: 0, lessons: [] };
-        let profileNextLessonTimer = null;
-        let profileNextLessonBusy = false;
-        let profileCreatedFallbackText = '';
 
         mountTelegramSettings({
             auth,
@@ -2417,80 +2410,6 @@
             return lessons;
         }
 
-        function formatProfileNextLessonCountdown(totalSeconds) {
-            const safe = Math.max(0, Math.floor(Number(totalSeconds) || 0));
-            const hours = Math.floor(safe / 3600);
-            const mins = Math.floor((safe % 3600) / 60);
-            const secs = safe % 60;
-            if (hours > 0) {
-                return toArabicDigits(`${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`);
-            }
-            return toArabicDigits(`${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`);
-        }
-        function formatProfileLessonStartTime(minutesFromMidnight) {
-            const total = Math.max(0, Math.floor(Number(minutesFromMidnight) || 0));
-            const h24 = Math.floor(total / 60) % 24;
-            const mm = total % 60;
-            const meridiem = h24 < 12 ? 'صباحا' : 'مساءً';
-            let h12 = h24 % 12;
-            if (h12 === 0) h12 = 12;
-            return `${toArabicDigits(h12)}:${toArabicDigits(String(mm).padStart(2, '0'))} ${meridiem}`;
-        }
-
-        function stopProfileNextLessonTicker() {
-            if (profileNextLessonTimer) {
-                clearInterval(profileNextLessonTimer);
-                profileNextLessonTimer = null;
-            }
-            profileNextLessonBusy = false;
-        }
-
-        async function refreshProfileNextLessonLine() {
-            if (profileNextLessonBusy) return;
-            if (!createdAtText) return;
-            const user = auth.currentUser;
-            if (!user) {
-                createdAtText.textContent = '—';
-                return;
-            }
-
-            profileNextLessonBusy = true;
-            try {
-                const dateISO = kuwaitTodayISO();
-                const nowSec = getCurrentKuwaitSeconds();
-                const lessons = await getTeacherLessonsForToday(user.uid, dateISO);
-                const active = lessons.find((item) => nowSec >= (item.startMin * 60) && nowSec < (item.endMin * 60)) || null;
-                if (active) {
-                    const classLabel = formatClassLabel(active.classKey || '—');
-                    const countdown = formatProfileNextLessonCountdown((active.endMin * 60) - nowSec);
-                    createdAtText.textContent = `${classLabel} : ${countdown}`;
-                    return;
-                }
-
-                const next = lessons.find((item) => (item.startMin * 60) > nowSec) || null;
-
-                if (!next) {
-                    createdAtText.textContent = profileCreatedFallbackText || '—';
-                    return;
-                }
-
-                const classLabel = formatClassLabel(next.classKey || '—');
-                const startsAt = formatProfileLessonStartTime(next.startMin);
-                createdAtText.textContent = `${classLabel} : ${startsAt}`;
-            } catch (error) {
-                console.error('Error loading profile next lesson:', error);
-                createdAtText.textContent = profileCreatedFallbackText || '—';
-            } finally {
-                profileNextLessonBusy = false;
-            }
-        }
-
-        function startProfileNextLessonTicker() {
-            stopProfileNextLessonTicker();
-            refreshProfileNextLessonLine();
-            profileNextLessonTimer = setInterval(refreshProfileNextLessonLine, PROFILE_NEXT_LESSON_REFRESH_MS);
-        }
-
         function renderClassInfoModalContent() {
             if (!classInfoContext) return;
             const nowMin = getCurrentKuwaitMinutes();
@@ -2707,8 +2626,6 @@
                 avatarUserUid = null;
                 applyAvatarToUI(null);
                 stopClassHighlightTicker();
-                stopProfileNextLessonTicker();
-                profileCreatedFallbackText = '';
                 closeClassInfoModal();
                 closeModal(blockedModal);
                 show(sNotLog);
@@ -2721,8 +2638,6 @@
                     avatarUserUid = null;
                     applyAvatarToUI(null);
                     stopClassHighlightTicker();
-                    stopProfileNextLessonTicker();
-                    profileCreatedFallbackText = '';
                     show(sDenied);
                     return;
                 }
@@ -2733,8 +2648,6 @@
                     avatarUserUid = null;
                     applyAvatarToUI(null);
                     stopClassHighlightTicker();
-                    stopProfileNextLessonTicker();
-                    profileCreatedFallbackText = '';
                     show(sDenied);
                     return;
                 }
@@ -2748,14 +2661,6 @@
                 displayName.textContent = data?.name || (user.email ? user.email.split('@')[0] : 'مستخدم');
                 avatarUserUid = user.uid;
                 loadStoredAvatar(user.uid);
-                profileCreatedFallbackText = '';
-                if (role === 'admin') {
-                    stopProfileNextLessonTicker();
-                    createdAtText.textContent = profileCreatedFallbackText || '—';
-                } else {
-                    createdAtText.textContent = profileCreatedFallbackText || '—';
-                    startProfileNextLessonTicker();
-                }
                 renderClassButtons(data?.classes || []);
                 renderMoreLists(CLASS_OPTIONS_RAW);
                 setTimeout(() => {
@@ -2767,8 +2672,6 @@
             }catch(e){
                 console.error(e);
                 stopClassHighlightTicker();
-                stopProfileNextLessonTicker();
-                profileCreatedFallbackText = '';
                 show(sDenied);
             }
         });
