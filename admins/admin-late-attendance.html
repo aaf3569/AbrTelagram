@@ -363,7 +363,6 @@
     .avatar{width:120px;height:120px;border-radius:50%;background:linear-gradient(145deg,var(--primary),var(--primary-2));display:grid;place-items:center;border:3px solid #fff;box-shadow:var(--shadow-1);overflow:hidden}
     .avatar svg{width:60px;height:60px;stroke:#fff;fill:none;stroke-width:2}
     .name{font-size:1.3rem;font-weight:900;color:var(--primary);margin-top:8px}
-    .created{font-size:.92rem;color:var(--muted)}
     .divider{width:100%;height:1px;background:var(--border);margin:20px 0;border-radius:1px}
     .stack{width:100%;display:flex;flex-direction:column;gap:16px;margin-top:16px;align-items:center}
     .stack.wide .btn{width:100%}
@@ -510,7 +509,6 @@
         <div class="panel center">
           <div class="avatar"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.2"></circle><path d="M5 19c0-3.3 3.1-5.5 7-5.5s7 2.2 7 5.5"></path></svg></div>
           <div id="displayName" class="name">—</div>
-          <div id="createdAtText" class="created">—</div>
         </div>
         <div class="divider" aria-hidden="true"></div>
         <div class="panel">
@@ -743,7 +741,6 @@
     const sDenied = document.getElementById('stateDenied');
     const sDash = document.getElementById('stateDashboard');
     const displayName = document.getElementById('displayName');
-    const createdAtText = document.getElementById('createdAtText');
     const classesButtons = document.getElementById('classesButtons');
     const moreBtn = document.getElementById('moreBtn');
     const moreSheet = document.getElementById('moreSheet');
@@ -845,7 +842,6 @@
         }
     };
 
-    const fmtDate = (d)=> new Intl.DateTimeFormat('ar-KW', { dateStyle:'medium' }).format(d);
     const TZ = 'Asia/Kuwait';
 
     // REAL lesson times (Kuwait) with your schedule
@@ -1075,10 +1071,6 @@
                 return;
             }
             displayName.textContent = data?.name || (user.email ? user.email.split('@')[0] : 'مستخدم');
-            let created=null;
-            if (data?.createdAt?.toDate) created=data.createdAt.toDate();
-            else if (user.metadata?.creationTime) created=new Date(user.metadata.creationTime);
-            createdAtText.textContent = created ? `انضممت في: ${fmtDate(created)}` : '';
             renderClassButtons(data?.classes || []);
             renderMoreLists(CLASS_OPTIONS_RAW);
             setTimeout(() => {

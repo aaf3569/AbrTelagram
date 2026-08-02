@@ -2210,11 +2210,8 @@
                 await loadSchoolBreaksSettings();
                 
                 displayName.textContent = data?.name || (user.email ? user.email.split('@')[0] : 'قائد قسم');
-                
-                let created = null;
-                if (data?.createdAt?.toDate) created = data.createdAt.toDate();
-                else if (user.metadata?.creationTime) created = new Date(user.metadata.creationTime);
-                profileCreatedFallbackText = created ? `انضممت في: ${created.toLocaleDateString('ar-KW', { timeZone: TZ })}` : '';
+
+                profileCreatedFallbackText = '';
                 createdAtText.textContent = profileCreatedFallbackText || '—';
                 startProfileNextLessonTicker();
                 avatarUserUid = user.uid;

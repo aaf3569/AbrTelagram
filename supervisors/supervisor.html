@@ -1394,7 +1394,6 @@
         
         const openModal = (el)=>{ el.classList.add('open'); el.setAttribute('aria-hidden','false'); };
         const closeModal = (el)=>{ el.classList.remove('open'); el.setAttribute('aria-hidden','true'); };
-        const fmtDate = (d)=> new Intl.DateTimeFormat('ar-KW', { dateStyle:'medium', timeZone:'Asia/Kuwait' }).format(d);
         const TZ = 'Asia/Kuwait';
         const START_H = 7, START_M = 40;
         const DUR = [45,45,45, /*break*/ 15, 45,45, /*break*/ 15, 45, 40];
@@ -1910,10 +1909,7 @@
                     teamsBox.style.display = 'none';
                 }
                 
-                let created=null;
-                if (data?.createdAt?.toDate) created=data.createdAt.toDate();
-                else if (user.metadata?.creationTime) created=new Date(user.metadata.creationTime);
-                profileCreatedFallbackText = created ? `انضممت في: ${fmtDate(created)}` : '';
+                profileCreatedFallbackText = '';
                 if (access.role === 'admin') {
                     stopProfileNextLessonTicker();
                     createdAtText.textContent = profileCreatedFallbackText || '—';

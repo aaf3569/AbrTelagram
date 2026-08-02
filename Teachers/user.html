@@ -2177,7 +2177,6 @@
             }
         };
 
-        const fmtDate = (d)=> new Intl.DateTimeFormat('ar-KW', { dateStyle:'medium' }).format(d);
         const TZ = 'Asia/Kuwait';
         // Built from LESSON_TIMES via refreshLessonRanges()
 
@@ -2749,10 +2748,7 @@
                 displayName.textContent = data?.name || (user.email ? user.email.split('@')[0] : 'مستخدم');
                 avatarUserUid = user.uid;
                 loadStoredAvatar(user.uid);
-                let created=null;
-                if (data?.createdAt?.toDate) created=data.createdAt.toDate();
-                else if (user.metadata?.creationTime) created=new Date(user.metadata.creationTime);
-                profileCreatedFallbackText = created ? `انضممت في: ${fmtDate(created)}` : '';
+                profileCreatedFallbackText = '';
                 if (role === 'admin') {
                     stopProfileNextLessonTicker();
                     createdAtText.textContent = profileCreatedFallbackText || '—';
