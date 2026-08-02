@@ -603,7 +603,7 @@
 
     <div id="stateNotLogged" class="state panel">
       <div class="msg error">يرجى تسجيل الدخول قبل الاستخدام.</div>
-      <p class="muted" style="text-align:center; margin:8px 0 0;">لا توجد جلسة نشطة. <a href="/index">اذهب لصفحة الدخول</a>.</p>
+      <p class="muted" style="text-align:center; margin:8px 0 0;">لا توجد جلسة نشطة. <a href="/index.html">اذهب لصفحة الدخول</a>.</p>
     </div>
 
     <div id="stateDenied" class="state panel">
@@ -897,7 +897,7 @@
         // Click to student page if studentId exists
         row.addEventListener('click', () => {
           if (!it.studentId) return;
-          window.location.href = `students?studentId=${encodeURIComponent(it.studentId)}&class=${encodeURIComponent(classKey)}`;
+          window.location.href = `students.html?studentId=${encodeURIComponent(it.studentId)}&class=${encodeURIComponent(classKey)}`;
         });
 
         list.appendChild(row);

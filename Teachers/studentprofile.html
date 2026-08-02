@@ -829,7 +829,7 @@
     /* ========= Back button ========= */
     document.getElementById('backBtn').addEventListener('click', ()=>{
       if (history.length > 1) history.back();
-      else location.href = '/index';
+      else location.href = '/index.html';
     });
 
     /* ========= State ========= */
@@ -929,7 +929,7 @@
 
     /* ========= Auth gate + initial load ========= */
     onAuthStateChanged(auth, async (user)=>{
-      if(!user){ alert('يرجى تسجيل الدخول'); location.href='/index'; return; }
+      if(!user){ alert('يرجى تسجيل الدخول'); location.href='/index.html'; return; }
       teacherId = user.uid;
 
       // Read-only banner for teachers

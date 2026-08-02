@@ -560,7 +560,7 @@
             </div>
             <div id="stateNotLogged" class="state panel">
                 <div class="msg error">يرجى تسجيل الدخول أولاً.</div>
-                <p class="muted" style="text-align:center; margin:12px 0 0;">لا توجد جلسة نشطة. <a href="/index">انتقل إلى تسجيل الدخول</a>.</p>
+                <p class="muted" style="text-align:center; margin:12px 0 0;">لا توجد جلسة نشطة. <a href="/index.html">انتقل إلى تسجيل الدخول</a>.</p>
             </div>
             <div id="stateDenied" class="state panel">
                 <div class="msg error">تم رفض الوصول - هذه الصفحة مخصصة لقادة الأقسام فقط (دور: قائد قسم).</div>
@@ -2318,20 +2318,20 @@
         /* ========= Schedule Modal ========= */
         teacherScheduleBtn.addEventListener('click', () => openModal(scheduleModal));
         adminScheduleEditBtn.addEventListener('click', () => {
-            window.location.href = '/admins/adminschedule';
+            window.location.href = '/admins/adminschedule.html';
         });
         morningLateBtn.addEventListener('click', () => {
-            window.location.href = '/teachers/morning';
+            window.location.href = '/Teachers/morning.html';
         });
         closeScheduleModal.addEventListener('click', () => closeModal(scheduleModal));
         scheduleModal.querySelector('.overlay').addEventListener('click', () => closeModal(scheduleModal));
         
         myScheduleBtn.addEventListener('click', () => {
-            window.location.href = 'schedual';
+            window.location.href = 'schedual.html';
         });
         
         deptScheduleBtn.addEventListener('click', () => {
-            window.location.href = 'dptschedual';
+            window.location.href = 'dptschedual.html';
         });
 
         /* ========= Class View ========= */
@@ -2501,7 +2501,7 @@
                 const stuId = student.uid || '';
                 const stuName = student.name || '';
                 const stuClass = student.class || currentClass || '';
-                const href = `studentprofile?id=${encodeURIComponent(stuId)}&name=${encodeURIComponent(stuName)}&class=${encodeURIComponent(stuClass)}`;
+                const href = `studentprofile.html?id=${encodeURIComponent(stuId)}&name=${encodeURIComponent(stuName)}&class=${encodeURIComponent(stuClass)}`;
                 
                 el.addEventListener('click', ()=> { location.href = href; });
                 el.addEventListener('keydown', (ev)=> { 
@@ -3275,12 +3275,12 @@
             });
             if(!isConfirmed) return;
             await signOut(auth);
-            location.href='/index';
+            location.href='/index.html';
         });
 
         /* ========= Department Button ========= */
         deptBtn.addEventListener('click', () => {
-            window.location.href = 'department';
+            window.location.href = 'department.html';
         });
     </script>
   <script src="/shared/hub-title-link.js" defer></script>

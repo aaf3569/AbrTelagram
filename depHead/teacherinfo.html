@@ -776,7 +776,7 @@
     teacherTitle.textContent = teacherNameParam || "المعلّم";
     backBtn.addEventListener("click", ()=>{
       if(history.length > 1) history.back();
-      else location.href = "dptlead";
+      else location.href = "dptlead.html";
     });
 
     /* ========= Sheet controls ========= */
@@ -1240,7 +1240,7 @@
 
       if(!user){
         showStatus("الرجاء تسجيل الدخول أولاً. سيتم تحويلك لصفحة الدخول.", true);
-        setTimeout(()=> location.href = "/index", 250);
+        setTimeout(()=> location.href = "/index.html", 250);
         return;
       }
 

@@ -615,14 +615,14 @@
           <div class="pill"><i class="fas fa-arrow-left"></i><span>فتح</span></div>
         `;
 
-        // On click: go directly to teacherinfo
+        // On click: go directly to teacherinfo.html
         btn.addEventListener('click', ()=>{
           const params = new URLSearchParams({
             teacherUid: t.uid,
             teacherName: t.name,
             date: todayISO
           });
-          window.location.href = `teacherinfo?${params.toString()}`;
+          window.location.href = `teacherinfo.html?${params.toString()}`;
         });
 
         teachersListEl.appendChild(btn);
@@ -728,7 +728,7 @@
     setPersistence(auth, browserLocalPersistence).catch(()=>{});
 
     btnBack.addEventListener('click', ()=>{
-      window.location.href = 'dptlead';
+      window.location.href = 'dptlead.html';
     });
 
     btnRefresh.addEventListener('click', async ()=>{
@@ -761,7 +761,7 @@
       if(!user){
         currentUser = null;
         showStatus('الرجاء تسجيل الدخول أولاً. سيتم تحويلك إلى صفحة الدخول.', true);
-        setTimeout(()=> window.location.href = '/index', 250);
+        setTimeout(()=> window.location.href = '/index.html', 250);
         return;
       }
 

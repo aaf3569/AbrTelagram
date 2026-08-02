@@ -1359,9 +1359,9 @@
 
     backToAdminBtn?.addEventListener('click', () => {
       if(dirty){
-        showUnsavedModal(()=>{ window.location.href = '/admins/adminpage'; });
+        showUnsavedModal(()=>{ window.location.href = '/admins/adminpage.html'; });
       } else {
-        window.location.href = '/admins/adminpage';
+        window.location.href = '/admins/adminpage.html';
       }
     });
 
@@ -3033,7 +3033,7 @@
     onAuthStateChanged(auth, async (user) => {
       try {
         await setPersistence(auth, browserLocalPersistence);
-        if (!user) { location.href = "/index"; return; }
+        if (!user) { location.href = "/index.html"; return; }
 
         const profRef = doc(db, "teachers", user.uid);
         const profSnap = await getDoc(profRef);
@@ -3049,7 +3049,7 @@
                 <div style="font-size:1.2rem; font-weight:950; color:#a11; margin-bottom:10px">تم رفض الوصول</div>
                 <div style="color:#6b7f9f; font-weight:800; margin-bottom:16px">هذه الصفحة مخصّصة للإدارة أو للمستخدمين المصرح لهم بالتعديل.</div>
                 <button style="height:44px; padding:0 16px; border-radius:12px; border:1px solid #e4ecf7; background:#fff; font-weight:950; cursor:pointer"
-                  onclick="location.href='/index'">العودة لصفحة الدخول</button>
+                  onclick="location.href='index.html'">العودة لصفحة الدخول</button>
               </div>
             </div>`;
           return;
@@ -3080,7 +3080,7 @@
               <div style="font-size:1.2rem; font-weight:950; color:#a11; margin-bottom:10px">تعذّر التحقق من الصلاحيات</div>
               <div style="color:#6b7f9f; font-weight:800; margin-bottom:16px">يرجى إعادة تسجيل الدخول ثم المحاولة.</div>
               <button style="height:44px; padding:0 16px; border-radius:12px; border:1px solid #e4ecf7; background:#fff; font-weight:950; cursor:pointer"
-                onclick="location.href='/index'">العودة لصفحة الدخول</button>
+                onclick="location.href='index.html'">العودة لصفحة الدخول</button>
             </div>
           </div>`;
       }
