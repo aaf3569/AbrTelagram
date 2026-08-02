@@ -34,7 +34,7 @@
             --greenBg: rgba(26, 127, 55, 0.08);
             --yellowBg: rgba(160, 109, 0, 0.10);
             --redBg: rgba(180, 35, 24, 0.10);
-            --transition: all 0.16s ease;
+            --transition: transform .12s ease, box-shadow .12s ease, background-color .12s ease, border-color .12s ease, color .12s ease, opacity .12s ease;
             /* Teams colors */
             --teams-primary: #6264A7;
             --teams-light: rgba(98, 100, 167, 0.15);
@@ -144,7 +144,7 @@
         .sheet-title{margin:0;font-size:1.2rem;font-weight:900;color:var(--primary);display:flex;align-items:center;gap:10px}
         #moreSheet .sheet-header{justify-content:center}
         #moreSheet .sheet-title{flex:none;justify-content:center;text-align:center}
-        .sheet-fab-back{position:fixed;top:18px;right:18px;z-index:1010;height:46px;padding:0 18px 0 20px;border-radius:999px;border:1px solid rgba(3,60,84,.16);background:rgba(255,255,255,.92);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);color:var(--primary);font-weight:900;font-size:.92rem;cursor:pointer;box-shadow:var(--shadow-1);transition:var(--transition);display:flex;align-items:center;gap:8px}
+        .sheet-fab-back{position:fixed;bottom:18px;right:18px;z-index:1010;height:46px;padding:0 18px 0 20px;border-radius:999px;border:1px solid rgba(3,60,84,.16);background:rgba(255,255,255,.92);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);color:var(--primary);font-weight:900;font-size:.92rem;cursor:pointer;box-shadow:var(--shadow-1);transition:var(--transition);display:flex;align-items:center;gap:8px}
         .sheet-fab-back:hover{transform:translateX(-2px);box-shadow:0 14px 32px rgba(3,60,84,.18)}
         .sheet-fab-back:active{transform:scale(.97)}
         .sheet-body{

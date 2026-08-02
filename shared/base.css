@@ -27,3 +27,28 @@ img {
   max-width: 100%;
   height: auto;
 }
+
+/* Snappier, less "cheap-feeling" taps everywhere:
+   - touch-action removes the browser's residual tap delay on controls.
+   - the :active rule gives instant press-down feedback. It uses !important
+     because each page defines its own (often more specific, e.g.
+     .btn.ghost:hover) hover-lift effect in its own <style> block loaded
+     after this file, which would otherwise silently win and mask the press
+     feedback while a button is being held down. */
+button,
+a,
+[role="button"],
+input[type="submit"],
+input[type="button"] {
+  touch-action: manipulation;
+}
+
+button:active,
+a.btn:active,
+.btn:active,
+.filter-btn:active,
+.fab-back:active,
+.sheet-fab-back:active {
+  transform: scale(0.97) !important;
+  transition: transform 0.08s ease !important;
+}

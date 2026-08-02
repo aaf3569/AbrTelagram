@@ -90,13 +90,19 @@ const STYLES = `
   #attBlockedModal .blocked-actions{width:100%;display:flex;justify-content:center}
   #attBlockedModal .blocked-actions .btn{max-width:180px;min-height:52px}
   #attBlockedModal.open .blocked-card{animation:attBlockedCardIn .2s ease}
+  /* Module-owned success celebration (green checkmark draw) */
+  #attSuccessModal .overlay{background:rgba(15,23,42,.35);backdrop-filter:blur(6px)}
+  #attSuccessModal .success-card{position:relative;z-index:1;width:min(320px,92vw);background:#fff;border:1px solid var(--border);border-radius:18px;box-shadow:0 24px 60px rgba(3,60,84,.24);padding:22px 18px;display:grid;justify-items:center;gap:10px;text-align:center}
+  #attSuccessModal.open .success-card{animation:attBlockedCardIn .2s ease}
+  #attSuccessModal .success-check{width:88px;height:88px;display:grid;place-items:center}
+  #attSuccessModal .success-check svg{width:88px;height:88px;overflow:visible}
+  #attSuccessModal .success-check circle{fill:none;stroke:#16a34a;stroke-width:6;stroke-dasharray:220;stroke-dashoffset:220;transform-origin:50% 50%;animation:attSuccessRingDraw .9s ease-out forwards}
+  #attSuccessModal .success-check path{fill:none;stroke:#16a34a;stroke-width:7;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:70;stroke-dashoffset:70;animation:attSuccessCheckDraw .6s ease-out .5s forwards}
+  #attSuccessModal .success-title{margin:0;color:#166534;font-weight:900;font-size:1.08rem}
+  #attSuccessModal .success-sub{margin:0;color:var(--muted);font-weight:700;font-size:.9rem}
+  @keyframes attSuccessRingDraw{from{stroke-dashoffset:220;opacity:.4}to{stroke-dashoffset:0;opacity:1}}
+  @keyframes attSuccessCheckDraw{from{stroke-dashoffset:70}to{stroke-dashoffset:0}}
   /* Module-owned toast */
-  #attToast{position:fixed;inset-inline:0;bottom:20px;display:flex;justify-content:center;pointer-events:none;z-index:1300}
-  #attToast .inner{pointer-events:auto;background:#fff;border:1px solid var(--border);border-radius:16px;box-shadow:0 20px 50px rgba(3,60,84,.25);padding:14px 18px;min-width:min(520px,92vw);display:flex;flex-direction:column;gap:6px}
-  #attToast .title{font-weight:900;color:var(--green,#1a7f37)}
-  #attToast .sub{color:var(--text);font-weight:800}
-  #attToast .close{align-self:flex-end;margin-top:4px;background:#fff;border:1px solid var(--border);border-radius:12px;padding:6px 10px;cursor:pointer;color:var(--primary);font-weight:800}
-  #attToast.hidden{display:none}
   @keyframes attBlockedCardIn{from{transform:translateY(8px) scale(.98);opacity:.7}to{transform:translateY(0) scale(1);opacity:1}}
   @keyframes attBlockedRingDraw{0%{stroke-dashoffset:220;opacity:.5}30%{stroke-dashoffset:0;opacity:1}70%{stroke-dashoffset:0;opacity:1}100%{stroke-dashoffset:220;opacity:.5}}
   @keyframes attBlockedXDraw{0%{stroke-dashoffset:56;opacity:0}25%{stroke-dashoffset:56;opacity:0}45%{stroke-dashoffset:0;opacity:1}70%{stroke-dashoffset:0;opacity:1}100%{stroke-dashoffset:56;opacity:0}}
@@ -198,11 +204,17 @@ const SHEET_HTML = `
       </div>
     </div>
   </div>
-  <div id="attToast" class="hidden" aria-live="polite">
-    <div class="inner">
-      <div class="title" id="attToastTitle">تم تسجيل الغياب بنجاح</div>
-      <div class="sub" id="attToastSub">للحصة: —</div>
-      <button id="attToastClose" class="close" type="button">إغلاق</button>
+  <div id="attSuccessModal" class="modal" aria-hidden="true">
+    <div class="overlay"></div>
+    <div class="success-card" role="status" aria-live="polite">
+      <div class="success-check" aria-hidden="true">
+        <svg viewBox="0 0 100 100">
+          <circle cx="50" cy="50" r="35"></circle>
+          <path d="M32 52 L45 65 L70 40"></path>
+        </svg>
+      </div>
+      <h3 id="attSuccessTitle" class="success-title">تم</h3>
+      <p id="attSuccessSub" class="success-sub"></p>
     </div>
   </div>
   <div id="attLessonDetailModal" class="modal" aria-hidden="true">
@@ -336,10 +348,9 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
     blockedBody: document.getElementById("attBlockedBody"),
     blockedClose: document.getElementById("attBlockedClose"),
     blockedOk: document.getElementById("attBlockedOk"),
-    toast: document.getElementById("attToast"),
-    toastTitle: document.getElementById("attToastTitle"),
-    toastSub: document.getElementById("attToastSub"),
-    toastClose: document.getElementById("attToastClose"),
+    successModal: document.getElementById("attSuccessModal"),
+    successTitle: document.getElementById("attSuccessTitle"),
+    successSub: document.getElementById("attSuccessSub"),
     lessonDetailModal: document.getElementById("attLessonDetailModal"),
     lessonDetailTitle: document.getElementById("attLessonDetailTitle"),
     lessonDetailBody: document.getElementById("attLessonDetailBody"),
@@ -358,7 +369,7 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
   let takenLessonNumbers = new Set();
   let pendingSave = null;
   let currentMeta = null;
-  let toastTimer = null;
+  let successTimer = null;
 
   // Sheet/modal helpers (operate on this module's elements only)
   function openSheet(el) {
@@ -424,12 +435,18 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
     openModal(els.blockedModal);
   }
 
-  function showToast(title, sub) {
-    els.toastTitle.textContent = title || "تم";
-    els.toastSub.textContent = sub || "";
-    els.toast.classList.remove("hidden");
-    if (toastTimer) clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => els.toast.classList.add("hidden"), 5000);
+  // The same checkmark-draw celebration used elsewhere on the site (e.g. the
+  // schedule save confirmation), reused here for a saved/updated attendance
+  // report instead of a plain toast. Auto-dismisses, then runs onDone.
+  function showSuccessCelebration(title, sub, onDone) {
+    els.successTitle.textContent = title || "تم";
+    els.successSub.textContent = sub || "";
+    openModal(els.successModal);
+    if (successTimer) clearTimeout(successTimer);
+    successTimer = setTimeout(() => {
+      closeModal(els.successModal);
+      if (typeof onDone === "function") onDone();
+    }, 1500);
   }
 
   // Lesson time loading
@@ -1204,15 +1221,16 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
         });
         await batch.commit();
         closeModal(els.confirmModal);
-        showToast("تم حفظ التعديلات", `للحصة: ${lessonLabel}`);
-        closeSheet(els.sheet);
-        if (typeof onSaved === "function") {
-          try {
-            onSaved({ classKey, lesson: lessonIndex, lessonLabel, date: dateKW, mode, counts: { present: present.length, late: late.length, absent: absent.length } });
-          } catch (e) {
-            console.error("[attendance] onSaved threw:", e);
+        showSuccessCelebration("تم حفظ التعديلات", `للحصة: ${lessonLabel}`, () => {
+          closeSheet(els.sheet);
+          if (typeof onSaved === "function") {
+            try {
+              onSaved({ classKey, lesson: lessonIndex, lessonLabel, date: dateKW, mode, counts: { present: present.length, late: late.length, absent: absent.length } });
+            } catch (e) {
+              console.error("[attendance] onSaved threw:", e);
+            }
           }
-        }
+        });
         return;
       }
 
@@ -1272,28 +1290,29 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
       });
       await batch.commit();
       closeModal(els.confirmModal);
-      showToast("تم تسجيل الغياب بنجاح", `للحصة: ${lessonLabel}`);
-      closeSheet(els.sheet);
+      showSuccessCelebration("تم تسجيل الغياب بنجاح", `للحصة: ${lessonLabel}`, () => {
+        closeSheet(els.sheet);
 
-      if (mode === "any" && typeof onLateSubmit === "function") {
-        const nowMin = getCurrentKuwaitMinutes();
-        const cutoffMin = parseTimeToMinutes(lessonTime?.end || "00:00") + 5;
-        if (nowMin > cutoffMin) {
-          try {
-            onLateSubmit({ classKey, lesson: lessonIndex, lessonLabel, date: dateKW });
-          } catch (e) {
-            console.error("[attendance] onLateSubmit threw:", e);
+        if (mode === "any" && typeof onLateSubmit === "function") {
+          const nowMin = getCurrentKuwaitMinutes();
+          const cutoffMin = parseTimeToMinutes(lessonTime?.end || "00:00") + 5;
+          if (nowMin > cutoffMin) {
+            try {
+              onLateSubmit({ classKey, lesson: lessonIndex, lessonLabel, date: dateKW });
+            } catch (e) {
+              console.error("[attendance] onLateSubmit threw:", e);
+            }
           }
         }
-      }
 
-      if (typeof onSaved === "function") {
-        try {
-          onSaved({ classKey, lesson: lessonIndex, lessonLabel, date: dateKW, mode, counts: { present: present.length, late: late.length, absent: absent.length } });
-        } catch (e) {
-          console.error("[attendance] onSaved threw:", e);
+        if (typeof onSaved === "function") {
+          try {
+            onSaved({ classKey, lesson: lessonIndex, lessonLabel, date: dateKW, mode, counts: { present: present.length, late: late.length, absent: absent.length } });
+          } catch (e) {
+            console.error("[attendance] onSaved threw:", e);
+          }
         }
-      }
+      });
     } catch (e) {
       console.error("[attendance] save:", e);
       closeModal(els.confirmModal);
@@ -1369,7 +1388,6 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
   els.errorOk.addEventListener("click", () => closeModal(els.errorModal));
   els.blockedClose.addEventListener("click", () => closeModal(els.blockedModal));
   els.blockedOk.addEventListener("click", () => closeModal(els.blockedModal));
-  els.toastClose.addEventListener("click", () => els.toast.classList.add("hidden"));
   els.lessonDetailClose.addEventListener("click", () => closeModal(els.lessonDetailModal));
 
   els.confirmModal.querySelector(".overlay").addEventListener("click", () => closeModal(els.confirmModal));
@@ -1389,6 +1407,7 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
     open: openWithMeta,
     openForClass,
     openForEdit,
+    canEditSession(sessionData) { return canEditSessionByTime(sessionData?.createdAt); },
     close() { closeSheet(els.sheet); },
     refreshLessonTimes: fetchLessonTimes,
   };

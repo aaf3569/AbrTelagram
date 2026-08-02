@@ -35,7 +35,7 @@
       --success: #10b981;
       --danger: #ef4444;
       --warning: #f59e0b;
-      --transition: all 0.16s ease;
+      --transition: transform .12s ease, box-shadow .12s ease, background-color .12s ease, border-color .12s ease, color .12s ease, opacity .12s ease;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -137,7 +137,7 @@
     /* Floating back button */
     .fab-back {
       position: fixed;
-      top: 84px;
+      bottom: 18px;
       right: 18px;
       z-index: 30;
       height: 48px; padding: 0 18px 0 20px;
@@ -623,7 +623,7 @@
       .header-full { grid-column: 1; }
       .info-grid, .split { grid-template-columns: 1fr; }
       .modal-card { border-radius: 18px; max-height: 85vh; }
-      .fab-back { top: 74px; right: 14px; height: 46px; padding: 0 16px 0 18px; }
+      .fab-back { bottom: 18px; right: 14px; height: 46px; padding: 0 16px 0 18px; }
       
       /* Mobile modal improvements */
       .modal { padding: 12px; }
