@@ -719,10 +719,10 @@
     function getRouteForProfile(profile) {
       const role = normalizeRole(profile?.role);
       const isSupervisor = isTruthyFlag(profile?.isSupervisor);
-      if (role === 'admin') return './admins/adminpage.html';
-      if (role === 'head') return './depHead/dptlead.html';
-      if (role === 'user' && isSupervisor) return './supervisors/supervisor.html';
-      if (role === 'user') return './Teachers/user.html';
+      if (role === 'admin') return './admins/adminpage';
+      if (role === 'head') return './dephead/dptlead';
+      if (role === 'user' && isSupervisor) return './supervisors/supervisor';
+      if (role === 'user') return './teachers/user';
       return null;
     }
 

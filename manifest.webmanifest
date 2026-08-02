@@ -1,7 +1,7 @@
 ﻿{
   "name": "ثانوية أحمد البشر الرومي",
   "short_name": "ثانوية الرومي",
-  "start_url": "./index.html",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "background_color": "#f6f8fb",

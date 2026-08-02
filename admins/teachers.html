@@ -180,7 +180,7 @@
   <header class="site-header">
     <h1 class="site-title">ثانوية أحمد البشر الرومي</h1>
   </header>
-  <a class="floating-back" href="/admins/adminpage.html" aria-label="رجوع">رجوع</a>
+  <a class="floating-back" href="/admins/adminpage" aria-label="رجوع">رجوع</a>
 
   <main>
     <div class="column">
@@ -189,11 +189,11 @@
       </div>
       <div id="stateNotLogged" class="state panel">
         <div class="error">يرجى تسجيل الدخول أولًا.</div>
-        <p class="muted" style="text-align:center; margin-top:12px;"><a href="/index.html">العودة لتسجيل الدخول</a></p>
+        <p class="muted" style="text-align:center; margin-top:12px;"><a href="/index">العودة لتسجيل الدخول</a></p>
       </div>
       <div id="stateDenied" class="state panel">
         <div class="error">هذه الصفحة للمشرفين فقط.</div>
-        <p class="muted" style="text-align:center; margin-top:12px;"><a href="/admins/adminpage.html">العودة للوحة الإدارة</a></p>
+        <p class="muted" style="text-align:center; margin-top:12px;"><a href="/admins/adminpage">العودة للوحة الإدارة</a></p>
       </div>
 
       <section id="stateTeachers" class="state" aria-label="اختر المادة">
@@ -917,7 +917,7 @@
       closeSheet(teacherSheet);
     }
     closeTeacher.addEventListener('click', closeTeacherView);
-    openAdminsTop.addEventListener('click', ()=>{window.location.href='/admins/adminpage.html#admins';});
+    openAdminsTop.addEventListener('click', ()=>{window.location.href='/admins/adminpage#admins';});
     editTeacherBtn.addEventListener('click',()=>setTeacherEditMode(true));
     cancelTeacherEditBtn.addEventListener('click',()=>{
       const d=currentTeacher.data||{};

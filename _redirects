@@ -1,0 +1,4 @@
+# Canonicalize away the .html extension in the address bar. Every internal
+# link already points to the clean form; this catches old bookmarks, typed
+# URLs, or anything external still pointing at *.html.
+/*.html  /:splat  301

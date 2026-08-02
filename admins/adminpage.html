@@ -469,7 +469,7 @@
 
       <div id="stateNotLogged" class="state panel">
         <div class="msg error">يرجى تسجيل الدخول قبل الاستخدام.</div>
-        <p class="muted" style="text-align:center; margin:8px 0 0;">لا توجد جلسة نشطة. <a href="/index.html">اذهب لصفحة الدخول</a>.</p>
+        <p class="muted" style="text-align:center; margin:8px 0 0;">لا توجد جلسة نشطة. <a href="/index">اذهب لصفحة الدخول</a>.</p>
       </div>
 
       <div id="stateDenied" class="state panel">
@@ -1717,21 +1717,21 @@
     
     // Absence modal button actions
     overallAbsenceBtn.addEventListener('click', ()=>{ 
-      window.location.href = '/admins/overallabsence.html';
+      window.location.href = '/admins/overallabsence';
     });
     
     detailedAbsenceBtn.addEventListener('click', ()=>{ 
-      window.location.href = '/admins/absence.html';
+      window.location.href = '/admins/absence';
     });
 
-    const openTeachersHandler = ()=>{ window.location.href = '/admins/teachers.html'; };
+    const openTeachersHandler = ()=>{ window.location.href = '/admins/teachers'; };
     openTeachers.addEventListener('click', openTeachersHandler);
     closeTeachers.addEventListener('click', ()=> closeSheet(teachersSheet));
 
-    openClasses.addEventListener('click', ()=>{ window.location.href = '/admins/students.html'; });
+    openClasses.addEventListener('click', ()=>{ window.location.href = '/admins/students'; });
 
     // NEW: schedules button action
-    openSchedules.addEventListener('click', ()=>{ window.location.href = '/admins/adminschedule.html'; });
+    openSchedules.addEventListener('click', ()=>{ window.location.href = '/admins/adminschedule'; });
     openNotifications.addEventListener('click', ()=> openNotificationsPanel(true));
     closeNotifications.addEventListener('click', ()=> closeNotificationsPanel(true));
 
@@ -1979,7 +1979,7 @@
       });
       if(!isConfirmed) return;
       await signOut(auth);
-      location.href='/index.html';
+      location.href='/index';
     };
     logoutBtn.addEventListener('click', logoutBtnHandler);
 
@@ -2005,7 +2005,7 @@
         await ensureRecentLogin();
         await deleteUser(u);
         alert('تم حذف الحساب.');
-        location.href='/index.html';
+        location.href='/index';
       }catch(e){ alert('تعذّر الحذف: '+(e?.message||'')); }
     });
 

@@ -481,7 +481,7 @@
           لوحة خاصة للإدارة فقط
         </span>
         <!-- Link back to teacher schedule page (adjust filename if needed) -->
-        <a id="teacherScheduleBtn" href="/Teachers/teacherschedule.html" class="link-btn">
+        <a id="teacherScheduleBtn" href="/teachers/teacherschedule" class="link-btn">
           <i class="fas fa-calendar-alt"></i>
           <span>جدول المعلّم</span>
         </a>
@@ -500,7 +500,7 @@
       </div>
       <div id="stateNotLogged" class="state panel">
         <div class="msg error">يرجى تسجيل الدخول أولاً.</div>
-        <p class="muted" style="text-align:center; margin:12px 0 0;">لا توجد جلسة نشطة. <a href="/index.html">انتقل إلى تسجيل الدخول</a>.</p>
+        <p class="muted" style="text-align:center; margin:12px 0 0;">لا توجد جلسة نشطة. <a href="/index">انتقل إلى تسجيل الدخول</a>.</p>
       </div>
       <div id="stateDenied" class="state panel">
         <div class="msg error">تم رفض الوصول - هذه الصفحة مخصصة للإدارة فقط.</div>
@@ -1284,7 +1284,7 @@
             const stuId = s.uid || '';
             const stuName = s.name || '';
             const stuClass = (typeof currentClass === 'string' && currentClass) ? currentClass : (s.class || '');
-            const href = `/Teachers/studentprofile.html?id=${encodeURIComponent(stuId)}&name=${encodeURIComponent(stuName)}&class=${encodeURIComponent(stuClass)}`;
+            const href = `/teachers/studentprofile?id=${encodeURIComponent(stuId)}&name=${encodeURIComponent(stuName)}&class=${encodeURIComponent(stuClass)}`;
             el.addEventListener('click', ()=> { location.href = href; });
             el.addEventListener('keydown', (ev)=>{ if(ev.key==='Enter'||ev.key===' '){ ev.preventDefault(); location.href=href; }});
             studentsList.appendChild(el);
@@ -1679,13 +1679,13 @@
         });
         if(!isConfirmed) return;
         await signOut(auth);
-        location.href='/index.html';
+        location.href='/index';
     });
 
     /* ========= NEW: Teacher Schedule Redirect ========= */
     if (teacherScheduleBtn) {
         teacherScheduleBtn.addEventListener('click', ()=> {
-            location.href = '/Teachers/teacherschedule.html';
+            location.href = '/teachers/teacherschedule';
         });
     }
 </script>
