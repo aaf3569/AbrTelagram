@@ -12,6 +12,7 @@ node_modules/
 
 # Netlify CLI local state
 .netlify/
+deno.lock
 
 # OS junk
 .DS_Store
