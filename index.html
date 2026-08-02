@@ -359,8 +359,7 @@
       position: fixed;
       inset: 0;
       z-index: 9999;
-      background: linear-gradient(135deg, #dff6ff 0%, #eaf6fb 50%, #dcf0fb 100%);
-      background-size: 200% 200%;
+      background: linear-gradient(135deg, #dff6ff 0%, #eaf6fb 100%);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -369,79 +368,32 @@
       opacity: 0;
       visibility: hidden;
       overflow: hidden;
-      transition: opacity 0.55s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.55s;
+      transition: opacity 0.55s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     .loader-overlay.show {
       opacity: 1;
       visibility: visible;
-      animation: loaderBgDrift 14s ease-in-out infinite;
     }
 
     .loader-overlay.leaving {
-      transition: opacity 0.42s cubic-bezier(0.5, 0, 0.75, 0), visibility 0.42s;
+      transition: opacity 0.4s cubic-bezier(0.5, 0, 0.75, 0), visibility 0.4s;
       opacity: 0;
     }
 
-    .loader-overlay.leaving .loader-main {
-      transition: transform 0.42s cubic-bezier(0.5, 0, 0.75, 0), filter 0.42s ease;
-      transform: scale(1.06);
-      filter: blur(6px);
-    }
-
-    @keyframes loaderBgDrift {
-      0%, 100% { background-position: 0% 50%; }
-      50% { background-position: 100% 50%; }
-    }
-
-    .loader-orbs {
-      position: absolute;
-      inset: 0;
-      overflow: hidden;
-      pointer-events: none;
-      z-index: 0;
-    }
-
-    .loader-orb {
-      position: absolute;
-      border-radius: 50%;
-      filter: blur(50px);
-      opacity: 0;
-      background: radial-gradient(circle, rgba(46, 139, 192, 0.35), rgba(46, 139, 192, 0));
-      animation: loaderOrbFade 1.4s ease forwards, loaderOrbDrift 18s ease-in-out infinite;
-    }
-
-    .loader-orb-a {
-      width: 320px;
-      height: 320px;
-      top: -80px;
-      inset-inline-start: -60px;
-      animation-delay: 0.2s, 0.2s;
-    }
-
-    .loader-orb-b {
-      width: 260px;
-      height: 260px;
-      bottom: -70px;
-      inset-inline-end: -50px;
-      background: radial-gradient(circle, rgba(12, 45, 72, 0.28), rgba(12, 45, 72, 0));
-      animation-delay: 0.4s, 0.4s;
-      animation-duration: 1.4s, 22s;
-    }
-
-    @keyframes loaderOrbFade {
-      to { opacity: 1; }
-    }
-
-    @keyframes loaderOrbDrift {
-      0%, 100% { transform: translate(0, 0) scale(1); }
-      50% { transform: translate(24px, -18px) scale(1.08); }
+    .loader-overlay.leaving .loader-content {
+      transition: transform 0.4s cubic-bezier(0.5, 0, 0.75, 0);
+      transform: scale(calc(var(--loader-scale, 1) * 0.96));
     }
 
     .loader-main {
-      position: relative;
-      z-index: 1;
+      transition: transform 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+      transform: translateY(0);
       transform-origin: center;
+    }
+
+    .loader-overlay.spinner-visible .loader-main {
+      transform: translateY(-30px);
     }
 
     .loader-content {
@@ -456,7 +408,6 @@
     }
 
     .loader-logo-container {
-      position: relative;
       width: 200px;
       height: 200px;
       margin-bottom: 24px;
@@ -470,38 +421,13 @@
       box-shadow:
         0 8px 24px rgba(0, 0, 0, 0.1),
         0 2px 6px rgba(0, 0, 0, 0.06);
-      animation: logoPop 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+      animation: fadeUp 0.65s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     .loader-logo {
       width: 85%;
       height: 85%;
       object-fit: contain;
-    }
-
-    .loader-ring {
-      position: absolute;
-      inset: -12px;
-      border-radius: 50%;
-      opacity: 0;
-      pointer-events: none;
-      background: conic-gradient(from 0deg, transparent 0%, var(--secondary, #2e8bc0) 35%, var(--primary, #033C54) 55%, transparent 78%);
-      -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
-      mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
-      animation: loaderRingFadeIn 0.5s ease 0.55s forwards, loaderRingSpin 1.6s linear infinite;
-      animation-play-state: paused, paused;
-    }
-
-    .loader-overlay.show .loader-ring {
-      animation-play-state: running, running;
-    }
-
-    @keyframes loaderRingFadeIn {
-      to { opacity: 1; }
-    }
-
-    @keyframes loaderRingSpin {
-      to { transform: rotate(360deg); }
     }
 
     .loader-heading {
@@ -522,8 +448,8 @@
 
     .loader-word {
       opacity: 0;
-      transform: translateY(16px);
-      animation: fadeWord 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      transform: translateY(20px);
+      animation: fadeWord 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards;
       margin: 0 3px;
       white-space: nowrap;
     }
@@ -536,7 +462,7 @@
       margin-top: 14px;
       transform: scaleX(0);
       transform-origin: center;
-      animation: growLine 0.7s 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      animation: growLine 0.75s 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
 
     .loader-welcome {
@@ -546,8 +472,8 @@
       font-size: 16px;
       margin-top: 22px;
       opacity: 0;
-      transform: translateY(12px);
-      transition: opacity 0.55s cubic-bezier(0.16, 1, 0.3, 1) 1.05s, transform 0.55s cubic-bezier(0.16, 1, 0.3, 1) 1.05s;
+      transform: translateY(15px);
+      transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1) 1.2s, transform 0.6s cubic-bezier(0.16, 1, 0.3, 1) 1.2s;
       direction: rtl;
       text-align: center;
       max-width: 90%;
@@ -559,36 +485,52 @@
       transform: translateY(0);
     }
 
-    .loader-progress-track {
-      width: 130px;
-      height: 4px;
-      border-radius: 999px;
-      margin-top: 26px;
-      background: rgba(12, 45, 72, 0.12);
-      overflow: hidden;
+    .bar-spinner {
+      width: 70px;
+      height: 70px;
+      position: absolute;
+      bottom: var(--spinner-bottom, 80px);
       opacity: 0;
-      transition: opacity 0.4s ease 0.15s;
+      transform: translateY(20px);
+      transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
-    .loader-overlay.show .loader-progress-track {
+    .loader-overlay.spinner-visible .bar-spinner {
       opacity: 1;
+      transform: translateY(0);
     }
 
-    .loader-progress-fill {
+    .spinner-bar-rotate {
+      position: absolute;
       width: 100%;
       height: 100%;
-      border-radius: 999px;
-      background: linear-gradient(90deg, var(--secondary, #2e8bc0), var(--primary, #033C54));
-      transform: scaleX(0);
-      transform-origin: right;
-      transition: transform linear;
+      transform: rotate(calc(var(--i) * 30deg));
+    }
+
+    .spinner-bar {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      width: 4px;
+      height: 18px;
+      border-radius: 4px;
+      transform: translateX(-50%);
+      background: linear-gradient(to bottom, #0c2d48, #2e8bc0);
+      box-shadow: 0 0 8px rgba(0, 50, 100, 0.3);
+      animation: barPulse 1.2s infinite cubic-bezier(0.45, 0, 0.55, 1);
+      animation-delay: calc(var(--i) * 0.07s);
     }
 
     /* Animations */
+    @keyframes barPulse {
+      0%, 100% { opacity: 0.2; }
+      50% { opacity: 1; }
+    }
+
     @keyframes fadeWord {
       from {
         opacity: 0;
-        transform: translateY(16px);
+        transform: translateY(20px);
       }
       to { opacity: 1; transform: translateY(0); }
     }
@@ -597,16 +539,12 @@
       to { transform: scaleX(1); }
     }
 
-    @keyframes logoPop {
-      0% {
+    @keyframes fadeUp {
+      from {
         opacity: 0;
-        transform: translateY(8px) scale(0.88);
+        transform: translateY(10px) scale(0.9);
       }
-      65% {
-        opacity: 1;
-        transform: translateY(0) scale(1.035);
-      }
-      100% {
+      to {
         opacity: 1;
         transform: translateY(0) scale(1);
       }
@@ -715,25 +653,32 @@
 
   <!-- Loading Overlay -->
   <div id="loader" class="loader-overlay" aria-hidden="true">
-    <div class="loader-orbs" aria-hidden="true">
-      <span class="loader-orb loader-orb-a"></span>
-      <span class="loader-orb loader-orb-b"></span>
-    </div>
     <div class="loader-main">
       <div class="loader-content">
         <div class="loader-logo-container">
-          <span class="loader-ring" aria-hidden="true"></span>
           <img class="loader-logo" src="https://framerusercontent.com/images/aI1iHN9wVHJ3PyWbMpHkgJYWsqE.png" alt="شعار المدرسة">
         </div>
 
         <h2 id="loaderTitle" class="loader-heading" aria-label="ثانوية أحمد البشر الرومي"></h2>
         <div class="loader-subtitle"></div>
         <div id="loaderWelcome" class="loader-welcome"></div>
-        <div class="loader-progress-track" aria-hidden="true">
-          <div id="loaderProgressFill" class="loader-progress-fill"></div>
-        </div>
       </div>
     </div>
+
+    <div id="barSpinner" class="bar-spinner" aria-hidden="true">
+      <div class="spinner-bar-rotate" style="--i:0"><div class="spinner-bar" style="--i:0"></div></div>
+      <div class="spinner-bar-rotate" style="--i:1"><div class="spinner-bar" style="--i:1"></div></div>
+      <div class="spinner-bar-rotate" style="--i:2"><div class="spinner-bar" style="--i:2"></div></div>
+      <div class="spinner-bar-rotate" style="--i:3"><div class="spinner-bar" style="--i:3"></div></div>
+      <div class="spinner-bar-rotate" style="--i:4"><div class="spinner-bar" style="--i:4"></div></div>
+      <div class="spinner-bar-rotate" style="--i:5"><div class="spinner-bar" style="--i:5"></div></div>
+      <div class="spinner-bar-rotate" style="--i:6"><div class="spinner-bar" style="--i:6"></div></div>
+      <div class="spinner-bar-rotate" style="--i:7"><div class="spinner-bar" style="--i:7"></div></div>
+      <div class="spinner-bar-rotate" style="--i:8"><div class="spinner-bar" style="--i:8"></div></div>
+      <div class="spinner-bar-rotate" style="--i:9"><div class="spinner-bar" style="--i:9"></div></div>
+      <div class="spinner-bar-rotate" style="--i:10"><div class="spinner-bar" style="--i:10"></div></div>
+      <div class="spinner-bar-rotate" style="--i:11"><div class="spinner-bar" style="--i:11"></div></div>
+      </div>
   </div>
 
   <script type="module">
@@ -773,7 +718,6 @@
     const loader = document.getElementById('loader');
     const loaderTitle = document.getElementById('loaderTitle');
     const loaderWelcome = document.getElementById('loaderWelcome');
-    const loaderProgressFill = document.getElementById('loaderProgressFill');
     function normalizeRole(value) {
       return (value || '').toString().trim().toLowerCase();
     }
@@ -889,8 +833,9 @@
 
     // Loader overlay animation
     const loaderTitleText = 'ثانوية أحمد البشر الرومي';
+    let spinnerTimer = null;
     let loaderShownAtMs = null;
-    const REDIRECT_DELAY_MS = 2600; // hold time before the exit transition begins
+    const REDIRECT_DELAY_MS = 2600; // hold time before the closing transition begins
     const EXIT_DURATION_MS = 400;   // closing transition, plays right before navigation
     let isLoginAttemptInProgress = false;
     let redirectScheduled = false;
@@ -905,9 +850,11 @@
     function updateLoaderScale() {
       const width = window.innerWidth;
       const height = window.innerHeight;
+      const isPhone = width < 480;
       const baseScale = Math.min(width / 375, height / 700);
       const scale = Math.min(1, Math.max(0.75, baseScale));
       loader.style.setProperty('--loader-scale', String(scale));
+      loader.style.setProperty('--spinner-bottom', isPhone ? '7vh' : `${Math.round(80 * scale)}px`);
     }
 
     setupLoaderHeading();
@@ -919,37 +866,30 @@
       loaderWelcome.textContent = safeName ? `مرحباً، ${safeName}` : 'مرحباً';
     }
 
-    function resetProgressFill() {
-      if (!loaderProgressFill) return;
-      loaderProgressFill.style.transition = 'none';
-      loaderProgressFill.style.transform = 'scaleX(0)';
-    }
-
-    function runProgressFill(durationMs) {
-      if (!loaderProgressFill) return;
-      resetProgressFill();
-      // Force a reflow so the reset above is committed before the new
-      // transition starts, otherwise the browser coalesces both style
-      // writes into one and the bar jumps straight to full.
-      void loaderProgressFill.offsetWidth;
-      loaderProgressFill.style.transition = `transform ${Math.max(0, durationMs)}ms linear`;
-      loaderProgressFill.style.transform = 'scaleX(1)';
-    }
-
     function showLoader(name) {
       setLoaderWelcomeName(name);
       loaderWelcome.classList.add('show');
       loader.classList.remove('leaving');
       loader.classList.add('show');
+      loader.classList.remove('spinner-visible');
       document.body.style.overflow = 'hidden';
       if (!loaderShownAtMs) loaderShownAtMs = Date.now();
+
+      if (spinnerTimer) clearTimeout(spinnerTimer);
+      spinnerTimer = setTimeout(() => {
+        loader.classList.add('spinner-visible');
+      }, 1200);
     }
 
     function hideLoader() {
       loader.classList.remove('show');
+      loader.classList.remove('spinner-visible');
       loader.classList.remove('leaving');
       loaderWelcome.classList.remove('show');
-      resetProgressFill();
+      if (spinnerTimer) {
+        clearTimeout(spinnerTimer);
+        spinnerTimer = null;
+      }
       loaderShownAtMs = null;
       document.body.style.overflow = '';
     }
@@ -1016,9 +956,9 @@
         signOut(auth).catch(() => {});
         return;
       }
-      // Play the closing transition before the hard navigation, so the
-      // animation resolves instead of being cut off mid-flight by the
-      // browser's page unload.
+      // Play a quick closing transition before the hard navigation, so the
+      // animation resolves instead of being cut off mid-frame by the
+      // browser unloading the page.
       loader.classList.add('leaving');
       setTimeout(() => {
         window.location.href = route;
@@ -1031,7 +971,6 @@
 
       const safeProfile = profile || {};
       showLoader(safeProfile.name);
-      runProgressFill(REDIRECT_DELAY_MS);
 
       setTimeout(() => {
         redirectToProfileRoute(safeProfile);
@@ -1045,7 +984,6 @@
       const safeProfile = profile || {};
       const elapsedMs = Date.now() - (startedAtMs || Date.now());
       const remainingMs = Math.max(0, REDIRECT_DELAY_MS - elapsedMs);
-      runProgressFill(remainingMs);
 
       setTimeout(() => {
         redirectToProfileRoute(safeProfile);
