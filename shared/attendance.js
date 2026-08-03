@@ -94,6 +94,19 @@ const STYLES = `
   #attBlockedModal .blocked-actions{width:100%;display:flex;justify-content:center}
   #attBlockedModal .blocked-actions .btn{max-width:180px;min-height:52px}
   #attBlockedModal.open .blocked-card{animation:attBlockedCardIn .2s ease}
+  /* Module-owned loading overlay — appears the instant a "take attendance"
+     action is tapped, while the schedule checks run, so the tap always gets
+     immediate feedback. Covers the page, which also blocks double-taps. */
+  #attLoadingOverlay{position:fixed;inset:0;z-index:1250;display:none;place-items:center;background:rgba(255,255,255,.6);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+  #attLoadingOverlay.show{display:grid}
+  #attLoadingOverlay .loading-box{display:grid;justify-items:center;gap:12px}
+  #attLoadingOverlay .loading-spinner{width:52px;height:52px;border-radius:50%;border:5px solid rgba(3,60,84,.15);border-top-color:var(--primary,#033C54);animation:attLoadingSpin 1s linear infinite}
+  #attLoadingOverlay .loading-text{font-weight:900;color:var(--primary,#033C54);font-size:.95rem}
+  @keyframes attLoadingSpin{to{transform:rotate(360deg)}}
+  /* In-sheet student list placeholder while the list loads */
+  #attendanceSheet .att-list-loading{display:grid;justify-items:center;gap:12px;padding:36px 0}
+  #attendanceSheet .att-list-loading .loading-spinner{width:44px;height:44px;border-radius:50%;border:4px solid rgba(3,60,84,.15);border-top-color:var(--primary,#033C54);animation:attLoadingSpin 1s linear infinite}
+  #attendanceSheet .att-list-loading .loading-text{font-weight:800;color:var(--muted,#6b7f9f);font-size:.9rem}
   /* Module-owned success celebration — looping green checkmark draw on a
      white/blurred backdrop, dismissed only via the labeled button below the
      text (no small icon-only close button — easy to miss and, since this
@@ -206,6 +219,12 @@ const SHEET_HTML = `
       <div class="blocked-actions">
         <button id="attBlockedOk" class="btn primary" type="button">إغلاق</button>
       </div>
+    </div>
+  </div>
+  <div id="attLoadingOverlay" aria-hidden="true">
+    <div class="loading-box">
+      <div class="loading-spinner"></div>
+      <div class="loading-text">جاري التحميل...</div>
     </div>
   </div>
   <div id="attSuccessModal" class="modal" aria-hidden="true">
@@ -353,6 +372,7 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
     successModal: document.getElementById("attSuccessModal"),
     successTitle: document.getElementById("attSuccessTitle"),
     successOk: document.getElementById("attSuccessOk"),
+    loadingOverlay: document.getElementById("attLoadingOverlay"),
     lessonDetailModal: document.getElementById("attLessonDetailModal"),
     lessonDetailTitle: document.getElementById("attLessonDetailTitle"),
     lessonDetailBody: document.getElementById("attLessonDetailBody"),
@@ -371,6 +391,9 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
   let takenLessonNumbers = new Set();
   let pendingSave = null;
   let currentMeta = null;
+  let openingInProgress = false; // guards against double-taps on the open buttons
+  let savingInProgress = false;  // guards against double-taps on the confirm-save button
+  let todayMapCache = { key: "", at: 0, map: null };
 
   // Sheet/modal helpers (operate on this module's elements only)
   function openSheet(el) {
@@ -445,6 +468,23 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
     openModal(els.successModal);
   }
 
+  function showLoadingOverlay() { els.loadingOverlay.classList.add("show"); }
+  function hideLoadingOverlay() { els.loadingOverlay.classList.remove("show"); }
+
+  // Wraps the async pre-open work of start/openForClass/openForEdit:
+  // instant spinner feedback on tap, double-tap guard, guaranteed cleanup.
+  async function withOpeningOverlay(fn) {
+    if (openingInProgress) return;
+    openingInProgress = true;
+    showLoadingOverlay();
+    try {
+      await fn();
+    } finally {
+      hideLoadingOverlay();
+      openingInProgress = false;
+    }
+  }
+
   // Lesson time loading
   async function fetchLessonTimes() {
     try {
@@ -498,11 +538,23 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
     return getCurrentKuwaitMinutes() > parseTimeToMinutes(l.end);
   }
 
+  const TODAY_MAP_CACHE_MS = 45000;
+
   async function buildTodayMapWithOverrides(teacherUid, dateISO) {
+    const cacheKey = `${teacherUid}|${dateISO}`;
+    const nowMs = Date.now();
+    if (todayMapCache.key === cacheKey && todayMapCache.map && nowMs - todayMapCache.at < TODAY_MAP_CACHE_MS) {
+      return todayMapCache.map;
+    }
     const map = new Map();
     try {
       const todayDayIndex = getKuwaitDayIndexSunThu();
-      const schedSnap = await getDocs(query(collection(db, "schedules"), where("teacherUid", "==", teacherUid)));
+      // The teacher's standing schedule and today's substitution overrides are
+      // independent queries — fetch both at once.
+      const [schedSnap, ovSnap] = await Promise.all([
+        getDocs(query(collection(db, "schedules"), where("teacherUid", "==", teacherUid))),
+        getDocs(query(collection(db, "scheduleOverrides"), where("date", "==", dateISO))),
+      ]);
       schedSnap.forEach(d => {
         const data = d.data();
         if (!data.lesson) return;
@@ -514,7 +566,6 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
           map.set(key, { ...data, _source: "normal", _coveredAway: false });
         }
       });
-      const ovSnap = await getDocs(query(collection(db, "scheduleOverrides"), where("date", "==", dateISO)));
       ovSnap.forEach(d => {
         const ov = d.data();
         const key = String(ov.lesson);
@@ -524,6 +575,7 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
           if (map.has(key)) map.set(key, { ...map.get(key), _coveredAway: true });
         }
       });
+      todayMapCache = { key: cacheKey, at: nowMs, map };
     } catch (e) {
       console.error("[attendance] buildTodayMap:", e);
     }
@@ -1050,6 +1102,11 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
     attStatuses = {};
     takenLessonsByStudent = new Map();
     takenLessonNumbers = new Set();
+    els.attList.innerHTML = `
+      <div class="att-list-loading">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">جاري تحميل الطلاب...</div>
+      </div>`;
     const dateISO = currentMeta?.date || kuwaitTodayISO();
 
     // The student list and the "what's already been taken" data don't
@@ -1071,7 +1128,9 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
     attStudentList = sortStudentsByStudentNumberOnly(students);
     takenLessonsByStudent = taken.byStudent;
     takenLessonNumbers = taken.takenLessons;
-    attStudentList.forEach(s => { if (s.uid) attStatuses[s.uid] = "present"; });
+    // Default missing statuses only (don't clobber): in edit mode the saved
+    // statuses are prefilled concurrently with this load.
+    attStudentList.forEach(s => { if (s.uid && !attStatuses[s.uid]) attStatuses[s.uid] = "present"; });
     renderList(attStudentList);
     recalcStats();
   }
@@ -1093,51 +1152,64 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
       showBlocked("not_logged_in");
       return;
     }
-    const dateISO = kuwaitTodayISO();
-    // Attendance may only be taken for a lesson you're actually scheduled to
-    // teach today — not an arbitrary slot nobody assigned to this class.
-    const myLessons = await getMyScheduledLessonsForClass(auth.currentUser.uid, classKey, dateISO);
-    if (myLessons.size === 0) {
-      showBlocked("not_my_class");
-      return;
-    }
-    const takenSet = await getTakenLessonIndicesForClass(dateISO, classKey);
-    const available = LESSON_TIMES.filter(l => myLessons.has(l.index) && !takenSet.has(l.index));
-    if (available.length === 0) {
-      showBlocked("no_lessons_left");
-      return;
-    }
-    currentMeta = { ok: true, mode: "any", date: dateISO, classKey, lesson: null };
-    buildManualLessonOptions(available);
-    loadStudentsForClass(classKey);
-    openSheet(els.sheet);
+    await withOpeningOverlay(async () => {
+      const dateISO = kuwaitTodayISO();
+      // Attendance may only be taken for a lesson you're actually scheduled to
+      // teach today — not an arbitrary slot nobody assigned to this class.
+      // The "which lessons already have a session" lookup is independent of
+      // that check, so both run at once.
+      const [myLessons, takenSet] = await Promise.all([
+        getMyScheduledLessonsForClass(auth.currentUser.uid, classKey, dateISO),
+        getTakenLessonIndicesForClass(dateISO, classKey),
+      ]);
+      if (myLessons.size === 0) {
+        showBlocked("not_my_class");
+        return;
+      }
+      const available = LESSON_TIMES.filter(l => myLessons.has(l.index) && !takenSet.has(l.index));
+      if (available.length === 0) {
+        showBlocked("no_lessons_left");
+        return;
+      }
+      currentMeta = { ok: true, mode: "any", date: dateISO, classKey, lesson: null };
+      buildManualLessonOptions(available);
+      loadStudentsForClass(classKey);
+      openSheet(els.sheet);
+    });
   }
 
   async function openForEdit(sessionId) {
     if (!sessionId) return;
-    const sessionRef = doc(db, ATTENDANCE_SESSIONS_COLLECTION, sessionId);
-    const snap = await getDoc(sessionRef);
-    if (!snap.exists()) {
-      showError("غير موجود", "التقرير غير موجود.");
-      return;
-    }
-    const data = snap.data() || {};
-    const createdAt = data.createdAt || null;
-    if (!canEditSessionByTime(createdAt)) {
-      showError("تعذّر التعديل", "انتهت مهلة التعديل (45 دقيقة).");
-      return;
-    }
-    const classKey = data.classKey || "";
-    const lessonIndex = Number(data.lesson) || 0;
-    const lessonLabel = data.lessonLabel || null;
-    currentMeta = {
-      ok: true, mode: "edit", date: data.date || kuwaitTodayISO(),
-      classKey, lesson: lessonIndex, sessionId, createdAt,
-    };
-    buildFixedLessonOption(lessonIndex, lessonLabel);
-    await loadStudentsForClass(classKey);
-    await prefillStatusesFromSession(sessionId);
-    openSheet(els.sheet);
+    await withOpeningOverlay(async () => {
+      const sessionRef = doc(db, ATTENDANCE_SESSIONS_COLLECTION, sessionId);
+      const snap = await getDoc(sessionRef);
+      if (!snap.exists()) {
+        showError("غير موجود", "التقرير غير موجود.");
+        return;
+      }
+      const data = snap.data() || {};
+      const createdAt = data.createdAt || null;
+      if (!canEditSessionByTime(createdAt)) {
+        showError("تعذّر التعديل", "انتهت مهلة التعديل (45 دقيقة).");
+        return;
+      }
+      const classKey = data.classKey || "";
+      const lessonIndex = Number(data.lesson) || 0;
+      const lessonLabel = data.lessonLabel || null;
+      currentMeta = {
+        ok: true, mode: "edit", date: data.date || kuwaitTodayISO(),
+        classKey, lesson: lessonIndex, sessionId, createdAt,
+      };
+      buildFixedLessonOption(lessonIndex, lessonLabel);
+      // Open right away with the in-list loading placeholder; the student
+      // list and the saved statuses load together (loadStudentsForClass only
+      // defaults statuses that prefill hasn't already set).
+      openSheet(els.sheet);
+      await Promise.all([
+        loadStudentsForClass(classKey),
+        prefillStatusesFromSession(sessionId),
+      ]);
+    });
   }
 
   // Submit handlers
@@ -1209,6 +1281,12 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
   els.confirmCancel.addEventListener("click", () => closeModal(els.confirmModal));
 
   els.confirmSave.addEventListener("click", async () => {
+    if (savingInProgress) return;
+    savingInProgress = true;
+    const confirmSaveLabel = els.confirmSave.textContent;
+    els.confirmSave.disabled = true;
+    els.confirmCancel.disabled = true;
+    els.confirmSave.textContent = "جاري الحفظ...";
     try {
       if (!auth.currentUser) {
         showError("تعذّر الحفظ", "يرجى تسجيل الدخول.");
@@ -1268,38 +1346,56 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
       }
 
       // Create flow: "self" (time-gated, own current lesson) or "any" (manual class/lesson pick)
+      const newSessionId = createAttendanceSessionId(dateKW, lessonIndex, classKey);
+      const sessionRef = doc(db, ATTENDANCE_SESSIONS_COLLECTION, newSessionId);
       let activeMeta = {};
       if (mode === "self") {
-        const c = await checkAllowed();
-        if (!c.allowed) {
+        // Schedule eligibility and "not already taken" were both verified over
+        // the network when the sheet opened; the only thing that can genuinely
+        // change while filling the sheet is the clock — a sync check. (The
+        // exists-check below still guards the double-submit race.)
+        const w = getLessonWindowStatus(lessonIndex);
+        if (!w.ok) {
           closeModal(els.confirmModal);
+          showBlocked("time_locked");
           return;
         }
-        activeMeta = c.meta || {};
+        activeMeta = currentMeta || {};
+        const existing = await getDoc(sessionRef);
+        if (existing.exists()) {
+          closeModal(els.confirmModal);
+          showError("تعذّر الحفظ", "تم تسجيل غياب هذه الحصّة مسبقًا.");
+          pendingSave = null;
+          return;
+        }
       } else if (mode === "any") {
-        // Re-check against the schedule in case it changed since the sheet was opened.
-        const myLessons = await getMyScheduledLessonsForClass(uid, classKey, dateKW);
+        // Re-check against the schedule in case it changed since the sheet was
+        // opened — in parallel with the duplicate-session check.
+        const [myLessons, existing] = await Promise.all([
+          getMyScheduledLessonsForClass(uid, classKey, dateKW),
+          getDoc(sessionRef),
+        ]);
         if (!myLessons.has(lessonIndex)) {
           closeModal(els.confirmModal);
           showBlocked("not_my_class");
           return;
         }
-      }
-      const newSessionId = createAttendanceSessionId(dateKW, lessonIndex, classKey);
-      const sessionRef = doc(db, ATTENDANCE_SESSIONS_COLLECTION, newSessionId);
-      const existing = await getDoc(sessionRef);
-      if (existing.exists()) {
-        closeModal(els.confirmModal);
-        showError("تعذّر الحفظ", "تم تسجيل غياب هذه الحصّة مسبقًا.");
-        pendingSave = null;
-        return;
+        if (existing.exists()) {
+          closeModal(els.confirmModal);
+          showError("تعذّر الحفظ", "تم تسجيل غياب هذه الحصّة مسبقًا.");
+          pendingSave = null;
+          return;
+        }
       }
       const lessonTime = LESSON_TIMES.find(l => l.index === lessonIndex);
       const startHHMM = (activeMeta.activeStart || lessonTime?.start || "00:00").toString();
       const endHHMM = (activeMeta.activeEnd || lessonTime?.end || "00:00").toString();
       const sessionStartTs = kuwaitDateTimeToDate(dateKW, startHHMM);
       const sessionCutoffTs = addMinutesToDate(kuwaitDateTimeToDate(dateKW, endHHMM), 5);
-      await setDoc(sessionRef, {
+      // Session doc + all student records in a single batch — one network
+      // round trip instead of a setDoc followed by a separate commit.
+      const batch = writeBatch(db);
+      batch.set(sessionRef, {
         date: dateKW,
         lesson: lessonIndex,
         classKey,
@@ -1310,7 +1406,6 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
         sessionCutoffTs: Timestamp.fromDate(sessionCutoffTs),
         locked: false,
       });
-      const batch = writeBatch(db);
       all.forEach(({ uid: u, status }) => {
         if (!u) return;
         const ref = doc(db, ATTENDANCE_SESSIONS_COLLECTION, newSessionId, ATTENDANCE_RECORDS_SUBCOLLECTION, u);
@@ -1351,6 +1446,10 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
       showError("تعذّر الحفظ", "حدث خطأ أثناء حفظ البيانات.");
     } finally {
       pendingSave = null;
+      savingInProgress = false;
+      els.confirmSave.disabled = false;
+      els.confirmCancel.disabled = false;
+      els.confirmSave.textContent = confirmSaveLabel;
     }
   });
 
@@ -1433,9 +1532,11 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
 
   return {
     async start() {
-      const c = await checkAllowed(true);
-      if (!c.allowed) return;
-      openWithMeta(c.meta);
+      await withOpeningOverlay(async () => {
+        const c = await checkAllowed(true);
+        if (!c.allowed) return;
+        openWithMeta(c.meta);
+      });
     },
     open: openWithMeta,
     openForClass,
