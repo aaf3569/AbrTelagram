@@ -140,6 +140,7 @@
         .sheet-title{margin:0;font-size:1.2rem;font-weight:900;color:var(--primary);display:flex;align-items:center;gap:10px}
         #moreSheet .sheet-header{justify-content:center}
         #moreSheet .sheet-title{flex:none;justify-content:center;text-align:center}
+        #classSheet .sheet-header .sheet-title{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);flex:none;text-align:center;max-width:calc(100% - 220px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
         .sheet-fab-back{position:fixed;bottom:18px;right:18px;z-index:1010;height:46px;padding:0 18px 0 20px;border-radius:999px;border:1px solid rgba(3,60,84,.16);background:rgba(255,255,255,.92);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);color:var(--primary);font-weight:900;font-size:.92rem;cursor:pointer;box-shadow:var(--shadow-1);transition:var(--transition);display:flex;align-items:center;gap:8px}
         .sheet-fab-back:hover{transform:translateX(-2px);box-shadow:0 14px 32px rgba(3,60,84,.18)}
         .sheet-fab-back:active{transform:scale(.97)}
@@ -769,7 +770,7 @@
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
                 رجوع
             </button>
-            <h3 class="sheet-title">الطلاب</h3>
+            <h3 id="classSheetTitle" class="sheet-title">الطلاب</h3>
         </div>
         <div class="sheet-body">
             <div class="class-hero">
@@ -1014,6 +1015,7 @@
         const classSheet = document.getElementById('classSheet');
         const closeClass = document.getElementById('closeClass');
         const classHeroName = document.getElementById('classHeroName');
+        const classSheetTitle = document.getElementById('classSheetTitle');
         const studentSearch = document.getElementById('studentSearch');
         const studentsList = document.getElementById('studentsList');
 
@@ -2720,6 +2722,7 @@
         async function openClassView(cls){
             currentClass = cls;
             classHeroName.textContent = formatClassLabel(cls);
+            classSheetTitle.textContent = `طلاب ${formatClassLabel(cls)}`;
             studentsList.innerHTML = '';
             studentSearch.value = '';
             openSheet(classSheet);

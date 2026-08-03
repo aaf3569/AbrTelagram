@@ -424,6 +424,8 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
         m = "ليس لديك حصة في هذا الفصل اليوم بحسب الجدول."; break;
       case "no_lessons_left":
         m = "لقد سجّلت الغياب لجميع حصصك في هذا الفصل اليوم بالفعل."; break;
+      case "already_taken":
+        m = "لقد سجّلت الغياب لهذه الحصة مسبقًا."; break;
       case "time_locked":
         m = "انتهى وقت تسجيل الغياب لهذه الحصة."; break;
       case "not_logged_in":
@@ -605,15 +607,38 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
     return null;
   }
 
+  // A cheap direct-document lookup (no query) so "already taken" can be
+  // caught before the sheet even opens, instead of only at final save time.
+  async function hasExistingAttendanceSession(dateISO, lesson, classKey) {
+    if (!classKey) return false;
+    try {
+      const sessionId = createAttendanceSessionId(dateISO, lesson, classKey);
+      const snap = await getDoc(doc(db, ATTENDANCE_SESSIONS_COLLECTION, sessionId));
+      return snap.exists();
+    } catch (e) {
+      console.error("[attendance] hasExistingAttendanceSession:", e);
+      return false; // fail open — a transient read error shouldn't block a legit submission
+    }
+  }
+
   async function getMyActiveLessonMetaForNow() {
     const user = auth.currentUser;
     if (!user) return { ok: false, reason: "not_logged_in" };
     const todayISO = kuwaitTodayISO();
-    const customHit = await getMyActiveCustomLessonMetaForNow(user.uid, todayISO);
-    if (customHit?.ok) return customHit;
     const L = getActiveLessonIndex();
+    // These two schedule sources are independent of each other — check them
+    // at the same time instead of one after the other.
+    const [customHit, map] = await Promise.all([
+      getMyActiveCustomLessonMetaForNow(user.uid, todayISO),
+      L === null ? Promise.resolve(new Map()) : buildTodayMapWithOverrides(user.uid, todayISO),
+    ]);
+    if (customHit?.ok) {
+      if (await hasExistingAttendanceSession(customHit.date, customHit.lesson, customHit.classKey)) {
+        return { ok: false, reason: "already_taken" };
+      }
+      return customHit;
+    }
     if (L === null) return { ok: false, reason: "outside_lessons" };
-    const map = await buildTodayMapWithOverrides(user.uid, todayISO);
     const hit = map.get(String(L));
     if (!hit || hit._coveredAway === true) return { ok: false, reason: "not_my_lesson" };
     const w = getLessonWindowStatus(L);
@@ -623,6 +648,9 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
     if (hit.classKey) classKey = hit.classKey;
     else if (hit.grade && hit.section) classKey = `${hit.grade} / ${hit.section}${hit.track ? ` ${hit.track}` : ""}`;
     else classKey = hit.class || "";
+    if (await hasExistingAttendanceSession(todayISO, L, classKey)) {
+      return { ok: false, reason: "already_taken" };
+    }
     return {
       ok: true, lesson: L, date: todayISO, classKey,
       subject: hit.subject || "", activeStart: lesson?.start || "00:00",
@@ -1029,19 +1057,29 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
     attStatuses = {};
     takenLessonsByStudent = new Map();
     takenLessonNumbers = new Set();
-    let students = await tryQueryStudents("students", cls);
-    if (students.length === 0) {
-      const nested = await tryQueryStudents("students/uids", cls);
-      if (nested.length > 0) students = nested;
-    }
-    students = sortStudentsByStudentNumberOnly(students);
-    attStudentList = students;
     const dateISO = currentMeta?.date || kuwaitTodayISO();
-    const taken = await loadTakenLessonsForClass(dateISO, cls);
+
+    // The student list and the "what's already been taken" data don't
+    // depend on each other — fetch both at once instead of one after the
+    // other.
+    const fetchStudents = async () => {
+      let list = await tryQueryStudents("students", cls);
+      if (list.length === 0) {
+        const nested = await tryQueryStudents("students/uids", cls);
+        if (nested.length > 0) list = nested;
+      }
+      return list;
+    };
+    const [students, taken] = await Promise.all([
+      fetchStudents(),
+      loadTakenLessonsForClass(dateISO, cls),
+    ]);
+
+    attStudentList = sortStudentsByStudentNumberOnly(students);
     takenLessonsByStudent = taken.byStudent;
     takenLessonNumbers = taken.takenLessons;
-    students.forEach(s => { if (s.uid) attStatuses[s.uid] = "present"; });
-    renderList(students);
+    attStudentList.forEach(s => { if (s.uid) attStatuses[s.uid] = "present"; });
+    renderList(attStudentList);
     recalcStats();
   }
 
