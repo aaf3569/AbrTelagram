@@ -16,6 +16,10 @@
   <!-- Font Awesome for icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
+  <!-- PDF export (report download) -->
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
   <link rel="stylesheet" href="/shared/base.css" />
   <style>
     :root{
@@ -356,6 +360,143 @@
       background: #f1f5f9;
       border-color: rgba(3, 60, 84, 0.3);
     }
+
+    /* [hidden] must always win over any component class also present on the
+       element (author rules otherwise beat the UA [hidden] rule on a tie). */
+    [hidden] { display: none !important; }
+
+    .modal-btn.primary {
+      background: linear-gradient(180deg, var(--primary-2), var(--primary));
+      border-color: rgba(3, 60, 84, 0.4);
+      color: #fff;
+    }
+    .modal-btn.primary:hover:not(:disabled) {
+      background: linear-gradient(180deg, var(--primary), var(--primary-2));
+      color: #fff;
+    }
+    .modal-btn.loading {
+      position: relative;
+      color: transparent !important;
+      pointer-events: none;
+    }
+    .modal-btn.loading i, .modal-btn.loading span { visibility: hidden; }
+    .modal-btn.loading::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      margin: auto;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 3px solid rgba(255, 255, 255, .4);
+      border-top-color: #fff;
+      animation: spin .7s linear infinite;
+    }
+    .modal-btn.primary.loading::after {
+      border-color: rgba(255, 255, 255, .4);
+      border-top-color: #fff;
+    }
+    .modal-btn:not(.primary).loading::after {
+      border-color: rgba(3, 60, 84, .25);
+      border-top-color: var(--primary);
+    }
+
+    /* Download report modal */
+    .dl-card { max-width: 460px; }
+    .dl-section {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .dl-section-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 900;
+      color: var(--primary);
+      font-size: .92rem;
+    }
+    .dl-section-title i { font-size: .82rem; opacity: .85; }
+
+    .dl-seg {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      background: var(--chip);
+      padding: 4px;
+      border-radius: 12px;
+    }
+    .dl-seg-btn {
+      border: none;
+      background: transparent;
+      padding: 10px 8px;
+      border-radius: 9px;
+      font-family: inherit;
+      font-weight: 900;
+      font-size: .85rem;
+      color: var(--muted);
+      cursor: pointer;
+      transition: background .15s ease, color .15s ease, box-shadow .15s ease;
+    }
+    .dl-seg-btn.active {
+      background: #fff;
+      color: var(--primary);
+      box-shadow: 0 4px 10px rgba(3, 60, 84, .12);
+    }
+
+    .dl-single-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(3, 60, 84, .06);
+      border: 1px solid rgba(3, 60, 84, .14);
+      color: var(--primary);
+      border-radius: 12px;
+      padding: 11px 12px;
+      font-weight: 800;
+      font-size: .88rem;
+    }
+    .dl-single-info i { font-size: .8rem; opacity: .8; }
+
+    .dl-range-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .dl-field { display: grid; gap: 6px; }
+    .dl-field label { font-size: .78rem; font-weight: 900; color: var(--muted); }
+
+    .dl-date-input, .dl-select {
+      height: 46px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 0 12px;
+      font-family: inherit;
+      font-weight: 900;
+      font-size: .92rem;
+      color: var(--text);
+      background: #fff;
+      outline: none;
+      transition: box-shadow .12s ease, border-color .12s ease;
+    }
+    .dl-date-input:focus, .dl-select:focus {
+      border-color: var(--focus);
+      box-shadow: 0 0 0 3px rgba(121, 179, 200, .22);
+    }
+
+    .dl-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 11px 12px;
+      border-radius: 12px;
+      font-weight: 800;
+      font-size: .85rem;
+      line-height: 1.5;
+    }
+    .dl-status.info { background: rgba(3, 60, 84, .06); color: var(--primary); }
+    .dl-status.error { background: var(--redBg); color: #a11; }
+    .dl-status.ok { background: var(--greenBg); color: #065f46; }
 
     /* Header */
     .site-header{
@@ -956,17 +1097,17 @@
 <body>
   <header class="site-header" id="siteHeader">
     <div class="header-inner">
-      <button class="icon-btn" id="refreshBtn" title="تحديث" aria-label="تحديث">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
-        </svg>
+      <button class="icon-btn" id="backBtn" title="رجوع" aria-label="رجوع">
+        <i class="fas fa-arrow-right"></i>
       </button>
 
       <div class="header-center">
         <h1 class="site-title" id="navbarTitle">ثانوية أحمد البشر الرومي</h1>
       </div>
 
-      <div></div>
+      <button class="icon-btn" id="downloadBtn" title="تنزيل تقرير الغياب" aria-label="تنزيل تقرير الغياب">
+        <i class="fas fa-download"></i>
+      </button>
     </div>
 
     <div class="date-chip">
@@ -1104,6 +1245,67 @@
     </div>
   </div>
 
+  <!-- Download absence report modal -->
+  <div class="modal-backdrop" id="downloadBackdrop"></div>
+  <div class="modal" id="downloadModal">
+    <div class="modal-card dl-card">
+      <div class="modal-head">
+        <div class="modal-title">
+          <b>تنزيل تقرير الغياب</b>
+          <span>اختر النطاق ثم نزّل ملف PDF</span>
+        </div>
+        <button class="modal-close" id="downloadClose" aria-label="إغلاق">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="dl-section">
+          <div class="dl-section-title"><i class="fas fa-calendar-days"></i> الفترة الزمنية</div>
+          <div class="dl-seg" id="dlPeriodSeg">
+            <button type="button" class="dl-seg-btn active" data-period="single">اليوم المحدد</button>
+            <button type="button" class="dl-seg-btn" data-period="range">نطاق تواريخ</button>
+          </div>
+          <div class="dl-single-info" id="dlSingleInfo">
+            <i class="fas fa-circle-info"></i>
+            <span id="dlSingleDateText">—</span>
+          </div>
+          <div class="dl-range-row" id="dlRangeRow" hidden>
+            <div class="dl-field">
+              <label for="dlFromDate">من</label>
+              <input type="date" id="dlFromDate" class="dl-date-input">
+            </div>
+            <div class="dl-field">
+              <label for="dlToDate">إلى</label>
+              <input type="date" id="dlToDate" class="dl-date-input">
+            </div>
+          </div>
+        </div>
+
+        <div class="dl-section">
+          <div class="dl-section-title"><i class="fas fa-users-rectangle"></i> الصفوف</div>
+          <div class="dl-seg" id="dlClassSeg">
+            <button type="button" class="dl-seg-btn active" data-scope="all">كل الصفوف</button>
+            <button type="button" class="dl-seg-btn" data-scope="one">صف محدد</button>
+          </div>
+          <div class="dl-range-row" id="dlClassRow" hidden style="grid-template-columns:1fr;">
+            <div class="dl-field">
+              <label for="dlClassSelect">الصف والفصل</label>
+              <select id="dlClassSelect" class="dl-select"></select>
+            </div>
+          </div>
+        </div>
+
+        <div class="dl-status" id="dlStatus" hidden></div>
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn primary" id="dlDownloadBtn" type="button">
+          <i class="fas fa-file-pdf"></i> <span>تنزيل PDF</span>
+        </button>
+        <button class="modal-btn" id="dlCancelBtn" type="button">
+          <i class="fas fa-times"></i> إلغاء
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script type="module">
     import { firebaseConfig } from "/shared/firebase.js";
     import { initializeApp, getApp, getApps } from "/shared/firebase.js";
@@ -1130,7 +1332,8 @@
     const sDenied  = document.getElementById('stateDenied');
     const sOk      = document.getElementById('stateOk');
 
-    const refreshBtn = document.getElementById('refreshBtn');
+    const backBtn = document.getElementById('backBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
     const gridBody = document.getElementById('gridBody');
 
     const dateBtn = document.getElementById('dateBtn');
@@ -1173,6 +1376,23 @@
     const confirmSaveBtn = document.getElementById('confirmSaveBtn');
     const confirmCancelBtn = document.getElementById('confirmCancelBtn');
 
+    // Download report modal elements
+    const downloadBackdrop = document.getElementById('downloadBackdrop');
+    const downloadModal = document.getElementById('downloadModal');
+    const downloadClose = document.getElementById('downloadClose');
+    const dlPeriodSeg = document.getElementById('dlPeriodSeg');
+    const dlSingleInfo = document.getElementById('dlSingleInfo');
+    const dlSingleDateText = document.getElementById('dlSingleDateText');
+    const dlRangeRow = document.getElementById('dlRangeRow');
+    const dlFromDate = document.getElementById('dlFromDate');
+    const dlToDate = document.getElementById('dlToDate');
+    const dlClassSeg = document.getElementById('dlClassSeg');
+    const dlClassRow = document.getElementById('dlClassRow');
+    const dlClassSelect = document.getElementById('dlClassSelect');
+    const dlStatus = document.getElementById('dlStatus');
+    const dlDownloadBtn = document.getElementById('dlDownloadBtn');
+    const dlCancelBtn = document.getElementById('dlCancelBtn');
+
     // Make navbar title clickable
     navbarTitle.addEventListener('click', () => {
       window.location.href = 'adminpage.html';
@@ -1191,6 +1411,21 @@
 
     const toArabicDigits = (str) => (str || "").toString().replace(/\d/g, d => '٠١٢٣٤٥٦٧٨٩'[d]);
     const arabicSort = (a, b) => (a || "").toString().localeCompare((b || "").toString(), 'ar', { sensitivity: 'base' });
+
+    function escapeHtml(str){
+      return String(str ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+    }
+
+    function filenameSafe(value){
+      return (value ?? '').toString().trim()
+        .replace(/[\\/:*?"<>|]+/g, '-')
+        .replace(/\s+/g, '-');
+    }
 
     function fmtDateLong(d){
       return new Intl.DateTimeFormat('ar-KW', {
@@ -2429,7 +2664,6 @@
     }
 
     function setGridLoadingState(isLoading) {
-      refreshBtn.disabled = isLoading;
       dateBtn.disabled = isLoading;
     }
 
@@ -2508,8 +2742,8 @@
       }
     });
 
-    refreshBtn.addEventListener('click', async () => {
-      await requestGridLoad(selectedDate);
+    backBtn.addEventListener('click', () => {
+      window.location.href = 'adminpage.html';
     });
 
     // FIX: Close popover only if click is outside popover (and not inside)
@@ -2549,6 +2783,516 @@
       // Redirect to modal for consistency
       openModalForCell(anchorEl, className, lessonIndex, mode);
     }
+
+    // ===================== Download absence report (PDF) =====================
+    const PDF_RENDER_SCALE = 1.5;
+    const LESSON_ORDINALS = ["الأولى", "الثانية", "الثالثة", "الرابعة", "الخامسة", "السادسة", "السابعة"];
+    const ROWS_PER_PAGE = 20;
+
+    let dlPeriodMode = 'single';
+    let dlClassMode = 'all';
+
+    function dlSetPeriodMode(mode){
+      dlPeriodMode = mode;
+      dlPeriodSeg.querySelectorAll('.dl-seg-btn').forEach(b => b.classList.toggle('active', b.dataset.period === mode));
+      dlSingleInfo.hidden = mode !== 'single';
+      dlRangeRow.hidden = mode !== 'range';
+    }
+    function dlSetClassMode(mode){
+      dlClassMode = mode;
+      dlClassSeg.querySelectorAll('.dl-seg-btn').forEach(b => b.classList.toggle('active', b.dataset.scope === mode));
+      dlClassRow.hidden = mode !== 'one';
+    }
+
+    function setDlStatus(kind, html){
+      if (!html) { dlStatus.hidden = true; dlStatus.innerHTML = ''; return; }
+      dlStatus.hidden = false;
+      dlStatus.className = `dl-status ${kind}`;
+      dlStatus.innerHTML = html;
+    }
+
+    function openDownloadModal(){
+      if (dlDownloadBtn.classList.contains('loading')) return;
+      dlSetPeriodMode('single');
+      dlSetClassMode('all');
+      const iso = toInputDate(selectedDate);
+      dlSingleDateText.textContent = toArabicDigits(fmtDateLong(selectedDate));
+      dlFromDate.value = iso;
+      dlToDate.value = iso;
+      dlFromDate.max = kuwaitTodayISO();
+      dlToDate.max = kuwaitTodayISO();
+      dlClassSelect.innerHTML = ALL_CLASSES.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(toArabicDigits(c))}</option>`).join('');
+      setDlStatus(null);
+      document.body.classList.add('modal-open');
+      downloadBackdrop.classList.add('open');
+      downloadModal.classList.add('open');
+    }
+    function closeDownloadModal(){
+      if (dlDownloadBtn.classList.contains('loading')) return;
+      document.body.classList.remove('modal-open');
+      downloadBackdrop.classList.remove('open');
+      downloadModal.classList.remove('open');
+    }
+
+    downloadBtn.addEventListener('click', openDownloadModal);
+    downloadClose.addEventListener('click', closeDownloadModal);
+    dlCancelBtn.addEventListener('click', closeDownloadModal);
+    downloadBackdrop.addEventListener('click', closeDownloadModal);
+    downloadModal.addEventListener('click', (e) => { if (e.target === downloadModal) closeDownloadModal(); });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && downloadModal.classList.contains('open')) closeDownloadModal();
+    });
+
+    dlPeriodSeg.addEventListener('click', (e) => {
+      const btn = e.target.closest('.dl-seg-btn'); if (!btn) return;
+      dlSetPeriodMode(btn.dataset.period);
+    });
+    dlClassSeg.addEventListener('click', (e) => {
+      const btn = e.target.closest('.dl-seg-btn'); if (!btn) return;
+      dlSetClassMode(btn.dataset.scope);
+    });
+
+    function formatDateArabicShort(iso){
+      const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || '');
+      if (!m) return iso || '—';
+      return toArabicDigits(`${Number(m[3])}/${Number(m[2])}`);
+    }
+
+    // Schedule map cache (per weekday, reused across every date in a range) —
+    // used only to look up the subject for display; the actual attendance
+    // records are always date-specific and never cached.
+    const dlScheduleCache = new Map();
+    async function getScheduleMapForDayIndex(dayIndex){
+      if (dlScheduleCache.has(dayIndex)) return dlScheduleCache.get(dayIndex);
+      const map = Object.create(null);
+      try {
+        const snap = await getDocs(query(collection(db, 'schedules'), where('dayIndex', '==', dayIndex)));
+        snap.forEach(ds => {
+          const x = ds.data() || {};
+          const classKey = (x.classKey || '').toString().trim();
+          const li = Number((x.lesson || '').toString());
+          if (!classKey || !Number.isFinite(li) || li < 1 || li > 7) return;
+          if (!ALL_CLASSES.includes(classKey)) return;
+          if (!map[classKey]) map[classKey] = {};
+          map[classKey][li] = { subject: (x.subject || '').toString() };
+        });
+      } catch (e) { console.error('Error loading schedule for dayIndex', dayIndex, e); }
+      try {
+        const customSnap = await getDocs(query(collection(db, 'customDaySchedules'), where('dayIndex', '==', dayIndex)));
+        customSnap.forEach(ds => {
+          const x = ds.data() || {};
+          if (x.deletedAt || x.enabled !== true) return;
+          const classKey = (x.classKey || '').toString().trim();
+          if (!classKey || !ALL_CLASSES.includes(classKey)) return;
+          const lessons = Array.isArray(x.lessons) ? x.lessons : [];
+          if (!map[classKey]) map[classKey] = {};
+          const maxLessons = Math.min(7, Number(x.lessonCount) || lessons.length || 7);
+          for (let li = 1; li <= maxLessons; li++) {
+            if (map[classKey][li]) continue;
+            const lesson = lessons[li - 1] || {};
+            map[classKey][li] = { subject: (lesson.subject || '').toString() };
+          }
+        });
+      } catch (e) { console.error('Error loading custom schedules for dayIndex', dayIndex, e); }
+      dlScheduleCache.set(dayIndex, map);
+      return map;
+    }
+
+    // Flat absence/late row fetch for one date — mirrors loadGridForDate's
+    // multi-source logic (legacy top-level sessions, modern
+    // attendanceSessions/attendanceRecords, legacy per-student subcollection
+    // by date, and its createdAt-range fallback) but returns a flat row list
+    // instead of aggregating into the on-screen grid.
+    async function fetchAbsenceRowsForDate(dateISO, studentsById){
+      const rows = [];
+      const seen = new Set();
+      const pushRow = (row) => {
+        const key = `${row.className}|${row.lessonIndex}|${row.status}|${row.studentId || row.studentName}`;
+        if (seen.has(key)) return;
+        seen.add(key);
+        rows.push(row);
+      };
+
+      const dayIndex = weekdayFromISO(dateISO);
+      const scheduleMapForDay = await getScheduleMapForDayIndex(dayIndex);
+      const subjectFor = (className, lessonIndex) => scheduleMapForDay?.[className]?.[lessonIndex]?.subject || '';
+
+      try {
+        const legacySessions = await getDocs(query(collection(db, 'attendance'), where('date', '==', dateISO)));
+        legacySessions.forEach((docSnap) => {
+          const r = docSnap.data() || {};
+          const className = normalizeClassName(r.class || r.classKey || '');
+          const lessonIndex = parseLessonIndex(r.lessonIndex, r.lesson);
+          if (!className || !lessonIndex) return;
+          const teacherUid = (r.createdBy || r.teacherUid || r.updatedBy || '').toString().trim() || null;
+          const absentList = Array.isArray(r.absent) ? r.absent : [];
+          absentList.forEach((raw) => {
+            const rawId = (raw || '').toString().trim();
+            if (!rawId) return;
+            const linked = studentsById.get(rawId);
+            pushRow({
+              dateISO, className, lessonIndex, status: 'absent',
+              studentId: rawId, studentName: linked?.name || rawId,
+              subject: subjectFor(className, lessonIndex), teacherUid
+            });
+          });
+        });
+      } catch (error) {
+        console.error('Error loading legacy attendance sessions:', error);
+      }
+
+      try {
+        const sessionsSnap = await getDocs(query(collection(db, 'attendanceSessions'), where('date', '==', dateISO)));
+        const sessions = [];
+        sessionsSnap.forEach((docSnap) => sessions.push({ id: docSnap.id, data: docSnap.data() || {} }));
+        await promisePool(sessions, async (session) => {
+          const data = session.data || {};
+          const className = normalizeClassName(data.classKey || data.class || '');
+          const lessonIndex = parseLessonIndex(data.lesson, data.lessonIndex);
+          if (!className || !lessonIndex) return;
+          const teacherUid = (data.teacherUid || data.createdBy || data.updatedBy || '').toString().trim() || null;
+          let recordsSnap;
+          try { recordsSnap = await getDocs(collection(db, 'attendanceSessions', session.id, 'attendanceRecords')); }
+          catch { return; }
+          recordsSnap.forEach((recordSnap) => {
+            const rec = recordSnap.data() || {};
+            const status = (rec.status || '').toString();
+            if (status !== 'absent' && status !== 'late') return;
+            const uid = (recordSnap.id || rec.uid || '').toString().trim();
+            const linked = uid ? studentsById.get(uid) : null;
+            const name = (linked?.name || rec.studentName || uid || '—').toString();
+            const recTeacherUid = (rec.updatedBy || rec.createdBy || teacherUid || '').toString().trim() || null;
+            pushRow({
+              dateISO, className, lessonIndex, status,
+              studentId: uid, studentName: name,
+              subject: subjectFor(className, lessonIndex), teacherUid: recTeacherUid
+            });
+          });
+        }, 10);
+      } catch (error) {
+        console.error('Error loading attendance sessions:', error);
+      }
+
+      const applyLegacyRow = (docSnap) => {
+        const parts = splitPathSegments(docSnap.ref?.path);
+        if (parts.length < 4) return;
+        if (parts[0] !== 'students' || parts[2] !== 'attendance') return;
+        const studentId = parts[1];
+        const rec = docSnap.data() || {};
+        const linked = studentsById.get(studentId);
+        const className = normalizeClassName(rec.class || rec.classKey || linked?.className || '');
+        const lessonIndex = parseLessonIndex(rec.lessonIndex, rec.lesson);
+        if (!className || !lessonIndex) return;
+        const status = (rec.status || '').toString();
+        if (status !== 'absent' && status !== 'late') return;
+        const teacherUid = (rec.updatedBy || rec.createdBy || '').toString().trim() || null;
+        pushRow({
+          dateISO, className, lessonIndex, status,
+          studentId, studentName: (linked?.name || rec.studentName || studentId || '—').toString(),
+          subject: subjectFor(className, lessonIndex), teacherUid
+        });
+      };
+
+      try {
+        const snap = await getDocs(query(collectionGroup(db, 'attendance'), where('date', '==', dateISO)));
+        snap.forEach(applyLegacyRow);
+      } catch (error) {
+        console.error('Error loading legacy attendance by date:', error);
+      }
+
+      try {
+        const startTs = Timestamp.fromDate(startOfDay(fromInputDate(dateISO)));
+        const endTs = Timestamp.fromDate(endOfDay(fromInputDate(dateISO)));
+        const snap = await getDocs(query(
+          collectionGroup(db, 'attendance'),
+          where('createdAt', '>=', startTs),
+          where('createdAt', '<=', endTs)
+        ));
+        snap.forEach(applyLegacyRow);
+      } catch (error) {
+        console.error('Error loading legacy attendance by createdAt:', error);
+      }
+
+      return rows;
+    }
+
+    async function fetchAbsenceRows({ fromISO, toISO, classFilter }){
+      const studentsSnap = await getDocs(collection(db, 'students'));
+      const studentsById = new Map();
+      studentsSnap.forEach((docSnap) => {
+        const data = docSnap.data() || {};
+        const className = normalizeClassName(data.class || data.className || '');
+        studentsById.set(docSnap.id, { id: docSnap.id, name: (data.name || '—').toString(), className });
+      });
+
+      const dates = [];
+      let cursor = fromInputDate(fromISO);
+      const lastISO = toISO;
+      while (toInputDate(cursor) <= lastISO) {
+        dates.push(toInputDate(cursor));
+        cursor = new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate() + 1);
+      }
+
+      const perDateRows = await promisePool(dates, (d) => fetchAbsenceRowsForDate(d, studentsById), 4);
+      let rows = perDateRows.flat();
+
+      if (classFilter) {
+        rows = rows.filter(r => r.className === classFilter);
+      }
+
+      const teacherUids = new Set(rows.map(r => r.teacherUid).filter(Boolean));
+      await promisePool(Array.from(teacherUids), (uid) => getTeacherName(uid), 10);
+      rows.forEach(r => { r.teacherName = r.teacherUid ? (teacherNameCache.get(r.teacherUid) || r.teacherUid) : '—'; });
+
+      const classOrder = new Map(ALL_CLASSES.map((c, i) => [c, i]));
+      rows.sort((a, b) => {
+        if (a.dateISO !== b.dateISO) return a.dateISO < b.dateISO ? -1 : 1;
+        const ca = classOrder.get(a.className) ?? 999, cb = classOrder.get(b.className) ?? 999;
+        if (ca !== cb) return ca - cb;
+        if (a.lessonIndex !== b.lessonIndex) return a.lessonIndex - b.lessonIndex;
+        return arabicSort(a.studentName, b.studentName);
+      });
+
+      return rows;
+    }
+
+    function waitForImageReady(imgEl){
+      return new Promise((resolve) => {
+        if (!imgEl) { resolve(); return; }
+        if (imgEl.complete && imgEl.naturalWidth > 0) { resolve(); return; }
+        const done = () => { imgEl.removeEventListener('load', done); imgEl.removeEventListener('error', done); resolve(); };
+        imgEl.addEventListener('load', done);
+        imgEl.addEventListener('error', done);
+      });
+    }
+
+    function addCanvasToA4Page(docPdf, canvas, margin = 16){
+      const pageW = docPdf.internal.pageSize.getWidth();
+      const pageH = docPdf.internal.pageSize.getHeight();
+      const ratio = Math.min((pageW - margin * 2) / canvas.width, (pageH - margin * 2) / canvas.height);
+      const drawW = canvas.width * ratio;
+      const drawH = canvas.height * ratio;
+      const x = (pageW - drawW) / 2;
+      const y = margin;
+      docPdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', x, y, drawW, drawH, undefined, 'FAST');
+    }
+
+    function statusBadgeHtml(status){
+      return status === 'absent'
+        ? '<span class="dl-pdf-badge absent">غياب</span>'
+        : '<span class="dl-pdf-badge late">تأخير</span>';
+    }
+
+    function buildReportPageHost({ rows, meta, pageNum, totalPages }){
+      const showDateCol = meta.multiDay;
+      const showClassCol = !meta.singleClass;
+      const colCount = 6 + (showDateCol ? 1 : 0) + (showClassCol ? 1 : 0);
+
+      const headCells = [
+        '<th class="col-idx">#</th>',
+        showDateCol ? '<th class="col-date">التاريخ</th>' : '',
+        '<th class="col-name">اسم الطالب</th>',
+        showClassCol ? '<th class="col-class">الصف</th>' : '',
+        '<th class="col-lesson">الحصة</th>',
+        '<th class="col-subject">المادة</th>',
+        '<th class="col-status">الحالة</th>',
+        '<th class="col-teacher">سجّله</th>'
+      ].join('');
+
+      const bodyRows = rows.map((r, i) => {
+        const cells = [
+          `<td class="col-idx">${toArabicDigits(String(meta.startIndex + i + 1))}</td>`,
+          showDateCol ? `<td class="col-date">${escapeHtml(formatDateArabicShort(r.dateISO))}</td>` : '',
+          `<td class="col-name">${escapeHtml(r.studentName)}</td>`,
+          showClassCol ? `<td class="col-class">${escapeHtml(toArabicDigits(r.className))}</td>` : '',
+          `<td class="col-lesson">${escapeHtml(LESSON_ORDINALS[r.lessonIndex - 1] || '—')}</td>`,
+          `<td class="col-subject">${escapeHtml(r.subject || '—')}</td>`,
+          `<td class="col-status">${statusBadgeHtml(r.status)}</td>`,
+          `<td class="col-teacher">${escapeHtml(r.teacherName || '—')}</td>`
+        ].join('');
+        return `<tr>${cells}</tr>`;
+      }).join('');
+
+      const host = document.createElement('div');
+      host.style.position = 'fixed';
+      host.style.top = '0';
+      host.style.left = '-10000px';
+      host.style.width = '794px';
+      host.style.height = '1123px';
+      host.style.zIndex = '-1';
+      host.style.background = '#ffffff';
+
+      host.innerHTML = `
+        <style>
+          #dlPdfPage {
+            width: 794px; height: 1123px; box-sizing: border-box; overflow: hidden;
+            background: #ffffff; color: #153554;
+            font-family: "Noto Kufi Arabic", Tahoma, Arial, sans-serif;
+            direction: rtl;
+            padding: 30px 30px 22px;
+            display: flex; flex-direction: column;
+          }
+          #dlPdfPage .pdf-header { text-align: center; margin-bottom: 14px; }
+          #dlPdfPage .pdf-logo { width: auto; height: 58px; max-width: 220px; display: block; margin: 0 auto 8px; object-fit: contain; }
+          #dlPdfPage .school-name { font-size: 19px; font-weight: 900; color: #0f3f63; margin-bottom: 4px; }
+          #dlPdfPage .report-title { font-size: 15px; font-weight: 900; color: #184c74; margin-bottom: 6px; }
+          #dlPdfPage .meta-line { font-size: 11px; font-weight: 800; color: #42698a; }
+          #dlPdfPage .header-sep { border-top: 2px solid #d7e4f1; margin-top: 12px; }
+          #dlPdfPage .table-wrap { width: 100%; border: 1px solid #c9dced; border-radius: 12px; overflow: hidden; margin-top: 4px; }
+          #dlPdfPage table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+          #dlPdfPage thead th {
+            background: linear-gradient(135deg, #13466f, #2b6793); color: #fff;
+            border-left: 1px solid rgba(255,255,255,.22);
+            font-size: 11px; font-weight: 900; text-align: center; padding: 9px 4px;
+          }
+          #dlPdfPage thead th:last-child { border-left: none; }
+          #dlPdfPage tbody td {
+            font-size: 11px; font-weight: 700; color: #17324a; text-align: center;
+            padding: 7px 4px; border-top: 1px solid #e7eef5; border-left: 1px solid #eef3f8;
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+          }
+          #dlPdfPage tbody td:last-child { border-left: none; }
+          #dlPdfPage tbody tr:nth-child(even) td { background: #f7fafc; }
+          #dlPdfPage .col-idx { width: 34px; }
+          #dlPdfPage .col-date { width: 78px; }
+          #dlPdfPage .col-name { width: auto; text-align: right !important; padding-right: 10px !important; }
+          #dlPdfPage .col-class { width: 86px; }
+          #dlPdfPage .col-lesson { width: 64px; }
+          #dlPdfPage .col-subject { width: 90px; }
+          #dlPdfPage .col-status { width: 66px; }
+          #dlPdfPage .col-teacher { width: auto; }
+          #dlPdfPage .dl-pdf-badge {
+            display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 10px; font-weight: 900;
+          }
+          #dlPdfPage .dl-pdf-badge.absent { background: rgba(239,68,68,.14); color: #b91c1c; }
+          #dlPdfPage .dl-pdf-badge.late { background: rgba(245,158,11,.16); color: #92400e; }
+          #dlPdfPage .pdf-footer {
+            margin-top: auto; padding-top: 10px; display: flex; justify-content: space-between;
+            font-size: 10px; font-weight: 800; color: #6f89a3; border-top: 1px solid #e7eef5;
+          }
+        </style>
+        <div id="dlPdfPage">
+          <div class="pdf-header">
+            <img id="dlPdfLogo" class="pdf-logo" src="/images/schoollogo.png" alt="School Logo">
+            <div class="school-name">ثانوية أحمد البشر الرومي</div>
+            <div class="report-title">تقرير الغياب${meta.hasLate ? ' والتأخر' : ''}</div>
+            <div class="meta-line">${escapeHtml(meta.summaryLine)}</div>
+            <div class="header-sep"></div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr>${headCells}</tr></thead>
+              <tbody>${bodyRows || `<tr><td colspan="${colCount}" style="padding:20px;color:#8aa0b6;font-weight:800;">لا توجد بيانات في هذه الصفحة</td></tr>`}</tbody>
+            </table>
+          </div>
+          <div class="pdf-footer">
+            <span>صفحة ${toArabicDigits(String(pageNum))} من ${toArabicDigits(String(totalPages))}</span>
+            <span>تاريخ الإصدار: ${escapeHtml(toArabicDigits(fmtDateLong(new Date())))}</span>
+          </div>
+        </div>
+      `;
+      return host;
+    }
+
+    async function renderReportPageCanvas(pageRows, meta, pageNum, totalPages){
+      const host = buildReportPageHost({ rows: pageRows, meta, pageNum, totalPages });
+      document.body.appendChild(host);
+      try {
+        if (document.fonts?.ready) await document.fonts.ready;
+        const logoEl = host.querySelector('#dlPdfLogo');
+        try { await waitForImageReady(logoEl); } catch (_) {}
+        const pageEl = host.querySelector('#dlPdfPage');
+        return await window.html2canvas(pageEl, { backgroundColor: '#ffffff', scale: PDF_RENDER_SCALE, useCORS: true, logging: false });
+      } finally {
+        host.remove();
+      }
+    }
+
+    function chunkRows(arr, size){
+      const out = [];
+      for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+      return out;
+    }
+
+    async function generateAbsenceReportPdf(){
+      if (!window.html2canvas || !window.jspdf?.jsPDF) {
+        setDlStatus('error', '<i class="fas fa-triangle-exclamation"></i> تعذّر تحميل مكتبة إنشاء PDF. تحقّق من الاتصال وحاول مرة أخرى.');
+        return;
+      }
+
+      let fromISO, toISO;
+      if (dlPeriodMode === 'single') {
+        fromISO = toISO = toInputDate(selectedDate);
+      } else {
+        fromISO = dlFromDate.value;
+        toISO = dlToDate.value;
+        if (!fromISO || !toISO) {
+          setDlStatus('error', '<i class="fas fa-triangle-exclamation"></i> اختر تاريخي البداية والنهاية.');
+          return;
+        }
+        if (fromISO > toISO) {
+          setDlStatus('error', '<i class="fas fa-triangle-exclamation"></i> تاريخ البداية يجب أن يسبق تاريخ النهاية.');
+          return;
+        }
+      }
+
+      const classFilter = dlClassMode === 'one' ? dlClassSelect.value : null;
+      if (dlClassMode === 'one' && !classFilter) {
+        setDlStatus('error', '<i class="fas fa-triangle-exclamation"></i> اختر الصف والفصل.');
+        return;
+      }
+
+      dlDownloadBtn.classList.add('loading');
+      dlCancelBtn.disabled = true;
+      setDlStatus('info', '<i class="fas fa-spinner fa-spin"></i> جاري جلب بيانات الغياب...');
+
+      try {
+        const rows = await fetchAbsenceRows({ fromISO, toISO, classFilter });
+
+        if (!rows.length) {
+          setDlStatus('info', '<i class="fas fa-circle-info"></i> لا توجد أي حالات غياب أو تأخير ضمن هذا النطاق.');
+          return;
+        }
+
+        const multiDay = fromISO !== toISO;
+        const singleClass = !!classFilter;
+        const hasLate = rows.some(r => r.status === 'late');
+
+        const periodText = multiDay
+          ? `من ${toArabicDigits(formatDateArabicShort(fromISO))} إلى ${toArabicDigits(formatDateArabicShort(toISO))}`
+          : `ليوم ${toArabicDigits(fmtDateLong(fromInputDate(fromISO)))}`;
+        const classText = singleClass ? ` — الصف ${toArabicDigits(classFilter)}` : ' — كل الصفوف';
+        const summaryLine = `${periodText}${classText} — إجمالي الحالات: ${toArabicDigits(String(rows.length))}`;
+
+        const meta = { multiDay, singleClass, hasLate, summaryLine };
+        const pages = chunkRows(rows, ROWS_PER_PAGE);
+        const totalPages = pages.length;
+
+        const { jsPDF } = window.jspdf;
+        const docPdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4', compress: true });
+
+        for (let i = 0; i < pages.length; i++) {
+          setDlStatus('info', `<i class="fas fa-spinner fa-spin"></i> جاري إنشاء الصفحة ${toArabicDigits(String(i + 1))} من ${toArabicDigits(String(totalPages))}...`);
+          const canvas = await renderReportPageCanvas(pages[i], { ...meta, startIndex: i * ROWS_PER_PAGE }, i + 1, totalPages);
+          if (i > 0) docPdf.addPage('a4', 'portrait');
+          addCanvasToA4Page(docPdf, canvas, 16);
+        }
+
+        const scopeName = singleClass ? filenameSafe(classFilter) : 'كل-الصفوف';
+        const periodName = multiDay ? `${filenameSafe(fromISO)}_${filenameSafe(toISO)}` : filenameSafe(fromISO);
+        docPdf.save(`تقرير-الغياب-${scopeName}-${periodName}.pdf`);
+
+        setDlStatus('ok', '<i class="fas fa-circle-check"></i> تم تنزيل التقرير بنجاح.');
+      } catch (e) {
+        console.error('[generateAbsenceReportPdf]', e);
+        setDlStatus('error', '<i class="fas fa-triangle-exclamation"></i> تعذّر إنشاء التقرير. حاول مرة أخرى.');
+      } finally {
+        dlDownloadBtn.classList.remove('loading');
+        dlCancelBtn.disabled = false;
+      }
+    }
+
+    dlDownloadBtn.addEventListener('click', generateAbsenceReportPdf);
   </script>
 
   <script src="/shared/hub-title-link.js" defer></script>
