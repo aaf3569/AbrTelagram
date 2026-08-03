@@ -40,7 +40,6 @@ const STYLES = `
   #attendanceSheet .att-lesson-dot.future{background:rgba(148,163,184,.10);color:#94a3b8;border-color:rgba(148,163,184,.25);opacity:.65;cursor:default}
   #attendanceSheet .att-lesson-dot.future:hover{transform:none}
   #attendanceSheet .special-case-icon{width:18px;height:18px;margin-inline-start:8px;flex-shrink:0}
-  #attendanceSheet .sheet-header{position:relative}
   #attendanceSheet .sheet-header .sheet-title{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);flex:none;text-align:center;max-width:calc(100% - 220px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   #attendanceSheet .lesson-picker{width:100%}
   #attendanceSheet .att-row{display:flex;gap:12px;flex-wrap:wrap}
@@ -60,11 +59,6 @@ const STYLES = `
   #attendanceSheet .pill.g{color:var(--green,#1a7f37);border-color:var(--greenBg,rgba(26,127,55,.08));background:var(--greenBg,rgba(26,127,55,.08))}
   #attendanceSheet .pill.y{color:var(--yellow,#a06d00);border-color:var(--yellowBg,rgba(160,109,0,.10));background:var(--yellowBg,rgba(160,109,0,.10))}
   #attendanceSheet .pill.r{color:var(--red,#b42318);border-color:var(--redBg,rgba(180,35,24,.10));background:var(--redBg,rgba(180,35,24,.10))}
-  /* "غياب" pill is a <summary> (click reveals absent names below) — strip the
-     native disclosure marker so it matches the plain-span pills beside it. */
-  #attendanceSheet summary.pill{list-style:none;cursor:pointer}
-  #attendanceSheet summary.pill::-webkit-details-marker{display:none}
-  #attendanceSheet summary.pill::marker{content:""}
   #attendanceSheet .submit-row{display:flex;justify-content:flex-start}
   #attendanceSheet .btn.submit{min-height:60px;padding-inline:26px;border-radius:16px;box-shadow:0 16px 40px rgba(3,60,84,.32);background:linear-gradient(145deg,var(--primary-light),var(--primary));color:#fff;border:none}
   #attendanceSheet .btn.submit:hover{transform:translateY(-2px)}
@@ -157,10 +151,7 @@ const SHEET_HTML = `
         <div class="chips">
           <span id="attCountPresent" class="pill g">حضور: 0</span>
           <span id="attCountLate" class="pill y">تأخير: 0</span>
-          <details id="attAbsentDetails">
-            <summary class="pill r" id="attCountAbsent">غياب: 0</summary>
-            <div id="attAbsentNames" class="lead" style="margin-top:8px"></div>
-          </details>
+          <span id="attCountAbsent" class="pill r">غياب: 0</span>
         </div>
         <div class="submit-row">
           <button id="attSubmitBtn" class="btn submit" type="button">حفظ التقرير</button>
@@ -339,8 +330,6 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
     countPresent: document.getElementById("attCountPresent"),
     countLate: document.getElementById("attCountLate"),
     countAbsent: document.getElementById("attCountAbsent"),
-    absentDetails: document.getElementById("attAbsentDetails"),
-    absentNames: document.getElementById("attAbsentNames"),
     submitBtn: document.getElementById("attSubmitBtn"),
     confirmModal: document.getElementById("attConfirmModal"),
     confirmTitle: document.getElementById("attConfirmTitle"),
@@ -380,6 +369,7 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
   let takenLessonNumbers = new Set();
   let pendingSave = null;
   let currentMeta = null;
+  let successTimer = null;
 
   // Sheet/modal helpers (operate on this module's elements only)
   function openSheet(el) {
@@ -447,10 +437,17 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
 
   // The exact same checkmark-draw celebration used on the schedule save
   // confirmation (admins/adminschedule.html) — same looping animation, same
-  // white/blurred backdrop, dismissed manually via the close button.
+  // white/blurred backdrop, same close button. Also auto-dismisses: this
+  // modal makes the rest of the page inert while open (like every other
+  // modal in this module), and unlike the schedule page — where the admin
+  // is actively looking at the screen they just saved — a teacher may not
+  // notice the small close button, which made the whole page look frozen
+  // until someone found and tapped it.
   function showSuccessCelebration(title) {
     els.successTitle.textContent = title || "تم";
     openModal(els.successModal);
+    if (successTimer) clearTimeout(successTimer);
+    successTimer = setTimeout(() => closeModal(els.successModal), 2500);
   }
 
   // Lesson time loading
@@ -910,12 +907,6 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
     els.countPresent.textContent = `حضور: ${present}`;
     els.countLate.textContent = `تأخير: ${late}`;
     els.countAbsent.textContent = `غياب: ${absent}`;
-    const names = attStudentList
-      .filter(s => attStatuses[s.uid || s.name] === "absent")
-      .map(s => s.name)
-      .join("، ");
-    els.absentNames.textContent = names || "—";
-    if (!names) els.absentDetails.open = false;
   }
 
   function setStatus(student, status, btnP, btnL, btnA, card) {
@@ -1131,7 +1122,7 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
       // that full check here just to confirm the lesson window is still open
       // was adding a very noticeable delay to every single submit — this is a
       // pure client-side time check instead, no network involved.
-      const w = getLessonWindowStatus(currentMeta.lesson);
+      const w = getLessonWindowStatus(currentMeta?.lesson);
       if (!w.ok) {
         showBlocked("time_locked");
         return;
@@ -1398,7 +1389,10 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
   els.errorOk.addEventListener("click", () => closeModal(els.errorModal));
   els.blockedClose.addEventListener("click", () => closeModal(els.blockedModal));
   els.blockedOk.addEventListener("click", () => closeModal(els.blockedModal));
-  els.successClose.addEventListener("click", () => closeModal(els.successModal));
+  els.successClose.addEventListener("click", () => {
+    if (successTimer) { clearTimeout(successTimer); successTimer = null; }
+    closeModal(els.successModal);
+  });
   els.lessonDetailClose.addEventListener("click", () => closeModal(els.lessonDetailModal));
 
   els.confirmModal.querySelector(".overlay").addEventListener("click", () => closeModal(els.confirmModal));
