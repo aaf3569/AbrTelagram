@@ -79,7 +79,7 @@
       padding:12px 16px;
     }
     .titlebar{
-      width:min(1280px, 95vw);
+      width:min(1280px, 100%);
       margin:0 auto;
       display:flex;
       align-items:center;
@@ -154,7 +154,7 @@
 
     main{ flex:1; padding:20px 16px; }
     .board{
-      width:min(1280px, 95vw);
+      width:min(1280px, 100%);
       margin:0 auto;
       display:flex;
       flex-direction:column;
@@ -309,7 +309,7 @@
     label{ font-size:12px; color:var(--muted); font-weight:800; }
 
     .input{
-      height:44px;
+      height:46px;
       border:1px solid var(--border);
       border-radius:12px;
       padding:0 12px;
@@ -328,10 +328,10 @@
     .muted{ color:var(--muted); font-weight:700; }
 
     /* Top controls card (grade/class + break times) */
-    .top-controls-card{ padding:18px 16px; }
+    .card.top-controls-card{ padding:20px 16px; }
     .tc-row-main{
       display:flex;
-      gap:12px;
+      gap:14px;
     }
     .tc-field{
       display:grid;
@@ -355,7 +355,7 @@
     }
     .tc-divider{
       height:1px;
-      margin:18px 0 14px;
+      margin:20px 0 16px;
       background:linear-gradient(to right, transparent, var(--border) 12%, var(--border) 88%, transparent);
     }
     .tc-section-label{
@@ -363,12 +363,12 @@
       font-size:12px;
       font-weight:900;
       color:var(--muted);
-      margin-bottom:10px;
+      margin-bottom:12px;
     }
     .tc-break-grid{
       display:grid;
       grid-template-columns:1fr 1fr;
-      gap:10px;
+      gap:12px;
       width:100%;
     }
     .tc-field-break select{ width:100%; }
@@ -738,7 +738,7 @@
     }
     .unsaved-modal.show{ display: grid; }
     .unsaved-modal-box{
-      width: min(400px, 94vw);
+      width: min(400px, 100%);
       background: #fff;
       border-radius: 20px;
       padding: 36px 28px 28px;
@@ -803,7 +803,7 @@
     }
     .success-modal.show{ display:grid; }
     .success-card{
-      width:min(340px, 92vw);
+      width:min(340px, 100%);
       background:#fff;
       border:1px solid var(--border);
       border-radius:18px;
@@ -879,12 +879,12 @@
     .modal.show{ display:grid; }
 
     .modal-card{
-      width:min(720px, 96vw);
+      width:min(720px, 100%);
       background:#fff;
       border:1px solid var(--border);
       border-radius: 16px;
       box-shadow: var(--shadow-strong);
-      padding:20px;
+      padding:22px 18px 20px;
       animation:pop .16s ease-out;
     }
     @keyframes pop { from{ transform:scale(.98); opacity:0 } to{ transform:scale(1); opacity:1 } }
@@ -892,12 +892,12 @@
     .pop-title{
       font-weight:950;
       color:var(--primary);
-      margin-bottom:14px;
+      margin-bottom:16px;
       font-size:16px;
       text-align:right;
     }
 
-    .row{ display:grid; grid-template-columns: 1fr; gap:14px; }
+    .row{ display:grid; grid-template-columns: 1fr; gap:16px; }
 
     .themed-select, .notes-input{
       border:1px solid var(--border);
@@ -909,13 +909,13 @@
       font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
     }
     .themed-select{
-      height:44px;
+      height:48px;
       font-weight:950;
-      font-size:14px;
+      font-size:15px;
     }
     .notes-input{
-      min-height:92px;
-      padding:10px 12px;
+      min-height:96px;
+      padding:12px;
       resize:vertical;
       font-weight:700;
       line-height:1.7;
@@ -931,12 +931,12 @@
       display:flex;
       gap:10px;
       justify-content:flex-end;
-      margin-top:16px;
+      margin-top:18px;
       flex-wrap:wrap;
     }
     .btn{
-      height:40px;
-      padding:0 14px;
+      height:46px;
+      padding:0 16px;
       border-radius:12px;
       border:1px solid var(--border);
       background:#fff;
@@ -977,7 +977,7 @@
       color:var(--primary);
     }
     .time-input{
-      height:44px;
+      height:48px;
       border:1px solid var(--border);
       border-radius:12px;
       padding:0 12px;
