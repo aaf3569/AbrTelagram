@@ -94,18 +94,20 @@ const STYLES = `
   #attBlockedModal .blocked-actions{width:100%;display:flex;justify-content:center}
   #attBlockedModal .blocked-actions .btn{max-width:180px;min-height:52px}
   #attBlockedModal.open .blocked-card{animation:attBlockedCardIn .2s ease}
-  /* Module-owned success celebration — same look as admins/adminschedule.html's
-     save-success modal (white/blurred backdrop, looping green checkmark draw,
-     manual close), just with attendance-specific text. */
+  /* Module-owned success celebration — looping green checkmark draw on a
+     white/blurred backdrop, dismissed only via the labeled button below the
+     text (no small icon-only close button — easy to miss and, since this
+     modal makes the rest of the page inert while open like every other
+     modal here, missing it makes the whole page look frozen). */
   #attSuccessModal .overlay{background:rgba(255,255,255,.55);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
-  #attSuccessModal .success-card{position:relative;z-index:1;width:min(340px,92vw);background:#fff;border:1px solid var(--border);border-radius:18px;box-shadow:0 24px 60px rgba(3,60,84,.24);padding:18px;display:grid;justify-items:center;gap:12px}
+  #attSuccessModal .success-card{position:relative;z-index:1;width:min(340px,92vw);background:#fff;border:1px solid var(--border);border-radius:18px;box-shadow:0 24px 60px rgba(3,60,84,.24);padding:24px 22px;display:grid;justify-items:center;gap:14px}
   #attSuccessModal.open .success-card{animation:attBlockedCardIn .2s ease}
-  #attSuccessModal .success-close{position:absolute;top:8px;left:8px;width:32px;height:32px;border-radius:999px;border:1px solid var(--border);background:#fff;color:#64748b;font-weight:900;cursor:pointer}
   #attSuccessModal .success-check{width:96px;height:96px;display:grid;place-items:center}
   #attSuccessModal .success-check svg{width:96px;height:96px;overflow:visible}
   #attSuccessModal .success-check circle{fill:none;stroke:#16a34a;stroke-width:6;stroke-dasharray:220;stroke-dashoffset:220;transform-origin:50% 50%;animation:attSuccessRingDraw 1.2s ease-in-out infinite}
   #attSuccessModal .success-check path{fill:none;stroke:#16a34a;stroke-width:7;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:70;stroke-dashoffset:70;animation:attSuccessCheckDraw 1.2s ease-in-out infinite}
-  #attSuccessModal .success-title{font-weight:900;color:#166534;font-size:15px}
+  #attSuccessModal .success-title{font-weight:900;color:#166534;font-size:15px;text-align:center;line-height:1.5}
+  #attSuccessModal .success-ok{width:100%;min-height:52px;margin-top:4px}
   @keyframes attSuccessRingDraw{0%{stroke-dashoffset:220;opacity:.5}30%{stroke-dashoffset:0;opacity:1}70%{stroke-dashoffset:0;opacity:1}100%{stroke-dashoffset:220;opacity:.5}}
   @keyframes attSuccessCheckDraw{0%{stroke-dashoffset:70;opacity:0}25%{stroke-dashoffset:70;opacity:0}45%{stroke-dashoffset:0;opacity:1}70%{stroke-dashoffset:0;opacity:1}100%{stroke-dashoffset:70;opacity:0}}
   @keyframes attBlockedCardIn{from{transform:translateY(8px) scale(.98);opacity:.7}to{transform:translateY(0) scale(1);opacity:1}}
@@ -209,7 +211,6 @@ const SHEET_HTML = `
   <div id="attSuccessModal" class="modal" aria-hidden="true">
     <div class="overlay"></div>
     <div class="success-card" role="status" aria-live="polite">
-      <button id="attSuccessClose" type="button" class="success-close" aria-label="إغلاق">&times;</button>
       <div class="success-check" aria-hidden="true">
         <svg viewBox="0 0 100 100">
           <circle cx="50" cy="50" r="35"></circle>
@@ -217,6 +218,7 @@ const SHEET_HTML = `
         </svg>
       </div>
       <div id="attSuccessTitle" class="success-title">تم</div>
+      <button id="attSuccessOk" class="btn primary success-ok" type="button">إغلاق</button>
     </div>
   </div>
   <div id="attLessonDetailModal" class="modal" aria-hidden="true">
@@ -350,7 +352,7 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
     blockedOk: document.getElementById("attBlockedOk"),
     successModal: document.getElementById("attSuccessModal"),
     successTitle: document.getElementById("attSuccessTitle"),
-    successClose: document.getElementById("attSuccessClose"),
+    successOk: document.getElementById("attSuccessOk"),
     lessonDetailModal: document.getElementById("attLessonDetailModal"),
     lessonDetailTitle: document.getElementById("attLessonDetailTitle"),
     lessonDetailBody: document.getElementById("attLessonDetailBody"),
@@ -369,7 +371,6 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
   let takenLessonNumbers = new Set();
   let pendingSave = null;
   let currentMeta = null;
-  let successTimer = null;
 
   // Sheet/modal helpers (operate on this module's elements only)
   function openSheet(el) {
@@ -437,19 +438,11 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
     openModal(els.blockedModal);
   }
 
-  // The exact same checkmark-draw celebration used on the schedule save
-  // confirmation (admins/adminschedule.html) — same looping animation, same
-  // white/blurred backdrop, same close button. Also auto-dismisses: this
-  // modal makes the rest of the page inert while open (like every other
-  // modal in this module), and unlike the schedule page — where the admin
-  // is actively looking at the screen they just saved — a teacher may not
-  // notice the small close button, which made the whole page look frozen
-  // until someone found and tapped it.
+  // Looping green checkmark celebration. Stays open — no auto-dismiss —
+  // until the teacher taps the labeled إغلاق button below the text.
   function showSuccessCelebration(title) {
     els.successTitle.textContent = title || "تم";
     openModal(els.successModal);
-    if (successTimer) clearTimeout(successTimer);
-    successTimer = setTimeout(() => closeModal(els.successModal), 2500);
   }
 
   // Lesson time loading
@@ -1427,10 +1420,7 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
   els.errorOk.addEventListener("click", () => closeModal(els.errorModal));
   els.blockedClose.addEventListener("click", () => closeModal(els.blockedModal));
   els.blockedOk.addEventListener("click", () => closeModal(els.blockedModal));
-  els.successClose.addEventListener("click", () => {
-    if (successTimer) { clearTimeout(successTimer); successTimer = null; }
-    closeModal(els.successModal);
-  });
+  els.successOk.addEventListener("click", () => closeModal(els.successModal));
   els.lessonDetailClose.addEventListener("click", () => closeModal(els.lessonDetailModal));
 
   els.confirmModal.querySelector(".overlay").addEventListener("click", () => closeModal(els.confirmModal));
