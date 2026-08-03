@@ -94,19 +94,17 @@ const STYLES = `
   #attBlockedModal .blocked-actions{width:100%;display:flex;justify-content:center}
   #attBlockedModal .blocked-actions .btn{max-width:180px;min-height:52px}
   #attBlockedModal.open .blocked-card{animation:attBlockedCardIn .2s ease}
-  /* Module-owned loading overlay — appears the instant a "take attendance"
-     action is tapped, while the schedule checks run, so the tap always gets
-     immediate feedback. Covers the page, which also blocks double-taps. */
-  #attLoadingOverlay{position:fixed;inset:0;z-index:1250;display:none;place-items:center;background:rgba(255,255,255,.6);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
-  #attLoadingOverlay.show{display:grid}
-  #attLoadingOverlay .loading-box{display:grid;justify-items:center;gap:12px}
-  #attLoadingOverlay .loading-spinner{width:52px;height:52px;border-radius:50%;border:5px solid rgba(3,60,84,.15);border-top-color:var(--primary,#033C54);animation:attLoadingSpin 1s linear infinite}
-  #attLoadingOverlay .loading-text{font-weight:900;color:var(--primary,#033C54);font-size:.95rem}
-  @keyframes attLoadingSpin{to{transform:rotate(360deg)}}
-  /* In-sheet student list placeholder while the list loads */
-  #attendanceSheet .att-list-loading{display:grid;justify-items:center;gap:12px;padding:36px 0}
-  #attendanceSheet .att-list-loading .loading-spinner{width:44px;height:44px;border-radius:50%;border:4px solid rgba(3,60,84,.15);border-top-color:var(--primary,#033C54);animation:attLoadingSpin 1s linear infinite}
-  #attendanceSheet .att-list-loading .loading-text{font-weight:800;color:var(--muted,#6b7f9f);font-size:.9rem}
+  /* Skeleton loader — the sheet opens the instant the button is tapped and
+     shows shimmering placeholder cards shaped like the real student cards
+     while the schedule checks and student list load. */
+  #attendanceSheet .sk-card{padding:16px;border:1px solid var(--border);border-radius:16px;background:#fff;box-shadow:var(--shadow-1);display:flex;flex-direction:column;gap:14px}
+  #attendanceSheet .sk-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  #attendanceSheet .sk{position:relative;overflow:hidden;background:rgba(3,60,84,.08);border-radius:8px}
+  #attendanceSheet .sk::after{content:"";position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,transparent,rgba(255,255,255,.65),transparent);animation:attSkShimmer 1.3s ease-in-out infinite}
+  #attendanceSheet .sk-name{height:16px}
+  #attendanceSheet .sk-badge{height:22px;width:38px;border-radius:10px;flex-shrink:0}
+  #attendanceSheet .sk-seg{height:48px;width:100%;border-radius:14px}
+  @keyframes attSkShimmer{to{transform:translateX(100%)}}
   /* Module-owned success celebration — looping green checkmark draw on a
      white/blurred backdrop, dismissed only via the labeled button below the
      text (no small icon-only close button — easy to miss and, since this
@@ -219,12 +217,6 @@ const SHEET_HTML = `
       <div class="blocked-actions">
         <button id="attBlockedOk" class="btn primary" type="button">إغلاق</button>
       </div>
-    </div>
-  </div>
-  <div id="attLoadingOverlay" aria-hidden="true">
-    <div class="loading-box">
-      <div class="loading-spinner"></div>
-      <div class="loading-text">جاري التحميل...</div>
     </div>
   </div>
   <div id="attSuccessModal" class="modal" aria-hidden="true">
@@ -372,7 +364,6 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
     successModal: document.getElementById("attSuccessModal"),
     successTitle: document.getElementById("attSuccessTitle"),
     successOk: document.getElementById("attSuccessOk"),
-    loadingOverlay: document.getElementById("attLoadingOverlay"),
     lessonDetailModal: document.getElementById("attLessonDetailModal"),
     lessonDetailTitle: document.getElementById("attLessonDetailTitle"),
     lessonDetailBody: document.getElementById("attLessonDetailBody"),
@@ -468,19 +459,40 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
     openModal(els.successModal);
   }
 
-  function showLoadingOverlay() { els.loadingOverlay.classList.add("show"); }
-  function hideLoadingOverlay() { els.loadingOverlay.classList.remove("show"); }
+  function renderListSkeleton(count = 6) {
+    // Placeholder name widths vary a little so the list reads as real content.
+    const widths = [58, 44, 66, 50, 61, 47];
+    els.attList.innerHTML = Array.from({ length: count }, (_, i) => `
+      <div class="sk-card" aria-hidden="true">
+        <div class="sk-row">
+          <div class="sk sk-name" style="width:${widths[i % widths.length]}%"></div>
+          <div class="sk sk-badge"></div>
+        </div>
+        <div class="sk sk-seg"></div>
+      </div>`).join("");
+    if (els.submitBtn) els.submitBtn.disabled = true;
+  }
 
-  // Wraps the async pre-open work of start/openForClass/openForEdit:
-  // instant spinner feedback on tap, double-tap guard, guaranteed cleanup.
-  async function withOpeningOverlay(fn) {
+  // Wraps the async pre-open work of start/openForClass/openForEdit: the
+  // sheet opens instantly with skeleton cards (immediate tap feedback; the
+  // sheet covering the page also blocks double-taps), then the real content
+  // replaces the skeleton. If the flow reports it was blocked (returns
+  // false) or throws, the sheet closes again — the blocked/error modal the
+  // flow raised stays on top.
+  async function withSkeletonOpen(fn) {
     if (openingInProgress) return;
     openingInProgress = true;
-    showLoadingOverlay();
+    els.lessonPicker.style.display = "none";
+    renderListSkeleton();
+    openSheet(els.sheet);
     try {
-      await fn();
+      const ok = await fn();
+      if (ok === false) closeSheet(els.sheet);
+    } catch (e) {
+      console.error("[attendance] open failed:", e);
+      closeSheet(els.sheet);
+      showError("خطأ", "تعذّر فتح تسجيل الغياب. حاول مرة أخرى.");
     } finally {
-      hideLoadingOverlay();
       openingInProgress = false;
     }
   }
@@ -1102,11 +1114,7 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
     attStatuses = {};
     takenLessonsByStudent = new Map();
     takenLessonNumbers = new Set();
-    els.attList.innerHTML = `
-      <div class="att-list-loading">
-        <div class="loading-spinner"></div>
-        <div class="loading-text">جاري تحميل الطلاب...</div>
-      </div>`;
+    renderListSkeleton();
     const dateISO = currentMeta?.date || kuwaitTodayISO();
 
     // The student list and the "what's already been taken" data don't
@@ -1152,7 +1160,7 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
       showBlocked("not_logged_in");
       return;
     }
-    await withOpeningOverlay(async () => {
+    await withSkeletonOpen(async () => {
       const dateISO = kuwaitTodayISO();
       // Attendance may only be taken for a lesson you're actually scheduled to
       // teach today — not an arbitrary slot nobody assigned to this class.
@@ -1164,34 +1172,33 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
       ]);
       if (myLessons.size === 0) {
         showBlocked("not_my_class");
-        return;
+        return false;
       }
       const available = LESSON_TIMES.filter(l => myLessons.has(l.index) && !takenSet.has(l.index));
       if (available.length === 0) {
         showBlocked("no_lessons_left");
-        return;
+        return false;
       }
       currentMeta = { ok: true, mode: "any", date: dateISO, classKey, lesson: null };
       buildManualLessonOptions(available);
       loadStudentsForClass(classKey);
-      openSheet(els.sheet);
     });
   }
 
   async function openForEdit(sessionId) {
     if (!sessionId) return;
-    await withOpeningOverlay(async () => {
+    await withSkeletonOpen(async () => {
       const sessionRef = doc(db, ATTENDANCE_SESSIONS_COLLECTION, sessionId);
       const snap = await getDoc(sessionRef);
       if (!snap.exists()) {
         showError("غير موجود", "التقرير غير موجود.");
-        return;
+        return false;
       }
       const data = snap.data() || {};
       const createdAt = data.createdAt || null;
       if (!canEditSessionByTime(createdAt)) {
         showError("تعذّر التعديل", "انتهت مهلة التعديل (45 دقيقة).");
-        return;
+        return false;
       }
       const classKey = data.classKey || "";
       const lessonIndex = Number(data.lesson) || 0;
@@ -1201,10 +1208,8 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
         classKey, lesson: lessonIndex, sessionId, createdAt,
       };
       buildFixedLessonOption(lessonIndex, lessonLabel);
-      // Open right away with the in-list loading placeholder; the student
-      // list and the saved statuses load together (loadStudentsForClass only
-      // defaults statuses that prefill hasn't already set).
-      openSheet(els.sheet);
+      // The student list and the saved statuses load together
+      // (loadStudentsForClass only defaults statuses prefill hasn't set).
       await Promise.all([
         loadStudentsForClass(classKey),
         prefillStatusesFromSession(sessionId),
@@ -1532,9 +1537,9 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
 
   return {
     async start() {
-      await withOpeningOverlay(async () => {
+      await withSkeletonOpen(async () => {
         const c = await checkAllowed(true);
-        if (!c.allowed) return;
+        if (!c.allowed) return false;
         openWithMeta(c.meta);
       });
     },
