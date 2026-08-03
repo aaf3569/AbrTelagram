@@ -40,7 +40,8 @@ const STYLES = `
   #attendanceSheet .att-lesson-dot.future{background:rgba(148,163,184,.10);color:#94a3b8;border-color:rgba(148,163,184,.25);opacity:.65;cursor:default}
   #attendanceSheet .att-lesson-dot.future:hover{transform:none}
   #attendanceSheet .special-case-icon{width:18px;height:18px;margin-inline-start:8px;flex-shrink:0}
-  #attendanceSheet .sheet-header .sheet-title{flex:1;text-align:center}
+  #attendanceSheet .sheet-header{position:relative}
+  #attendanceSheet .sheet-header .sheet-title{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);flex:none;text-align:center;max-width:calc(100% - 220px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   #attendanceSheet .lesson-picker{width:100%}
   #attendanceSheet .att-row{display:flex;gap:12px;flex-wrap:wrap}
   #attendanceSheet .seg{display:flex;align-items:center;border:1px solid var(--border);border-radius:14px;overflow:hidden;background:#fff;box-shadow:var(--shadow-1)}
@@ -59,6 +60,11 @@ const STYLES = `
   #attendanceSheet .pill.g{color:var(--green,#1a7f37);border-color:var(--greenBg,rgba(26,127,55,.08));background:var(--greenBg,rgba(26,127,55,.08))}
   #attendanceSheet .pill.y{color:var(--yellow,#a06d00);border-color:var(--yellowBg,rgba(160,109,0,.10));background:var(--yellowBg,rgba(160,109,0,.10))}
   #attendanceSheet .pill.r{color:var(--red,#b42318);border-color:var(--redBg,rgba(180,35,24,.10));background:var(--redBg,rgba(180,35,24,.10))}
+  /* "غياب" pill is a <summary> (click reveals absent names below) — strip the
+     native disclosure marker so it matches the plain-span pills beside it. */
+  #attendanceSheet summary.pill{list-style:none;cursor:pointer}
+  #attendanceSheet summary.pill::-webkit-details-marker{display:none}
+  #attendanceSheet summary.pill::marker{content:""}
   #attendanceSheet .submit-row{display:flex;justify-content:flex-start}
   #attendanceSheet .btn.submit{min-height:60px;padding-inline:26px;border-radius:16px;box-shadow:0 16px 40px rgba(3,60,84,.32);background:linear-gradient(145deg,var(--primary-light),var(--primary));color:#fff;border:none}
   #attendanceSheet .btn.submit:hover{transform:translateY(-2px)}
@@ -74,6 +80,10 @@ const STYLES = `
   #attConfirmModal .filter-buttons{display:flex;gap:10px;margin-bottom:16px;justify-content:center}
   #attConfirmModal .filter-btn{flex:1;min-height:50px;border-radius:12px;font-weight:800;border:2px solid var(--border);background:#fff;color:var(--primary);cursor:pointer;transition:var(--transition)}
   #attConfirmModal .filter-btn.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+  #attConfirmModal #attFilterAbsent{color:var(--red,#b42318);border-color:rgba(180,35,24,.35)}
+  #attConfirmModal #attFilterAbsent.active{background:var(--red,#b42318);border-color:var(--red,#b42318);color:#fff}
+  #attConfirmModal #attFilterLate{color:var(--yellow,#a06d00);border-color:rgba(160,109,0,.35)}
+  #attConfirmModal #attFilterLate.active{background:var(--yellow,#a06d00);border-color:var(--yellow,#a06d00);color:#fff}
   #attConfirmModal .names-list{border:1px dashed var(--border);border-radius:14px;background:#fafcff;padding:12px;max-height:320px;overflow:auto}
   #attConfirmModal .names-list ul{margin:0;padding-inline-start:18px}
   #attConfirmModal .names-list li{margin:6px 0;font-weight:800}
@@ -90,19 +100,20 @@ const STYLES = `
   #attBlockedModal .blocked-actions{width:100%;display:flex;justify-content:center}
   #attBlockedModal .blocked-actions .btn{max-width:180px;min-height:52px}
   #attBlockedModal.open .blocked-card{animation:attBlockedCardIn .2s ease}
-  /* Module-owned success celebration (green checkmark draw) */
-  #attSuccessModal .overlay{background:rgba(15,23,42,.35);backdrop-filter:blur(6px)}
-  #attSuccessModal .success-card{position:relative;z-index:1;width:min(320px,92vw);background:#fff;border:1px solid var(--border);border-radius:18px;box-shadow:0 24px 60px rgba(3,60,84,.24);padding:22px 18px;display:grid;justify-items:center;gap:10px;text-align:center}
+  /* Module-owned success celebration — same look as admins/adminschedule.html's
+     save-success modal (white/blurred backdrop, looping green checkmark draw,
+     manual close), just with attendance-specific text. */
+  #attSuccessModal .overlay{background:rgba(255,255,255,.55);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+  #attSuccessModal .success-card{position:relative;z-index:1;width:min(340px,92vw);background:#fff;border:1px solid var(--border);border-radius:18px;box-shadow:0 24px 60px rgba(3,60,84,.24);padding:18px;display:grid;justify-items:center;gap:12px}
   #attSuccessModal.open .success-card{animation:attBlockedCardIn .2s ease}
-  #attSuccessModal .success-check{width:88px;height:88px;display:grid;place-items:center}
-  #attSuccessModal .success-check svg{width:88px;height:88px;overflow:visible}
-  #attSuccessModal .success-check circle{fill:none;stroke:#16a34a;stroke-width:6;stroke-dasharray:220;stroke-dashoffset:220;transform-origin:50% 50%;animation:attSuccessRingDraw .9s ease-out forwards}
-  #attSuccessModal .success-check path{fill:none;stroke:#16a34a;stroke-width:7;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:70;stroke-dashoffset:70;animation:attSuccessCheckDraw .6s ease-out .5s forwards}
-  #attSuccessModal .success-title{margin:0;color:#166534;font-weight:900;font-size:1.08rem}
-  #attSuccessModal .success-sub{margin:0;color:var(--muted);font-weight:700;font-size:.9rem}
-  @keyframes attSuccessRingDraw{from{stroke-dashoffset:220;opacity:.4}to{stroke-dashoffset:0;opacity:1}}
-  @keyframes attSuccessCheckDraw{from{stroke-dashoffset:70}to{stroke-dashoffset:0}}
-  /* Module-owned toast */
+  #attSuccessModal .success-close{position:absolute;top:8px;left:8px;width:32px;height:32px;border-radius:999px;border:1px solid var(--border);background:#fff;color:#64748b;font-weight:900;cursor:pointer}
+  #attSuccessModal .success-check{width:96px;height:96px;display:grid;place-items:center}
+  #attSuccessModal .success-check svg{width:96px;height:96px;overflow:visible}
+  #attSuccessModal .success-check circle{fill:none;stroke:#16a34a;stroke-width:6;stroke-dasharray:220;stroke-dashoffset:220;transform-origin:50% 50%;animation:attSuccessRingDraw 1.2s ease-in-out infinite}
+  #attSuccessModal .success-check path{fill:none;stroke:#16a34a;stroke-width:7;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:70;stroke-dashoffset:70;animation:attSuccessCheckDraw 1.2s ease-in-out infinite}
+  #attSuccessModal .success-title{font-weight:900;color:#166534;font-size:15px}
+  @keyframes attSuccessRingDraw{0%{stroke-dashoffset:220;opacity:.5}30%{stroke-dashoffset:0;opacity:1}70%{stroke-dashoffset:0;opacity:1}100%{stroke-dashoffset:220;opacity:.5}}
+  @keyframes attSuccessCheckDraw{0%{stroke-dashoffset:70;opacity:0}25%{stroke-dashoffset:70;opacity:0}45%{stroke-dashoffset:0;opacity:1}70%{stroke-dashoffset:0;opacity:1}100%{stroke-dashoffset:70;opacity:0}}
   @keyframes attBlockedCardIn{from{transform:translateY(8px) scale(.98);opacity:.7}to{transform:translateY(0) scale(1);opacity:1}}
   @keyframes attBlockedRingDraw{0%{stroke-dashoffset:220;opacity:.5}30%{stroke-dashoffset:0;opacity:1}70%{stroke-dashoffset:0;opacity:1}100%{stroke-dashoffset:220;opacity:.5}}
   @keyframes attBlockedXDraw{0%{stroke-dashoffset:56;opacity:0}25%{stroke-dashoffset:56;opacity:0}45%{stroke-dashoffset:0;opacity:1}70%{stroke-dashoffset:0;opacity:1}100%{stroke-dashoffset:56;opacity:0}}
@@ -207,14 +218,14 @@ const SHEET_HTML = `
   <div id="attSuccessModal" class="modal" aria-hidden="true">
     <div class="overlay"></div>
     <div class="success-card" role="status" aria-live="polite">
+      <button id="attSuccessClose" type="button" class="success-close" aria-label="إغلاق">&times;</button>
       <div class="success-check" aria-hidden="true">
         <svg viewBox="0 0 100 100">
           <circle cx="50" cy="50" r="35"></circle>
           <path d="M32 52 L45 65 L70 40"></path>
         </svg>
       </div>
-      <h3 id="attSuccessTitle" class="success-title">تم</h3>
-      <p id="attSuccessSub" class="success-sub"></p>
+      <div id="attSuccessTitle" class="success-title">تم</div>
     </div>
   </div>
   <div id="attLessonDetailModal" class="modal" aria-hidden="true">
@@ -350,7 +361,7 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
     blockedOk: document.getElementById("attBlockedOk"),
     successModal: document.getElementById("attSuccessModal"),
     successTitle: document.getElementById("attSuccessTitle"),
-    successSub: document.getElementById("attSuccessSub"),
+    successClose: document.getElementById("attSuccessClose"),
     lessonDetailModal: document.getElementById("attLessonDetailModal"),
     lessonDetailTitle: document.getElementById("attLessonDetailTitle"),
     lessonDetailBody: document.getElementById("attLessonDetailBody"),
@@ -369,7 +380,6 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
   let takenLessonNumbers = new Set();
   let pendingSave = null;
   let currentMeta = null;
-  let successTimer = null;
 
   // Sheet/modal helpers (operate on this module's elements only)
   function openSheet(el) {
@@ -435,18 +445,12 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
     openModal(els.blockedModal);
   }
 
-  // The same checkmark-draw celebration used elsewhere on the site (e.g. the
-  // schedule save confirmation), reused here for a saved/updated attendance
-  // report instead of a plain toast. Auto-dismisses, then runs onDone.
-  function showSuccessCelebration(title, sub, onDone) {
+  // The exact same checkmark-draw celebration used on the schedule save
+  // confirmation (admins/adminschedule.html) — same looping animation, same
+  // white/blurred backdrop, dismissed manually via the close button.
+  function showSuccessCelebration(title) {
     els.successTitle.textContent = title || "تم";
-    els.successSub.textContent = sub || "";
     openModal(els.successModal);
-    if (successTimer) clearTimeout(successTimer);
-    successTimer = setTimeout(() => {
-      closeModal(els.successModal);
-      if (typeof onDone === "function") onDone();
-    }, 1500);
   }
 
   // Lesson time loading
@@ -1122,8 +1126,16 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
         return;
       }
     } else if (currentMeta?.mode !== "any") {
-      const c = await checkAllowed();
-      if (!c.allowed) return;
+      // Schedule eligibility was already verified (with a couple of Firestore
+      // round trips) when the sheet was opened via checkAllowed(). Re-running
+      // that full check here just to confirm the lesson window is still open
+      // was adding a very noticeable delay to every single submit — this is a
+      // pure client-side time check instead, no network involved.
+      const w = getLessonWindowStatus(currentMeta.lesson);
+      if (!w.ok) {
+        showBlocked("time_locked");
+        return;
+      }
     }
     if (!currentMeta?.classKey) {
       showError("تعذّر الحفظ", "اختر فصلًا أولاً.");
@@ -1221,16 +1233,15 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
         });
         await batch.commit();
         closeModal(els.confirmModal);
-        showSuccessCelebration("تم حفظ التعديلات", `للحصة: ${lessonLabel}`, () => {
-          closeSheet(els.sheet);
-          if (typeof onSaved === "function") {
-            try {
-              onSaved({ classKey, lesson: lessonIndex, lessonLabel, date: dateKW, mode, counts: { present: present.length, late: late.length, absent: absent.length } });
-            } catch (e) {
-              console.error("[attendance] onSaved threw:", e);
-            }
+        closeSheet(els.sheet);
+        showSuccessCelebration(`تم حفظ التعديلات — للحصة: ${lessonLabel}`);
+        if (typeof onSaved === "function") {
+          try {
+            onSaved({ classKey, lesson: lessonIndex, lessonLabel, date: dateKW, mode, counts: { present: present.length, late: late.length, absent: absent.length } });
+          } catch (e) {
+            console.error("[attendance] onSaved threw:", e);
           }
-        });
+        }
         return;
       }
 
@@ -1290,29 +1301,28 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
       });
       await batch.commit();
       closeModal(els.confirmModal);
-      showSuccessCelebration("تم تسجيل الغياب بنجاح", `للحصة: ${lessonLabel}`, () => {
-        closeSheet(els.sheet);
+      closeSheet(els.sheet);
+      showSuccessCelebration(`تم تسجيل الغياب بنجاح — للحصة: ${lessonLabel}`);
 
-        if (mode === "any" && typeof onLateSubmit === "function") {
-          const nowMin = getCurrentKuwaitMinutes();
-          const cutoffMin = parseTimeToMinutes(lessonTime?.end || "00:00") + 5;
-          if (nowMin > cutoffMin) {
-            try {
-              onLateSubmit({ classKey, lesson: lessonIndex, lessonLabel, date: dateKW });
-            } catch (e) {
-              console.error("[attendance] onLateSubmit threw:", e);
-            }
-          }
-        }
-
-        if (typeof onSaved === "function") {
+      if (mode === "any" && typeof onLateSubmit === "function") {
+        const nowMin = getCurrentKuwaitMinutes();
+        const cutoffMin = parseTimeToMinutes(lessonTime?.end || "00:00") + 5;
+        if (nowMin > cutoffMin) {
           try {
-            onSaved({ classKey, lesson: lessonIndex, lessonLabel, date: dateKW, mode, counts: { present: present.length, late: late.length, absent: absent.length } });
+            onLateSubmit({ classKey, lesson: lessonIndex, lessonLabel, date: dateKW });
           } catch (e) {
-            console.error("[attendance] onSaved threw:", e);
+            console.error("[attendance] onLateSubmit threw:", e);
           }
         }
-      });
+      }
+
+      if (typeof onSaved === "function") {
+        try {
+          onSaved({ classKey, lesson: lessonIndex, lessonLabel, date: dateKW, mode, counts: { present: present.length, late: late.length, absent: absent.length } });
+        } catch (e) {
+          console.error("[attendance] onSaved threw:", e);
+        }
+      }
     } catch (e) {
       console.error("[attendance] save:", e);
       closeModal(els.confirmModal);
@@ -1388,6 +1398,7 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
   els.errorOk.addEventListener("click", () => closeModal(els.errorModal));
   els.blockedClose.addEventListener("click", () => closeModal(els.blockedModal));
   els.blockedOk.addEventListener("click", () => closeModal(els.blockedModal));
+  els.successClose.addEventListener("click", () => closeModal(els.successModal));
   els.lessonDetailClose.addEventListener("click", () => closeModal(els.lessonDetailModal));
 
   els.confirmModal.querySelector(".overlay").addEventListener("click", () => closeModal(els.confirmModal));
