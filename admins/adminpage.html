@@ -762,8 +762,9 @@
             <div class="input-wrap"><input id="adName" class="input" type="text" placeholder="الاسم الكامل" autocomplete="name"></div>
           </div>
           <div class="field">
-            <label class="label" for="adEmail">البريد الإلكتروني</label>
-            <div class="input-wrap"><input id="adEmail" class="input" type="email" placeholder="example@email.com" autocomplete="email"></div>
+            <label class="label" for="adEmail">رقم البطاقة المدنية</label>
+            <div class="input-wrap"><input id="adEmail" class="input" type="text" placeholder="مثال: 298040100633" autocomplete="off" inputmode="numeric" pattern="[0-9]*"></div>
+            <div class="muted" style="font-size:.82rem; margin-top:-4px;">سيتم الحفظ تلقائياً بصيغة: t[الرقم]@gmail.com</div>
           </div>
           <div class="field">
             <label class="label" for="adPassword">كلمة المرور</label>
@@ -2472,18 +2473,20 @@
       adOk.style.display='none'; adErr.style.display='none';
       try{
         const name = adName.value.trim();
-        const email = adEmail.value.trim();
+        const civilId = adEmail.value.trim().replace(/\D+/g, '');
+        const email = civilId ? `t${civilId}@gmail.com` : '';
         const pass  = adPassword.value;
 
         if(!name) throw new Error('أدخل الاسم.');
-        if(!emailRx.test(email)) throw new Error('أدخل بريدًا صالحًا.');
+        if(!civilId) throw new Error('أدخل رقم البطاقة المدنية بالأرقام فقط.');
+        if(!emailRx.test(email)) throw new Error('تعذّر توليد البريد الإلكتروني من رقم البطاقة المدنية.');
         if(!pass || pass.length<6) throw new Error('كلمة المرور ٦ أحرف على الأقل.');
 
         const cred = await createUserWithEmailAndPassword(helperAuth, email, pass);
         const newUid = cred.user.uid;
 
         await setDoc(doc(db,'teachers',newUid), {
-          uid:newUid, name, email, role:"admin",
+          uid:newUid, name, email, civilId, role:"admin",
           createdAt: serverTimestamp()
         }, { merge:true });
 
