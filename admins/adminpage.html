@@ -493,7 +493,6 @@
           <!-- /NEW -->
           <div id="telegramSettingsSlot"></div>
           <button id="logoutBtn" class="btn ghost section-break" type="button" aria-label="تسجيل الخروج">تسجيل الخروج</button>
-          <button id="deleteBtn" class="btn danger" type="button" aria-label="حذف الحساب">حذف الحساب</button>
         </div>
 
       </section>
@@ -839,7 +838,6 @@
     import { initializeApp, getApp, getApps } from "/shared/firebase.js";
     import {
       getAuth, onAuthStateChanged, signOut,
-      EmailAuthProvider, reauthenticateWithCredential, deleteUser,
       createUserWithEmailAndPassword
     } from "/shared/firebase.js";
     import {
@@ -905,7 +903,6 @@
     const openAdmins   = document.getElementById('openAdmins');
     const openClasses  = document.getElementById('openClasses');
     const logoutBtn    = document.getElementById('logoutBtn');
-    const deleteBtn    = document.getElementById('deleteBtn');
 
     // NEW: schedules button ref
     const openSchedules = document.getElementById('openSchedules');
@@ -1984,32 +1981,6 @@
       location.href='/index.html';
     };
     logoutBtn.addEventListener('click', logoutBtnHandler);
-
-    async function ensureRecentLogin(){
-      const u=auth.currentUser; if(!u) throw new Error('غير مسجّل الدخول');
-      const p=prompt('لأمانك، أدخل كلمة المرور الحالية:'); if(!p) throw new Error('تم الإلغاء');
-      const cred=EmailAuthProvider.credential(u.email||'', p);
-      await reauthenticateWithCredential(u, cred);
-    }
-    deleteBtn.addEventListener('click', async ()=>{
-      const u=auth.currentUser; if(!u) return;
-      const isConfirmed = await showActionPopup({
-        variant: 'danger',
-        title: 'تحذير: حذف الحساب نهائيًا',
-        message: 'سيتم حذف حسابك بشكل دائم ولا يمكن التراجع عن هذه العملية.',
-        confirmText: 'نعم، احذف الحساب',
-        cancelText: 'إلغاء',
-        icon: '!'
-      });
-      if(!isConfirmed) return;
-      try{
-        try{ await setDoc(doc(db,'teachers',u.uid), { deletedAt: serverTimestamp() }, { merge:true }); }catch{}
-        await ensureRecentLogin();
-        await deleteUser(u);
-        alert('تم حذف الحساب.');
-        location.href='/index.html';
-      }catch(e){ alert('تعذّر الحذف: '+(e?.message||'')); }
-    });
 
     /* ========= معلمون ========= */
     let selectedSubject = null;
