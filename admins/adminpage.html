@@ -425,6 +425,51 @@
       border-bottom:1px solid #f0f4f8; display:flex; align-items:center; gap:8px;
     }
     .seen-name-item:last-child { border-bottom:none; }
+
+    .notif-current-actions { margin-top:10px; display:flex; justify-content:flex-end; }
+    .notif-deactivate-btn {
+      padding:8px 14px; border-radius:10px; border:1px solid rgba(203,43,43,.35);
+      background:#fff; color:#cb2b2b; font-weight:800; font-size:.82rem; cursor:pointer;
+      font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      transition:background .12s ease, border-color .12s ease;
+      display:inline-flex; align-items:center; gap:6px;
+    }
+    .notif-deactivate-btn:hover { background:#fdecec; border-color:rgba(203,43,43,.5); }
+    .notif-deactivate-btn:disabled { opacity:.6; cursor:not-allowed; }
+    .notif-active-tag { color:#126a2e; font-weight:800; }
+
+    .notif-hist-actions { display:flex; flex-direction:column; align-items:flex-end; gap:8px; flex-shrink:0; }
+    .notif-hist-icon-row { display:flex; gap:6px; }
+    .notif-icon-btn {
+      width:34px; height:34px; border-radius:10px; border:1px solid var(--border);
+      background:#f4f8fb; color:#033C54; cursor:pointer; display:grid; place-items:center;
+      transition:background .12s ease, border-color .12s ease, transform .08s ease;
+      flex-shrink:0; padding:0;
+    }
+    .notif-icon-btn svg { width:16px; height:16px; }
+    .notif-icon-btn:hover { background:#e8f0f8; border-color:rgba(3,60,84,.3); }
+    .notif-icon-btn:active { transform:scale(.92); }
+    .notif-icon-btn:disabled { opacity:.5; cursor:not-allowed; }
+    .notif-icon-btn.delete { color:#cb2b2b; }
+    .notif-icon-btn.delete:hover { background:#fdecec; border-color:rgba(203,43,43,.4); }
+
+    .notif-edit-form {
+      display:none; flex-direction:column; gap:12px;
+      padding:14px; border-top:1px solid var(--border); background:#fbfdff;
+    }
+    .notif-edit-form.open { display:flex; }
+    .notif-edit-form .notif-textarea { min-height:100px; font-size:.92rem; }
+    .notif-edit-actions { display:flex; gap:8px; justify-content:flex-end; }
+    .notif-edit-save, .notif-edit-cancel {
+      padding:10px 18px; border-radius:10px; font-weight:800; font-size:.85rem; cursor:pointer;
+      font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      transition:opacity .12s ease, background .12s ease;
+    }
+    .notif-edit-save { border:none; background:var(--primary); color:#fff; }
+    .notif-edit-save:hover { opacity:.92; }
+    .notif-edit-save:disabled { opacity:.6; cursor:not-allowed; }
+    .notif-edit-cancel { border:1px solid var(--border); background:#fff; color:#4a6072; }
+    .notif-edit-cancel:hover { background:#f4f8fb; }
   </style>
 
   <!-- iOS home screen icon -->
@@ -792,6 +837,12 @@
         <div class="label">الإشعار النشط حالياً</div>
         <div id="currentNotifDisplay" style="margin-top:8px;">
           <div class="muted">—</div>
+        </div>
+        <div id="currentNotifActions" class="notif-current-actions" style="display:none;">
+          <button id="deactivateNotifBtn" type="button" class="notif-deactivate-btn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+            إيقاف الإشعار
+          </button>
         </div>
       </div>
 
@@ -1504,12 +1555,14 @@
     const emailRx = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const toArabicDigits = (str) => str.replace(/\d/g, d => '٠١٢٣٤٥٦٧٨٩'[d]);
 
-    function openNotificationsPanel(updateHash = true){
+    async function openNotificationsPanel(updateHash = true){
       openSheet(notificationsSheet);
       if(updateHash && window.location.hash !== NOTIFICATIONS_HASH){
         window.location.hash = 'notifications';
       }
-      loadCurrentNotif();
+      // History cards need to know the active notifId (to tag/gate the
+      // "current" card correctly), so load current before history.
+      await loadCurrentNotif();
       loadNotifHistory();
     }
     function closeNotificationsPanel(clearHashOnClose = true){
@@ -1746,6 +1799,9 @@
     const notifOk             = document.getElementById('notifOk');
     const notifErr            = document.getElementById('notifErr');
     const currentNotifDisplay = document.getElementById('currentNotifDisplay');
+    const currentNotifActions = document.getElementById('currentNotifActions');
+    const deactivateNotifBtn  = document.getElementById('deactivateNotifBtn');
+    let activeNotifId = null;
 
     let notifFormOpen = false;
 
@@ -1824,7 +1880,8 @@
         notifFormOpen = false;
         notifForm.classList.remove('expanded');
         openNotifFormBtn.querySelector('svg').style.transform = '';
-        loadCurrentNotif();
+        await loadCurrentNotif();
+        loadNotifHistory();
       } catch (e) {
         notifErr.textContent = 'حدث خطأ أثناء الإرسال: ' + (e?.message || '');
         notifErr.style.display = 'block';
@@ -1843,9 +1900,12 @@
         const snap = await getDoc(doc(db, 'site_notifications', 'current'));
         if (!snap.exists() || !snap.data()?.active) {
           currentNotifDisplay.innerHTML = '<div class="muted">لا يوجد إشعار نشط حالياً.</div>';
+          currentNotifActions.style.display = 'none';
+          activeNotifId = null;
           return;
         }
         const d = snap.data();
+        activeNotifId = d.notifId || null;
         const isImportant = d.importance === 'important';
         currentNotifDisplay.innerHTML = `
           <div class="notif-current">
@@ -1854,10 +1914,35 @@
             <div>${escNotif(d.text)}</div>
           </div>
         `;
+        currentNotifActions.style.display = 'flex';
       } catch {
         currentNotifDisplay.innerHTML = '<div class="muted">تعذّر تحميل الإشعار.</div>';
+        currentNotifActions.style.display = 'none';
+        activeNotifId = null;
       }
     }
+
+    deactivateNotifBtn.addEventListener('click', async () => {
+      const isConfirmed = await showActionPopup({
+        variant: 'danger',
+        title: 'إيقاف الإشعار',
+        message: 'سيتوقف هذا الإشعار عن الظهور للمستخدمين. يبقى محفوظًا في السجل ويمكن حذفه من هناك.',
+        confirmText: 'نعم، أوقف الإشعار',
+        cancelText: 'إلغاء',
+        icon: '!'
+      });
+      if (!isConfirmed) return;
+      deactivateNotifBtn.disabled = true;
+      try {
+        await setDoc(doc(db, 'site_notifications', 'current'), { active: false }, { merge: true });
+        await loadCurrentNotif();
+        loadNotifHistory();
+      } catch (e) {
+        alert('تعذّر إيقاف الإشعار: ' + (e?.message || ''));
+      } finally {
+        deactivateNotifBtn.disabled = false;
+      }
+    });
 
     async function loadNotifHistory() {
       const histEl = document.getElementById('notifHistory');
@@ -1884,19 +1969,52 @@
           const card = document.createElement('div');
           card.className = 'notif-hist-card';
           const listId = 'seen-list-' + d.id;
+          const isActive = d.id === activeNotifId;
           card.innerHTML = `
             <div class="notif-hist-header">
               <div class="notif-hist-meta">
                 <div class="nc-badge${isImp ? ' important' : ''}">${isImp ? '🔴 مهم' : '📢 عادي'}</div>
                 ${hData.title ? `<div class="notif-hist-title">${escNotif(hData.title)}</div>` : ''}
                 <div class="notif-hist-preview">${escNotif(hData.text || '')}</div>
-                <div class="notif-hist-date">${dateStr}</div>
+                <div class="notif-hist-date">${dateStr}${isActive ? ' · <span class="notif-active-tag">نشط الآن</span>' : ''}</div>
               </div>
-              <button class="seen-count-btn" type="button" title="من شاهده">
-                <span class="scn">…</span> شاهده
-              </button>
+              <div class="notif-hist-actions">
+                <div class="notif-hist-icon-row">
+                  <button class="notif-icon-btn edit" type="button" title="تعديل" aria-label="تعديل الإشعار">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                  </button>
+                  <button class="notif-icon-btn delete" type="button" title="حذف" aria-label="حذف الإشعار">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                  </button>
+                </div>
+                <button class="seen-count-btn" type="button" title="من شاهده">
+                  <span class="scn">…</span> شاهده
+                </button>
+              </div>
             </div>
             <div class="notif-seen-list" id="${listId}"></div>
+            <div class="notif-edit-form">
+              <div class="field">
+                <div class="label">الأهمية</div>
+                <div class="input-wrap"><select class="input notif-edit-importance">
+                  <option value="normal">إشعار عادي</option>
+                  <option value="important">مهم</option>
+                </select></div>
+              </div>
+              <div class="field">
+                <div class="label">العنوان (اختياري)</div>
+                <div class="input-wrap"><input type="text" class="input notif-edit-title" maxlength="120"></div>
+              </div>
+              <div class="field">
+                <div class="label">النص</div>
+                <textarea class="notif-textarea notif-edit-text" maxlength="1000"></textarea>
+              </div>
+              <div class="notif-edit-actions">
+                <button class="notif-edit-save" type="button">حفظ التعديل</button>
+                <button class="notif-edit-cancel" type="button">إلغاء</button>
+              </div>
+              <div class="err notif-edit-err"></div>
+            </div>
           `;
           stack.appendChild(card);
           const seenListEl = card.querySelector('#' + listId);
@@ -1932,6 +2050,90 @@
               } catch {
                 seenListEl.innerHTML = '<div class="muted" style="font-size:.85rem;">تعذّر التحميل.</div>';
               }
+            }
+          });
+
+          // Edit (inline form, prefilled; live-syncs the "current" doc if this
+          // history entry is the one currently being broadcast)
+          const editBtn      = card.querySelector('.notif-icon-btn.edit');
+          const editForm     = card.querySelector('.notif-edit-form');
+          const editImportEl = card.querySelector('.notif-edit-importance');
+          const editTitleEl  = card.querySelector('.notif-edit-title');
+          const editTextEl   = card.querySelector('.notif-edit-text');
+          const editSaveBtn  = card.querySelector('.notif-edit-save');
+          const editCancelBtn= card.querySelector('.notif-edit-cancel');
+          const editErrEl    = card.querySelector('.notif-edit-err');
+
+          editBtn.addEventListener('click', () => {
+            const opening = !editForm.classList.contains('open');
+            if (opening) {
+              editImportEl.value = hData.importance === 'important' ? 'important' : 'normal';
+              editTitleEl.value = hData.title || '';
+              editTextEl.value = hData.text || '';
+              editErrEl.style.display = 'none';
+            }
+            editForm.classList.toggle('open', opening);
+          });
+          editCancelBtn.addEventListener('click', () => editForm.classList.remove('open'));
+          editSaveBtn.addEventListener('click', async () => {
+            const newText = editTextEl.value.trim();
+            if (!newText) {
+              editErrEl.textContent = 'يرجى كتابة نص الإشعار.';
+              editErrEl.style.display = 'block';
+              return;
+            }
+            editErrEl.style.display = 'none';
+            editSaveBtn.disabled = true;
+            editSaveBtn.textContent = 'جارٍ الحفظ...';
+            try {
+              const updates = {
+                text: newText,
+                title: editTitleEl.value.trim() || null,
+                importance: editImportEl.value,
+                editedAt: serverTimestamp(),
+              };
+              await updateDoc(doc(db, 'site_notifications_history', d.id), updates);
+              if (d.id === activeNotifId) {
+                await setDoc(doc(db, 'site_notifications', 'current'), updates, { merge: true });
+              }
+              await loadCurrentNotif();
+              loadNotifHistory();
+            } catch (e) {
+              editErrEl.textContent = 'تعذّر حفظ التعديل: ' + (e?.message || '');
+              editErrEl.style.display = 'block';
+              editSaveBtn.disabled = false;
+              editSaveBtn.textContent = 'حفظ التعديل';
+            }
+          });
+
+          // Delete (removes the history record + its "seen" subcollection;
+          // also deactivates the live banner if this was the active one)
+          const deleteBtn = card.querySelector('.notif-icon-btn.delete');
+          deleteBtn.addEventListener('click', async () => {
+            const isConfirmed = await showActionPopup({
+              variant: 'danger',
+              title: 'حذف الإشعار نهائيًا',
+              message: 'سيتم حذف هذا الإشعار من السجل بشكل نهائي ولا يمكن التراجع عن هذه العملية.',
+              confirmText: 'نعم، احذف',
+              cancelText: 'إلغاء',
+              icon: '!'
+            });
+            if (!isConfirmed) return;
+            editBtn.disabled = true;
+            deleteBtn.disabled = true;
+            try {
+              const seenSnap = await getDocs(collection(db, 'site_notifications_history', d.id, 'seen'));
+              await Promise.all(seenSnap.docs.map(sd => deleteDoc(sd.ref)));
+              await deleteDoc(doc(db, 'site_notifications_history', d.id));
+              if (d.id === activeNotifId) {
+                await deleteDoc(doc(db, 'site_notifications', 'current')).catch(() => {});
+              }
+              await loadCurrentNotif();
+              loadNotifHistory();
+            } catch (e) {
+              alert('تعذّر حذف الإشعار: ' + (e?.message || ''));
+              editBtn.disabled = false;
+              deleteBtn.disabled = false;
             }
           });
         });
