@@ -723,6 +723,26 @@ body.student-profile-open #studentSheet .sheet-header{
   cursor: pointer;
 }
 
+/* === Add Student modal: bulk name entry === */
+.st-names-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.bulk-count-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.bulk-count-wrap {
+  width: 96px;
+  flex: none;
+  min-height: 44px;
+}
+.bulk-count-wrap .input {
+  text-align: center;
+}
+
 /* === NEW: Reorder Modal Styles === */
 .reorder-modal-overlay {
   position: fixed;
@@ -1331,7 +1351,6 @@ body.student-profile-open #studentSheet .sheet-header{
     grid-template-columns:repeat(auto-fill, minmax(270px, 1fr));
     gap:14px;
   }
-  #addStudentModal .row{ flex-wrap:nowrap; }
 
   /* ---- Sheet chrome + modals: a bit more room on wide screens ---- */
   .sheet-header{ padding:20px 28px; }
@@ -1856,15 +1875,12 @@ body.student-profile-open #studentSheet .sheet-header{
       </button>
     </div>
     <div class="modal-body">
-      <div class="row">
-        <div class="field">
-          <div class="label">اسم الطالب</div>
-          <div class="input-wrap"><input id="stName" class="input" type="text" placeholder="الاسم الكامل" autocomplete="name"></div>
+      <div class="field">
+        <div class="label">اسم الطالب</div>
+        <div id="stNamesList" class="st-names-list">
+          <div class="input-wrap"><input class="input st-name-input" type="text" placeholder="الاسم الكامل" autocomplete="off"></div>
         </div>
-        <div class="field">
-          <div class="label">الرقم المدني</div>
-          <div class="input-wrap"><input id="stCivil" class="input" type="text" inputmode="numeric" placeholder="الرقم المدني"></div>
-        </div>
+        <div class="muted" style="font-size:.82rem;">يمكنك لصق عدة أسماء من إكسل دفعة واحدة داخل أي حقل، وستتوزّع تلقائياً على الحقول التالية بنفس ترتيبها.</div>
       </div>
 
       <div class="field">
@@ -1873,6 +1889,13 @@ body.student-profile-open #studentSheet .sheet-header{
           <span class="label" style="margin: 0; font-weight: 600;">حالة خاصة؟</span>
         </label>
         <div class="muted" style="font-size:.86rem; margin-top:-6px;">لن يتم إنشاء حساب دخول — فقط حفظ بيانات الطالب في Firestore.</div>
+      </div>
+
+      <div class="field">
+        <div class="bulk-count-row">
+          <span class="label" style="margin:0;">عدد الطلاب</span>
+          <div class="input-wrap bulk-count-wrap"><input id="stBulkCount" class="input" type="number" min="1" max="100" step="1" value="1" inputmode="numeric"></div>
+        </div>
       </div>
 
       <div id="asOk" class="ok"></div>
@@ -2000,8 +2023,8 @@ const openAddStudent = document.getElementById('openAddStudent');
 const addStudentModal = document.getElementById('addStudentModal');
 const closeAddStudentModalBtn = document.getElementById('closeAddStudentModal');
 const cancelAddStudentBtn = document.getElementById('cancelAddStudent');
-const stName = document.getElementById('stName');
-const stCivil = document.getElementById('stCivil');
+const stNamesList = document.getElementById('stNamesList');
+const stBulkCount = document.getElementById('stBulkCount');
 const createStudentBtn = document.getElementById('createStudentBtn');
 const asOk = document.getElementById('asOk');
 const asErr = document.getElementById('asErr');
@@ -3054,11 +3077,84 @@ initStudentRequestForm();
 let selectedClass = null;
 let currentClassStudents = []; // Store students for the current class
 
+/* ========= Add Student modal: bulk name entry ========= */
+// One row per student name. A single-line paste behaves like a normal
+// paste; a multi-line paste (copied straight out of Excel) is split and
+// distributed across this input and the ones after it, growing the list
+// if there are more pasted names than existing rows.
+function createNameInputRow(){
+  const wrap = document.createElement('div');
+  wrap.className = 'input-wrap';
+  wrap.innerHTML = `<input class="input st-name-input" type="text" placeholder="الاسم الكامل" autocomplete="off">`;
+  const input = wrap.querySelector('input');
+  attachNamePasteHandler(input);
+  return wrap;
+}
+
+function attachNamePasteHandler(input){
+  input.addEventListener('paste', (e)=>{
+    const text = (e.clipboardData || window.clipboardData)?.getData('text');
+    if(!text) return;
+    const lines = text.split(/\r\n|\r|\n/).map(s => s.trim());
+    while(lines.length && lines[lines.length - 1] === '') lines.pop();
+    if(lines.length <= 1) return; // plain single-name paste: default behavior
+
+    e.preventDefault();
+    const inputs = Array.from(stNamesList.querySelectorAll('.st-name-input'));
+    const startIndex = inputs.indexOf(input);
+
+    lines.forEach((line, i) => {
+      const idx = startIndex + i;
+      let target = inputs[idx];
+      if(!target){
+        const row = createNameInputRow();
+        stNamesList.appendChild(row);
+        target = row.querySelector('input');
+        inputs.push(target);
+      }
+      target.value = line;
+    });
+    stBulkCount.value = inputs.length;
+    (inputs[startIndex + lines.length] || inputs[inputs.length - 1])?.focus();
+  });
+}
+
+function setNameInputCount(n){
+  n = Math.max(1, Math.min(100, Math.round(Number(n)) || 1));
+  const rows = Array.from(stNamesList.children);
+  if(n < rows.length){
+    for(let i = rows.length - 1; i >= n; i--) rows[i].remove();
+  } else if(n > rows.length){
+    for(let i = rows.length; i < n; i++) stNamesList.appendChild(createNameInputRow());
+  }
+  stBulkCount.value = n;
+}
+
+function resetAddStudentForm(){
+  stNamesList.innerHTML = '';
+  stNamesList.appendChild(createNameInputRow());
+  stBulkCount.value = 1;
+  stSpecialCase.checked = false;
+}
+
+// Resize on commit (blur/change), not on every keystroke — typing "20"
+// passes through "2" for an instant, and resizing live would delete
+// already-typed names in rows 3-20 before the "0" even lands.
+stBulkCount.addEventListener('change', ()=> setNameInputCount(stBulkCount.value));
+stBulkCount.addEventListener('keydown', (e)=>{
+  if(e.key !== 'Enter') return;
+  e.preventDefault();
+  setNameInputCount(stBulkCount.value);
+});
+
+resetAddStudentForm();
+
 function openClass(className){
   selectedClass = className;
   classTitle.textContent = toArabicDigits(className);
   classNameStrong.textContent = toArabicDigits(className);
   closeModal(addStudentModal);
+  resetAddStudentForm();
   asOk.style.display='none'; asErr.style.display='none';
   openSheet(classSheet);
   loadStudents(className);
@@ -3085,11 +3181,12 @@ window.addEventListener('popstate', ()=>{ applyStudentRoute(); });
 
 openAddStudent.addEventListener('click', ()=>{
   asOk.style.display='none'; asErr.style.display='none';
+  resetAddStudentForm();
   openModal(addStudentModal);
-  stName.focus();
+  stNamesList.querySelector('.st-name-input')?.focus();
 });
-closeAddStudentModalBtn.addEventListener('click', ()=> closeModal(addStudentModal));
-cancelAddStudentBtn.addEventListener('click', ()=> closeModal(addStudentModal));
+closeAddStudentModalBtn.addEventListener('click', ()=>{ closeModal(addStudentModal); resetAddStudentForm(); });
+cancelAddStudentBtn.addEventListener('click', ()=>{ closeModal(addStudentModal); resetAddStudentForm(); });
 
 refreshStudents.addEventListener('click', ()=>{ if(selectedClass) loadStudents(selectedClass); });
 
@@ -3231,53 +3328,49 @@ createStudentBtn.addEventListener('click', async ()=>{
   asOk.style.display='none';
   asErr.style.display='none';
   try{
-    const name = (stName.value||'').trim();
-    const civilid = (stCivil.value||'').trim();
     const cls = selectedClass;
-    const specialCase = stSpecialCase.checked;
-    
     if(!cls) throw new Error('لم يتم تحديد فصل.');
-    if(!name) throw new Error('أدخل اسم الطالب.');
-    
-    // Calculate the next studentNumber
-    const maxStudentNumber = currentClassStudents.reduce((max, st) => {
+
+    // Order matters: students are numbered in the order their name rows
+    // appear, so a pasted Excel column gets the exact same order as
+    // studentNumber (1, 2, 3, ...) continuing from the class's current max.
+    const names = Array.from(stNamesList.querySelectorAll('.st-name-input'))
+      .map(inp => inp.value.trim())
+      .filter(Boolean);
+    if(!names.length) throw new Error('أدخل اسم طالب واحد على الأقل.');
+
+    const specialCase = stSpecialCase.checked;
+
+    let nextStudentNumber = currentClassStudents.reduce((max, st) => {
       const num = st.studentNumber;
-      if (typeof num === 'number' && !isNaN(num) && num > max) {
-        return num;
+      return (typeof num === 'number' && !isNaN(num) && num > max) ? num : max;
+    }, 0) + 1;
+
+    const batch = writeBatch(db);
+    names.forEach((name) => {
+      const ref = doc(collection(db,'students'));
+      const studentData = {
+        uid: ref.id,
+        name,
+        class: cls,
+        specialCase,
+        studentNumber: nextStudentNumber++,
+        createdAt: serverTimestamp()
+      };
+      if (specialCase && specialCaseModalContext.tempReason) {
+        studentData.specialCaseReason = specialCaseModalContext.tempReason;
+        studentData.specialCaseUpdatedAt = serverTimestamp();
+        studentData.specialCaseUpdatedBy = auth.currentUser.uid;
       }
-      return max;
-    }, 0);
-    
-    const nextStudentNumber = maxStudentNumber + 1;
-    
-    const ref = doc(collection(db,'students'));
-    
-    const studentData = { 
-      uid: ref.id, 
-      name, 
-      civilid, 
-      class: cls, 
-      specialCase,
-      studentNumber: nextStudentNumber,
-      createdAt: serverTimestamp() 
-    };
-    
-    // Add special case reason if available
-    if (specialCase && specialCaseModalContext.tempReason) {
-      studentData.specialCaseReason = specialCaseModalContext.tempReason;
-      studentData.specialCaseUpdatedAt = serverTimestamp();
-      studentData.specialCaseUpdatedBy = auth.currentUser.uid;
-    }
-    
-    await setDoc(ref, studentData, { merge:true });
-    
-    asOk.textContent='تم إضافة الطالب.';
+      batch.set(ref, studentData, { merge:true });
+    });
+    await batch.commit();
+
+    asOk.textContent = names.length > 1 ? `تم إضافة ${toArabicDigits(names.length)} طلاب.` : 'تم إضافة الطالب.';
     asOk.style.display='block';
-    stName.value='';
-    stCivil.value='';
-    stSpecialCase.checked = false;
+    resetAddStudentForm();
     specialCaseModalContext.tempReason = null; // Clear temp reason
-    
+
     // Reload students to update sorting
     await loadStudents(cls);
     await refreshSchoolStats();
