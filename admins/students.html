@@ -1283,10 +1283,9 @@ body.student-profile-open #studentSheet .sheet-header{
   .group, .spacer, .student-request-shell{ grid-column:1; }
   .spacer{ height:6px; }
 
-  .group-body{ display:block !important; }
-  .group > .subject::after{ display:none; }
-  .grade-hero{ cursor:default; }
-  .grade-hero:hover{ transform:none; }
+  /* Grade sections stay collapsible (dropdown) exactly like before —
+     only the layout of an *opened* group's classes changes, from a
+     vertical list to a wrapping pill grid. */
   .group .list{
     display:grid;
     grid-template-columns:repeat(auto-fill, minmax(150px, 1fr));
