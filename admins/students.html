@@ -1263,28 +1263,37 @@ body.student-profile-open #studentSheet .sheet-header{
      on every row otherwise, even when there's plenty of space. */
   .row .field{ width:auto; flex:1 1 240px; }
 
-  /* ---- Classes home: sticky stats sidebar + grade group list ---- */
+  /* ---- Classes home: sticky stats sidebar + grade group list ----
+     #gradesMain and #schoolStatsPanel are the ONLY two grid items —
+     both sit in a single row (column 1 and column 2). Earlier this
+     used grid-row:1/-1 to span the sidebar across each group's own
+     row, but a row-spanning item forces the *sum* of the tracks it
+     spans to fit its height, and that extra space gets distributed
+     across every spanned row — inflating each collapsed group's row
+     to match the tall sidebar instead of hugging its own content.
+     Wrapping the groups in one element sidesteps that entirely. */
   #stateClasses{
     display:grid;
     grid-template-columns: minmax(0, 1fr) minmax(300px, 340px);
     align-items:start;
     gap:20px;
   }
+  #gradesMain{ grid-column:1; }
   #schoolStatsPanel{
     grid-column:2;
-    grid-row:1 / -1;
     position:sticky;
     top:96px;
     margin-bottom:0;
+    align-self:start;
   }
   #schoolStatsPanel .school-overview-body{
     grid-template-columns:1fr;
   }
-  .group, .student-request-shell{ grid-column:1; }
-  /* The grid's own gap already separates the groups — the .spacer
-     divs were a manual-margin hack for the old block-flow layout and
-     would just add extra, uneven space on top of the grid gap. */
-  #stateClasses .spacer{ display:none; }
+  /* The wrapper's own flow already separates the groups — the
+     .spacer divs were a manual-margin hack for the old block-flow
+     layout and would just add extra, uneven space on top of that. */
+  #gradesMain .spacer{ display:none; }
+  #gradesMain .group{ margin-bottom:20px; }
 
   /* Grade sections stay collapsible (dropdown) exactly like before —
      only the layout of an *opened* group's classes changes, from a
@@ -1414,23 +1423,25 @@ body.student-profile-open #studentSheet .sheet-header{
           </div>
         </div>
       </div>
-      <div class="group" id="g10">
-        <button class="subject grade-hero" type="button"> <span>الصف العاشر</span> </button>
-        <div class="group-body"> <div class="list" id="list10"></div> </div>
-      </div>
-      <div class="spacer"></div>
-      <div class="group" id="g11">
-        <button class="subject grade-hero" type="button"> <span>الصف الحادي عشر</span> </button>
-        <div class="group-body"> <div class="list" id="list11"></div> </div>
-      </div>
-      <div class="spacer"></div>
-      <div class="group" id="g12">
-        <button class="subject grade-hero" type="button"> <span>الصف الثاني عشر</span> </button>
-        <div class="group-body"> <div class="list" id="list12"></div> </div>
-      </div>
+      <div id="gradesMain">
+        <div class="group" id="g10">
+          <button class="subject grade-hero" type="button"> <span>الصف العاشر</span> </button>
+          <div class="group-body"> <div class="list" id="list10"></div> </div>
+        </div>
+        <div class="spacer"></div>
+        <div class="group" id="g11">
+          <button class="subject grade-hero" type="button"> <span>الصف الحادي عشر</span> </button>
+          <div class="group-body"> <div class="list" id="list11"></div> </div>
+        </div>
+        <div class="spacer"></div>
+        <div class="group" id="g12">
+          <button class="subject grade-hero" type="button"> <span>الصف الثاني عشر</span> </button>
+          <div class="group-body"> <div class="list" id="list12"></div> </div>
+        </div>
 
-      <div class="student-request-shell" aria-label="طلب طالب">
-        <button id="toggleStudentRequest" class="btn primary student-request-toggle" type="button">طلب طالب</button>
+        <div class="student-request-shell" aria-label="طلب طالب">
+          <button id="toggleStudentRequest" class="btn primary student-request-toggle" type="button">طلب طالب</button>
+        </div>
       </div>
     </section>
   </div>
