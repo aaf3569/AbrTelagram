@@ -1246,6 +1246,84 @@ body.student-profile-open #studentSheet .sheet-header{
     padding:12px;
   }
 }
+
+/* ============================================================
+   Desktop layout for the rest of the page — the classes/grades
+   home screen and the class roster sheet. #studentSheet already
+   gets its own desktop treatment above; this reuses the same
+   min-width:900px breakpoint so the whole page switches to
+   "desktop mode" together. Phones/tablets under 900px are
+   completely unaffected by anything in this block.
+   ============================================================ */
+@media (min-width: 900px){
+  .column{ width:min(1360px, 94vw); }
+
+  /* Let paired fields (name/civil id, etc.) sit side by side
+     instead of always stacking — .field{width:100%} forces a wrap
+     on every row otherwise, even when there's plenty of space. */
+  .row .field{ width:auto; flex:1 1 240px; }
+
+  /* ---- Classes home: sticky stats sidebar + always-open grade groups ---- */
+  #stateClasses{
+    display:grid;
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 340px);
+    align-items:start;
+    gap:24px;
+  }
+  #schoolStatsPanel{
+    grid-column:2;
+    grid-row:1 / -1;
+    position:sticky;
+    top:96px;
+    margin-bottom:0;
+  }
+  #schoolStatsPanel .school-overview-body{
+    grid-template-columns:1fr;
+  }
+  .group, .spacer, .student-request-shell{ grid-column:1; }
+  .spacer{ height:6px; }
+
+  .group-body{ display:block !important; }
+  .group > .subject::after{ display:none; }
+  .grade-hero{ cursor:default; }
+  .grade-hero:hover{ transform:none; }
+  .group .list{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(150px, 1fr));
+    gap:10px;
+  }
+  .group .list .class-option{ padding:14px 12px; min-height:48px; }
+
+  .student-request-shell{
+    background:linear-gradient(120deg, #033C54 0%, #0a5f81 100%);
+    border-color:transparent;
+    border-radius:18px;
+    padding:20px;
+    box-shadow:0 16px 34px rgba(3,60,84,.22);
+  }
+  .btn.primary.student-request-toggle{ background:#fff; color:var(--primary); }
+
+  /* ---- Class roster + secondary sheets: more room, card grid ---- */
+  #classSheet .sheet-body,
+  #studentRequestSheet .sheet-body{
+    width:min(1080px, 92vw);
+  }
+  #attDetailSheet .sheet-body{
+    width:min(720px, 92vw);
+  }
+  #studentsList.list{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(270px, 1fr));
+    gap:14px;
+  }
+  #addStudentForm .row{ flex-wrap:nowrap; }
+
+  /* ---- Sheet chrome + modals: a bit more room on wide screens ---- */
+  .sheet-header{ padding:20px 28px; }
+  .back-btn{ height:48px; padding:0 20px; }
+  .sheet-title{ font-size:1.15rem; }
+  .modal, .reorder-modal{ max-width:640px; }
+}
 </style>
 
   <!-- iOS home screen icon -->
