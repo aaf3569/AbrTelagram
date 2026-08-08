@@ -109,6 +109,7 @@ main{ flex:1; padding:32px 20px 40px; display:flex }
 }
 .btn:active{ transform:translateY(0) scale(.995) }
 .btn:focus-visible{ outline:3px solid var(--focus); outline-offset:2px }
+.btn:disabled{ opacity:.5; cursor:not-allowed; box-shadow:none !important; transform:none !important; }
 .btn.primary{
   background: linear-gradient(180deg, #065372, #033C54); color:#fff; box-shadow: 0 12px 28px rgba(3,60,84,.26)
 }
@@ -232,6 +233,18 @@ main{ flex:1; padding:32px 20px 40px; display:flex }
   min-height:56px;
   font-size:1.04rem;
 }
+.class-settings-shell{
+  margin-top:14px;
+}
+.class-settings-shell .btn{
+  width:100%;
+  min-height:52px;
+}
+.danger-zone{
+  border-color: rgba(180,35,24,.35) !important;
+  background: rgba(180,35,24,.04);
+}
+.danger-zone .label{ color: var(--red); }
 .student-request-panel{
   margin-top:12px;
   border-top:1px solid var(--border);
@@ -1337,6 +1350,7 @@ body.student-profile-open #studentSheet .sheet-header{
     box-shadow:0 16px 34px rgba(3,60,84,.22);
   }
   .btn.primary.student-request-toggle{ background:#fff; color:var(--primary); }
+  .class-settings-shell{ margin-top:14px; }
 
   /* ---- Class roster + secondary sheets: more room, card grid ---- */
   #classSheet .sheet-body,
@@ -1464,6 +1478,10 @@ body.student-profile-open #studentSheet .sheet-header{
         <div class="student-request-shell" aria-label="طلب طالب">
           <button id="toggleStudentRequest" class="btn primary student-request-toggle" type="button">طلب طالب</button>
         </div>
+
+        <div class="class-settings-shell" aria-label="إعدادات الفصول">
+          <button id="openClassSettings" class="btn ghost" type="button">⚙️ إعدادات الفصول</button>
+        </div>
       </div>
     </section>
   </div>
@@ -1555,6 +1573,173 @@ body.student-profile-open #studentSheet .sheet-header{
     </section>
   </div>
 </section>
+
+<!-- CLASS SETTINGS SHEET -->
+<section id="classSettingsSheet" class="sheet" aria-hidden="true">
+  <div class="sheet-header">
+    <button id="closeClassSettings" class="back-btn" aria-label="رجوع">رجوع</button>
+    <h3 class="sheet-title">إعدادات الفصول</h3>
+  </div>
+  <div class="sheet-body">
+
+    <!-- Change Grade / move a class -->
+    <div class="section">
+      <div class="label" style="margin-bottom:2px;">تغيير الصف (نقل فصل)</div>
+      <div class="muted" style="font-size:.86rem;">اختر الفصل الحالي والفصل الجديد. سيُنقل جميع طلاب الفصل الحالي إلى الفصل الجديد ويُعاد ترقيمهم بعد آخر رقم موجود هناك.</div>
+
+      <div class="row">
+        <div class="field">
+          <div class="label">الصف الحالي</div>
+          <div class="input-wrap"><select id="mvFromGrade" class="input">
+            <option value="10">الصف العاشر</option>
+            <option value="11">الصف الحادي عشر</option>
+            <option value="12">الصف الثاني عشر</option>
+          </select></div>
+        </div>
+        <div class="field">
+          <div class="label">الفصل الحالي</div>
+          <div class="input-wrap"><select id="mvFromClass" class="input"></select></div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <div class="label">الصف الجديد</div>
+          <div class="input-wrap"><select id="mvToGrade" class="input">
+            <option value="10">الصف العاشر</option>
+            <option value="11">الصف الحادي عشر</option>
+            <option value="12">الصف الثاني عشر</option>
+          </select></div>
+        </div>
+        <div class="field">
+          <div class="label">الفصل الجديد</div>
+          <div class="input-wrap"><select id="mvToClass" class="input"></select></div>
+        </div>
+      </div>
+
+      <div id="mvCountInfo" class="muted" style="font-size:.86rem;"></div>
+      <div style="display:flex; justify-content:flex-end;">
+        <button id="mvSubmitBtn" class="btn primary" type="button">نقل الفصل</button>
+      </div>
+      <div id="mvOk" class="ok"></div>
+      <div id="mvErr" class="err"></div>
+    </div>
+
+    <!-- Delete a class -->
+    <div class="section">
+      <div class="label" style="margin-bottom:2px; color:var(--red);">حذف فصل بالكامل</div>
+      <div class="muted" style="font-size:.86rem;">سيتم حذف جميع بيانات طلاب الفصل المحدد نهائيًا (بما فيها الغياب والتعهدات والتقارير والملاحظات). هذا الإجراء لا يمكن التراجع عنه.</div>
+
+      <div class="row">
+        <div class="field">
+          <div class="label">الصف</div>
+          <div class="input-wrap"><select id="delGrade" class="input">
+            <option value="10">الصف العاشر</option>
+            <option value="11">الصف الحادي عشر</option>
+            <option value="12">الصف الثاني عشر</option>
+          </select></div>
+        </div>
+        <div class="field">
+          <div class="label">الفصل</div>
+          <div class="input-wrap"><select id="delClass" class="input"></select></div>
+        </div>
+      </div>
+
+      <div id="delCountInfo" class="muted" style="font-size:.86rem;"></div>
+      <div style="display:flex; justify-content:flex-end;">
+        <button id="delClassBtn" class="btn danger" type="button">حذف الفصل</button>
+      </div>
+      <div id="delOk" class="ok"></div>
+      <div id="delErr" class="err"></div>
+    </div>
+
+    <!-- Danger zone: delete every student -->
+    <div class="section danger-zone">
+      <div class="label" style="margin-bottom:2px;">منطقة الخطر</div>
+      <div class="muted" style="font-size:.86rem;">حذف جميع الطلاب في جميع الصفوف نهائيًا. هذا الإجراء لا يمكن التراجع عنه إطلاقًا ويتطلب تأكيدين منفصلين.</div>
+      <div style="display:flex; justify-content:flex-end;">
+        <button id="deleteAllStudentsBtn" class="btn danger" type="button">حذف كل الطلاب</button>
+      </div>
+      <div id="delAllOk" class="ok"></div>
+      <div id="delAllErr" class="err"></div>
+    </div>
+
+  </div>
+</section>
+
+<!-- Delete Class confirm modal -->
+<div id="deleteClassConfirmModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title">تأكيد حذف الفصل</h3>
+      <button id="closeDeleteClassConfirm" class="modal-close" aria-label="إغلاق">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 6L6 18M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div id="deleteClassConfirmText" class="msg" style="text-align:right;">—</div>
+    </div>
+    <div class="modal-footer">
+      <button id="cancelDeleteClassConfirm" class="btn ghost" type="button">إلغاء</button>
+      <button id="confirmDeleteClassBtn" class="btn danger" type="button">حذف نهائيًا</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete All Students: step 1, password re-auth -->
+<div id="deleteAllPasswordModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title">تأكيد الهوية</h3>
+      <button id="closeDeleteAllPasswordModal" class="modal-close" aria-label="إغلاق">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 6L6 18M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="muted" style="font-size:.9rem;">لتأكيد أنك المشرف، أدخل كلمة مرور حسابك.</div>
+      <div class="field">
+        <div class="label">كلمة المرور</div>
+        <div class="input-wrap"><input id="deleteAllPasswordInput" class="input" type="password" placeholder="••••••••" autocomplete="current-password"></div>
+      </div>
+      <div id="deleteAllPasswordErr" class="err"></div>
+    </div>
+    <div class="modal-footer">
+      <button id="cancelDeleteAllPassword" class="btn ghost" type="button">إلغاء</button>
+      <button id="submitDeleteAllPassword" class="btn danger" type="button">التالي</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete All Students: step 2, type-to-confirm -->
+<div id="deleteAllTypeModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title">تأكيد نهائي</h3>
+      <button id="closeDeleteAllTypeModal" class="modal-close" aria-label="إغلاق">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 6L6 18M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="msg" style="text-align:right;">سيتم حذف <b id="deleteAllTotalCount">—</b> طالبًا نهائيًا من جميع الصفوف. لا يمكن التراجع عن هذا الإجراء.</div>
+      <div class="field">
+        <div class="label">للتأكيد، اكتب: <b>Delete all students</b></div>
+        <div class="input-wrap"><input id="deleteAllTypeInput" class="input" type="text" placeholder="Delete all students" autocomplete="off"></div>
+      </div>
+      <div id="deleteAllProgress" class="muted" style="font-size:.86rem; display:none;"></div>
+      <div id="deleteAllTypeErr" class="err"></div>
+    </div>
+    <div class="modal-footer">
+      <button id="cancelDeleteAllType" class="btn ghost" type="button">إلغاء</button>
+      <button id="confirmDeleteAllBtn" class="btn danger" type="button" disabled>حذف كل الطلاب نهائيًا</button>
+    </div>
+  </div>
+</div>
 
 <!-- CLASS PAGE -->
 <section id="classSheet" class="sheet" aria-hidden="true">
@@ -1966,7 +2151,7 @@ body.student-profile-open #studentSheet .sheet-header{
     import { firebaseConfig } from "/shared/firebase.js";
 /* ========= Firebase ========= */
 import { initializeApp, getApp, getApps } from "/shared/firebase.js";
-import { getAuth, onAuthStateChanged } from "/shared/firebase.js";
+import { getAuth, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from "/shared/firebase.js";
 import { initializeFirestore, persistentSingleTabManager, collection, getDocs, query, where, orderBy, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp, writeBatch } from "/shared/firebase.js";
 
 
@@ -2137,6 +2322,50 @@ const cancelReorderBtn = document.getElementById('cancelReorder');
 const saveReorderBtn = document.getElementById('saveReorder');
 const reorderList = document.getElementById('reorderList');
 const reorderSaveIndicator = document.getElementById('reorderSaveIndicator');
+
+// Class settings refs
+const openClassSettingsBtn = document.getElementById('openClassSettings');
+const classSettingsSheet = document.getElementById('classSettingsSheet');
+const closeClassSettingsBtn = document.getElementById('closeClassSettings');
+const mvFromGrade = document.getElementById('mvFromGrade');
+const mvFromClass = document.getElementById('mvFromClass');
+const mvToGrade = document.getElementById('mvToGrade');
+const mvToClass = document.getElementById('mvToClass');
+const mvCountInfo = document.getElementById('mvCountInfo');
+const mvSubmitBtn = document.getElementById('mvSubmitBtn');
+const mvOk = document.getElementById('mvOk');
+const mvErr = document.getElementById('mvErr');
+const delGrade = document.getElementById('delGrade');
+const delClass = document.getElementById('delClass');
+const delCountInfo = document.getElementById('delCountInfo');
+const delClassBtn = document.getElementById('delClassBtn');
+const delOk = document.getElementById('delOk');
+const delErr = document.getElementById('delErr');
+const deleteAllStudentsBtn = document.getElementById('deleteAllStudentsBtn');
+const delAllOk = document.getElementById('delAllOk');
+const delAllErr = document.getElementById('delAllErr');
+
+const deleteClassConfirmModal = document.getElementById('deleteClassConfirmModal');
+const closeDeleteClassConfirm = document.getElementById('closeDeleteClassConfirm');
+const cancelDeleteClassConfirm = document.getElementById('cancelDeleteClassConfirm');
+const confirmDeleteClassBtn = document.getElementById('confirmDeleteClassBtn');
+const deleteClassConfirmText = document.getElementById('deleteClassConfirmText');
+
+const deleteAllPasswordModal = document.getElementById('deleteAllPasswordModal');
+const closeDeleteAllPasswordModal = document.getElementById('closeDeleteAllPasswordModal');
+const cancelDeleteAllPassword = document.getElementById('cancelDeleteAllPassword');
+const submitDeleteAllPassword = document.getElementById('submitDeleteAllPassword');
+const deleteAllPasswordInput = document.getElementById('deleteAllPasswordInput');
+const deleteAllPasswordErr = document.getElementById('deleteAllPasswordErr');
+
+const deleteAllTypeModal = document.getElementById('deleteAllTypeModal');
+const closeDeleteAllTypeModal = document.getElementById('closeDeleteAllTypeModal');
+const cancelDeleteAllType = document.getElementById('cancelDeleteAllType');
+const confirmDeleteAllBtn = document.getElementById('confirmDeleteAllBtn');
+const deleteAllTypeInput = document.getElementById('deleteAllTypeInput');
+const deleteAllTypeErr = document.getElementById('deleteAllTypeErr');
+const deleteAllTotalCount = document.getElementById('deleteAllTotalCount');
+const deleteAllProgress = document.getElementById('deleteAllProgress');
 
 // NEW: Warning system references
 const warningAbsenceCount = document.getElementById('warningAbsenceCount');
@@ -3072,6 +3301,274 @@ function initStudentRequestForm(){
 }
 
 initStudentRequestForm();
+
+/* ========= Class Settings (move class / delete class / delete all) ========= */
+const GRADE_CLASSES = { '10': GROUP_10, '11': GROUP_11, '12': GROUP_12 };
+const STUDENT_SUBCOLLECTIONS = ['attendance','commitments','enrollments','reports','notes'];
+const DELETE_ALL_PHRASE = 'delete all students';
+
+function populateClassSelect(selectEl, grade){
+  const list = GRADE_CLASSES[grade] || [];
+  selectEl.innerHTML = list.map(c => `<option value="${c}">${toArabicDigits(c)}</option>`).join('');
+}
+
+async function countStudentsInClass(classKey){
+  if(!classKey) return 0;
+  const snap = await getDocs(query(collection(db,'students'), where('class','==', classKey)));
+  return snap.size;
+}
+
+async function updateMoveCountInfo(){
+  mvCountInfo.textContent = 'جارٍ التحقق...';
+  const n = await countStudentsInClass(mvFromClass.value);
+  mvCountInfo.textContent = `عدد الطلاب في الفصل الحالي: ${toArabicDigits(n)}`;
+}
+
+async function updateDeleteCountInfo(){
+  delCountInfo.textContent = 'جارٍ التحقق...';
+  const n = await countStudentsInClass(delClass.value);
+  delCountInfo.textContent = `عدد الطلاب في هذا الفصل: ${toArabicDigits(n)}`;
+}
+
+function openClassSettingsSheet(){
+  populateClassSelect(mvFromClass, mvFromGrade.value);
+  populateClassSelect(mvToClass, mvToGrade.value);
+  populateClassSelect(delClass, delGrade.value);
+  mvOk.style.display='none'; mvErr.style.display='none';
+  delOk.style.display='none'; delErr.style.display='none';
+  delAllOk.style.display='none'; delAllErr.style.display='none';
+  updateMoveCountInfo();
+  updateDeleteCountInfo();
+  openSheet(classSettingsSheet);
+}
+openClassSettingsBtn.addEventListener('click', openClassSettingsSheet);
+closeClassSettingsBtn.addEventListener('click', ()=> closeSheet(classSettingsSheet));
+
+mvFromGrade.addEventListener('change', ()=>{ populateClassSelect(mvFromClass, mvFromGrade.value); updateMoveCountInfo(); });
+mvToGrade.addEventListener('change', ()=> populateClassSelect(mvToClass, mvToGrade.value));
+mvFromClass.addEventListener('change', updateMoveCountInfo);
+delGrade.addEventListener('change', ()=>{ populateClassSelect(delClass, delGrade.value); updateDeleteCountInfo(); });
+delClass.addEventListener('change', updateDeleteCountInfo);
+
+// ---- Move class ----
+mvSubmitBtn.addEventListener('click', async ()=>{
+  mvOk.style.display='none'; mvErr.style.display='none';
+  const fromClass = mvFromClass.value;
+  const toClass = mvToClass.value;
+  try{
+    if(!fromClass || !toClass) throw new Error('اختر الفصل الحالي والفصل الجديد.');
+    if(fromClass === toClass) throw new Error('الفصل الحالي والفصل الجديد متطابقان.');
+
+    const snap = await getDocs(query(collection(db,'students'), where('class','==', fromClass)));
+    if(snap.empty) throw new Error('لا يوجد طلاب في هذا الفصل.');
+
+    const students = [];
+    snap.forEach(d => students.push({ id:d.id, ...d.data() }));
+    students.sort((a,b)=>{
+      const an = (typeof a.studentNumber === 'number' && !isNaN(a.studentNumber)) ? a.studentNumber : 99999;
+      const bn = (typeof b.studentNumber === 'number' && !isNaN(b.studentNumber)) ? b.studentNumber : 99999;
+      return an - bn;
+    });
+
+    if(!confirm(`سيتم نقل ${students.length} طالبًا من ${fromClass} إلى ${toClass}. متابعة؟`)) return;
+
+    const destSnap = await getDocs(query(collection(db,'students'), where('class','==', toClass)));
+    let nextNumber = 0;
+    destSnap.forEach(d=>{
+      const n = d.data().studentNumber;
+      if(typeof n === 'number' && !isNaN(n) && n > nextNumber) nextNumber = n;
+    });
+    nextNumber++;
+
+    mvSubmitBtn.disabled = true;
+    mvSubmitBtn.textContent = 'جارٍ النقل...';
+
+    const batch = writeBatch(db);
+    students.forEach(st => {
+      batch.update(doc(db,'students', st.id), {
+        class: toClass,
+        studentNumber: nextNumber++,
+        updatedAt: serverTimestamp()
+      });
+    });
+    await batch.commit();
+
+    mvOk.textContent = `تم نقل ${toArabicDigits(students.length)} طالبًا إلى ${toArabicDigits(toClass)}.`;
+    mvOk.style.display='block';
+    await updateMoveCountInfo();
+    await refreshSchoolStats();
+    if(selectedClass === fromClass || selectedClass === toClass) await loadStudents(selectedClass);
+  }catch(e){
+    mvErr.textContent = e?.message || 'تعذّر نقل الفصل.';
+    mvErr.style.display='block';
+  }finally{
+    mvSubmitBtn.disabled = false;
+    mvSubmitBtn.textContent = 'نقل الفصل';
+  }
+});
+
+// ---- Shared deep-delete helper: a student doc plus its known
+// subcollections (attendance/commitments/enrollments/reports/notes).
+// Chunks deletes into batches under Firestore's 500-write cap.
+async function deleteStudentsDeep(studentIds, onProgress){
+  const BATCH_LIMIT = 450;
+  let batch = writeBatch(db);
+  let opsInBatch = 0;
+  let done = 0;
+
+  const flush = async () => {
+    if(opsInBatch > 0){
+      await batch.commit();
+      batch = writeBatch(db);
+      opsInBatch = 0;
+    }
+  };
+  const queueDelete = async (ref) => {
+    batch.delete(ref);
+    opsInBatch++;
+    if(opsInBatch >= BATCH_LIMIT) await flush();
+  };
+
+  for(const sid of studentIds){
+    for(const sub of STUDENT_SUBCOLLECTIONS){
+      let subSnap;
+      try{ subSnap = await getDocs(collection(db,'students', sid, sub)); }
+      catch{ continue; }
+      for(const d of subSnap.docs) await queueDelete(d.ref);
+    }
+    await queueDelete(doc(db,'students', sid));
+    done++;
+    if(onProgress) onProgress(done, studentIds.length);
+  }
+  await flush();
+}
+
+// ---- Delete one class ----
+let pendingDeleteClass = null;
+
+delClassBtn.addEventListener('click', async ()=>{
+  delOk.style.display='none'; delErr.style.display='none';
+  const classKey = delClass.value;
+  if(!classKey){ delErr.textContent='اختر الفصل.'; delErr.style.display='block'; return; }
+  const n = await countStudentsInClass(classKey);
+  if(n === 0){ delErr.textContent='لا يوجد طلاب في هذا الفصل.'; delErr.style.display='block'; return; }
+  pendingDeleteClass = classKey;
+  deleteClassConfirmText.innerHTML = `سيتم حذف <b>${toArabicDigits(n)}</b> طالبًا من الفصل <b>${toArabicDigits(classKey)}</b> نهائيًا، بما في ذلك سجلات الغياب والتعهدات والتقارير والملاحظات الخاصة بهم. هذا الإجراء لا يمكن التراجع عنه.`;
+  openModal(deleteClassConfirmModal);
+});
+closeDeleteClassConfirm.addEventListener('click', ()=> closeModal(deleteClassConfirmModal));
+cancelDeleteClassConfirm.addEventListener('click', ()=> closeModal(deleteClassConfirmModal));
+
+confirmDeleteClassBtn.addEventListener('click', async ()=>{
+  if(!pendingDeleteClass) return;
+  const classKey = pendingDeleteClass;
+  confirmDeleteClassBtn.disabled = true;
+  cancelDeleteClassConfirm.disabled = true;
+  const originalLabel = confirmDeleteClassBtn.textContent;
+  try{
+    const snap = await getDocs(query(collection(db,'students'), where('class','==', classKey)));
+    const ids = snap.docs.map(d=>d.id);
+    await deleteStudentsDeep(ids, (done,total)=>{
+      confirmDeleteClassBtn.textContent = `جارٍ الحذف... ${toArabicDigits(done)}/${toArabicDigits(total)}`;
+    });
+    closeModal(deleteClassConfirmModal);
+    delOk.textContent = `تم حذف الفصل ${toArabicDigits(classKey)} (${toArabicDigits(ids.length)} طالبًا).`;
+    delOk.style.display='block';
+    await updateDeleteCountInfo();
+    await refreshSchoolStats();
+    if(selectedClass === classKey){
+      closeSheet(classSheet);
+      selectedClass = null;
+    }
+  }catch(e){
+    console.error('[deleteClass]', e);
+    delErr.textContent = 'تعذّر حذف الفصل بالكامل. حاول مرة أخرى.';
+    delErr.style.display='block';
+    closeModal(deleteClassConfirmModal);
+  }finally{
+    pendingDeleteClass = null;
+    confirmDeleteClassBtn.disabled = false;
+    cancelDeleteClassConfirm.disabled = false;
+    confirmDeleteClassBtn.textContent = originalLabel;
+  }
+});
+
+// ---- Delete ALL students: password re-auth, then a literal type-to-confirm ----
+deleteAllStudentsBtn.addEventListener('click', ()=>{
+  delAllOk.style.display='none'; delAllErr.style.display='none';
+  deleteAllPasswordInput.value = '';
+  deleteAllPasswordErr.style.display='none';
+  openModal(deleteAllPasswordModal);
+});
+closeDeleteAllPasswordModal.addEventListener('click', ()=> closeModal(deleteAllPasswordModal));
+cancelDeleteAllPassword.addEventListener('click', ()=> closeModal(deleteAllPasswordModal));
+
+submitDeleteAllPassword.addEventListener('click', async ()=>{
+  deleteAllPasswordErr.style.display='none';
+  const password = deleteAllPasswordInput.value;
+  if(!password){ deleteAllPasswordErr.textContent='أدخل كلمة المرور.'; deleteAllPasswordErr.style.display='block'; return; }
+  submitDeleteAllPassword.disabled = true;
+  submitDeleteAllPassword.textContent = 'جارٍ التحقق...';
+  try{
+    const user = auth.currentUser;
+    const cred = EmailAuthProvider.credential(user.email || '', password);
+    await reauthenticateWithCredential(user, cred);
+
+    closeModal(deleteAllPasswordModal);
+
+    const snap = await getDocs(collection(db,'students'));
+    deleteAllTotalCount.textContent = toArabicDigits(snap.size);
+    deleteAllTypeInput.value = '';
+    deleteAllTypeErr.style.display='none';
+    deleteAllProgress.style.display='none';
+    confirmDeleteAllBtn.disabled = true;
+    openModal(deleteAllTypeModal);
+  }catch(e){
+    deleteAllPasswordErr.textContent = 'كلمة المرور غير صحيحة.';
+    deleteAllPasswordErr.style.display='block';
+  }finally{
+    submitDeleteAllPassword.disabled = false;
+    submitDeleteAllPassword.textContent = 'التالي';
+  }
+});
+
+closeDeleteAllTypeModal.addEventListener('click', ()=> closeModal(deleteAllTypeModal));
+cancelDeleteAllType.addEventListener('click', ()=> closeModal(deleteAllTypeModal));
+
+deleteAllTypeInput.addEventListener('input', ()=>{
+  const ok = deleteAllTypeInput.value.trim().toLowerCase() === DELETE_ALL_PHRASE;
+  confirmDeleteAllBtn.disabled = !ok;
+});
+
+confirmDeleteAllBtn.addEventListener('click', async ()=>{
+  if(deleteAllTypeInput.value.trim().toLowerCase() !== DELETE_ALL_PHRASE) return;
+  confirmDeleteAllBtn.disabled = true;
+  cancelDeleteAllType.disabled = true;
+  deleteAllProgress.style.display='block';
+  deleteAllProgress.textContent = 'جارٍ التحضير...';
+  try{
+    const snap = await getDocs(collection(db,'students'));
+    const ids = snap.docs.map(d=>d.id);
+    await deleteStudentsDeep(ids, (done,total)=>{
+      deleteAllProgress.textContent = `جارٍ الحذف... ${toArabicDigits(done)}/${toArabicDigits(total)}`;
+    });
+    closeModal(deleteAllTypeModal);
+    delAllOk.textContent = `تم حذف جميع الطلاب (${toArabicDigits(ids.length)}).`;
+    delAllOk.style.display='block';
+    await refreshSchoolStats();
+    await updateMoveCountInfo();
+    await updateDeleteCountInfo();
+    closeSheet(classSheet);
+    selectedClass = null;
+  }catch(e){
+    console.error('[deleteAllStudents]', e);
+    deleteAllTypeErr.textContent = 'تعذّر إتمام الحذف بالكامل. راجع البيانات وحاول مرة أخرى.';
+    deleteAllTypeErr.style.display='block';
+  }finally{
+    cancelDeleteAllType.disabled = false;
+    deleteAllProgress.style.display='none';
+  }
+});
 
 /* ========= Class page ========= */
 let selectedClass = null;
