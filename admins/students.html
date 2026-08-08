@@ -821,15 +821,9 @@ body.student-profile-open #studentSheet .sheet-header{
   display: flex;
   align-items: center;
   gap: 14px;
-  cursor: grab;
   user-select: none;
-  touch-action: none;
-  transition: all 0.2s ease;
+  transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
   position: relative;
-}
-
-.reorder-item:active {
-  cursor: grabbing;
 }
 
 .reorder-item.dragging {
@@ -840,22 +834,25 @@ body.student-profile-open #studentSheet .sheet-header{
   border-color: var(--primary);
 }
 
-.reorder-item.drag-over {
-  border-style: dashed;
-  border-color: var(--primary);
-  background: var(--primary-light);
-  transform: translateY(0);
-}
-
 .reorder-item-handle {
-  width: 20px;
-  height: 20px;
+  width: 40px;
+  height: 40px;
+  padding: 10px;
+  margin: -10px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   cursor: grab;
   flex-shrink: 0;
+  /* Only the handle blocks the browser's default touch scrolling —
+     dragging starts here, so the rest of the row (and the list body)
+     stays scrollable by touch, unlike before where touch-action:none
+     sat on the whole row. Padded out to a 40px touch target (box-sizing:
+     border-box keeps the two visual bars the original 20x20 size) since
+     20px is too small to reliably grab with a finger. */
+  touch-action: none;
 }
+.reorder-item-handle:active { cursor: grabbing; }
 
 .reorder-item-handle::before,
 .reorder-item-handle::after {
@@ -1334,7 +1331,7 @@ body.student-profile-open #studentSheet .sheet-header{
     grid-template-columns:repeat(auto-fill, minmax(270px, 1fr));
     gap:14px;
   }
-  #addStudentForm .row{ flex-wrap:nowrap; }
+  #addStudentModal .row{ flex-wrap:nowrap; }
 
   /* ---- Sheet chrome + modals: a bit more room on wide screens ---- */
   .sheet-header{ padding:20px 28px; }
@@ -1557,35 +1554,6 @@ body.student-profile-open #studentSheet .sheet-header{
           <button id="openReorderModal" class="btn secondary" type="button" style="height:48px; padding:0 16px;">ترتيب الطلاب</button>
         </div>
       </div>
-    </div>
-
-    <!-- Add student form -->
-    <div id="addStudentForm" class="section" style="display:none;">
-      <div class="row">
-        <div class="field">
-          <div class="label">اسم الطالب</div>
-          <div class="input-wrap"><input id="stName" class="input" type="text" placeholder="الاسم الكامل" autocomplete="name"></div>
-        </div>
-        <div class="field">
-          <div class="label">الرقم المدني</div>
-          <div class="input-wrap"><input id="stCivil" class="input" type="text" inputmode="numeric" placeholder="الرقم المدني"></div>
-        </div>
-      </div>
-      
-      <!-- NEW: Special Case Checkbox in Add Form -->
-      <div class="field">
-        <label class="checkbox-field">
-          <input id="stSpecialCase" type="checkbox">
-          <span class="label" style="margin: 0; font-weight: 600;">حالة خاصة؟</span>
-        </label>
-        <div class="muted" style="font-size:.86rem; margin-top:-6px;">لن يتم إنشاء حساب دخول — فقط حفظ بيانات الطالب في Firestore.</div>
-      </div>
-      
-      <div style="display:flex; gap:12px; justify-content:flex-end;">
-        <button id="createStudentBtn" class="btn primary" type="button" style="height:48px; padding:0 16px;">حفظ الطالب</button>
-      </div>
-      <div id="asOk" class="ok"></div>
-      <div id="asErr" class="err"></div>
     </div>
 
     <!-- Students list -->
@@ -1876,6 +1844,47 @@ body.student-profile-open #studentSheet .sheet-header{
   </div>
 </div>
 
+<!-- Add Student Modal -->
+<div id="addStudentModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title">إضافة طالب</h3>
+      <button id="closeAddStudentModal" class="modal-close" aria-label="إغلاق">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 6L6 18M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="row">
+        <div class="field">
+          <div class="label">اسم الطالب</div>
+          <div class="input-wrap"><input id="stName" class="input" type="text" placeholder="الاسم الكامل" autocomplete="name"></div>
+        </div>
+        <div class="field">
+          <div class="label">الرقم المدني</div>
+          <div class="input-wrap"><input id="stCivil" class="input" type="text" inputmode="numeric" placeholder="الرقم المدني"></div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="checkbox-field">
+          <input id="stSpecialCase" type="checkbox">
+          <span class="label" style="margin: 0; font-weight: 600;">حالة خاصة؟</span>
+        </label>
+        <div class="muted" style="font-size:.86rem; margin-top:-6px;">لن يتم إنشاء حساب دخول — فقط حفظ بيانات الطالب في Firestore.</div>
+      </div>
+
+      <div id="asOk" class="ok"></div>
+      <div id="asErr" class="err"></div>
+    </div>
+    <div class="modal-footer">
+      <button id="cancelAddStudent" class="btn ghost" type="button">إلغاء</button>
+      <button id="createStudentBtn" class="btn primary" type="button">حفظ الطالب</button>
+    </div>
+  </div>
+</div>
+
 <!-- NEW: Excused Absence Reason Modal -->
 <div id="excusedAbsenceModal" class="modal-overlay">
   <div class="modal">
@@ -1988,7 +1997,9 @@ const classTitle = document.getElementById('classTitle');
 const classNameStrong = document.getElementById('classNameStrong');
 const refreshStudents = document.getElementById('refreshStudents');
 const openAddStudent = document.getElementById('openAddStudent');
-const addStudentForm = document.getElementById('addStudentForm');
+const addStudentModal = document.getElementById('addStudentModal');
+const closeAddStudentModalBtn = document.getElementById('closeAddStudentModal');
+const cancelAddStudentBtn = document.getElementById('cancelAddStudent');
 const stName = document.getElementById('stName');
 const stCivil = document.getElementById('stCivil');
 const createStudentBtn = document.getElementById('createStudentBtn');
@@ -3047,7 +3058,7 @@ function openClass(className){
   selectedClass = className;
   classTitle.textContent = toArabicDigits(className);
   classNameStrong.textContent = toArabicDigits(className);
-  addStudentForm.style.display = 'none';
+  closeModal(addStudentModal);
   asOk.style.display='none'; asErr.style.display='none';
   openSheet(classSheet);
   loadStudents(className);
@@ -3073,10 +3084,12 @@ document.addEventListener('keydown', (e)=>{
 window.addEventListener('popstate', ()=>{ applyStudentRoute(); });
 
 openAddStudent.addEventListener('click', ()=>{
-  addStudentForm.style.display = addStudentForm.style.display==='none' ? 'block' : 'none';
   asOk.style.display='none'; asErr.style.display='none';
-  if(addStudentForm.style.display==='block'){ stName.focus(); }
+  openModal(addStudentModal);
+  stName.focus();
 });
+closeAddStudentModalBtn.addEventListener('click', ()=> closeModal(addStudentModal));
+cancelAddStudentBtn.addEventListener('click', ()=> closeModal(addStudentModal));
 
 refreshStudents.addEventListener('click', ()=>{ if(selectedClass) loadStudents(selectedClass); });
 
@@ -3297,10 +3310,9 @@ function openReorderInterface() {
     const item = document.createElement('div');
     item.className = 'reorder-item';
     item.setAttribute('data-id', student.id);
-    item.setAttribute('draggable', 'true');
-    
+
     const studentNumber = student.studentNumber || (index + 1);
-    
+
     item.innerHTML = `
       <div class="reorder-item-handle"></div>
       <div class="reorder-item-number">${toArabicDigits(studentNumber)}</div>
@@ -3312,15 +3324,9 @@ function openReorderInterface() {
         </div>
       </div>
     `;
-    
-    // Add drag and drop events
-    item.addEventListener('dragstart', handleDragStart);
-    item.addEventListener('dragover', handleDragOver);
-    item.addEventListener('dragenter', handleDragEnter);
-    item.addEventListener('dragleave', handleDragLeave);
-    item.addEventListener('drop', handleDrop);
-    item.addEventListener('dragend', handleDragEnd);
-    
+
+    attachReorderDragHandle(item);
+
     fragment.appendChild(item);
   });
   
@@ -3343,74 +3349,58 @@ function closeReorderModal() {
   document.body.style.overflow = '';
 }
 
-// Drag and drop variables
-let draggedItem = null;
-let dragOverItem = null;
+// Drag-to-reorder, driven by Pointer Events rather than the native HTML5
+// Drag and Drop API. Native DnD (dragstart/dragover/drop) simply never
+// fires from touch input on phones/tablets — there is no polyfill-free way
+// to make it work there — so the old implementation silently couldn't be
+// used on the exact devices this admin panel is mostly used from, even
+// though long-pressing a student row (touch-based) could still open this
+// modal. Pointer Events fire uniformly for mouse, touch and pen, so one
+// implementation covers both.
+let dragItem = null;
+let dragPointerId = null;
 
-function handleDragStart(e) {
-  draggedItem = this;
-  this.classList.add('dragging');
-  
-  e.dataTransfer.effectAllowed = 'move';
-  e.dataTransfer.setData('text/html', this.innerHTML);
-  
-  setTimeout(() => {
-    this.style.opacity = '0.4';
-  }, 0);
-}
-
-function handleDragOver(e) {
-  e.preventDefault();
-  e.dataTransfer.dropEffect = 'move';
-  
-  if (draggedItem !== this) {
-    dragOverItem = this;
-  }
-}
-
-function handleDragEnter(e) {
-  e.preventDefault();
-  if (draggedItem !== this) {
-    this.classList.add('drag-over');
-  }
-}
-
-function handleDragLeave(e) {
-  this.classList.remove('drag-over');
-}
-
-function handleDrop(e) {
-  e.preventDefault();
-  e.stopPropagation();
-  
-  if (draggedItem !== this) {
-    this.classList.remove('drag-over');
-    
-    const items = Array.from(reorderList.children);
-    const draggedIndex = items.indexOf(draggedItem);
-    const dropIndex = items.indexOf(this);
-    
-    if (draggedIndex < dropIndex) {
-      this.parentNode.insertBefore(draggedItem, this.nextSibling);
-    } else {
-      this.parentNode.insertBefore(draggedItem, this);
-    }
-    
-    updateReorderNumbers();
-  }
-}
-
-function handleDragEnd(e) {
-  const items = Array.from(reorderList.children);
-  items.forEach(item => {
-    item.classList.remove('dragging');
-    item.classList.remove('drag-over');
-    item.style.opacity = '';
+function attachReorderDragHandle(item) {
+  const handle = item.querySelector('.reorder-item-handle');
+  handle.addEventListener('pointerdown', (e) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    dragItem = item;
+    dragPointerId = e.pointerId;
+    item.classList.add('dragging');
+    try { handle.setPointerCapture(e.pointerId); } catch {}
+    e.preventDefault();
   });
-  
-  draggedItem = null;
-  dragOverItem = null;
 }
+
+function reorderListPointerMove(e) {
+  if (!dragItem || e.pointerId !== dragPointerId) return;
+  e.preventDefault();
+  const siblings = Array.from(reorderList.children).filter(el => el !== dragItem);
+  let target = null;
+  let placeBefore = false;
+  for (const el of siblings) {
+    const rect = el.getBoundingClientRect();
+    const mid = rect.top + rect.height / 2;
+    if (e.clientY < mid) { target = el; placeBefore = true; break; }
+  }
+  if (target) {
+    reorderList.insertBefore(dragItem, placeBefore ? target : target.nextSibling);
+  } else if (siblings.length) {
+    reorderList.appendChild(dragItem);
+  }
+  updateReorderNumbers();
+}
+
+function endReorderDrag() {
+  if (!dragItem) return;
+  dragItem.classList.remove('dragging');
+  dragItem = null;
+  dragPointerId = null;
+}
+
+reorderList.addEventListener('pointermove', reorderListPointerMove);
+reorderList.addEventListener('pointerup', endReorderDrag);
+reorderList.addEventListener('pointercancel', endReorderDrag);
 
 // Update numbers in reorder list
 function updateReorderNumbers() {
