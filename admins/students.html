@@ -1263,12 +1263,12 @@ body.student-profile-open #studentSheet .sheet-header{
      on every row otherwise, even when there's plenty of space. */
   .row .field{ width:auto; flex:1 1 240px; }
 
-  /* ---- Classes home: sticky stats sidebar + always-open grade groups ---- */
+  /* ---- Classes home: sticky stats sidebar + grade group list ---- */
   #stateClasses{
     display:grid;
     grid-template-columns: minmax(0, 1fr) minmax(300px, 340px);
     align-items:start;
-    gap:24px;
+    gap:20px;
   }
   #schoolStatsPanel{
     grid-column:2;
@@ -1280,8 +1280,11 @@ body.student-profile-open #studentSheet .sheet-header{
   #schoolStatsPanel .school-overview-body{
     grid-template-columns:1fr;
   }
-  .group, .spacer, .student-request-shell{ grid-column:1; }
-  .spacer{ height:6px; }
+  .group, .student-request-shell{ grid-column:1; }
+  /* The grid's own gap already separates the groups — the .spacer
+     divs were a manual-margin hack for the old block-flow layout and
+     would just add extra, uneven space on top of the grid gap. */
+  #stateClasses .spacer{ display:none; }
 
   /* Grade sections stay collapsible (dropdown) exactly like before —
      only the layout of an *opened* group's classes changes, from a
@@ -1294,6 +1297,7 @@ body.student-profile-open #studentSheet .sheet-header{
   .group .list .class-option{ padding:14px 12px; min-height:48px; }
 
   .student-request-shell{
+    margin-top:0;
     background:linear-gradient(120deg, #033C54 0%, #0a5f81 100%);
     border-color:transparent;
     border-radius:18px;
