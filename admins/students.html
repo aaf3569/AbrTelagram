@@ -89,7 +89,7 @@ body.student-profile-open .top-student-back{ display:inline-flex; }
 
 /* === Layout === */
 main{ flex:1; padding:32px 20px 40px; display:flex }
-.column{ width:min(880px, 96vw); margin:0 auto; display:flex; flex-direction:column; align-items:center; gap:24px; }
+.column{ width:min(880px, 100%); margin:0 auto; display:flex; flex-direction:column; align-items:center; gap:24px; }
 
 /* === Panels / states === */
 .panel{ width:100%; background:#fff; border:1px solid var(--border); border-radius:20px; padding:24px 20px; box-shadow: var(--shadow-1) }
@@ -1272,15 +1272,21 @@ body.student-profile-open #studentSheet .sheet-header{
      across every spanned row — inflating each collapsed group's row
      to match the tall sidebar instead of hugging its own content.
      Wrapping the groups in one element sidesteps that entirely. */
-  #stateClasses{
+  #stateClasses.active{
     display:grid;
     grid-template-columns: minmax(0, 1fr) minmax(300px, 340px);
     align-items:start;
     gap:20px;
   }
-  #gradesMain{ grid-column:1; }
+  /* Both pinned to row 1 explicitly — #schoolStatsPanel comes first in
+     the DOM with the only definite grid-column, so without an explicit
+     grid-row here, sparse auto-placement's shared cursor claims row 1
+     for it and pushes #gradesMain (processed second) down into row 2,
+     leaving row 1's first column empty for the sidebar's whole height. */
+  #gradesMain{ grid-column:1; grid-row:1; }
   #schoolStatsPanel{
     grid-column:2;
+    grid-row:1;
     position:sticky;
     top:96px;
     margin-bottom:0;
