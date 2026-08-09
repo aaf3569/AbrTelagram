@@ -1082,6 +1082,7 @@
                 show(sDenied);
                 return;
             }
+            attendance.setPrivilegedEdit(role === 'admin');
             displayName.textContent = data?.name || (user.email ? user.email.split('@')[0] : 'مستخدم');
             renderClassButtons(data?.classes || []);
             renderMoreLists(CLASS_OPTIONS_RAW);

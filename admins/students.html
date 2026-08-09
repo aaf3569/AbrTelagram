@@ -2225,6 +2225,10 @@ const attendance = mountAttendanceSheet({
   db,
   auth,
   onSaved: () => { if (currentStudent.id) loadStudentAttendance(currentStudent.id); },
+  // This whole page is gated to role === 'admin' (see the auth check
+  // below) — admins can correct any attendance record at any time, no
+  // 45-minute self-edit window.
+  isPrivilegedEdit: true,
 });
 
 const TELEGRAM_BACKEND_BASE_URL = (() => {

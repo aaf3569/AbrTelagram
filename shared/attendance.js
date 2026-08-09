@@ -324,10 +324,17 @@ function unlockBodyScroll(state) {
   state.locked = false;
 }
 
-export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
+export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivilegedEdit } = {}) {
   if (!db || !auth) {
     throw new Error("mountAttendanceSheet requires { db, auth }");
   }
+
+  // Admin surfaces (e.g. editing a record from a student's profile) pass
+  // this to skip the 45-minute self-edit window below — matching the
+  // server-side isAdmin() bypass already granted on attendanceSessions/
+  // attendanceRecords writes. Regular teachers/heads/supervisors keep the
+  // window since they only ever mount without this flag.
+  let privilegedEdit = !!isPrivilegedEdit;
 
   ensureStyles();
   injectMarkup();
@@ -920,6 +927,7 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
   }
 
   function canEditSessionByTime(createdAtField) {
+    if (privilegedEdit) return true;
     if (!createdAtField) return false;
     let created = null;
     if (createdAtField?.toDate) created = createdAtField.toDate();
@@ -1584,6 +1592,11 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
     openForClass,
     openForEdit,
     canEditSession(sessionData) { return canEditSessionByTime(sessionData?.createdAt); },
+    // For hosts that don't know the caller's role until auth resolves
+    // (mountAttendanceSheet is called at module load) — e.g.
+    // admin-late-attendance.html, which is also reachable by non-admin
+    // allowMorningLate users who must keep the 45-minute window.
+    setPrivilegedEdit(v) { privilegedEdit = !!v; },
     close() { closeSheet(els.sheet); },
     refreshLessonTimes: fetchLessonTimes,
   };
