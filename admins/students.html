@@ -4291,7 +4291,14 @@ studentHeaderCard.addEventListener('click', ()=>{ studentCollapseBody.classList.
 
 function closeStudentView(){
   if(getRouteStudentId()){
-    clearStudentRoute();
+    // Replace, don't push: opening a student already pushed one history
+    // entry, so an in-page "return" should undo that entry in place. Pushing
+    // a second entry here left a stale student-route entry sitting one step
+    // behind in history — pressing the browser/device back button (the only
+    // way back on a webview with no visible chrome) landed right back on
+    // the profile the user just closed, which is exactly what "the return
+    // button doesn't work" looks like from the outside.
+    clearStudentRoute({ replace: true });
     closeSheet(studentSheet);
     syncStudentProfileChrome();
     if(selectedClass){
