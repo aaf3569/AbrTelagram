@@ -1433,12 +1433,18 @@
         logList.innerHTML = '';
         items.forEach(item=>{
             const div = document.createElement('div');
-            const canEdit = canEditByTime(item.createdAt);
+            // Modern (attendanceSessions) items are governed by the shared
+            // module's own lesson-time-anchored window (same check
+            // attendance.openForEdit itself enforces below); only the
+            // legacy/frozen schema still uses the local createdAt-based one.
+            const canEdit = item.source === 'attendanceSessions'
+                ? attendance.canEditSession(item)
+                : canEditByTime(item.createdAt);
             div.className = 'log-item';
             div.innerHTML = `
                 <h4 class="log-title">${item.class || '—'}</h4>
                 <div class="log-sub">التاريخ: ${item.date || '—'} — ${item.lessonLabel || ('حصة '+(item.lessonIndex||''))}</div>
-                <div class="${canEdit ? 'ok':'warn'}">${canEdit ? 'متاح للتعديل خلال 45 دقيقة' : 'انتهت مهلة التعديل'}</div>
+                <div class="${canEdit ? 'ok':'warn'}">${canEdit ? 'متاح للتعديل' : 'انتهت مهلة التعديل'}</div>
             `;
             div.addEventListener('click', ()=> {
                 if (item.source === 'attendanceSessions') attendance.openForEdit(item.id);
@@ -1448,6 +1454,10 @@
         });
     }
     function canEditByTime(createdAtField){
+        // Legacy schema only (frozen — no new records land here). Admins can
+        // still correct any of it at any time, same as everywhere else.
+        const role = (currentUserData?.role || '').toString().toLowerCase();
+        if (role === 'admin') return true;
         if(!createdAtField) return false;
         let created = null;
         if (createdAtField?.toDate) created = createdAtField.toDate();
@@ -1518,7 +1528,7 @@
         const canEdit = canEditByTime(data.createdAt);
         saveDetail.disabled = !canEdit;
         detailLockMsg.style.display = canEdit ? 'none' : 'block';
-        editWindowHint.textContent = canEdit ? 'متاح للتعديل حتى 45 دقيقة من الإنشاء' : 'غير متاح للتعديل';
+        editWindowHint.textContent = canEdit ? 'متاح للتعديل' : 'غير متاح للتعديل';
         openSheet(logDetailSheet);
     }
     function renderDetailList(students, nameByUid){

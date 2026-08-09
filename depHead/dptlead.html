@@ -2759,8 +2759,8 @@
                 logList.innerHTML = '';
                 items.forEach(item => {
                     const div = document.createElement('div');
-                    // Same 45-minute rule attendance.openForEdit itself enforces,
-                    // so what's shown here always matches what actually happens.
+                    // Same lesson-time-anchored window attendance.openForEdit itself
+                    // enforces, so what's shown here always matches what actually happens.
                     const canEdit = attendance.canEditSession(item);
                     const classLabel = item.classKey ? formatClassLabel(item.classKey) : '—';
                     div.className = 'log-item';

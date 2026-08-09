@@ -16,6 +16,10 @@ import {
 const STYLE_ID = "attendance-sheet-style";
 const ATTENDANCE_SESSIONS_COLLECTION = "attendanceSessions";
 const ATTENDANCE_RECORDS_SUBCOLLECTION = "attendanceRecords";
+// Attendance for a lesson can be taken/edited from the moment it starts
+// until this many minutes after it ends — configured lesson times come from
+// settings/lessonTimes (edited in admins/adminschedule.html).
+const LESSON_END_GRACE_MINUTES = 7;
 
 const STYLES = `
   /* Attendance sheet — bundled by /shared/attendance.js */
@@ -534,14 +538,52 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
     return null;
   }
 
+  // A lesson that just ended is still inside its own grace window — distinct
+  // from getActiveLessonIndex, which only ever reports whichever lesson is
+  // running *right now*. Without this, once the next lesson starts, its
+  // teacher (who may be a different person) would silently take over the
+  // "current lesson" slot in self-detect mode, locking out the previous
+  // teacher during their own grace period.
+  function getGracePeriodLessonIndex() {
+    const now = getCurrentKuwaitMinutes();
+    for (const l of LESSON_TIMES) {
+      const e = parseTimeToMinutes(l.end);
+      if (now > e && now <= e + LESSON_END_GRACE_MINUTES) return l.index;
+    }
+    return null;
+  }
+
   function getLessonWindowStatus(lessonIndex) {
     const l = LESSON_TIMES.find(x => x.index === lessonIndex);
     if (!l) return { ok: false, reason: "invalid_lesson" };
     const now = getCurrentKuwaitMinutes();
     const s = parseTimeToMinutes(l.start);
     const e = parseTimeToMinutes(l.end);
-    const cutoff = e + 5;
+    const cutoff = e + LESSON_END_GRACE_MINUTES;
     return { ok: now >= s && now <= cutoff, reason: now >= s && now <= cutoff ? "within_window" : "outside_window" };
+  }
+
+  function resolveClassKeyFromScheduleHit(hit) {
+    if (hit.classKey) return hit.classKey;
+    if (hit.grade && hit.section) return `${hit.grade} / ${hit.section}${hit.track ? ` ${hit.track}` : ""}`;
+    return hit.class || "";
+  }
+
+  // Anchored to the lesson's own scheduled time (from settings/lessonTimes,
+  // managed in admins/adminschedule.html) rather than "now" or when the
+  // session was created — a record stays editable from the lesson's start
+  // until LESSON_END_GRACE_MINUTES after it ends, same window as taking it
+  // in the first place. Admin callers pass isPrivilegedEdit to mount() and
+  // bypass this entirely.
+  function isWithinAttendanceEditWindow(dateISO, lessonIndex) {
+    if (privilegedEdit) return true;
+    const l = LESSON_TIMES.find(x => x.index === Number(lessonIndex));
+    if (!l) return false;
+    if (dateISO && dateISO !== kuwaitTodayISO()) return false;
+    const now = getCurrentKuwaitMinutes();
+    const s = parseTimeToMinutes(l.start);
+    const e = parseTimeToMinutes(l.end);
+    return now >= s && now <= e + LESSON_END_GRACE_MINUTES;
   }
 
   // Has this lesson's time slot already ended? Used to tell a genuinely
@@ -650,11 +692,16 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
         const slot = times[i] || {};
         const sMin = parseTimeToMinutes((slot.start || fb.start || "00:00").toString());
         const eMin = parseTimeToMinutes((slot.end || fb.end || "00:00").toString());
-        if (nowMin < sMin || nowMin > eMin + 5) continue;
+        if (nowMin < sMin || nowMin > eMin + LESSON_END_GRACE_MINUTES) continue;
         let classKey = (row.classKey || "").toString().trim() || (lesson.classKey || "").toString().trim();
         if (!classKey && row.grade && row.section) {
           classKey = `${row.grade} / ${row.section}${row.track ? ` ${row.track}` : ""}`;
         }
+        // A just-ended lesson still in grace can be already-taken while a
+        // later overlapping one for the same teacher isn't — keep scanning
+        // instead of getting stuck reporting "already taken" for the wrong
+        // lesson.
+        if (await hasExistingAttendanceSession(dateISO, i + 1, classKey)) continue;
         return {
           ok: true,
           lesson: i + 1,
@@ -689,29 +736,46 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
     const user = auth.currentUser;
     if (!user) return { ok: false, reason: "not_logged_in" };
     const todayISO = kuwaitTodayISO();
+    const G = getGracePeriodLessonIndex();
     const L = getActiveLessonIndex();
     // These two schedule sources are independent of each other — check them
-    // at the same time instead of one after the other.
+    // at the same time instead of one after the other. The map is needed if
+    // either a grace-period or a currently-active lesson exists.
     const [customHit, map] = await Promise.all([
       getMyActiveCustomLessonMetaForNow(user.uid, todayISO),
-      L === null ? Promise.resolve(new Map()) : buildTodayMapWithOverrides(user.uid, todayISO),
+      (G !== null || L !== null) ? buildTodayMapWithOverrides(user.uid, todayISO) : Promise.resolve(new Map()),
     ]);
-    if (customHit?.ok) {
-      if (await hasExistingAttendanceSession(customHit.date, customHit.lesson, customHit.classKey)) {
-        return { ok: false, reason: "already_taken" };
+    // getMyActiveCustomLessonMetaForNow already skips already-taken slots
+    // internally, so a hit here is guaranteed usable.
+    if (customHit?.ok) return customHit;
+
+    // A lesson that just ended and is still inside its grace window takes
+    // priority over one that just started — otherwise the teacher who had
+    // the previous lesson would be silently locked out the moment the next
+    // lesson's time slot begins, even though their own grace period hasn't
+    // closed yet.
+    if (G !== null) {
+      const graceHit = map.get(String(G));
+      if (graceHit && graceHit._coveredAway !== true) {
+        const graceClassKey = resolveClassKeyFromScheduleHit(graceHit);
+        if (!(await hasExistingAttendanceSession(todayISO, G, graceClassKey))) {
+          const graceLesson = LESSON_TIMES.find(l => l.index === G);
+          return {
+            ok: true, lesson: G, date: todayISO, classKey: graceClassKey,
+            subject: graceHit.subject || "", activeStart: graceLesson?.start || "00:00",
+            activeEnd: graceLesson?.end || "00:00", teacherUid: user.uid, scheduleData: graceHit,
+          };
+        }
       }
-      return customHit;
     }
+
     if (L === null) return { ok: false, reason: "outside_lessons" };
     const hit = map.get(String(L));
     if (!hit || hit._coveredAway === true) return { ok: false, reason: "not_my_lesson" };
     const w = getLessonWindowStatus(L);
     if (!w.ok) return { ok: false, reason: "time_locked" };
     const lesson = LESSON_TIMES.find(l => l.index === L);
-    let classKey = "";
-    if (hit.classKey) classKey = hit.classKey;
-    else if (hit.grade && hit.section) classKey = `${hit.grade} / ${hit.section}${hit.track ? ` ${hit.track}` : ""}`;
-    else classKey = hit.class || "";
+    const classKey = resolveClassKeyFromScheduleHit(hit);
     if (await hasExistingAttendanceSession(todayISO, L, classKey)) {
       return { ok: false, reason: "already_taken" };
     }
@@ -924,16 +988,6 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
       console.error("[attendance] getTakenLessonIndices:", e);
     }
     return set;
-  }
-
-  function canEditSessionByTime(createdAtField) {
-    if (privilegedEdit) return true;
-    if (!createdAtField) return false;
-    let created = null;
-    if (createdAtField?.toDate) created = createdAtField.toDate();
-    else if (createdAtField?.seconds) created = new Date(createdAtField.seconds * 1000);
-    if (!created) return false;
-    return (Date.now() - created.getTime()) <= 45 * 60 * 1000;
   }
 
   async function prefillStatusesFromSession(sessionId) {
@@ -1204,15 +1258,16 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
       }
       const data = snap.data() || {};
       const createdAt = data.createdAt || null;
-      if (!canEditSessionByTime(createdAt)) {
-        showError("تعذّر التعديل", "انتهت مهلة التعديل (45 دقيقة).");
+      const sessionDate = data.date || kuwaitTodayISO();
+      const lessonIndex = Number(data.lesson) || 0;
+      if (!isWithinAttendanceEditWindow(sessionDate, lessonIndex)) {
+        showError("تعذّر التعديل", "انتهت مهلة تعديل هذه الحصة.");
         return false;
       }
       const classKey = data.classKey || "";
-      const lessonIndex = Number(data.lesson) || 0;
       const lessonLabel = data.lessonLabel || null;
       currentMeta = {
-        ok: true, mode: "edit", date: data.date || kuwaitTodayISO(),
+        ok: true, mode: "edit", date: sessionDate,
         classKey, lesson: lessonIndex, sessionId, createdAt,
       };
       buildFixedLessonOption(lessonIndex, lessonLabel);
@@ -1228,8 +1283,8 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
   // Submit handlers
   els.submitBtn.addEventListener("click", async () => {
     if (currentMeta?.mode === "edit") {
-      if (!canEditSessionByTime(currentMeta.createdAt)) {
-        showError("تعذّر الحفظ", "انتهت مهلة التعديل (45 دقيقة).");
+      if (!isWithinAttendanceEditWindow(currentMeta.date, currentMeta.lesson)) {
+        showError("تعذّر الحفظ", "انتهت مهلة تعديل هذه الحصة.");
         return;
       }
     } else if (currentMeta?.mode !== "any") {
@@ -1320,9 +1375,9 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
       ];
 
       if (mode === "edit") {
-        if (!canEditSessionByTime(currentMeta?.createdAt)) {
+        if (!isWithinAttendanceEditWindow(dateKW, lessonIndex)) {
           closeModal(els.confirmModal);
-          showError("تعذّر الحفظ", "انتهت مهلة التعديل (45 دقيقة).");
+          showError("تعذّر الحفظ", "انتهت مهلة تعديل هذه الحصة.");
           pendingSave = null;
           return;
         }
@@ -1424,7 +1479,7 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
       const startHHMM = (activeMeta.activeStart || lessonTime?.start || "00:00").toString();
       const endHHMM = (activeMeta.activeEnd || lessonTime?.end || "00:00").toString();
       const sessionStartTs = kuwaitDateTimeToDate(dateKW, startHHMM);
-      const sessionCutoffTs = addMinutesToDate(kuwaitDateTimeToDate(dateKW, endHHMM), 5);
+      const sessionCutoffTs = addMinutesToDate(kuwaitDateTimeToDate(dateKW, endHHMM), LESSON_END_GRACE_MINUTES);
       // Session doc + all student records in a single batch — one network
       // round trip instead of a setDoc followed by a separate commit.
       const batch = writeBatch(db);
@@ -1473,7 +1528,7 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
 
       if (mode === "any" && typeof onLateSubmit === "function") {
         const nowMin = getCurrentKuwaitMinutes();
-        const cutoffMin = parseTimeToMinutes(lessonTime?.end || "00:00") + 5;
+        const cutoffMin = parseTimeToMinutes(lessonTime?.end || "00:00") + LESSON_END_GRACE_MINUTES;
         if (nowMin > cutoffMin) {
           try {
             onLateSubmit({ classKey, lesson: lessonIndex, lessonLabel, date: dateKW });
@@ -1591,7 +1646,7 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
     open: openWithMeta,
     openForClass,
     openForEdit,
-    canEditSession(sessionData) { return canEditSessionByTime(sessionData?.createdAt); },
+    canEditSession(sessionData) { return isWithinAttendanceEditWindow(sessionData?.date, sessionData?.lesson); },
     // For hosts that don't know the caller's role until auth resolves
     // (mountAttendanceSheet is called at module load) — e.g.
     // admin-late-attendance.html, which is also reachable by non-admin

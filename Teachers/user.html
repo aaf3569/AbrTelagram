@@ -3487,8 +3487,9 @@
                 const div = document.createElement('div');
                 const classLabel = item.classKey ? formatClassLabel(item.classKey) : '—';
                 
-                // Check if still within edit window (same 45-minute rule the shared
-                // attendance editor itself enforces — see attendance.openForEdit)
+                // Check if still within edit window (the lesson's own time slot plus
+                // a short grace period — same check attendance.openForEdit itself
+                // enforces, see attendance.canEditSession)
                 const lessonTime = LESSON_TIMES.find(l => l.index === item.lesson);
                 const canEdit = attendance.canEditSession(item);
                 
