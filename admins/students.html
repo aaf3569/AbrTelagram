@@ -1026,6 +1026,35 @@ body.student-profile-open #studentSheet .sheet-header{
   transform: translateY(0) scale(1);
 }
 
+/* Attendance sheet (shared/attendance.js) modals use a self-contained
+   .modal + .open convention (overlay+card children, no wrapping
+   .modal-overlay) — they need their own fixed/hidden chrome instead of
+   the .modal-overlay-nested card style above, or they render inline
+   and always-visible. */
+html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%; inset: 0; overscroll-behavior: none; }
+#attConfirmModal, #attErrorModal, #attBlockedModal, #attSuccessModal, #attLessonDetailModal {
+  position: fixed; inset: 0; z-index: 1100; display: none;
+  background: none; width: auto; max-width: none; max-height: none;
+  box-shadow: none; transform: none; transition: none; overflow: visible;
+}
+#attConfirmModal.open, #attErrorModal.open, #attBlockedModal.open, #attSuccessModal.open, #attLessonDetailModal.open {
+  display: grid; place-items: center;
+}
+#attConfirmModal .overlay, #attErrorModal .overlay, #attBlockedModal .overlay, #attSuccessModal .overlay, #attLessonDetailModal .overlay {
+  position: absolute; inset: 0; background: rgba(15,23,42,.35); backdrop-filter: blur(4px);
+}
+#attConfirmModal .card, #attErrorModal .card, #attLessonDetailModal .card {
+  position: relative; z-index: 1; width: min(560px,92vw); background: #fff;
+  border: 1px solid var(--border); border-radius: 20px;
+  box-shadow: 0 24px 60px rgba(3,60,84,.28); padding: 20px;
+}
+#attErrorModal .card.error { border-color: rgba(180,35,24,.25); box-shadow: 0 24px 60px rgba(180,35,24,.20); }
+#attErrorModal .card.error h3 { color: var(--red); }
+#attConfirmModal h3, #attErrorModal h3, #attLessonDetailModal h3 { margin: 0 0 8px; font-size: 1.15rem; color: var(--primary); font-weight: 900; }
+#attConfirmModal p, #attErrorModal p, #attLessonDetailModal p { margin: 0 0 12px; color: var(--muted); font-weight: 800; }
+#attConfirmModal .row, #attErrorModal .row, #attLessonDetailModal .row { display: flex; gap: 10px; justify-content: flex-start; margin-top: 16px; flex-wrap: wrap; }
+.btn.cancel { background: #fff; color: var(--primary); border: 1px solid rgba(3,60,84,.25); }
+
 .modal-header {
   padding: 20px 24px;
   border-bottom: 1px solid var(--border);
