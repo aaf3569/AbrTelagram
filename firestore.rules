@@ -283,6 +283,17 @@ service cloud.firestore {
       allow read: if isTeacherSupervisorOrAdmin();
     }
 
+    /* ---------- attendanceRecords (collection group) ---------- */
+    /* Required so collectionGroup('attendanceRecords') queries (e.g. the   */
+    /* admin one-time mirror backfill in admins/students.html) work across  */
+    /* all attendanceSessions/{sessionId}/attendanceRecords sub-collections */
+    /* — the nested match below only covers get/list scoped to a known     */
+    /* sessionId, not an unscoped collection-group query. Write access is   */
+    /* still governed exclusively by the nested rule further down.         */
+    match /{path=**}/attendanceRecords/{recordId} {
+      allow get, list: if isTeacherSupervisorOrAdmin();
+    }
+
     /* ---------- teachers ---------- */
     match /teachers/{uid} {
       allow get, list: if isTeacherOrAdmin();
