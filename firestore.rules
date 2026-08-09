@@ -990,19 +990,22 @@ service cloud.firestore {
         && canWriteSessionTime(newSessionData());
 
       allow update: if
-        isTeacherSupervisorOrAdmin()
-        && sessionData().teacherUid == request.auth.uid
-        && canWriteSessionTime(sessionData())
-        && preserveOrInit('date')
-        && preserveOrInit('lesson')
-        && preserveOrInit('classKey')
-        && preserveOrInit('teacherUid')
-        && preserveOrInit('sessionStartTs')
-        && preserveOrInit('sessionCutoffTs')
-        && preserveOrInit('createdAt')
-        && (
-          !('locked' in request.resource.data)
-          || request.resource.data.locked == resource.data.locked
+        isAdmin()
+        || (
+          isTeacherSupervisorOrAdmin()
+          && sessionData().teacherUid == request.auth.uid
+          && canWriteSessionTime(sessionData())
+          && preserveOrInit('date')
+          && preserveOrInit('lesson')
+          && preserveOrInit('classKey')
+          && preserveOrInit('teacherUid')
+          && preserveOrInit('sessionStartTs')
+          && preserveOrInit('sessionCutoffTs')
+          && preserveOrInit('createdAt')
+          && (
+            !('locked' in request.resource.data)
+            || request.resource.data.locked == resource.data.locked
+          )
         );
 
       allow delete: if isAdmin();
@@ -1020,9 +1023,13 @@ service cloud.firestore {
 
         allow get, list: if isTeacherSupervisorOrAdmin();
 
+        // Admins can correct any student's record on any session (past the
+        // 45-minute self-edit window, or one taken by another teacher) —
+        // e.g. editing a record opened from a student's profile page. The
+        // owning teacher still only gets their own live-session window.
         allow create, update: if
           isTeacherSupervisorOrAdmin()
-          && canWriteRecord()
+          && (canWriteRecord() || isAdmin())
           && isStatus(request.resource.data.status)
           && (
             !('updatedBy' in request.resource.data)
