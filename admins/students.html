@@ -1691,6 +1691,18 @@ html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%;
       <div id="delErr" class="err"></div>
     </div>
 
+    <!-- One-time sync of historical attendance into student profiles -->
+    <div class="section">
+      <div class="label" style="margin-bottom:2px;">مزامنة سجلات الحضور القديمة</div>
+      <div class="muted" style="font-size:.86rem;">إذا كانت ملفات بعض الطلاب لا تعرض غيابات/تأخيرات مأخوذة قبل هذا التحديث، اضغط هذا الزر لمزامنتها مرة واحدة لكل الفصول. لن يؤثر على أي بيانات موجودة، فقط يضيف الناقص.</div>
+      <div id="attSyncInfo" class="muted" style="font-size:.86rem;"></div>
+      <div style="display:flex; justify-content:flex-end;">
+        <button id="attSyncBtn" class="btn secondary" type="button">مزامنة الحضور القديم</button>
+      </div>
+      <div id="attSyncOk" class="ok"></div>
+      <div id="attSyncErr" class="err"></div>
+    </div>
+
     <!-- Danger zone: delete every student -->
     <div class="section danger-zone">
       <div class="label" style="margin-bottom:2px;">منطقة الخطر</div>
@@ -2190,7 +2202,7 @@ html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%;
 /* ========= Firebase ========= */
 import { initializeApp, getApp, getApps } from "/shared/firebase.js";
 import { getAuth, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from "/shared/firebase.js";
-import { initializeFirestore, persistentSingleTabManager, collection, getDocs, query, where, orderBy, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp, writeBatch } from "/shared/firebase.js";
+import { initializeFirestore, persistentSingleTabManager, collection, collectionGroup, getDocs, query, where, orderBy, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp, writeBatch } from "/shared/firebase.js";
 import { mountAttendanceSheet } from "/shared/attendance.js";
 
 
@@ -2394,6 +2406,11 @@ const delErr = document.getElementById('delErr');
 const deleteAllStudentsBtn = document.getElementById('deleteAllStudentsBtn');
 const delAllOk = document.getElementById('delAllOk');
 const delAllErr = document.getElementById('delAllErr');
+
+const attSyncBtn = document.getElementById('attSyncBtn');
+const attSyncInfo = document.getElementById('attSyncInfo');
+const attSyncOk = document.getElementById('attSyncOk');
+const attSyncErr = document.getElementById('attSyncErr');
 
 const deleteClassConfirmModal = document.getElementById('deleteClassConfirmModal');
 const closeDeleteClassConfirm = document.getElementById('closeDeleteClassConfirm');
@@ -3630,6 +3647,93 @@ confirmDeleteAllBtn.addEventListener('click', async ()=>{
   }finally{
     cancelDeleteAllType.disabled = false;
     deleteAllProgress.style.display='none';
+  }
+});
+
+// ---- One-time sync: mirror every existing attendanceSessions/attendanceRecords
+// entry into students/{uid}/attendance, so profiles for classes taken before
+// the mirror-write fix (2026-08-09) also show their attendance history. ----
+const DEFAULT_LESSON_LABELS = {
+  1: 'الحصة الأولى', 2: 'الحصة الثانية', 3: 'الحصة الثالثة', 4: 'الحصة الرابعة',
+  5: 'الحصة الخامسة', 6: 'الحصة السادسة', 7: 'الحصة السابعة',
+};
+
+async function runAttendanceMirrorBackfill(onProgress){
+  const adminUid = auth.currentUser.uid;
+  const recordsSnap = await getDocs(collectionGroup(db, 'attendanceRecords'));
+  const sessionCache = new Map();
+  let processed = 0, written = 0;
+  let batch = writeBatch(db);
+  let opsInBatch = 0;
+
+  async function flush(){
+    if(opsInBatch > 0) await batch.commit();
+    batch = writeBatch(db);
+    opsInBatch = 0;
+  }
+
+  for(const recDoc of recordsSnap.docs){
+    processed++;
+    const sessionRef = recDoc.ref.parent.parent;
+    if(sessionRef){
+      const sessionId = sessionRef.id;
+      let session = sessionCache.get(sessionId);
+      if(session === undefined){
+        const sSnap = await getDoc(sessionRef);
+        session = sSnap.exists() ? sSnap.data() : null;
+        sessionCache.set(sessionId, session);
+      }
+      if(session && session.classKey && session.date && session.lesson){
+        const studentUid = recDoc.id;
+        const rec = recDoc.data();
+        if(studentUid && rec.status){
+          const lessonIndex = session.lesson;
+          const lessonLabel = session.lessonLabel || DEFAULT_LESSON_LABELS[lessonIndex] || `حصة ${lessonIndex}`;
+          const mirrorRef = doc(db, 'students', studentUid, 'attendance', sessionId);
+          batch.set(mirrorRef, {
+            class: session.classKey,
+            date: session.date,
+            lessonIndex,
+            lessonLabel,
+            status: rec.status,
+            updatedAt: serverTimestamp(),
+            updatedBy: adminUid,
+            sessionId,
+            sessionPath: sessionRef.path,
+            studentName: rec.studentName || null,
+          }, { merge: true });
+          opsInBatch++; written++;
+          if(opsInBatch >= 450) await flush();
+        }
+      }
+    }
+    if(onProgress && processed % 25 === 0) onProgress(processed, recordsSnap.size, written);
+  }
+  await flush();
+  if(onProgress) onProgress(processed, recordsSnap.size, written);
+  return { processed, written };
+}
+
+attSyncBtn.addEventListener('click', async ()=>{
+  attSyncOk.style.display='none'; attSyncErr.style.display='none';
+  attSyncBtn.disabled = true;
+  const originalLabel = attSyncBtn.textContent;
+  try{
+    attSyncInfo.textContent = 'جارٍ الفحص والمزامنة...';
+    const { processed, written } = await runAttendanceMirrorBackfill((done,total,written)=>{
+      attSyncInfo.textContent = `جارٍ المزامنة... ${toArabicDigits(done)}/${toArabicDigits(total)} (تمت إضافة/تحديث ${toArabicDigits(written)})`;
+    });
+    attSyncInfo.textContent = '';
+    attSyncOk.textContent = `تمت المزامنة: تمت مراجعة ${toArabicDigits(processed)} سجلًا وتحديث ${toArabicDigits(written)} في ملفات الطلاب.`;
+    attSyncOk.style.display='block';
+  }catch(e){
+    console.error('[attendanceMirrorBackfill]', e);
+    attSyncInfo.textContent = '';
+    attSyncErr.textContent = 'تعذّرت المزامنة. حاول مرة أخرى.';
+    attSyncErr.style.display='block';
+  }finally{
+    attSyncBtn.disabled = false;
+    attSyncBtn.textContent = originalLabel;
   }
 });
 
