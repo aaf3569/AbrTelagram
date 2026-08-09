@@ -1789,19 +1789,19 @@ body.student-profile-open #studentSheet .sheet-header{
       <div id="studentHeaderClass" class="student-class">—</div>
     </div>
 
-    <!-- Collapsible details (save/delete/id...) -->
+    <!-- Collapsible details (save/delete/class...) -->
     <div id="studentCollapseBody" class="section collapse-body">
-      <div class="row">
-        <div class="field">
-          <div class="label">الاسم</div>
-          <div class="input-wrap"><input id="edSName" class="input" type="text" placeholder="الاسم"></div>
-        </div>
-        <div class="field">
-          <div class="label">الرقم المدني</div>
-          <div class="input-wrap"><input id="edSCivil" class="input" type="text" inputmode="numeric" placeholder="الرقم المدني"></div>
-        </div>
+      <div class="field">
+        <div class="label">الاسم</div>
+        <div class="input-wrap"><input id="edSName" class="input" type="text" placeholder="الاسم"></div>
       </div>
-      
+
+      <div class="field">
+        <div class="label">الفصل</div>
+        <div class="input-wrap"><select id="edSClass" class="input"></select></div>
+        <div class="muted" style="font-size:.82rem;">تغيير الفصل ينقل الطالب إليه ويُعطيه رقمًا بعد آخر رقم موجود هناك.</div>
+      </div>
+
       <!-- NEW: Special Case Checkbox in Editor -->
       <div class="field">
         <label class="checkbox-field">
@@ -1809,7 +1809,7 @@ body.student-profile-open #studentSheet .sheet-header{
           <span class="label" style="margin: 0; font-weight: 600;">حالة خاصة؟</span>
         </label>
       </div>
-      
+
       <div style="display:flex; gap:12px; justify-content:flex-end;">
         <button id="saveStudent" class="btn primary" type="button" style="height:48px; padding:0 16px;">حفظ</button>
         <button id="deleteStudent" class="btn danger" type="button" style="height:48px; padding:0 16px;">حذف</button>
@@ -2225,7 +2225,7 @@ const studentHeaderClass = document.getElementById('studentHeaderClass');
 const studentCollapseBody= document.getElementById('studentCollapseBody');
 // Hidden edit refs
 const edSName = document.getElementById('edSName');
-const edSCivil = document.getElementById('edSCivil');
+const edSClass = document.getElementById('edSClass');
 const saveStudent = document.getElementById('saveStudent');
 const deleteStudent = document.getElementById('deleteStudent');
 const edOk = document.getElementById('edOk');
@@ -3312,6 +3312,19 @@ function populateClassSelect(selectEl, grade){
   selectEl.innerHTML = list.map(c => `<option value="${c}">${toArabicDigits(c)}</option>`).join('');
 }
 
+// Student editor's single "الفصل" dropdown — one flat list grouped by grade,
+// used to move a student straight from their own profile instead of only
+// via the bulk "تغيير الصف" tool in class settings.
+const GRADE_LABEL = { '10': 'الصف العاشر', '11': 'الصف الحادي عشر', '12': 'الصف الثاني عشر' };
+function populateStudentClassSelect(){
+  edSClass.innerHTML = Object.keys(GRADE_CLASSES).map(grade => `
+    <optgroup label="${GRADE_LABEL[grade]}">
+      ${GRADE_CLASSES[grade].map(c => `<option value="${c}">${toArabicDigits(c)}</option>`).join('')}
+    </optgroup>
+  `).join('');
+}
+populateStudentClassSelect();
+
 async function countStudentsInClass(classKey){
   if(!classKey) return 0;
   const snap = await getDocs(query(collection(db,'students'), where('class','==', classKey)));
@@ -4095,7 +4108,7 @@ async function openStudentEditor(id, { syncRoute=true } = {}){
     studentHeaderClass.textContent = d.class ? `الفصل: ${toArabicDigits(d.class)}` : '—';
     
     edSName.value = d.name || '';
-    edSCivil.value = d.civilid || '';
+    edSClass.value = d.class || '';
     edSSpecialCase.checked = d.specialCase || false;
     
     openSheet(studentSheet);
@@ -4140,41 +4153,63 @@ studentTopBack.addEventListener('click', closeStudentView);
 saveStudent.addEventListener('click', async ()=>{
   edOk.style.display='none';
   edErr.style.display='none';
+  const originalLabel = saveStudent.textContent;
   try{
     const { id } = currentStudent;
     if(!id) throw new Error('لم يتم اختيار طالب.');
     const name = (edSName.value||'').trim();
-    const civilid = (edSCivil.value||'').trim();
     const specialCase = edSSpecialCase.checked;
-    
+    const newClass = edSClass.value;
+    const oldClass = currentStudent.data?.class || '';
+
     if(!name) throw new Error('أدخل الاسم.');
-    
-    const updateData = { 
-      name, 
-      civilid, 
+    if(!newClass) throw new Error('اختر الفصل.');
+
+    const updateData = {
+      name,
       specialCase,
-      updatedAt: serverTimestamp() 
+      updatedAt: serverTimestamp()
     };
-    
+
     // If special case is being turned off, clear reason
     if (!specialCase && currentStudent.data?.specialCase) {
       updateData.specialCaseReason = null;
       updateData.specialCaseUpdatedAt = serverTimestamp();
       updateData.specialCaseUpdatedBy = auth.currentUser.uid;
     }
-    
+
+    const classChanged = newClass !== oldClass;
+    if(classChanged){
+      saveStudent.disabled = true;
+      saveStudent.textContent = 'جارٍ النقل...';
+      const destSnap = await getDocs(query(collection(db,'students'), where('class','==', newClass)));
+      let maxNumber = 0;
+      destSnap.forEach(d => {
+        const n = d.data().studentNumber;
+        if(typeof n === 'number' && !isNaN(n) && n > maxNumber) maxNumber = n;
+      });
+      updateData.class = newClass;
+      updateData.studentNumber = maxNumber + 1;
+    }
+
     await updateDoc(doc(db,'students', id), updateData);
-    
+    currentStudent.data = { ...(currentStudent.data || {}), ...updateData };
+
     studentHeaderName.textContent = name;
-    edOk.textContent = 'تم حفظ التعديلات.';
+    studentHeaderClass.textContent = newClass ? `الفصل: ${toArabicDigits(newClass)}` : '—';
+    edOk.textContent = classChanged ? `تم حفظ التعديلات ونقل الطالب إلى ${toArabicDigits(newClass)}.` : 'تم حفظ التعديلات.';
     edOk.style.display='block';
-    setTimeout(()=>{ edOk.style.display='none'; }, 900);
-    
+    setTimeout(()=>{ edOk.style.display='none'; }, 1400);
+
     // Update the student list with proper studentNumber sorting
     if(selectedClass) await loadStudents(selectedClass);
+    if(classChanged) await refreshSchoolStats();
   }catch(e){
     edErr.textContent = e?.message || 'تعذّر الحفظ.';
     edErr.style.display='block';
+  }finally{
+    saveStudent.disabled = false;
+    saveStudent.textContent = originalLabel;
   }
 });
 
