@@ -2162,6 +2162,7 @@ body.student-profile-open #studentSheet .sheet-header{
 import { initializeApp, getApp, getApps } from "/shared/firebase.js";
 import { getAuth, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from "/shared/firebase.js";
 import { initializeFirestore, persistentSingleTabManager, collection, getDocs, query, where, orderBy, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp, writeBatch } from "/shared/firebase.js";
+import { mountAttendanceSheet } from "/shared/attendance.js";
 
 
 
@@ -2173,6 +2174,17 @@ try {
   db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true, useFetchStreams: false });
 }
 const auth = getAuth(app);
+
+// Modern (attendanceSessions) records are always edited through the shared
+// attendance sheet's own edit flow — see the branch in openAttDetail() below
+// — never through this page's own status editor, which only ever touches
+// the students/{uid}/attendance mirror and would silently desync from the
+// real record otherwise.
+const attendance = mountAttendanceSheet({
+  db,
+  auth,
+  onSaved: () => { if (currentStudent.id) loadStudentAttendance(currentStudent.id); },
+});
 
 const TELEGRAM_BACKEND_BASE_URL = (() => {
   const fromWindow = String(window.__TELEGRAM_BACKEND_BASE_URL || '').trim();
@@ -4349,6 +4361,16 @@ function makeAttTile(r){
 
 // MODIFIED: openAttDetail function to show excused absence details
 async function openAttDetail(r){
+  // Modern records (this student's mirror of an attendanceSessions doc) are
+  // edited through the shared attendance sheet, which writes back to the
+  // real session + records — not this page's own status editor, which can
+  // only ever touch the mirror. Only pre-migration legacy records (mirrored
+  // from the old top-level "attendance" collection) use the editor below.
+  if (r.sessionId && r.sessionPath && r.sessionPath.startsWith('attendanceSessions/')) {
+    attendance.openForEdit(r.sessionId);
+    return;
+  }
+
   currentAttendanceRecord = r;
   attDetailTitle.textContent = r.status==='late' ? 'تفاصيل التأخير' : 'تفاصيل الغياب';
   

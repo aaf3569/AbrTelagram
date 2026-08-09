@@ -1335,6 +1335,26 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
             updatedBy: uid,
             studentName: nameByUid[u] || null,
           }, { merge: true });
+
+          // Mirror into students/{uid}/attendance too — every "student
+          // profile" page (admins/students.html, supervisors/
+          // supervisorstudents.html, ...) only ever reads this
+          // subcollection, never attendanceSessions/attendanceRecords, so
+          // without this mirror a profile would never reflect attendance
+          // taken through this shared sheet.
+          const mirrorRef = doc(db, "students", u, "attendance", sessionId);
+          batch.set(mirrorRef, {
+            class: classKey,
+            date: dateKW,
+            lessonIndex,
+            lessonLabel,
+            status,
+            updatedAt: serverTimestamp(),
+            updatedBy: uid,
+            sessionId,
+            sessionPath: sessionRef.path,
+            studentName: nameByUid[u] || null,
+          }, { merge: true });
         });
         await batch.commit();
         closeModal(els.confirmModal);
@@ -1418,6 +1438,23 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit } = {}) {
           status,
           updatedAt: serverTimestamp(),
           updatedBy: uid,
+          studentName: nameByUid[u] || null,
+        });
+
+        // Mirror into students/{uid}/attendance — see the matching mirror
+        // in the "edit" branch above for why this exists.
+        const mirrorRef = doc(db, "students", u, "attendance", newSessionId);
+        batch.set(mirrorRef, {
+          class: classKey,
+          date: dateKW,
+          lessonIndex,
+          lessonLabel,
+          status,
+          createdBy: uid,
+          updatedAt: serverTimestamp(),
+          updatedBy: uid,
+          sessionId: newSessionId,
+          sessionPath: sessionRef.path,
           studentName: nameByUid[u] || null,
         });
       });
