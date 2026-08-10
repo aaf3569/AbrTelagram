@@ -89,6 +89,9 @@
     .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
     .field{display:flex;flex-direction:column;gap:8px;width:100%;min-width:0}
     .label{font-size:.92rem;font-weight:800;color:#0f2743}
+    .field-hint{font-size:.82rem;font-weight:700;color:#a35b00;margin-top:2px}
+    .delete-confirm-text{margin:0;color:#334155;font-weight:700;line-height:1.8}
+    .delete-confirm-text strong{color:#cb2b2b}
     .input-wrap{display:flex;align-items:center;gap:10px;min-height:52px;padding:0 14px;background:#fff;border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-1);overflow:hidden}
     .input{flex:1;height:48px;border:none;outline:none;background:transparent;font-size:16px;color:#0a0a0a;font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;min-width:0}
     .input:disabled{color:#334155;opacity:1;cursor:default}
@@ -130,8 +133,14 @@
     .permissions-editor{display:flex;flex-direction:column;gap:12px}
     .permissions-editor .checkbox-wrap{padding:12px 14px;border:1px dashed #d8e8f8;border-radius:14px;background:#f8fbff}
     .classes-editor[hidden]{display:none}
-    .profile-actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}
-    #saveTeacher[hidden], #cancelTeacherEdit[hidden], #editTeacher[hidden]{display:none}
+    /* Primary actions read start-to-end in Arabic (right-to-left), so they
+       belong at flex-start, not flex-end — flex-end in an RTL flex context
+       is the LEFT edge, which had every button (including تعديل/حفظ)
+       bunched up on the wrong side. حذف stays visually isolated on the
+       left as the one deliberately-separated destructive action. */
+    .profile-actions{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+    .profile-actions-group{display:flex;gap:10px;flex-wrap:wrap}
+    #saveTeacher[hidden], #cancelTeacherEdit[hidden], #editTeacher[hidden], #deleteTeacher[hidden], #changeTeacherPassword[hidden]{display:none}
     .pill[hidden]{display:none}
     .teacher-readonly .classes-editor{display:none !important}
     .teacher-readonly .edit-only{display:none !important}
@@ -143,6 +152,7 @@
        tablets by default. The min-width:980px block below is the only
        place that ever turns them on. */
     .sidebar-desktop-head{display:none}
+    .sidebar-desktop-foot{display:none}
     #desktopWelcome{display:none}
     .back-btn-icon{display:none}
     @media (min-width:980px){
@@ -227,7 +237,11 @@
       }
       #stateTeachers.active{display:flex}
 
-      .sidebar-desktop-head{display:flex;flex-direction:column;gap:14px;margin-bottom:18px}
+      .sidebar-desktop-head{display:flex;flex-direction:column;margin-bottom:14px}
+      .sidebar-desktop-foot{
+        display:flex;flex-direction:column;margin-top:auto;padding-top:18px;
+        border-top:1px solid var(--border);
+      }
       .sidebar-back-link{
         display:inline-flex;align-items:center;gap:7px;width:fit-content;
         height:38px;padding:0 14px;border-radius:11px;
@@ -344,10 +358,27 @@
         position:absolute;top:22px;right:32px;left:auto;
       }
       #teacherSheet.open .teacher-profile-back{display:inline-flex}
-      #teacherSheet .sheet-body{padding-top:10px}
-      .profile-hero{padding:20px 22px}
-      .avatar{width:64px;height:64px;font-size:1.2rem}
-      .profile-name{font-size:1.14rem}
+      /* The back button floats over this panel (no separate sheet-header
+         here) — sheet-body's top padding has to clear its ~68px-tall
+         footprint, or the profile hero sits right underneath it and gets
+         visually covered ("the name bar going off screen"). */
+      #teacherSheet .sheet-body{padding-top:86px}
+
+      .profile-hero{padding:28px 30px;gap:20px;border-radius:20px}
+      .avatar{width:92px;height:92px;font-size:1.7rem;box-shadow:0 14px 30px rgba(3,60,84,.32)}
+      .profile-head{gap:18px}
+      .profile-name{font-size:1.5rem}
+      .profile-email{font-size:.98rem}
+      .profile-badges{gap:10px}
+      .pill{height:34px;padding:0 14px;font-size:.86rem}
+      .profile-grid{gap:16px}
+      .profile-card{padding:20px 22px;border-radius:18px}
+      .profile-card-title{font-size:1.02rem;margin-bottom:14px}
+      .profile-card-basic .info-grid{gap:18px 22px}
+      .plain-value{font-size:1.02rem}
+      .teacher-readonly .field .label{font-size:.88rem}
+      .class-chip{height:36px;padding:0 14px;font-size:.88rem}
+      .perm-chip{height:38px;padding:0 14px;font-size:.9rem}
 
       #addTeacherModal .modal{width:min(92vw,660px)}
       .add-teacher-body{display:grid;grid-template-columns:1fr 1fr;gap:14px 18px}
@@ -377,10 +408,6 @@
 
       <section id="stateTeachers" class="state" aria-label="اختر المادة">
         <div class="sidebar-desktop-head">
-          <a href="/admins/adminpage.html" class="sidebar-back-link">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
-            <span>لوحة الإدارة</span>
-          </a>
           <div class="sidebar-heading">الأقسام الدراسية</div>
         </div>
         <button id="openAdminsTop" class="subject subject-card subject-admin-entry" type="button" aria-label="الإدارة">
@@ -388,6 +415,12 @@
           <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
         </button>
         <div id="subjectsList" class="stack"></div>
+        <div class="sidebar-desktop-foot">
+          <a href="/admins/adminpage.html" class="sidebar-back-link">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+            <span>لوحة الإدارة</span>
+          </a>
+        </div>
       </section>
     </div>
   </main>
@@ -478,11 +511,13 @@
 
         <section class="profile-card">
           <div class="profile-actions">
-            <button id="editTeacher" class="btn ghost" type="button">تعديل</button>
-            <button id="changeTeacherPassword" class="btn ghost" type="button" hidden>تغيير كلمة المرور</button>
-            <button id="cancelTeacherEdit" class="btn ghost" type="button" hidden>إلغاء</button>
-            <button id="saveTeacher" class="btn primary" type="button" hidden>حفظ</button>
-            <button id="deleteTeacher" class="btn danger" type="button">حذف</button>
+            <div class="profile-actions-group">
+              <button id="editTeacher" class="btn ghost" type="button">تعديل</button>
+              <button id="changeTeacherPassword" class="btn ghost" type="button" hidden>تغيير كلمة المرور</button>
+              <button id="cancelTeacherEdit" class="btn ghost" type="button" hidden>إلغاء</button>
+              <button id="saveTeacher" class="btn primary" type="button" hidden>حفظ</button>
+            </div>
+            <button id="deleteTeacher" class="btn danger" type="button" hidden>حذف</button>
           </div>
           <div id="edOk" class="ok"></div><div id="edErr" class="err"></div>
         </section>
@@ -581,11 +616,26 @@
     </div>
   </div>
 
+  <div id="deleteTeacherModal" class="modal-overlay" aria-hidden="true">
+    <div class="modal">
+      <div class="modal-header"><h3 class="modal-title">حذف ملف المعلّم</h3><button class="close-modal" aria-label="إغلاق">×</button></div>
+      <div class="modal-body">
+        <p class="delete-confirm-text">هل تريد حذف ملف المعلّم <strong id="dtName"></strong> نهائيًا؟ لا يمكن التراجع عن هذا الإجراء.</p>
+        <div id="dtErr" class="err"></div>
+      </div>
+      <div class="modal-footer"><button id="cancelDeleteTeacher" class="btn ghost" type="button">إلغاء</button><button id="confirmDeleteTeacher" class="btn danger" type="button">حذف نهائيًا</button></div>
+    </div>
+  </div>
+
   <div id="changePasswordModal" class="modal-overlay" aria-hidden="true">
     <div class="modal">
-      <div class="modal-header"><h3 class="modal-title">تغيير كلمة مرور المعلّم</h3><button class="close-modal" aria-label="إغلاق">×</button></div>
+      <div class="modal-header"><h3 class="modal-title">تغيير كلمة مرور المعلّم: <span id="cpTeacherName"></span></h3><button class="close-modal" aria-label="إغلاق">×</button></div>
       <div class="modal-body add-teacher-body">
-        <div class="field add-teacher-full"><label class="label" for="cpAdminPassword">كلمة مرورك الحالية (للتأكيد)</label><div class="input-wrap"><input id="cpAdminPassword" class="input" type="password" autocomplete="current-password"></div></div>
+        <div class="field add-teacher-full">
+          <label class="label" for="cpAdminPassword">كلمة مرور حسابك أنت كمشرف (للتأكيد فقط)</label>
+          <div class="input-wrap"><input id="cpAdminPassword" class="input" type="password" autocomplete="current-password"></div>
+          <div class="field-hint">هذه كلمة مرورك أنت لتأكيد هويتك — وليست كلمة مرور المعلّم.</div>
+        </div>
         <div class="field"><label class="label" for="cpNewPassword">كلمة المرور الجديدة للمعلّم</label><div class="input-wrap"><input id="cpNewPassword" class="input" type="password" autocomplete="new-password"></div></div>
         <div class="field"><label class="label" for="cpConfirmPassword">تأكيد كلمة المرور الجديدة</label><div class="input-wrap"><input id="cpConfirmPassword" class="input" type="password" autocomplete="new-password"></div></div>
         <div id="cpOk" class="ok add-teacher-full"></div><div id="cpErr" class="err add-teacher-full"></div>
@@ -693,6 +743,13 @@
     const cpConfirmPassword=document.getElementById('cpConfirmPassword');
     const cpOk=document.getElementById('cpOk');
     const cpErr=document.getElementById('cpErr');
+    const cpTeacherName=document.getElementById('cpTeacherName');
+    const deleteTeacherModal=document.getElementById('deleteTeacherModal');
+    const closeDeleteTeacherModal=document.querySelector('#deleteTeacherModal .close-modal');
+    const cancelDeleteTeacher=document.getElementById('cancelDeleteTeacher');
+    const confirmDeleteTeacher=document.getElementById('confirmDeleteTeacher');
+    const dtName=document.getElementById('dtName');
+    const dtErr=document.getElementById('dtErr');
     const edOk=document.getElementById('edOk');
     const edErr=document.getElementById('edErr');
     const edClasses=document.getElementById('edClasses');
@@ -784,7 +841,7 @@
 
     let lastFocusedBeforeSuccessModal=null;
     function syncBodyScrollLock(){
-      const anyOverlayOpen=addTeacherModal.classList.contains('active') || addAdminModal.classList.contains('active') || supervisorGradeModal.classList.contains('active') || changePasswordModal.classList.contains('active') || successModal.classList.contains('show');
+      const anyOverlayOpen=addTeacherModal.classList.contains('active') || addAdminModal.classList.contains('active') || supervisorGradeModal.classList.contains('active') || changePasswordModal.classList.contains('active') || deleteTeacherModal.classList.contains('active') || successModal.classList.contains('show');
       document.body.style.overflow=anyOverlayOpen?'hidden':'';
     }
     function focusIfPossible(el){
@@ -1163,6 +1220,29 @@
       const credential=EmailAuthProvider.credential(email, adminPassword);
       await reauthenticateWithCredential(user, credential);
     }
+    // Save only makes sense once something has actually changed — a
+    // snapshot is taken the moment edit mode starts, and every summary
+    // refresh (already wired to every relevant input) compares against it.
+    let editSnapshot=null;
+    function serializeEditForm(){
+      return JSON.stringify({
+        name:edTName.value.trim(),
+        civilId:edTEmail.value.trim(),
+        phone:edTPhone.value.trim(),
+        teams:edTTeams.value.trim(),
+        displayedPassword:edTDisplayedPassword.value,
+        role:edTRole.value,
+        isSupervisor:edTIsSupervisor.checked,
+        supervisorGrade:edTIsSupervisor.checked?normalizeSupervisorGrade(editSupervisorGrade):'',
+        allowEditSchedule:edTAllowEditSchedule.checked,
+        allowMorningLate:edTAllowMorningLate.checked,
+        allowSupervisorStudents:edTAllowSupervisorStudents.checked,
+        classes:getClassesFrom(edClasses),
+      });
+    }
+    function captureEditSnapshot(){ editSnapshot=serializeEditForm(); }
+    function isEditFormDirty(){ return editSnapshot!==null && serializeEditForm()!==editSnapshot; }
+
     function updateProfileSummary(){
       const name=edTName.value.trim() || currentTeacher?.data?.name || currentTeacher?.uid || '—';
       const civilId=(edTEmail.value||'').replace(/\D+/g,'') || getTeacherCivilId(currentTeacher?.data) || '—';
@@ -1191,6 +1271,7 @@
       renderPermissionsPreview({ isSupervisor, supervisorGrade, allowEditSchedule, allowMorningLate, allowSupervisorStudents });
       renderClassesPreview(getClassesFrom(edClasses));
       updateSupervisorCheckboxLabels();
+      if(teacherEditMode) saveTeacher.hidden=!isEditFormDirty();
     }
     function setTeacherEditMode(isEdit){
       teacherEditMode=!!isEdit;
@@ -1202,8 +1283,10 @@
       classesEditorWrap.hidden=!teacherEditMode;
       editTeacherBtn.hidden=teacherEditMode;
       changeTeacherPasswordBtn.hidden=!teacherEditMode;
+      deleteTeacherBtn.hidden=!teacherEditMode;
       cancelTeacherEditBtn.hidden=!teacherEditMode;
-      saveTeacher.hidden=!teacherEditMode;
+      if(teacherEditMode) captureEditSnapshot(); else editSnapshot=null;
+      saveTeacher.hidden=true;
       updateProfileSummary();
     }
 
@@ -1560,14 +1643,39 @@
       }catch(e){edErr.textContent=e?.message||'تعذّر الحفظ.';edErr.style.display='block';}
     });
 
-    deleteTeacherBtn.addEventListener('click', async ()=>{
+    deleteTeacherBtn.addEventListener('click',()=>{
+      if(!currentTeacher.uid) return;
+      dtErr.style.display='none';
+      dtName.textContent=currentTeacher?.data?.name||edTName.value.trim()||'';
+      openModal(deleteTeacherModal,{ fallbackFocus:deleteTeacherBtn });
+    });
+    closeDeleteTeacherModal.addEventListener('click',()=>closeModal(deleteTeacherModal,{fallbackFocus:deleteTeacherBtn}));
+    cancelDeleteTeacher.addEventListener('click',()=>closeModal(deleteTeacherModal,{fallbackFocus:deleteTeacherBtn}));
+    deleteTeacherModal.addEventListener('click',(e)=>{
+      if(e.target===deleteTeacherModal) closeModal(deleteTeacherModal,{fallbackFocus:deleteTeacherBtn});
+    });
+    confirmDeleteTeacher.addEventListener('click', async ()=>{
+      dtErr.style.display='none';
       edOk.style.display='none';edErr.style.display='none';
+      const {uid}=currentTeacher;
+      if(!uid) return;
+      confirmDeleteTeacher.disabled=true;
+      cancelDeleteTeacher.disabled=true;
+      const originalLabel=confirmDeleteTeacher.textContent;
+      confirmDeleteTeacher.textContent='جارٍ الحذف...';
       try{
-        const {uid}=currentTeacher;if(!uid) return; if(!confirm('حذف ملف المعلّم من Firestore؟')) return;
         await deleteDoc(doc(db,'teachers',uid));
+        closeModal(deleteTeacherModal,{fallbackFocus:deleteTeacherBtn});
         edOk.textContent='تم الحذف.';edOk.style.display='block';setTimeout(()=>{edOk.style.display='none';closeTeacherView();},700);
         if(selectedSubject) await loadTeachers(selectedSubject);
-      }catch(e){edErr.textContent=e?.message||'تعذّر الحذف.';edErr.style.display='block';}
+      }catch(e){
+        dtErr.textContent=e?.message||'تعذّر الحذف.';
+        dtErr.style.display='block';
+      }finally{
+        confirmDeleteTeacher.disabled=false;
+        cancelDeleteTeacher.disabled=false;
+        confirmDeleteTeacher.textContent=originalLabel;
+      }
     });
 
     // ---- Change a teacher's login password: admin re-enters their own
@@ -1585,6 +1693,7 @@
     changeTeacherPasswordBtn.addEventListener('click',()=>{
       if(!currentTeacher.uid) return;
       resetChangePasswordForm();
+      cpTeacherName.textContent=currentTeacher?.data?.name||edTName.value.trim()||'';
       openModal(changePasswordModal);
       setTimeout(()=>focusIfPossible(cpAdminPassword),20);
     });
@@ -1719,6 +1828,7 @@
         if(addTeacherModal.classList.contains('active')) closeModal(addTeacherModal);
         if(addAdminModal.classList.contains('active')) closeModal(addAdminModal,{fallbackFocus:openAddAdmin});
         if(changePasswordModal.classList.contains('active')) closeModal(changePasswordModal,{fallbackFocus:changeTeacherPasswordBtn});
+        if(deleteTeacherModal.classList.contains('active')) closeModal(deleteTeacherModal,{fallbackFocus:deleteTeacherBtn});
         if(successModal.classList.contains('show')) closeSuccessModalFn();
         syncTeacherRouteMode();
       }
