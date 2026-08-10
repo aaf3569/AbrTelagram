@@ -576,6 +576,12 @@ body.student-route-active #studentSheet .sheet-header{
 .pill{ background:var(--chip); color:#0f2743; border:1px solid var(--border); padding:6px 12px; border-radius:999px; font-size:.9rem; font-weight:800 }
 .pill.g{ color:var(--green); border-color:var(--greenBg); background:var(--greenBg) } .pill.y{ color:var(--yellow); border-color:var(--yellowBg); background:var(--yellowBg) } .pill.r{ color:var(--red); border-color:var(--redBg); background:var(--redBg) } .pill.e{ color:var(--excused); border-color:var(--excusedBg); background:var(--excusedBg) }
 .att-group{ display:flex; flex-direction:column; gap:12px }
+/* #absencesBlock/#latesBlock's label+count row is a bare .row with no
+   margin, and .analytics-card itself doesn't space its children (other
+   cards get spacing from .analytics-head's own margin-bottom instead) —
+   so the first tile sat flush against the row above it, and its hover
+   lift (translateY(-2px)) visibly rode up into it. */
+#absencesBlock > .row, #latesBlock > .row{ margin-bottom:14px; }
 .att-tile{
   padding:14px 16px; border:1px solid var(--border); border-radius:16px; background:#fff; box-shadow: var(--shadow-1);
   display:flex; align-items:center; justify-content:space-between; cursor:pointer; transition: var(--transition);
@@ -1738,6 +1744,31 @@ html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%;
   </div>
 </div>
 
+<!-- Morning-late record: view + remove -->
+<div id="morningLateDetailModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title">تأخير طابور الصباح</h3>
+      <button id="closeMorningLateDetail" class="modal-close" aria-label="إغلاق">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 6L6 18M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body" style="display:flex; flex-direction:column; gap:10px;">
+      <div class="row"><span class="label" style="min-width:110px;">التاريخ:</span><span id="mlDate">—</span></div>
+      <div class="row"><span class="label" style="min-width:110px;">الوقت:</span><span id="mlTime">—</span></div>
+      <div class="row"><span class="label" style="min-width:110px;">الفصل:</span><span id="mlClass">—</span></div>
+      <div class="row"><span class="label" style="min-width:110px;">سجّله:</span><span id="mlBy">—</span></div>
+      <div id="mlErr" class="error" style="display:none;"></div>
+    </div>
+    <div class="modal-footer">
+      <button id="closeMorningLateDetailBtn" class="btn ghost" type="button">إغلاق</button>
+      <button id="deleteMorningLateBtn" class="btn danger" type="button">حذف التأخير</button>
+    </div>
+  </div>
+</div>
+
 <!-- Delete All Students: step 1, password re-auth -->
 <div id="deleteAllPasswordModal" class="modal-overlay">
   <div class="modal">
@@ -2304,6 +2335,15 @@ const absencesList = document.getElementById('absencesList');
 const latesList = document.getElementById('latesList');
 const absentCountPill = document.getElementById('absentCountPill');
 const lateCountPill = document.getElementById('lateCountPill');
+const morningLateDetailModal = document.getElementById('morningLateDetailModal');
+const closeMorningLateDetail = document.getElementById('closeMorningLateDetail');
+const closeMorningLateDetailBtn = document.getElementById('closeMorningLateDetailBtn');
+const deleteMorningLateBtn = document.getElementById('deleteMorningLateBtn');
+const mlDate = document.getElementById('mlDate');
+const mlTime = document.getElementById('mlTime');
+const mlClass = document.getElementById('mlClass');
+const mlBy = document.getElementById('mlBy');
+const mlErr = document.getElementById('mlErr');
 // Tabs
 const tabCommit = document.getElementById('tabCommit');
 const tabEnroll = document.getElementById('tabEnroll');
@@ -4408,36 +4448,46 @@ async function loadStudentAttendance(studentId){
   warningLevelBadge.className = 'warning-level-badge warning-level-0';
   
   try{
-    const subSnap = await getDocs(collection(db,'students', studentId, 'attendance'));
+    // Lesson-based attendance (students/{uid}/attendance) and morning-ceremony
+    // lateness (a separate, unrelated morningLates collection keyed by
+    // studentUid — see Teachers/morning.html) are independent queries.
+    const [subSnap, morningSnap] = await Promise.all([
+      getDocs(collection(db,'students', studentId, 'attendance')),
+      getDocs(query(collection(db,'morningLates'), where('studentUid','==',studentId))).catch(e=>{ console.error('[loadStudentAttendance] morningLates:', e); return { forEach(){} }; })
+    ]);
     const rows = [];
     subSnap.forEach(d=> rows.push({ id:d.id, ...d.data() }));
     rows.sort((a,b)=>{ if(a.date===b.date) return (b.lessonIndex||0) - (a.lessonIndex||0); return a.date < b.date ? 1 : -1; });
     currentStudentAttendance = rows;
-    
+
+    const morningLateRows = [];
+    morningSnap.forEach(d=> morningLateRows.push({ id:d.id, source:'morningLate', ...d.data() }));
+    morningLateRows.sort((a,b)=>{ if(a.date===b.date) return (b.time||'').localeCompare(a.time||''); return a.date < b.date ? 1 : -1; });
+
     // Calculate totals based on new rules
     const present = rows.filter(r=> r.status==='present').length;
-    const late = rows.filter(r=> r.status==='late').length;
-    
+    const late = rows.filter(r=> r.status==='late').length + morningLateRows.length;
+
     // Count only absences without reason for totals and warnings
     const absencesWithoutReason = rows.filter(r=> r.status==='absent' && r.hasReason !== true);
     const absent = absencesWithoutReason.length;
-    
+
     // Count all absences for display
     const allAbsences = rows.filter(r=> r.status==='absent');
-    
+
     totPresent.textContent = toArabicDigits(present);
     totLate.textContent = toArabicDigits(late);
     totAbsent.textContent = toArabicDigits(absent);
     absentCountPill.textContent = `غياب: ${toArabicDigits(allAbsences.length)}`;
     lateCountPill.textContent = `تأخير: ${toArabicDigits(late)}`;
-    
+
     // Calculate warning level
     const warningAbsencesCount = absent;
     warningAbsenceCount.textContent = toArabicDigits(warningAbsencesCount);
-    
+
     let warningLevel = 0;
     let warningText = 'لا يوجد';
-    
+
     if (warningAbsencesCount >= 15) {
       warningLevel = 3;
       warningText = 'تحذير 3';
@@ -4448,24 +4498,32 @@ async function loadStudentAttendance(studentId){
       warningLevel = 1;
       warningText = 'تحذير 1';
     }
-    
+
     warningLevelBadge.textContent = warningText;
     warningLevelBadge.className = `warning-level-badge warning-level-${warningLevel}`;
-    
+
     const absencesFragment = document.createDocumentFragment();
     const latesFragment = document.createDocumentFragment();
-    
+
     // Create attendance tiles for all absences (both excused and non-excused)
     allAbsences.forEach(r=> absencesFragment.appendChild(makeAttTile(r)));
-    rows.filter(r=> r.status==='late').forEach(r=> latesFragment.appendChild(makeAttTile(r)));
-    
+    // Lesson lates and morning lates share one list, newest first.
+    const combinedLates = [
+      ...rows.filter(r=> r.status==='late'),
+      ...morningLateRows,
+    ].sort((a,b)=>{
+      if(a.date===b.date) return (b.time||'').localeCompare(a.time||'');
+      return a.date < b.date ? 1 : -1;
+    });
+    combinedLates.forEach(r=> latesFragment.appendChild(r.source==='morningLate' ? makeMorningLateTile(r) : makeAttTile(r)));
+
     absencesList.innerHTML = ''; latesList.innerHTML = '';
     absencesList.appendChild(absencesFragment); latesList.appendChild(latesFragment);
-    
+
     if(allAbsences.length===0){
       const empty=document.createElement('div'); empty.className='muted'; empty.textContent='لا توجد حالات غياب.'; absencesList.appendChild(empty);
     }
-    if(late===0){
+    if(combinedLates.length===0){
       const empty=document.createElement('div'); empty.className='muted'; empty.textContent='لا توجد حالات تأخير.'; latesList.appendChild(empty);
     }
   }catch(e){
@@ -4502,6 +4560,59 @@ function makeAttTile(r){
   div.addEventListener('click', ()=> openAttDetail(r));
   return div;
 }
+
+function makeMorningLateTile(r){
+  const div = document.createElement('div');
+  div.className='att-tile will-change';
+  const sub = `${r.classKey ? toArabicDigits(r.classKey) : '—'} • ${toArabicDigits(r.date || '')}${r.time ? ' • ' + toArabicDigits(r.time) : ''}`;
+  div.innerHTML = `
+    <div class="att-left">
+      <div class="att-title">تأخير عن طابور الصباح</div>
+      <div class="att-sub">${sub}</div>
+    </div>
+    <span class="badge b-late">تأخير صباح</span>
+  `;
+  div.addEventListener('click', ()=> openMorningLateDetail(r));
+  return div;
+}
+
+let currentMorningLateRecord = null;
+function openMorningLateDetail(r){
+  currentMorningLateRecord = r;
+  mlErr.style.display = 'none';
+  mlDate.textContent = toArabicDigits(r.date || '—');
+  mlTime.textContent = r.time ? toArabicDigits(r.time) : '—';
+  mlClass.textContent = r.classKey ? toArabicDigits(r.classKey) : '—';
+  mlBy.textContent = r.createdByName || '—';
+  openModal(morningLateDetailModal);
+}
+function closeMorningLateDetailFn(){
+  closeModal(morningLateDetailModal);
+  currentMorningLateRecord = null;
+}
+closeMorningLateDetail.addEventListener('click', closeMorningLateDetailFn);
+closeMorningLateDetailBtn.addEventListener('click', closeMorningLateDetailFn);
+deleteMorningLateBtn.addEventListener('click', async ()=>{
+  if(!currentMorningLateRecord || !currentStudent.id) return;
+  mlErr.style.display = 'none';
+  deleteMorningLateBtn.disabled = true;
+  closeMorningLateDetailBtn.disabled = true;
+  const originalLabel = deleteMorningLateBtn.textContent;
+  deleteMorningLateBtn.textContent = 'جارٍ الحذف...';
+  try{
+    await deleteDoc(doc(db, 'morningLates', currentMorningLateRecord.id));
+    closeMorningLateDetailFn();
+    await loadStudentAttendance(currentStudent.id);
+  }catch(e){
+    console.error('[deleteMorningLate]', e);
+    mlErr.textContent = 'تعذّر حذف سجل التأخير.';
+    mlErr.style.display = 'block';
+  }finally{
+    deleteMorningLateBtn.disabled = false;
+    closeMorningLateDetailBtn.disabled = false;
+    deleteMorningLateBtn.textContent = originalLabel;
+  }
+});
 
 // MODIFIED: openAttDetail function to show excused absence details
 async function openAttDetail(r){

@@ -398,6 +398,24 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
   let todayMapCache = { key: "", at: 0, map: null };
 
   // Sheet/modal helpers (operate on this module's elements only)
+  // Host pages (admins/students.html, Teachers/user.html, ...) use the same
+  // .sheet/.open and .modal/.open convention for their OWN, unrelated sheets
+  // (e.g. the student profile sheet). A blind document-wide
+  // ".sheet.open, .modal.open" query matches those too, so closing this
+  // module's last sheet while a host sheet is legitimately still open was
+  // never seen as "nothing left open" — main/.site-header stayed inert
+  // (and unclickable, including any back button living in the header)
+  // for the rest of that session. Only count this module's own elements.
+  function anyOwnUiOpen() {
+    return [
+      els.sheet,
+      els.confirmModal,
+      els.errorModal,
+      els.blockedModal,
+      els.successModal,
+      els.lessonDetailModal,
+    ].some((el) => el?.classList.contains("open"));
+  }
   function openSheet(el) {
     el.classList.add("open");
     el.setAttribute("aria-hidden", "false");
@@ -409,7 +427,7 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
     el.classList.remove("open");
     el.setAttribute("aria-hidden", "true");
     if (el === els.sheet) els.sheetTitle.textContent = DEFAULT_SHEET_TITLE;
-    if (!document.querySelector(".sheet.open, .modal.open")) {
+    if (!anyOwnUiOpen()) {
       unlockBodyScroll(scrollState);
       document.querySelector("main")?.removeAttribute("inert");
       document.querySelector(".site-header")?.removeAttribute("inert");
@@ -427,7 +445,7 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
     if (a && el.contains(a) && a instanceof HTMLElement) a.blur();
     el.classList.remove("open");
     el.setAttribute("aria-hidden", "true");
-    if (!document.querySelector(".sheet.open, .modal.open")) {
+    if (!anyOwnUiOpen()) {
       unlockBodyScroll(scrollState);
       document.querySelector("main")?.removeAttribute("inert");
       document.querySelector(".site-header")?.removeAttribute("inert");
