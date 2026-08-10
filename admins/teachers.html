@@ -139,6 +139,12 @@
     .teacher-profile-back{position:fixed;right:20px;top:92px;z-index:55;height:46px;padding:0 16px;border-radius:14px;border:1px solid rgba(3,60,84,.24);background:#fff;color:#033C54;font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;font-weight:900;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;box-shadow:0 14px 34px rgba(3,60,84,.2);transition:.16s ease}
     .teacher-profile-back:hover{transform:translateY(-2px);box-shadow:0 18px 40px rgba(3,60,84,.26);border-color:rgba(3,60,84,.45)}
     #teacherSheet:not(.open) .teacher-profile-back{display:none}
+    /* Desktop-shell-only elements: invisible and out of flow on phones/
+       tablets by default. The min-width:980px block below is the only
+       place that ever turns them on. */
+    .sidebar-desktop-head{display:none}
+    #desktopWelcome{display:none}
+    .back-btn-icon{display:none}
     @media (min-width:980px){
       .sheet.small .sheet-body{width:min(1060px,94vw)}
       .profile-grid{grid-template-columns:1.55fr .75fr;align-items:start}
@@ -174,6 +180,165 @@
     @keyframes checkDraw{0%{stroke-dashoffset:70;opacity:0}25%{stroke-dashoffset:70;opacity:0}45%{stroke-dashoffset:0;opacity:1}70%{stroke-dashoffset:0;opacity:1}100%{stroke-dashoffset:70;opacity:0}}
     @media (max-width:700px){.floating-back,.teacher-profile-back{right:12px;top:76px;height:42px;padding:0 12px}}
     @media (max-width:640px){.add-teacher-body{gap:10px}}
+
+    /* ================================================================
+       Desktop shell — admins/teachers.html only, min-width:980px.
+       Everything above this block is untouched and still governs phones/
+       tablets exactly as before. This section reflows the SAME elements
+       (no duplicated markup, two tiny additive nodes: .sidebar-desktop-head
+       and #desktopWelcome) into a persistent sidebar + content-panel
+       dashboard instead of the mobile full-screen slide-over sheets.
+       ================================================================ */
+    @media (min-width:980px){
+      html, body{height:100%}
+      body{
+        display:grid;
+        grid-template-columns:1fr;
+        grid-template-rows:auto 1fr;
+        height:100vh;
+        min-height:100vh;
+        overflow:hidden;
+      }
+      body:has(#stateTeachers.active){grid-template-columns:296px 1fr}
+      .site-header{grid-column:1 / -1}
+      .floating-back{display:none}
+
+      main{
+        grid-row:2;
+        grid-column:1 / -1;
+        min-height:0;
+        padding:0;
+        overflow-y:auto;
+      }
+      body:has(#stateTeachers.active) main{
+        grid-column:1;
+        background:#fff;
+        border-inline-end:1px solid var(--border);
+      }
+      main .column{width:100%;max-width:none;margin:0;height:100%;gap:0}
+      main .state.panel{max-width:480px;margin:auto;box-shadow:none;border:none;background:transparent}
+
+      #stateTeachers{
+        display:none;
+        flex-direction:column;
+        height:100%;
+        padding:22px 18px 28px;
+        overflow-y:auto;
+      }
+      #stateTeachers.active{display:flex}
+
+      .sidebar-desktop-head{display:flex;flex-direction:column;gap:16px;margin-bottom:18px}
+      .sidebar-back-link{display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-weight:800;font-size:.86rem;text-decoration:none;transition:color .15s ease;width:fit-content}
+      .sidebar-back-link:hover{color:var(--primary)}
+      .sidebar-back-link svg{width:15px;height:15px;stroke:currentColor;stroke-width:2.4;fill:none;stroke-linecap:round;stroke-linejoin:round;transform:scaleX(-1)}
+      .sidebar-heading{font-size:.76rem;font-weight:900;letter-spacing:.03em;color:#9aabc2;padding-inline-start:2px}
+
+      #stateTeachers #openAdminsTop,
+      #subjectsList .subject{
+        width:100%;background:transparent;border:1px solid transparent;border-radius:12px;
+        box-shadow:none;padding:0 14px;height:46px;color:#33475b;font-size:.94rem;
+        transition:background .14s ease,border-color .14s ease,color .14s ease;
+      }
+      #stateTeachers #openAdminsTop:hover,
+      #subjectsList .subject:hover{background:#f3f8fd;border-color:#e2edf8;transform:none;box-shadow:none}
+      #subjectsList .subject:hover .chev path{transform:none}
+      #subjectsList{gap:2px;margin-top:2px}
+      #stateTeachers #openAdminsTop{margin-bottom:14px;border-color:var(--border);background:#fafcff}
+      #stateTeachers #openAdminsTop.subject-selected,
+      #subjectsList .subject.subject-selected{
+        background:linear-gradient(90deg, rgba(3,60,84,.09), rgba(3,60,84,.02));
+        border-color:rgba(3,60,84,.22);
+        color:var(--primary);
+        font-weight:900;
+        position:relative;
+      }
+      #stateTeachers #openAdminsTop.subject-selected::before,
+      #subjectsList .subject.subject-selected::before{
+        content:"";position:absolute;inset-inline-start:0;top:9px;bottom:9px;width:3px;
+        border-radius:3px;background:var(--primary);
+      }
+
+      #desktopWelcome{
+        display:none;grid-row:2;grid-column:2;align-items:center;justify-content:center;padding:40px;
+      }
+      body:has(#stateTeachers.active) #desktopWelcome{display:flex}
+      body:has(#subjectSheet.open) #desktopWelcome,
+      body:has(#teacherSheet.open) #desktopWelcome{display:none}
+      .desktop-welcome-inner{text-align:center;max-width:340px;display:flex;flex-direction:column;align-items:center;gap:14px}
+      .desktop-welcome-icon{width:68px;height:68px;border-radius:20px;display:grid;place-items:center;background:linear-gradient(160deg,#eef6fb,#e2eef8);color:var(--primary);box-shadow:inset 0 0 0 1px rgba(3,60,84,.08)}
+      .desktop-welcome-icon svg{width:30px;height:30px;stroke:currentColor;stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round}
+      .desktop-welcome-inner h2{margin:0;font-size:1.12rem;color:#0f2743;font-weight:900}
+      .desktop-welcome-inner p{margin:0;color:var(--muted);font-weight:700;font-size:.9rem;line-height:1.7}
+
+      /* .sheet covers all four panels (subjects/teacher/admins/admin) so
+         a new sheet added later inherits this automatically. */
+      .sheet{
+        position:static;inset:auto;transform:none !important;transition:none;
+        grid-row:2;grid-column:2;display:none;height:100%;min-height:0;background:var(--page);
+      }
+      .sheet.open{display:flex}
+
+      /* Neutralize the mobile-only "teacher-route-active" full-bleed
+         takeover (base CSS above, unconditional): it hides main() with
+         !important and forces #teacherSheet to always render regardless
+         of .open, which is exactly wrong once the sidebar exists — this
+         class gets set on every normal teacher click (setTeacherRoute),
+         not just deep links, so it fires constantly at desktop widths too. */
+      body.teacher-route-active main{display:flex !important}
+      body.teacher-route-active #teacherSheet{
+        position:static;inset:auto;transform:none !important;
+        display:none;min-height:0;height:100%;
+      }
+      body.teacher-route-active #teacherSheet.open{display:flex}
+
+      .sheet .sheet-header{
+        position:static;background:transparent;border-bottom:none;padding:26px 32px 0;
+      }
+      .sheet .sheet-title{font-size:1.32rem}
+      /* A plain "رجوع" label reads ambiguous once a persistent sidebar
+         nav exists — the icon makes clear it's a directional "back",
+         and clicking it now also clears the sidebar's own highlight so
+         the two stay in sync (was possible to close a panel and still
+         see its sidebar entry marked as selected). */
+      .back-btn,.teacher-profile-back{display:inline-flex;align-items:center;gap:7px}
+      .back-btn-icon{display:inline-block;width:15px;height:15px;stroke:currentColor;stroke-width:2.4;fill:none;stroke-linecap:round;stroke-linejoin:round;transform:scaleX(-1);flex-shrink:0}
+      .sheet .sheet-body{
+        width:100%;max-width:1120px;margin:0 auto;padding:18px 32px 36px;overflow-y:auto;gap:18px;
+      }
+      .sheet.small .sheet-body{width:min(1120px,100%)}
+
+      #subjectSheet .sheet-body > .section:first-of-type,
+      #adminsSheet .sheet-body > .section:first-of-type{
+        background:transparent;border:none;box-shadow:none;padding:0;
+      }
+      #subjectSheet .sheet-body > .section:last-of-type,
+      #adminsSheet .sheet-body > .section:last-of-type{padding:0;overflow:hidden;flex-shrink:0}
+      #subjectSheet .sheet-body > .section:last-of-type > .label,
+      #adminsSheet .sheet-body > .section:last-of-type > .label{
+        padding:16px 20px;margin:0;border-bottom:1px solid var(--border);font-size:1rem;
+      }
+      #teachersList.stack,#adminsList.stack{gap:0}
+      #teachersList .teacher-item,#adminsList .teacher-item{
+        border-radius:0;border:none;box-shadow:none;padding:15px 20px;
+      }
+      #teachersList .teacher-item:hover,#adminsList .teacher-item:hover{transform:none;background:#f8fbff;box-shadow:none;border-color:transparent}
+      #teachersList .teacher-item + .teacher-item,#adminsList .teacher-item + .teacher-item{border-top:1px solid var(--border)}
+      #teachersList .teachers-separator{height:1px;background:var(--border);margin:0}
+
+      #teacherSheet{padding-top:0;position:relative}
+      .teacher-profile-back{
+        position:absolute;top:22px;right:32px;left:auto;
+      }
+      #teacherSheet.open .teacher-profile-back{display:inline-flex}
+      #teacherSheet .sheet-body{padding-top:10px}
+      .profile-hero{padding:20px 22px}
+      .avatar{width:64px;height:64px;font-size:1.2rem}
+      .profile-name{font-size:1.14rem}
+
+      #addTeacherModal .modal{width:min(92vw,660px)}
+      .add-teacher-body{display:grid;grid-template-columns:1fr 1fr;gap:14px 18px}
+      .add-teacher-body > .add-teacher-full{grid-column:1 / -1}
+    }
   </style>
 </head>
 <body>
@@ -197,6 +362,13 @@
       </div>
 
       <section id="stateTeachers" class="state" aria-label="اختر المادة">
+        <div class="sidebar-desktop-head">
+          <a href="/admins/adminpage.html" class="sidebar-back-link">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+            <span>لوحة الإدارة</span>
+          </a>
+          <div class="sidebar-heading">الأقسام الدراسية</div>
+        </div>
         <button id="openAdminsTop" class="subject subject-card subject-admin-entry" type="button" aria-label="الإدارة">
           <span>الإدارة</span>
           <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
@@ -206,9 +378,19 @@
     </div>
   </main>
 
+  <section id="desktopWelcome" aria-hidden="true">
+    <div class="desktop-welcome-inner">
+      <div class="desktop-welcome-icon">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      </div>
+      <h2>اختر قسمًا من القائمة</h2>
+      <p>لعرض المعلّمين المسجّلين وإدارة بياناتهم وصلاحياتهم.</p>
+    </div>
+  </section>
+
   <section id="subjectSheet" class="sheet" aria-hidden="true">
     <div class="sheet-header">
-      <button id="closeSubject" class="back-btn" aria-label="رجوع">رجوع</button>
+      <button id="closeSubject" class="back-btn" aria-label="رجوع"><svg class="back-btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg><span>رجوع</span></button>
       <h3 id="subjectTitle" class="sheet-title">—</h3>
     </div>
     <div class="sheet-body">
@@ -229,7 +411,7 @@
   </section>
 
   <section id="teacherSheet" class="sheet small" aria-hidden="true">
-    <button id="closeTeacher" class="teacher-profile-back" aria-label="رجوع">رجوع</button>
+    <button id="closeTeacher" class="teacher-profile-back" aria-label="رجوع"><svg class="back-btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg><span>رجوع</span></button>
     <div class="sheet-body">
       <div class="profile-shell teacher-readonly" id="teacherProfileShell">
         <section class="profile-hero">
@@ -292,6 +474,61 @@
       </div>
     </div>
   </section>
+
+  <section id="adminsSheet" class="sheet" aria-hidden="true">
+    <div class="sheet-header">
+      <button id="closeAdmins" class="back-btn" aria-label="رجوع"><svg class="back-btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg><span>رجوع</span></button>
+      <h3 class="sheet-title">الإدارة</h3>
+    </div>
+    <div class="sheet-body">
+      <div class="section">
+        <div class="row" style="justify-content:space-between;">
+          <div class="label" style="margin:0;">إدارة حسابات المشرفين</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <button id="refreshAdmins" class="btn ghost" type="button">تحديث</button>
+            <button id="openAddAdmin" class="btn primary" type="button">إضافة مشرف</button>
+          </div>
+        </div>
+      </div>
+      <div class="section">
+        <div class="label">قائمة المشرفين</div>
+        <div id="adminsList" class="stack"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="adminSheet" class="sheet small" aria-hidden="true">
+    <div class="sheet-header">
+      <button id="closeAdmin" class="back-btn" aria-label="رجوع"><svg class="back-btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg><span>رجوع</span></button>
+      <h3 id="adminTitle" class="sheet-title">بيانات المشرف</h3>
+    </div>
+    <div class="sheet-body">
+      <div class="section">
+        <div class="field"><label class="label" for="edAName">الاسم الكامل</label><div class="input-wrap"><input id="edAName" class="input" type="text"></div></div>
+        <div class="field"><label class="label" for="edAEmail">البريد الإلكتروني</label><div class="input-wrap"><input id="edAEmail" class="input" type="email" dir="ltr"></div></div>
+      </div>
+      <div class="section">
+        <div class="profile-actions">
+          <button id="saveAdmin" class="btn primary" type="button">حفظ</button>
+          <button id="deleteAdminBtn" class="btn danger" type="button">حذف</button>
+        </div>
+        <div id="edAOk" class="ok"></div><div id="edAErr" class="err"></div>
+      </div>
+    </div>
+  </section>
+
+  <div id="addAdminModal" class="modal-overlay" aria-hidden="true">
+    <div class="modal add-teacher-modal">
+      <div class="modal-header"><h3 class="modal-title">إضافة مشرف جديد</h3><button class="close-modal" aria-label="إغلاق">×</button></div>
+      <div class="modal-body add-teacher-body">
+        <div class="field"><label class="label" for="adName">الاسم الكامل</label><div class="input-wrap"><input id="adName" class="input" type="text"></div></div>
+        <div class="field"><label class="label" for="adEmail">رقم البطاقة المدنية</label><div class="input-wrap"><input id="adEmail" class="input" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="مثال: 298040100633"></div></div>
+        <div class="field add-teacher-full"><label class="label" for="adPassword">كلمة المرور</label><div class="input-wrap"><input id="adPassword" class="input" type="password"></div></div>
+        <div id="adOk" class="ok add-teacher-full"></div><div id="adErr" class="err add-teacher-full"></div>
+      </div>
+      <div class="modal-footer"><button id="cancelAddAdmin" class="btn ghost" type="button">إلغاء</button><button id="createAdminBtn" class="btn primary" type="button">إنشاء الحساب</button></div>
+    </div>
+  </div>
 
   <div id="addTeacherModal" class="modal-overlay" aria-hidden="true">
     <div class="modal add-teacher-modal">
@@ -435,6 +672,29 @@
     const supervisorGradeOptions=Array.from(document.querySelectorAll('#supervisorGradeModal [data-grade]'));
     const successModal=document.getElementById('successModal');
     const closeSuccessModal=document.getElementById('closeSuccessModal');
+    const adminsSheet=document.getElementById('adminsSheet');
+    const closeAdmins=document.getElementById('closeAdmins');
+    const refreshAdmins=document.getElementById('refreshAdmins');
+    const openAddAdmin=document.getElementById('openAddAdmin');
+    const adminsList=document.getElementById('adminsList');
+    const adminSheet=document.getElementById('adminSheet');
+    const closeAdmin=document.getElementById('closeAdmin');
+    const adminTitle=document.getElementById('adminTitle');
+    const edAName=document.getElementById('edAName');
+    const edAEmail=document.getElementById('edAEmail');
+    const saveAdmin=document.getElementById('saveAdmin');
+    const deleteAdminBtn=document.getElementById('deleteAdminBtn');
+    const edAOk=document.getElementById('edAOk');
+    const edAErr=document.getElementById('edAErr');
+    const addAdminModal=document.getElementById('addAdminModal');
+    const closeAddAdminModal=document.querySelector('#addAdminModal .close-modal');
+    const cancelAddAdmin=document.getElementById('cancelAddAdmin');
+    const adName=document.getElementById('adName');
+    const adEmail=document.getElementById('adEmail');
+    const adPassword=document.getElementById('adPassword');
+    const createAdminBtn=document.getElementById('createAdminBtn');
+    const adOk=document.getElementById('adOk');
+    const adErr=document.getElementById('adErr');
 
     const show=(el)=>{[sLoading,sNotLog,sDenied,sTeachers].forEach(x=>x.classList.remove('active'));el.classList.add('active');};
     const openSheet=(el)=>{el.classList.add('open');el.setAttribute('aria-hidden','false');};
@@ -474,7 +734,7 @@
 
     let lastFocusedBeforeSuccessModal=null;
     function syncBodyScrollLock(){
-      const anyOverlayOpen=addTeacherModal.classList.contains('active') || supervisorGradeModal.classList.contains('active') || successModal.classList.contains('show');
+      const anyOverlayOpen=addTeacherModal.classList.contains('active') || addAdminModal.classList.contains('active') || supervisorGradeModal.classList.contains('active') || successModal.classList.contains('show');
       document.body.style.overflow=anyOverlayOpen?'hidden':'';
     }
     function focusIfPossible(el){
@@ -627,7 +887,7 @@
     function renderSubjects(){
       subjectsList.innerHTML='';
       subjectsKW.forEach(label=>{
-        const btn=document.createElement('button');btn.type='button';btn.className='subject subject-card';
+        const btn=document.createElement('button');btn.type='button';btn.className='subject subject-card';btn.dataset.subject=label;
         btn.innerHTML=`<span>${label}</span><svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>`;
         btn.addEventListener('click',()=>openSubject(label));
         subjectsList.appendChild(btn);
@@ -903,8 +1163,129 @@
       syncAddTeacherSpecializationField();
       openSheet(subjectSheet);
       loadTeachers(label);
+      // Desktop sidebar only — highlights which subject is currently open.
+      // No visual effect on mobile (the sidebar markup isn't shown there).
+      Array.from(subjectsList.children).forEach(b=>b.classList.toggle('subject-selected', b.dataset.subject===label));
+      openAdminsTop.classList.remove('subject-selected');
     }
-    closeSubject.addEventListener('click',()=>closeSheet(subjectSheet));
+    closeSubject.addEventListener('click',()=>{
+      closeSheet(subjectSheet);
+      Array.from(subjectsList.children).forEach(b=>b.classList.remove('subject-selected'));
+    });
+
+    function openAdminsPanel(){
+      Array.from(subjectsList.children).forEach(b=>b.classList.remove('subject-selected'));
+      openAdminsTop.classList.add('subject-selected');
+      openSheet(adminsSheet);
+      loadAdmins();
+    }
+    closeAdmins.addEventListener('click',()=>{
+      closeSheet(adminsSheet);
+      openAdminsTop.classList.remove('subject-selected');
+    });
+    function closeAdminView(){ closeSheet(adminSheet); }
+    closeAdmin.addEventListener('click', closeAdminView);
+
+    let currentAdmin={uid:null,data:null};
+    function renderAdminsListEmpty(){
+      const empty=document.createElement('div');
+      empty.className='teacher-item';
+      empty.textContent='لا يوجد مشرفون بعد.';
+      adminsList.appendChild(empty);
+    }
+    async function loadAdmins(){
+      adminsList.innerHTML='';
+      try{
+        const q=query(collection(db,'teachers'), where('role','==','admin'));
+        const snap=await getDocs(q);
+        if(snap.empty){ renderAdminsListEmpty(); return; }
+        snap.forEach(d=>{
+          const t=d.data();
+          const civilId=getTeacherCivilId(t);
+          const el=document.createElement('div');
+          el.className='teacher-item';
+          el.innerHTML=`<div><div>${t.name||civilId||t.email||t.uid}</div><div class="teacher-sub">${civilId||t.email||''}</div></div><svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>`;
+          el.addEventListener('click',()=>openAdminEditor(t.uid));
+          adminsList.appendChild(el);
+        });
+      }catch(e){
+        const err=document.createElement('div');
+        err.className='teacher-item';
+        err.textContent='تعذّر تحميل القائمة.';
+        adminsList.appendChild(err);
+      }
+    }
+    async function openAdminEditor(uid){
+      edAOk.style.display='none';edAErr.style.display='none';
+      try{
+        const s=await getDoc(doc(db,'teachers',uid));
+        if(!s.exists()){alert('الملف غير موجود.');return;}
+        const d=s.data();
+        currentAdmin={uid,data:d};
+        adminTitle.textContent=d.name||d.email||uid;
+        edAName.value=d.name||'';
+        edAEmail.value=d.email||'';
+        openSheet(adminSheet);
+      }catch{
+        alert('تعذّر فتح صفحة المشرف.');
+      }
+    }
+    saveAdmin.addEventListener('click', async ()=>{
+      edAOk.style.display='none';edAErr.style.display='none';
+      try{
+        const {uid}=currentAdmin;if(!uid) throw new Error('لم يتم اختيار مشرف.');
+        const name=edAName.value.trim(), email=edAEmail.value.trim();
+        if(!name) throw new Error('أدخل الاسم.');
+        if(!emailRx.test(email)) throw new Error('أدخل بريدًا صالحًا.');
+        await updateDoc(doc(db,'teachers',uid),{name,email});
+        edAOk.textContent='تم حفظ التعديلات.';edAOk.style.display='block';
+        setTimeout(()=>{edAOk.style.display='none';closeAdminView();},900);
+        await loadAdmins();
+      }catch(e){edAErr.textContent=e?.message||'تعذّر الحفظ.';edAErr.style.display='block';}
+    });
+    deleteAdminBtn.addEventListener('click', async ()=>{
+      edAOk.style.display='none';edAErr.style.display='none';
+      try{
+        const {uid}=currentAdmin;if(!uid) return;
+        if(!confirm('حذف ملف المشرف من Firestore؟')) return;
+        await deleteDoc(doc(db,'teachers',uid));
+        edAOk.textContent='تم الحذف.';edAOk.style.display='block';
+        setTimeout(()=>{edAOk.style.display='none';closeAdminView();},700);
+        await loadAdmins();
+      }catch(e){edAErr.textContent=e?.message||'تعذّر الحذف.';edAErr.style.display='block';}
+    });
+    function resetAddAdminForm(){
+      adName.value='';adEmail.value='';adPassword.value='';
+      adOk.style.display='none';adErr.style.display='none';
+    }
+    openAddAdmin.addEventListener('click',()=>{
+      resetAddAdminForm();
+      openModal(addAdminModal);
+      setTimeout(()=>focusIfPossible(adName),20);
+    });
+    closeAddAdminModal.addEventListener('click',()=>closeModal(addAdminModal,{fallbackFocus:openAddAdmin}));
+    cancelAddAdmin.addEventListener('click',()=>closeModal(addAdminModal,{fallbackFocus:openAddAdmin}));
+    adEmail.addEventListener('input',()=>{const digits=adEmail.value.replace(/\D+/g,''); if(adEmail.value!==digits) adEmail.value=digits;});
+    addAdminModal.addEventListener('click',(e)=>{if(e.target===addAdminModal) closeModal(addAdminModal,{fallbackFocus:openAddAdmin});});
+    createAdminBtn.addEventListener('click', async ()=>{
+      adOk.style.display='none';adErr.style.display='none';
+      try{
+        const name=adName.value.trim(), civilId=adEmail.value.trim().replace(/\D+/g,'');
+        const email=civilId?`t${civilId}@gmail.com`:'';
+        const pass=adPassword.value;
+        if(!name) throw new Error('أدخل الاسم.');
+        if(!civilId) throw new Error('أدخل رقم البطاقة المدنية بالأرقام فقط.');
+        if(!emailRx.test(email)) throw new Error('تعذّر توليد البريد الإلكتروني من رقم البطاقة المدنية.');
+        if(!pass||pass.length<6) throw new Error('كلمة المرور ٦ أحرف على الأقل.');
+        const cred=await createUserWithEmailAndPassword(helperAuth,email,pass);
+        const newUid=cred.user.uid;
+        await setDoc(doc(db,'teachers',newUid),{uid:newUid,name,email,civilId,role:'admin',createdAt:serverTimestamp()},{merge:true});
+        try{await signOut(helperAuth);}catch{}
+        closeModal(addAdminModal,{fallbackFocus:openAddAdmin});
+        openSuccessModal();
+        await loadAdmins();
+      }catch(e){adErr.textContent=e?.message||'تعذّر إنشاء الحساب.';adErr.style.display='block';}
+    });
     function closeTeacherView(){
       if(getRouteTeacherId()){
         clearTeacherRoute();
@@ -922,7 +1303,7 @@
       closeSheet(teacherSheet);
     }
     closeTeacher.addEventListener('click', closeTeacherView);
-    openAdminsTop.addEventListener('click', ()=>{window.location.href='/admins/adminpage.html#admins';});
+    openAdminsTop.addEventListener('click', openAdminsPanel);
     editTeacherBtn.addEventListener('click',()=>setTeacherEditMode(true));
     cancelTeacherEditBtn.addEventListener('click',()=>{
       const d=currentTeacher.data||{};
@@ -1198,8 +1579,11 @@
           closeSupervisorGradePicker({ restorePrevious:true });
           return;
         }
-        [subjectSheet,teacherSheet].forEach(s=>closeSheet(s));
+        [subjectSheet,teacherSheet,adminsSheet,adminSheet].forEach(s=>closeSheet(s));
+        openAdminsTop.classList.remove('subject-selected');
+        Array.from(subjectsList.children).forEach(b=>b.classList.remove('subject-selected'));
         if(addTeacherModal.classList.contains('active')) closeModal(addTeacherModal);
+        if(addAdminModal.classList.contains('active')) closeModal(addAdminModal,{fallbackFocus:openAddAdmin});
         if(successModal.classList.contains('show')) closeSuccessModalFn();
         syncTeacherRouteMode();
       }
