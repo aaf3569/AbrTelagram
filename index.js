@@ -1782,6 +1782,72 @@ app.post("/api/telegram/run-reminder-sweep", async (req, res) => {
   }
 });
 
+// Firebase's client SDK can only ever change the *signed-in* user's own
+// password — an admin resetting someone else's login has to go through
+// the Admin SDK, which only exists server-side. The caller must already
+// have re-authenticated their own password client-side (see
+// admins/teachers.html) before this is ever hit; this endpoint only
+// re-checks that the caller is a real, currently-valid admin.
+app.post("/api/admin/set-teacher-password", async (req, res) => {
+  const adminUser = await requireAdminFromRequest(req, res);
+  if (!adminUser) return;
+
+  const targetUid = String(req.body?.uid || "").trim();
+  const newPassword = String(req.body?.newPassword || "");
+
+  if (!targetUid) {
+    return res.status(400).json({ ok: false, error: "missing_uid" });
+  }
+  if (newPassword.length < 6) {
+    return res.status(400).json({ ok: false, error: "weak_password" });
+  }
+
+  try {
+    const targetSnap = await db.collection("teachers").doc(targetUid).get();
+    if (!targetSnap.exists) {
+      return res.status(404).json({ ok: false, error: "teacher_not_found" });
+    }
+
+    await admin.auth().updateUser(targetUid, { password: newPassword });
+
+    // Keep the admin-visible "displayed password" (shown via the reveal
+    // toggle on the teacher's profile) in sync — otherwise it would keep
+    // showing a stale value after the real login password changed.
+    await db
+      .collection("teachers")
+      .doc(targetUid)
+      .collection("private")
+      .doc("credentials")
+      .set({ displayedPassword: newPassword }, { merge: true });
+
+    try {
+      await db.collection("passwordResetLog").add({
+        targetUid,
+        performedByUid: adminUser.uid,
+        performedByName: adminUser.name || null,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    } catch (logError) {
+      console.error(`[admin] password reset log write failed: ${logError.message}`);
+    }
+
+    console.log(`[admin] password reset targetUid=${targetUid} by=${adminUser.uid}`);
+    return res.json({ ok: true });
+  } catch (error) {
+    console.error(
+      `[admin] set-teacher-password failed targetUid=${targetUid}: ${error.message}`
+    );
+    const code = String(error?.code || "");
+    if (code === "auth/user-not-found") {
+      return res.status(404).json({ ok: false, error: "auth_user_not_found" });
+    }
+    if (code === "auth/invalid-password") {
+      return res.status(400).json({ ok: false, error: "weak_password" });
+    }
+    return res.status(500).json({ ok: false, error: "set_password_failed" });
+  }
+});
+
 app.get("/api/telegram/connect-link", async (req, res) => {
   const userId = await requireSelfOrAdminFromRequest(req, res, req.query.userId);
   if (!userId) return;

@@ -313,6 +313,13 @@
         width:100%;max-width:1120px;margin:0 auto;padding:18px 32px 36px;overflow-y:auto;gap:18px;
       }
       .sheet.small .sheet-body{width:min(1120px,100%)}
+      /* Profile content is usually shorter than the panel, so a plain
+         top-aligned flex column left it hugging the header with a slab
+         of empty space below — center it in the available height
+         instead. (Only the profile sheet: the list panels above should
+         keep starting scrolled to the top.) */
+      #teacherSheet .sheet-body{justify-content:center}
+      #teacherSheet .profile-shell{width:100%}
 
       #subjectSheet .sheet-body > .section:first-of-type,
       #adminsSheet .sheet-body > .section:first-of-type{
@@ -472,6 +479,7 @@
         <section class="profile-card">
           <div class="profile-actions">
             <button id="editTeacher" class="btn ghost" type="button">تعديل</button>
+            <button id="changeTeacherPassword" class="btn ghost" type="button" hidden>تغيير كلمة المرور</button>
             <button id="cancelTeacherEdit" class="btn ghost" type="button" hidden>إلغاء</button>
             <button id="saveTeacher" class="btn primary" type="button" hidden>حفظ</button>
             <button id="deleteTeacher" class="btn danger" type="button">حذف</button>
@@ -573,6 +581,19 @@
     </div>
   </div>
 
+  <div id="changePasswordModal" class="modal-overlay" aria-hidden="true">
+    <div class="modal">
+      <div class="modal-header"><h3 class="modal-title">تغيير كلمة مرور المعلّم</h3><button class="close-modal" aria-label="إغلاق">×</button></div>
+      <div class="modal-body add-teacher-body">
+        <div class="field add-teacher-full"><label class="label" for="cpAdminPassword">كلمة مرورك الحالية (للتأكيد)</label><div class="input-wrap"><input id="cpAdminPassword" class="input" type="password" autocomplete="current-password"></div></div>
+        <div class="field"><label class="label" for="cpNewPassword">كلمة المرور الجديدة للمعلّم</label><div class="input-wrap"><input id="cpNewPassword" class="input" type="password" autocomplete="new-password"></div></div>
+        <div class="field"><label class="label" for="cpConfirmPassword">تأكيد كلمة المرور الجديدة</label><div class="input-wrap"><input id="cpConfirmPassword" class="input" type="password" autocomplete="new-password"></div></div>
+        <div id="cpOk" class="ok add-teacher-full"></div><div id="cpErr" class="err add-teacher-full"></div>
+      </div>
+      <div class="modal-footer"><button id="cancelChangePassword" class="btn ghost" type="button">إلغاء</button><button id="submitChangePassword" class="btn primary" type="button">تغيير كلمة المرور</button></div>
+    </div>
+  </div>
+
   <div id="successModal" class="success-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-label="تمت إضافة المعلّم بنجاح">
     <div class="success-card">
       <button id="closeSuccessModal" type="button" class="success-close">×</button>
@@ -603,6 +624,18 @@
     const auth=getAuth(app);
     const helperApp=getApps().some(a=>a.name==="AdminHelper")?getApp("AdminHelper"):initializeApp(firebaseConfig,"AdminHelper");
     const helperAuth=getAuth(helperApp);
+
+    const TELEGRAM_BACKEND_BASE_URL = (() => {
+      const fromWindow = String(window.__TELEGRAM_BACKEND_BASE_URL || '').trim();
+      if (fromWindow) return fromWindow.replace(/\/+$/, '');
+      const fromStorage = String(localStorage.getItem('telegramBackendBaseUrl') || '').trim();
+      if (fromStorage) return fromStorage.replace(/\/+$/, '');
+      return 'https://abrschool-bot.onrender.com';
+    })();
+    function backendApiUrl(path){
+      const cleanPath = `/${String(path || '').replace(/^\/+/, '')}`;
+      return `${TELEGRAM_BACKEND_BASE_URL}${cleanPath}`;
+    }
 
     const sLoading=document.getElementById('stateLoading');
     const sNotLog=document.getElementById('stateNotLogged');
@@ -650,6 +683,16 @@
     const cancelTeacherEditBtn=document.getElementById('cancelTeacherEdit');
     const saveTeacher=document.getElementById('saveTeacher');
     const deleteTeacherBtn=document.getElementById('deleteTeacher');
+    const changeTeacherPasswordBtn=document.getElementById('changeTeacherPassword');
+    const changePasswordModal=document.getElementById('changePasswordModal');
+    const closeChangePasswordModal=document.querySelector('#changePasswordModal .close-modal');
+    const cancelChangePassword=document.getElementById('cancelChangePassword');
+    const submitChangePassword=document.getElementById('submitChangePassword');
+    const cpAdminPassword=document.getElementById('cpAdminPassword');
+    const cpNewPassword=document.getElementById('cpNewPassword');
+    const cpConfirmPassword=document.getElementById('cpConfirmPassword');
+    const cpOk=document.getElementById('cpOk');
+    const cpErr=document.getElementById('cpErr');
     const edOk=document.getElementById('edOk');
     const edErr=document.getElementById('edErr');
     const edClasses=document.getElementById('edClasses');
@@ -741,7 +784,7 @@
 
     let lastFocusedBeforeSuccessModal=null;
     function syncBodyScrollLock(){
-      const anyOverlayOpen=addTeacherModal.classList.contains('active') || addAdminModal.classList.contains('active') || supervisorGradeModal.classList.contains('active') || successModal.classList.contains('show');
+      const anyOverlayOpen=addTeacherModal.classList.contains('active') || addAdminModal.classList.contains('active') || supervisorGradeModal.classList.contains('active') || changePasswordModal.classList.contains('active') || successModal.classList.contains('show');
       document.body.style.overflow=anyOverlayOpen?'hidden':'';
     }
     function focusIfPossible(el){
@@ -1158,6 +1201,7 @@
       if(!teacherEditMode) setDisplayedPasswordVisibility(false);
       classesEditorWrap.hidden=!teacherEditMode;
       editTeacherBtn.hidden=teacherEditMode;
+      changeTeacherPasswordBtn.hidden=!teacherEditMode;
       cancelTeacherEditBtn.hidden=!teacherEditMode;
       saveTeacher.hidden=!teacherEditMode;
       updateProfileSummary();
@@ -1526,6 +1570,89 @@
       }catch(e){edErr.textContent=e?.message||'تعذّر الحذف.';edErr.style.display='block';}
     });
 
+    // ---- Change a teacher's login password: admin re-enters their own
+    // password (client-side reauth, same as the displayed-password reveal
+    // flow), then the backend verifies the caller is really an admin and
+    // uses the Firebase Admin SDK to set the target account's password —
+    // the client SDK can only ever change the signed-in user's own. ----
+    function resetChangePasswordForm(){
+      cpAdminPassword.value='';
+      cpNewPassword.value='';
+      cpConfirmPassword.value='';
+      cpOk.style.display='none';
+      cpErr.style.display='none';
+    }
+    changeTeacherPasswordBtn.addEventListener('click',()=>{
+      if(!currentTeacher.uid) return;
+      resetChangePasswordForm();
+      openModal(changePasswordModal);
+      setTimeout(()=>focusIfPossible(cpAdminPassword),20);
+    });
+    closeChangePasswordModal.addEventListener('click',()=>closeModal(changePasswordModal,{fallbackFocus:changeTeacherPasswordBtn}));
+    cancelChangePassword.addEventListener('click',()=>closeModal(changePasswordModal,{fallbackFocus:changeTeacherPasswordBtn}));
+    changePasswordModal.addEventListener('click',(e)=>{
+      if(e.target===changePasswordModal) closeModal(changePasswordModal,{fallbackFocus:changeTeacherPasswordBtn});
+    });
+
+    submitChangePassword.addEventListener('click', async ()=>{
+      cpOk.style.display='none';cpErr.style.display='none';
+      const {uid}=currentTeacher;
+      if(!uid){cpErr.textContent='لم يتم اختيار معلّم.';cpErr.style.display='block';return;}
+      const adminPassword=cpAdminPassword.value;
+      const newPassword=cpNewPassword.value;
+      const confirmPassword=cpConfirmPassword.value;
+      if(!adminPassword){cpErr.textContent='أدخل كلمة مرورك الحالية.';cpErr.style.display='block';return;}
+      if(!newPassword||newPassword.length<6){cpErr.textContent='كلمة المرور الجديدة يجب أن تكون ٦ أحرف على الأقل.';cpErr.style.display='block';return;}
+      if(newPassword!==confirmPassword){cpErr.textContent='كلمتا المرور غير متطابقتين.';cpErr.style.display='block';return;}
+
+      submitChangePassword.disabled=true;
+      cancelChangePassword.disabled=true;
+      const originalLabel=submitChangePassword.textContent;
+      submitChangePassword.textContent='جارٍ التحقق...';
+      try{
+        const user=auth.currentUser;
+        const email=(user?.email||'').trim();
+        if(!user||!email) throw new Error('تعذّر تحديد حساب المشرف الحالي.');
+        const credential=EmailAuthProvider.credential(email, adminPassword);
+        await reauthenticateWithCredential(user, credential);
+
+        submitChangePassword.textContent='جارٍ تغيير كلمة المرور...';
+        const idToken=await user.getIdToken();
+        const response=await fetch(backendApiUrl('/api/admin/set-teacher-password'),{
+          method:'POST',
+          headers:{'Content-Type':'application/json', Authorization:`Bearer ${idToken}`},
+          body:JSON.stringify({ uid, newPassword })
+        });
+        const body=await response.json().catch(()=>({}));
+        if(!response.ok || !body?.ok){
+          throw new Error(body?.error||`set_password_failed_${response.status}`);
+        }
+        cpOk.textContent='تم تغيير كلمة المرور بنجاح.';
+        cpOk.style.display='block';
+        setTimeout(()=>closeModal(changePasswordModal,{fallbackFocus:changeTeacherPasswordBtn}),900);
+      }catch(error){
+        const code=String(error?.code||'');
+        if(['auth/wrong-password','auth/invalid-credential','auth/invalid-login-credentials'].includes(code)){
+          cpErr.textContent='كلمة مرورك الحالية غير صحيحة.';
+        }else{
+          const raw=String(error?.message||'').trim().replace(/_\d{3}$/,'');
+          const messageMap={
+            weak_password:'كلمة المرور الجديدة ضعيفة جدًا.',
+            teacher_not_found:'الملف غير موجود.',
+            auth_user_not_found:'تعذّر إيجاد حساب هذا المعلّم في نظام تسجيل الدخول.',
+            unauthorized:'يرجى تسجيل الدخول من جديد.',
+            forbidden:'هذه الميزة متاحة للمشرف فقط.',
+          };
+          cpErr.textContent=messageMap[raw]||'تعذّر تغيير كلمة المرور. حاول مرة أخرى.';
+        }
+        cpErr.style.display='block';
+      }finally{
+        submitChangePassword.disabled=false;
+        cancelChangePassword.disabled=false;
+        submitChangePassword.textContent=originalLabel;
+      }
+    });
+
     createTeacherBtn.addEventListener('click', async ()=>{
       try{
         const name=teacherName.value.trim(), civilId=teacherEmail.value.trim().replace(/\D+/g,''), email=civilId?`t${civilId}@gmail.com`:'', password=teacherPassword.value, phone=teacherPhone.value.trim();
@@ -1591,6 +1718,7 @@
         Array.from(subjectsList.children).forEach(b=>b.classList.remove('subject-selected'));
         if(addTeacherModal.classList.contains('active')) closeModal(addTeacherModal);
         if(addAdminModal.classList.contains('active')) closeModal(addAdminModal,{fallbackFocus:openAddAdmin});
+        if(changePasswordModal.classList.contains('active')) closeModal(changePasswordModal,{fallbackFocus:changeTeacherPasswordBtn});
         if(successModal.classList.contains('show')) closeSuccessModalFn();
         syncTeacherRouteMode();
       }
