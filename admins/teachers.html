@@ -227,10 +227,17 @@
       }
       #stateTeachers.active{display:flex}
 
-      .sidebar-desktop-head{display:flex;flex-direction:column;gap:16px;margin-bottom:18px}
-      .sidebar-back-link{display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-weight:800;font-size:.86rem;text-decoration:none;transition:color .15s ease;width:fit-content}
-      .sidebar-back-link:hover{color:var(--primary)}
-      .sidebar-back-link svg{width:15px;height:15px;stroke:currentColor;stroke-width:2.4;fill:none;stroke-linecap:round;stroke-linejoin:round;transform:scaleX(-1)}
+      .sidebar-desktop-head{display:flex;flex-direction:column;gap:14px;margin-bottom:18px}
+      .sidebar-back-link{
+        display:inline-flex;align-items:center;gap:7px;width:fit-content;
+        height:38px;padding:0 14px;border-radius:11px;
+        border:1px solid rgba(3,60,84,.22);background:#fff;
+        color:var(--primary);font-weight:900;font-size:.88rem;
+        text-decoration:none;box-shadow:var(--shadow-1);
+        transition:background .15s ease,border-color .15s ease,transform .15s ease;
+      }
+      .sidebar-back-link:hover{background:#eef6fb;border-color:rgba(3,60,84,.4);transform:translateY(-1px)}
+      .sidebar-back-link svg{width:15px;height:15px;stroke:currentColor;stroke-width:2.6;fill:none;stroke-linecap:round;stroke-linejoin:round;transform:scaleX(-1);flex-shrink:0}
       .sidebar-heading{font-size:.76rem;font-weight:900;letter-spacing:.03em;color:#9aabc2;padding-inline-start:2px}
 
       #stateTeachers #openAdminsTop,
@@ -286,7 +293,7 @@
          not just deep links, so it fires constantly at desktop widths too. */
       body.teacher-route-active main{display:flex !important}
       body.teacher-route-active #teacherSheet{
-        position:static;inset:auto;transform:none !important;
+        position:relative;inset:auto;transform:none !important;
         display:none;min-height:0;height:100%;
       }
       body.teacher-route-active #teacherSheet.open{display:flex}
