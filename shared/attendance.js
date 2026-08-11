@@ -532,7 +532,7 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
       const snap = await getDoc(doc(db, "settings", "lessonTimes"));
       if (snap.exists()) {
         const data = snap.data() || {};
-        if (Array.isArray(data.times) && data.times.length === 7) {
+        if (Array.isArray(data.times) && data.times.length >= 1 && data.times.length <= 12) {
           LESSON_TIMES = data.times.map((t, i) => ({
             index: i + 1,
             label: DEFAULT_LESSON_TIMES[i]?.label || `الحصة ${i + 1}`,

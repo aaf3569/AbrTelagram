@@ -841,7 +841,7 @@
         /* ========= Kuwait Timezone and Lesson Times ========= */
         const TZ = 'Asia/Kuwait';
         
-        const LESSON_TIMES = [
+        const DEFAULT_LESSON_TIMES = [
             { index: 1, start: '07:55', end: '08:40' },
             { index: 2, start: '08:45', end: '09:30' },
             { index: 3, start: '09:35', end: '10:20' },
@@ -850,10 +850,12 @@
             { index: 6, start: '12:25', end: '13:10' },
             { index: 7, start: '13:15', end: '13:55' }
         ];
-        const LESSON_NAMES = [
+        let LESSON_TIMES = DEFAULT_LESSON_TIMES.map(t => ({ ...t }));
+        const DEFAULT_LESSON_NAMES = [
             "الحصة الأولى","الحصة الثانية","الحصة الثالثة",
             "الحصة الرابعة","الحصة الخامسة","الحصة السادسة","الحصة السابعة"
         ];
+        let LESSON_NAMES = [...DEFAULT_LESSON_NAMES];
 
         const BREAK_LABELS = {
             first: "الفرصة الأولى",
@@ -864,7 +866,7 @@
         function normalizeLessonIndex(value) {
             const n = Number(value);
             if (!Number.isFinite(n)) return null;
-            if (n < 1 || n > 7) return null;
+            if (n < 1 || n > LESSON_TIMES.length) return null;
             return Math.floor(n);
         }
 
@@ -886,6 +888,14 @@
                 }
                 const data = snap.data() || {};
                 schoolBreaks = normalizeSchoolBreaks(data.opportunityBreaks || data);
+                if (Array.isArray(data.times) && data.times.length >= 1 && data.times.length <= 12) {
+                    LESSON_TIMES = data.times.map((t, i) => ({
+                        index: i + 1,
+                        start: (t?.start || DEFAULT_LESSON_TIMES[i]?.start || '00:00').toString(),
+                        end: (t?.end || DEFAULT_LESSON_TIMES[i]?.end || '00:00').toString()
+                    }));
+                    LESSON_NAMES = LESSON_TIMES.map((_, i) => DEFAULT_LESSON_NAMES[i] || `الحصة ${i + 1}`);
+                }
             } catch (error) {
                 console.error('Error loading school breaks:', error);
                 schoolBreaks = { firstAfter: null, secondAfter: null };
@@ -980,7 +990,7 @@
 
         // FIX 2: Create a Timestamp for Kuwait time cutoff
         function createKuwaitCutoffTimestamp(dateKW, lessonIndex) {
-            const lessonTime = LESSON_TIMES[lessonIndex - 1];
+            const lessonTime = LESSON_TIMES[lessonIndex - 1] || DEFAULT_LESSON_TIMES[DEFAULT_LESSON_TIMES.length - 1];
             const endMinutes = timeToMinutes(lessonTime.end);
             
             // Parse the Kuwait date (YYYY-MM-DD)
@@ -1171,6 +1181,9 @@
             // Check time window (start to end + 5 minutes)
             const currentMinutes = getCurrentKuwaitMinutes();
             const lessonTime = LESSON_TIMES[lessonIndex - 1];
+            if (!lessonTime) {
+                return { allowed: false, reason: 'ليس لديك حصة في هذا الوقت' };
+            }
             const startMinutes = timeToMinutes(lessonTime.start);
             const endMinutes = timeToMinutes(lessonTime.end);
             
@@ -1922,7 +1935,7 @@
             
             // Build lesson select (only the current lesson)
             lessonSelect.innerHTML = '';
-            const lessonTime = LESSON_TIMES[lessonIndex - 1];
+            const lessonTime = LESSON_TIMES[lessonIndex - 1] || DEFAULT_LESSON_TIMES[DEFAULT_LESSON_TIMES.length - 1];
             const lessonBaseLabel = LESSON_NAMES[lessonIndex - 1] || `الحصة ${lessonIndex}`;
             const lessonLabel = formatLessonLabelWithBreak(lessonBaseLabel, lessonIndex);
             const option = document.createElement('option');

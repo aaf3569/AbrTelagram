@@ -484,6 +484,13 @@ async function verifyFirebaseUser(req) {
   }
 }
 
+// Schools can change how many lessons are in a day (settings/lessonTimes'
+// `times` array length is the source of truth) — anything beyond
+// DEFAULT_LESSON_TIMES' 7 curated ordinal names just gets a numbered label.
+function lessonLabelFor(i) {
+  return DEFAULT_LESSON_TIMES[i]?.label || `الحصة ${toArabicDigits(i + 1)}`;
+}
+
 async function loadLessonTimes() {
   if (!isFirebaseReady()) {
     console.warn("[firebase] loadLessonTimes skipped: Firebase unavailable");
@@ -493,15 +500,15 @@ async function loadLessonTimes() {
     const lessonTimesDoc = await db.collection("settings").doc("lessonTimes").get();
     if (!lessonTimesDoc.exists) return DEFAULT_LESSON_TIMES.map((x) => ({ ...x }));
     const data = lessonTimesDoc.data() || {};
-    if (!Array.isArray(data.times) || data.times.length !== 7) {
+    if (!Array.isArray(data.times) || data.times.length < 1 || data.times.length > 12) {
       return DEFAULT_LESSON_TIMES.map((x) => ({ ...x }));
     }
 
-    return DEFAULT_LESSON_TIMES.map((fallback, i) => ({
+    return data.times.map((t, i) => ({
       index: i + 1,
-      label: fallback.label,
-      start: String(data.times[i]?.start || fallback.start),
-      end: String(data.times[i]?.end || fallback.end),
+      label: lessonLabelFor(i),
+      start: String(t?.start || DEFAULT_LESSON_TIMES[i]?.start || "00:00"),
+      end: String(t?.end || DEFAULT_LESSON_TIMES[i]?.end || "00:00"),
     }));
   } catch (error) {
     console.error(`[firebase] loadLessonTimes failed: ${error.message}`);

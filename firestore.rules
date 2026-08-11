@@ -122,8 +122,10 @@ service cloud.firestore {
       return isValidClass(c);
     }
 
+    // Capped at 12, matching the max lesson count admins can configure in
+    // settings/lessonTimes (admins/adminschedule.html) — not hardcoded to 7.
     function isValidLessonIndex(i) {
-      return i is int && i >= 1 && i <= 7;
+      return i is int && i >= 1 && i <= 12;
     }
 
     function isISODate(d) {
@@ -157,10 +159,12 @@ service cloud.firestore {
 
     function isLesson(v) {
       return (v is string) && (
-        v.matches('^[1-7]$') ||
+        v.matches('^([1-9]|1[0-2])$') ||
         v in [
           'الحصة الأولى','الحصة الثانية','الحصة الثالثة',
-          'الحصة الرابعة','الحصة الخامسة','الحصة السادسة','الحصة السابعة'
+          'الحصة الرابعة','الحصة الخامسة','الحصة السادسة','الحصة السابعة',
+          'الحصة الثامنة','الحصة التاسعة','الحصة العاشرة',
+          'الحصة الحادية عشرة','الحصة الثانية عشرة'
         ]
       );
     }

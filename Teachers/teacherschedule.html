@@ -847,11 +847,12 @@
 
     /* ========= Constants ========= */
     const DAYS_AR = ["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس"]; // Sun→Thu
-    const LESSONS_AR = [
+    const DEFAULT_LESSONS_AR = [
       "الحصة الأولى","الحصة الثانية","الحصة الثالثة",
       "الحصة الرابعة","الحصة الخامسة","الحصة السادسة","الحصة السابعة"
     ];
-    const FIXED_LESSON_COUNT = 7;
+    let LESSONS_AR = [...DEFAULT_LESSONS_AR];
+    let FIXED_LESSON_COUNT = 7;
 
     const CLASS_OPTIONS = [
       "10 / 1","10 / 2","10 / 3","10 / 4","10 / 5","10 / 6","10 / 7",
@@ -894,7 +895,7 @@
     }
 
     /* ========= Live Lesson Times ========= */
-    let LESSON_TIMES = [
+    const DEFAULT_LESSON_TIMES = [
       { start: "07:55", end: "08:40" },
       { start: "08:45", end: "09:30" },
       { start: "09:35", end: "10:20" },
@@ -903,6 +904,7 @@
       { start: "12:25", end: "13:10" },
       { start: "13:15", end: "13:55" }
     ];
+    let LESSON_TIMES = DEFAULT_LESSON_TIMES.map(t => ({ ...t }));
 
     const BREAK_LABELS = {
       first: "الفرصة الأولى",
@@ -972,43 +974,64 @@
       if (lessonTimesUnsubscribe) {
         lessonTimesUnsubscribe();
       }
-      
-      const lessonTimesDocRef = doc(db, 'settings', 'lessonTimes');
-      lessonTimesUnsubscribe = onSnapshot(lessonTimesDocRef, (snap) => {
-        if (snap.exists()) {
-          const data = snap.data() || {};
-          const breakSource = data.opportunityBreaks || data;
-          SCHOOL_BREAKS = normalizeSchoolBreaks(breakSource);
 
-          if (data.times && Array.isArray(data.times) && data.times.length === 7) {
-            let valid = true;
-            for (let i = 0; i < data.times.length; i++) {
-              const t = data.times[i];
-              if (!t.start || !t.end || typeof t.start !== 'string' || typeof t.end !== 'string') {
-                valid = false;
-                break;
+      let firstSnapshotHandled = false;
+      const lessonTimesDocRef = doc(db, 'settings', 'lessonTimes');
+      return new Promise((resolve) => {
+        lessonTimesUnsubscribe = onSnapshot(lessonTimesDocRef, (snap) => {
+          if (snap.exists()) {
+            const data = snap.data() || {};
+            const breakSource = data.opportunityBreaks || data;
+            SCHOOL_BREAKS = normalizeSchoolBreaks(breakSource);
+
+            if (data.times && Array.isArray(data.times) && data.times.length >= 1 && data.times.length <= 12) {
+              let valid = true;
+              for (let i = 0; i < data.times.length; i++) {
+                const t = data.times[i];
+                if (!t.start || !t.end || typeof t.start !== 'string' || typeof t.end !== 'string') {
+                  valid = false;
+                  break;
+                }
               }
-            }
-            if (valid) {
-              LESSON_TIMES = data.times;
-              console.log('Lesson times updated from Firestore:', LESSON_TIMES);
+              if (valid) {
+                const newCount = data.times.length;
+                // Grid structure (columns/cells) is built only at render time from FIXED_LESSON_COUNT,
+                // so a live count change can't be reconciled in place; reload is the pragmatic fix.
+                if (firstSnapshotHandled && newCount !== FIXED_LESSON_COUNT) {
+                  location.reload();
+                  return;
+                }
+                LESSON_TIMES = data.times;
+                FIXED_LESSON_COUNT = newCount;
+                LESSONS_AR = LESSON_TIMES.map((_, i) => DEFAULT_LESSONS_AR[i] || `الحصة ${i + 1}`);
+                console.log('Lesson times updated from Firestore:', LESSON_TIMES);
+              } else {
+                console.warn('Invalid lesson times structure in Firestore, using defaults');
+              }
             } else {
-              console.warn('Invalid lesson times structure in Firestore, using defaults');
+              console.warn('No valid times array in Firestore, using defaults');
             }
           } else {
-            console.warn('No valid times array in Firestore, using defaults');
+            console.log('No lesson times document in Firestore, using defaults');
+            SCHOOL_BREAKS = { firstAfter: null, secondAfter: null };
           }
-        } else {
-          console.log('No lesson times document in Firestore, using defaults');
-          SCHOOL_BREAKS = { firstAfter: null, secondAfter: null };
-        }
 
-        updateLessonTimeLabels();
-        updateCurrentLessonHighlight();
-        updateCompactViewTimeLabels();
-        updateClassWeekGridTimeLabels();
-      }, (error) => {
-        console.error("Error listening to lesson times:", error);
+          updateLessonTimeLabels();
+          updateCurrentLessonHighlight();
+          updateCompactViewTimeLabels();
+          updateClassWeekGridTimeLabels();
+
+          if (!firstSnapshotHandled) {
+            firstSnapshotHandled = true;
+            resolve();
+          }
+        }, (error) => {
+          console.error("Error listening to lesson times:", error);
+          if (!firstSnapshotHandled) {
+            firstSnapshotHandled = true;
+            resolve();
+          }
+        });
       });
     }
 
@@ -1642,6 +1665,7 @@
       wrap.className = 'grid-wrap';
       const grid = document.createElement('div');
       grid.className = 'grid';
+      grid.style.gridTemplateColumns = `140px repeat(${FIXED_LESSON_COUNT}, minmax(130px, 1fr))`;
       wrap.appendChild(grid);
       containerEl.appendChild(wrap);
 
@@ -1738,7 +1762,7 @@
     function mergeCustomScheduleIntoMap(byLesson, uid, customRows){
       customRows.forEach(row=>{
         const lessonsArr = Array.isArray(row.lessons) ? row.lessons : [];
-        const max = Math.min(7, Number(row.lessonCount) || lessonsArr.length || 7);
+        const max = Math.min(FIXED_LESSON_COUNT, Number(row.lessonCount) || lessonsArr.length || FIXED_LESSON_COUNT);
         for(let i=0;i<max;i++){
           const lessonRow = lessonsArr[i] || {};
           if((lessonRow.teacherUid || '').toString() !== uid) continue;
@@ -1937,7 +1961,7 @@
         const customRows = customRowsByDay[dayIdx];
         customRows.forEach(row=>{
           const lessonsArr = Array.isArray(row.lessons) ? row.lessons : [];
-          const max = Math.min(7, Number(row.lessonCount) || lessonsArr.length || 7);
+          const max = Math.min(FIXED_LESSON_COUNT, Number(row.lessonCount) || lessonsArr.length || FIXED_LESSON_COUNT);
           for(let i=0;i<max;i++){
             const lessonRow = lessonsArr[i] || {};
             if((lessonRow.teacherUid || '').toString() !== uid) continue;
@@ -2731,6 +2755,7 @@
 
     function renderClassWeekGrid(map){
       classWeekGrid.innerHTML = '';
+      classWeekGrid.style.gridTemplateColumns = `140px repeat(${FIXED_LESSON_COUNT}, minmax(130px, 1fr))`;
       renderWeekHeaders(classWeekGrid);
       for(let r=0;r<5;r++){
         const iso = weekDates[r];
@@ -2792,7 +2817,7 @@
               </div>
               <div class="info-box">
                 <div class="info-k"><i class="far fa-clock"></i> الحصة + وقتها</div>
-                <div class="info-v">${escapeHtml(LESSONS_AR[lesson-1])} • ${escapeHtml(timeLabel)}</div>
+                <div class="info-v">${escapeHtml(LESSONS_AR[lesson-1] || `الحصة #${lesson}`)} • ${escapeHtml(timeLabel)}</div>
               </div>
             </div>
           `;
@@ -2822,7 +2847,7 @@
           </div>
           <div class="info-box">
             <div class="info-k"><i class="fas fa-hashtag"></i> الحصة</div>
-            <div class="info-v">${escapeHtml(LESSONS_AR[meta.lesson-1])} (#${meta.lesson})</div>
+            <div class="info-v">${escapeHtml(LESSONS_AR[meta.lesson-1] || `الحصة #${meta.lesson}`)} (#${meta.lesson})</div>
           </div>
           <div class="info-box">
             <div class="info-k"><i class="fas fa-users"></i> الصف</div>
@@ -2837,7 +2862,7 @@
       const lesson = normalizeLessonNumber(slot.lesson) || 1;
       const dayName = dayNameByISO(slot.date) || slot.date || '—';
       const classKey = slot.classKey || '—';
-      return `${dayName} | ${slot.date} | ${LESSONS_AR[lesson-1]} (#${lesson}) | ${classKey}`;
+      return `${dayName} | ${slot.date} | ${LESSONS_AR[lesson-1] || `الحصة #${lesson}`} (#${lesson}) | ${classKey}`;
     }
 
     function openLessonActionsModal(slotOrLesson){
@@ -3083,7 +3108,7 @@
         if (!selectEl) return;
         const options = (slots || []).map(slot => `
           <option value="${slot.lesson}">
-            ${escapeHtml(LESSONS_AR[slot.lesson-1])} (#${slot.lesson}) • ${escapeHtml(lessonTimeLabel(slot.lesson))} • ${escapeHtml(slot.classKey || '—')}
+            ${escapeHtml(LESSONS_AR[slot.lesson-1] || `الحصة #${slot.lesson}`)} (#${slot.lesson}) • ${escapeHtml(lessonTimeLabel(slot.lesson))} • ${escapeHtml(slot.classKey || '—')}
           </option>
         `).join('');
         selectEl.innerHTML = `<option value="">${escapeHtml(placeholder)}</option>${options}`;
@@ -3819,7 +3844,7 @@
 
       currentUser = user;
 
-      setupLessonTimesListener();
+      await setupLessonTimesListener();
       startCurrentLessonTimer();
       initWeek();
       initClassPicker();

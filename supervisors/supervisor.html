@@ -1419,7 +1419,8 @@
         function normalizeLessonIndex(value){
             const n = Number(value);
             if(!Number.isFinite(n)) return null;
-            if(n < 1 || n > 7) return null;
+            const max = (lessonTimesData && lessonTimesData.length) || 7;
+            if(n < 1 || n > max) return null;
             return Math.floor(n);
         }
 
@@ -1441,7 +1442,7 @@
                 }
                 const data = snap.data() || {};
                 schoolBreaks = normalizeSchoolBreaks(data.opportunityBreaks || data);
-                if (Array.isArray(data.times) && data.times.length === 7) {
+                if (Array.isArray(data.times) && data.times.length >= 1 && data.times.length <= 12) {
                     lessonTimesData = data.times.map(t => ({
                         start: t.start || '00:00',
                         end: t.end || '00:00'
@@ -1625,7 +1626,7 @@
                 snap.forEach(ds => {
                     const data = ds.data() || {};
                     const lesson = Number(data.lesson ?? data.lessonIndex);
-                    if(!Number.isFinite(lesson) || lesson < 1 || lesson > 7) return;
+                    if(!Number.isFinite(lesson) || lesson < 1 || lesson > ((lessonTimesData && lessonTimesData.length) || 7)) return;
 
                     const rowDate = (data.date || '').toString();
                     const rowWeekday = data.weekday ?? data.day ?? data.dow ?? data.dayIndex ?? '';
@@ -1667,7 +1668,7 @@
                 snap.forEach(ds => {
                     const data = ds.data() || {};
                     const lesson = Number(data.lesson ?? data.lessonIndex ?? data.period ?? data.lessonNumber);
-                    if(!Number.isFinite(lesson) || lesson < 1 || lesson > 7) return;
+                    if(!Number.isFinite(lesson) || lesson < 1 || lesson > ((lessonTimesData && lessonTimesData.length) || 7)) return;
 
                     const rowDate = (data.date || '').toString().trim();
                     const rowWeekday = data.weekday ?? data.day ?? data.dow ?? data.dayIndex ?? '';
@@ -2228,9 +2229,12 @@
             return parseInt(p[0] || 0, 10) * 60 + parseInt(p[1] || 0, 10);
         }
         function getDailyLessonIntervals(){
-            const opts = LESSON_NAMES.map((name, idx) => formatLessonLabelWithBreak(name, idx + 1));
+            const optsCount = lessonTimesData ? lessonTimesData.length : LESSON_NAMES.length;
+            const opts = Array.from({ length: optsCount }, (_, idx) =>
+                formatLessonLabelWithBreak(LESSON_NAMES[idx] || `الحصة ${idx + 1}`, idx + 1)
+            );
             const intervals = [];
-            if (lessonTimesData && lessonTimesData.length === 7) {
+            if (lessonTimesData && lessonTimesData.length >= 1 && lessonTimesData.length <= 12) {
                 lessonTimesData.forEach((t, i) => {
                     intervals.push({
                         index: i + 1,

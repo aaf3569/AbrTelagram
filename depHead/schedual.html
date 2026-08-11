@@ -848,13 +848,14 @@
 
     /* ========= Constants ========= */
     const DAYS_AR = ["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس"];
-    const LESSONS_AR = [
+    const DEFAULT_LESSONS_AR = [
       "الحصة الأولى","الحصة الثانية","الحصة الثالثة",
       "الحصة الرابعة","الحصة الخامسة","الحصة السادسة","الحصة السابعة"
     ];
-    const FIXED_LESSON_COUNT = 7;
+    let LESSONS_AR = [...DEFAULT_LESSONS_AR];
+    let FIXED_LESSON_COUNT = 7;
 
-    const LESSON_TIMES = [
+    const DEFAULT_LESSON_TIMES = [
       { start: "07:55", end: "08:40" },
       { start: "08:45", end: "09:30" },
       { start: "09:35", end: "10:20" },
@@ -863,6 +864,7 @@
       { start: "12:25", end: "13:10" },
       { start: "13:15", end: "13:55" }
     ];
+    let LESSON_TIMES = DEFAULT_LESSON_TIMES.map(t => ({ ...t }));
     const BREAK_LABELS = {
       first: "الفرصة الأولى",
       second: "الفرصة الثانية"
@@ -1086,6 +1088,14 @@
         breaksUnsubscribe();
       }
 
+      // Resolves once the first snapshot lands, so callers can await lesson
+      // count/times being settled before rendering the first schedule grid.
+      let resolveFirstSnapshot;
+      const firstSnapshot = new Promise((resolve) => { resolveFirstSnapshot = resolve; });
+      const settleFirstSnapshot = () => {
+        if (resolveFirstSnapshot) { resolveFirstSnapshot(); resolveFirstSnapshot = null; }
+      };
+
       const breaksDocRef = doc(db, 'settings', 'lessonTimes');
       breaksUnsubscribe = onSnapshot(breaksDocRef, (snap) => {
         if (!snap.exists()) {
@@ -1093,6 +1103,15 @@
         } else {
           const data = snap.data() || {};
           SCHOOL_BREAKS = normalizeSchoolBreaks(data.opportunityBreaks || data);
+
+          if (Array.isArray(data.times) && data.times.length >= 1 && data.times.length <= 12) {
+            LESSON_TIMES = data.times.map((t, i) => ({
+              start: (t?.start || DEFAULT_LESSON_TIMES[i]?.start || '00:00').toString(),
+              end: (t?.end || DEFAULT_LESSON_TIMES[i]?.end || '00:00').toString()
+            }));
+            FIXED_LESSON_COUNT = LESSON_TIMES.length;
+            LESSONS_AR = LESSON_TIMES.map((_, i) => DEFAULT_LESSONS_AR[i] || `الحصة ${i + 1}`);
+          }
         }
 
         if (currentView === 'today' && activeTodayISO && activeTodayByLesson instanceof Map) {
@@ -1101,9 +1120,13 @@
           refreshRenderedLessonMeta(containerMain);
           refreshRenderedLessonMeta(classWeekGrid);
         }
+        settleFirstSnapshot();
       }, (error) => {
         console.error('Error listening to school breaks:', error);
+        settleFirstSnapshot();
       });
+
+      return firstSnapshot;
     }
 
     function safeText(s){
@@ -1807,7 +1830,7 @@
           </div>
           <div class="info-box">
             <div class="info-k"><i class="fas fa-hashtag"></i> الحصة</div>
-            <div class="info-v">${escapeHtml(LESSONS_AR[meta.lesson-1])} (#${meta.lesson})</div>
+            <div class="info-v">${escapeHtml(LESSONS_AR[meta.lesson-1] || `الحصة #${meta.lesson}`)} (#${meta.lesson})</div>
           </div>
           <div class="info-box">
             <div class="info-k"><i class="fas fa-users"></i> الصف</div>
@@ -1822,7 +1845,7 @@
       const lesson = normalizeLessonNumber(slot.lesson) || 1;
       const dayName = dayNameByISO(slot.date) || slot.date || '—';
       const classKey = slot.classKey || '—';
-      return `${dayName} | ${slot.date} | ${LESSONS_AR[lesson-1]} (#${lesson}) | ${classKey}`;
+      return `${dayName} | ${slot.date} | ${LESSONS_AR[lesson-1] || `الحصة #${lesson}`} (#${lesson}) | ${classKey}`;
     }
 
     function openLessonActionsModal(slotOrLesson){
@@ -2053,7 +2076,7 @@
         if (!selectEl) return;
         const options = (slots || []).map(slot => `
           <option value="${slot.lesson}">
-            ${escapeHtml(LESSONS_AR[slot.lesson-1])} (#${slot.lesson}) • ${escapeHtml(lessonTimeLabel(slot.lesson))} • ${escapeHtml(slot.classKey || '—')}
+            ${escapeHtml(LESSONS_AR[slot.lesson-1] || `الحصة #${slot.lesson}`)} (#${slot.lesson}) • ${escapeHtml(lessonTimeLabel(slot.lesson))} • ${escapeHtml(slot.classKey || '—')}
           </option>
         `).join('');
         selectEl.innerHTML = `<option value="">${escapeHtml(placeholder)}</option>${options}`;
@@ -2517,10 +2540,10 @@
       
       const fromDate = request.fromDate || request.date || '—';
       const fromLessonNumber = Number(request.fromLesson || request.lesson) || 0;
-      const fromLessonLabel = fromLessonNumber ? `${LESSONS_AR[fromLessonNumber - 1]} (#${fromLessonNumber})` : '—';
+      const fromLessonLabel = fromLessonNumber ? `${LESSONS_AR[fromLessonNumber - 1] || `الحصة #${fromLessonNumber}`} (#${fromLessonNumber})` : '—';
       const toDate = request.toDate || '—';
       const toLessonNumber = Number(request.toLesson) || 0;
-      const toLessonLabel = toLessonNumber ? `${LESSONS_AR[toLessonNumber - 1]} (#${toLessonNumber})` : '—';
+      const toLessonLabel = toLessonNumber ? `${LESSONS_AR[toLessonNumber - 1] || `الحصة #${toLessonNumber}`} (#${toLessonNumber})` : '—';
       
       card.innerHTML = `
         <div class="request-header">
@@ -3052,7 +3075,7 @@
           // Enable buttons
           [btnRequests, btnToday, btnWeek, btnMore].forEach(b => b.removeAttribute('disabled'));
           
-          setupBreaksListener();
+          await setupBreaksListener();
           initWeek();
           initClassPicker();
           

@@ -151,6 +151,14 @@
     }
     .new-schedule-btn:hover{ box-shadow: 0 8px 18px rgba(11,79,108,.12); }
     .new-schedule-btn:active{ transform:scale(.99); }
+    .new-schedule-btn.icon-btn{
+      width:44px;
+      padding:0;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .new-schedule-btn.icon-btn svg{ width:20px; height:20px; }
 
     main{ flex:1; padding:20px 16px; }
     .board{
@@ -378,6 +386,17 @@
       font-weight:900;
       border-radius:12px;
     }
+    .lesson-count-row{
+      display:flex;
+      gap:10px;
+      align-items:center;
+    }
+    .lesson-count-row input{
+      width:90px;
+      flex:0 0 auto;
+      text-align:center;
+    }
+    .lesson-count-row .btn{ flex:0 0 auto; }
 
     /* Grid */
     .grid-wrap{
@@ -390,10 +409,10 @@
     .grid{
       direction: ltr;
       display:grid;
-      grid-template-columns: repeat(7, minmax(var(--colW),1fr)) minmax(var(--colW),1fr);
+      grid-template-columns: repeat(var(--lessonCols, 7), minmax(var(--colW),1fr)) minmax(var(--colW),1fr);
       gap:10px;
       align-items:stretch;
-      min-width: calc(var(--colW) * 8 + 7*10px);
+      min-width: calc(var(--colW) * (var(--lessonCols, 7) + 1) + var(--lessonCols, 7) * 10px);
       padding: 2px;
     }
 
@@ -577,65 +596,25 @@
       flex-direction:column;
       align-items:center;
       justify-content:center;
-      gap:10px;
-      width:min(380px, 92%);
+      gap:14px;
       text-align:center;
       padding:16px;
     }
-    .loader-logo-wrap{
-      width:150px;
-      height:150px;
-      border-radius:22px;
-      background:rgba(255,255,255,.45);
-      backdrop-filter: blur(10px);
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      box-shadow:0 8px 24px rgba(0,0,0,.1), 0 2px 6px rgba(0,0,0,.06);
-    }
-    .loader-logo{
-      width:84%;
-      height:84%;
-      object-fit:contain;
-    }
-    .loader-school{
-      font-weight:900;
-      font-size:28px;
-      color:#0c2d48;
-      line-height:1.4;
-      text-align:center;
-    }
-    .loader-line{
-      height:4px;
-      width:min(240px, 70%);
-      border-radius:2px;
-      background:linear-gradient(90deg, #0c2d48, #2e8bc0, #0c2d48);
-    }
-    .loader-text{
-      color:#36586b;
-      font-weight:900;
-      font-size:14px;
-      margin-top:2px;
-    }
-    .loader-spinner-bars{
-      width:48px;
-      height:48px;
-      margin-top:14px;
+    .spinner{
+      width:44px;
+      height:44px;
       border-radius:50%;
-      border:5px solid rgba(12,45,72,.12);
-      border-top-color:#2e8bc0;
-      border-right-color:#0c2d48;
-      animation: loaderSpin .75s linear infinite;
+      border:4px solid rgba(11,79,108,.16);
+      border-top-color:var(--primary);
+      animation: spin 1s linear infinite;
     }
-    @keyframes loaderSpin{
+    @keyframes spin{
       to { transform: rotate(360deg); }
     }
-    .loader-line{
-      animation: loaderLinePulse 1.6s ease-in-out infinite;
-    }
-    @keyframes loaderLinePulse{
-      0%,100%{ opacity:.45; transform:scaleX(.7); }
-      50%{ opacity:1; transform:scaleX(1); }
+    .loader-text{
+      color:var(--muted);
+      font-weight:800;
+      font-size:14px;
     }
 
     /* ===== Floating save bar ===== */
@@ -926,6 +905,7 @@
     }
 
     .pop-desc{ color:var(--muted); font-size:12px; font-weight:800; }
+    .pop-desc.err{ color:#a11; }
 
     .pop-actions{
       display:flex;
@@ -1023,9 +1003,6 @@
       main{ padding:12px; }
       .card{ padding:12px; }
       .time-inputs{ grid-template-columns:1fr; }
-      .loader-logo-wrap{ width:118px; height:118px; border-radius:18px; }
-      .loader-school{ font-size:22px; }
-      .loader-spinner-bars{ margin-top:8px; }
     }
   </style>
 
@@ -1060,6 +1037,12 @@
       <div class="top-info">
         <button id="backToAdminBtn" class="new-schedule-btn" type="button">← رجوع</button>
         <button id="newScheduleBtn" class="new-schedule-btn" type="button">+ إضافة جدول</button>
+        <button id="settingsBtn" class="new-schedule-btn icon-btn" type="button" title="الإعدادات" aria-label="الإعدادات">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+        </button>
       </div>
     </div>
   </header>
@@ -1077,22 +1060,6 @@
             <select id="classSel" class="input tc-select-lg"></select>
           </div>
         </div>
-
-        <div class="tc-divider"></div>
-
-        <div class="tc-row tc-row-breaks">
-          <span class="tc-section-label">أوقات الفرصة</span>
-          <div class="tc-break-grid">
-            <div class="tc-field tc-field-break">
-              <label for="breakAfterLesson1">الفرصة الأولى</label>
-              <select id="breakAfterLesson1" class="input tc-select-sm"></select>
-            </div>
-            <div class="tc-field tc-field-break">
-              <label for="breakAfterLesson2">الفرصة الثانية</label>
-              <select id="breakAfterLesson2" class="input tc-select-sm"></select>
-            </div>
-          </div>
-        </div>
       </div>
 
       <div id="scheduleCard" class="card schedule-card">
@@ -1104,14 +1071,8 @@
         </div>
         <div id="containerLoader" class="container-loader" aria-hidden="true">
           <div class="loader-shell">
-            <div class="loader-logo-wrap">
-              <img class="loader-logo" src="https://framerusercontent.com/images/aI1iHN9wVHJ3PyWbMpHkgJYWsqE.png" alt="School Logo">
-            </div>
-            <div class="loader-school">ثانوية أحمد البشر الرومي</div>
-            <div class="loader-line"></div>
+            <div class="spinner" aria-hidden="true"></div>
             <div id="loaderText" class="loader-text">جاري تحميل البيانات...</div>
-            <div class="loader-spinner-bars" aria-hidden="true">
-            </div>
           </div>
         </div>
       </div>
@@ -1181,6 +1142,42 @@
     </div>
   </div>
 
+  <!-- Settings modal -->
+  <div id="settingsModal" class="modal" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="settingsModalTitle">
+      <div id="settingsModalTitle" class="pop-title">الإعدادات</div>
+      <div class="row">
+        <div class="tc-row tc-row-lesson-count">
+          <span class="tc-section-label">عدد الحصص في اليوم</span>
+          <div class="lesson-count-row">
+            <input id="lessonCountInput" class="input tc-select-sm" type="number" min="1" max="12" step="1" inputmode="numeric">
+            <button id="lessonCountSaveBtn" class="btn primary" type="button">حفظ العدد</button>
+          </div>
+          <div id="lessonCountMsg" class="pop-desc"></div>
+        </div>
+
+        <div class="tc-divider"></div>
+
+        <div class="tc-row tc-row-breaks">
+          <span class="tc-section-label">أوقات الفرصة</span>
+          <div class="tc-break-grid">
+            <div class="tc-field tc-field-break">
+              <label for="breakAfterLesson1">الفرصة الأولى</label>
+              <select id="breakAfterLesson1" class="input tc-select-sm"></select>
+            </div>
+            <div class="tc-field tc-field-break">
+              <label for="breakAfterLesson2">الفرصة الثانية</label>
+              <select id="breakAfterLesson2" class="input tc-select-sm"></select>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="pop-actions">
+        <button id="settingsCloseBtn" class="btn primary" type="button">تم</button>
+      </div>
+    </div>
+  </div>
+
   <div id="saveSuccessModal" class="success-modal" aria-hidden="true">
     <div class="success-card">
       <div class="success-check">
@@ -1225,8 +1222,14 @@
     // Friday/Saturday, so they get their own extended day list — the main weekly
     // schedule above intentionally stays Sun→Thu only.
     const CUSTOM_DAYS_AR = [...DAYS_AR, "الجمعة", "السبت"]; // Sun→Sat
-    const LESSONS_AR = ["الحصة الأولى","الحصة الثانية","الحصة الثالثة","الحصة الرابعة","الحصة الخامسة","الحصة السادسة","الحصة السابعة"];
-    const FIXED_LESSON_COUNT = 7;
+    const DEFAULT_LESSONS_AR = ["الحصة الأولى","الحصة الثانية","الحصة الثالثة","الحصة الرابعة","الحصة الخامسة","الحصة السادسة","الحصة السابعة"];
+    // Both mutable: an admin can change the daily lesson count in Settings,
+    // which re-derives these from the saved settings/lessonTimes doc (see
+    // fetchLessonTimes) instead of assuming 7 everywhere.
+    let LESSONS_AR = [...DEFAULT_LESSONS_AR];
+    let FIXED_LESSON_COUNT = 7;
+    const MIN_LESSON_COUNT = 1;
+    const MAX_LESSON_COUNT = 12;
 
     const GRADES = ["10","11","12"];
     const CLASSES_BY_GRADE = {
@@ -1296,6 +1299,14 @@
     const newScheduleDaySel = document.getElementById('newScheduleDaySel');
     const createScheduleCancelBtn = document.getElementById('createScheduleCancelBtn');
     const createScheduleConfirmBtn = document.getElementById('createScheduleConfirmBtn');
+
+    // Settings modal refs
+    const settingsBtn = document.getElementById('settingsBtn');
+    const settingsModal = document.getElementById('settingsModal');
+    const settingsCloseBtn = document.getElementById('settingsCloseBtn');
+    const lessonCountInput = document.getElementById('lessonCountInput');
+    const lessonCountSaveBtn = document.getElementById('lessonCountSaveBtn');
+    const lessonCountMsg = document.getElementById('lessonCountMsg');
 
     /* ========= State ========= */
     // Remember the last-viewed grade/class across page reloads — otherwise every
@@ -1630,11 +1641,13 @@
         
         if (docSnap.exists()) {
           const data = docSnap.data();
-          if (Array.isArray(data.times) && data.times.length === 7) {
+          if (Array.isArray(data.times) && data.times.length >= MIN_LESSON_COUNT && data.times.length <= MAX_LESSON_COUNT) {
             lessonTimes = data.times.map(t => ({
               start: t.start || "00:00",
               end: t.end || "00:00"
             }));
+            FIXED_LESSON_COUNT = lessonTimes.length;
+            LESSONS_AR = lessonTimes.map((_, i) => DEFAULT_LESSONS_AR[i] || `الحصة #${i + 1}`);
           }
         } else {
           // Create default document if doesn't exist
@@ -1650,14 +1663,14 @@
     }
 
     function formatLessonTime(index) {
-      if (index < 0 || index >= 7) return "";
+      if (index < 0 || index >= FIXED_LESSON_COUNT) return "";
       const time = lessonTimes[index];
       if (!time) return "";
       return `${time.start} - ${time.end}`;
     }
 
     async function saveLessonTime(index, startTime, endTime) {
-      if (index < 0 || index >= 7) return false;
+      if (index < 0 || index >= FIXED_LESSON_COUNT) return false;
       
       try {
         // Validate times
@@ -1768,6 +1781,7 @@
 
     /* ======= Grid rendering (once), then patch per cell ======= */
     function renderHeaders(){
+      grid.style.setProperty('--lessonCols', FIXED_LESSON_COUNT);
       for(let i=FIXED_LESSON_COUNT - 1; i>=0; i--){
         const h = document.createElement('div');
         h.className='th';
@@ -1972,6 +1986,7 @@
         closeModal();
         closeTimeModal();
         closeCreateScheduleModal();
+        closeSettingsModal();
       }
     });
 
@@ -2589,6 +2604,93 @@
         overlay.classList.remove('show');
       }
     }
+
+    function openSettingsModal(){
+      lessonCountInput.value = FIXED_LESSON_COUNT;
+      lessonCountMsg.textContent = '';
+      lessonCountMsg.classList.remove('err');
+      overlay.classList.add('show');
+      settingsModal.classList.add('show');
+    }
+
+    function closeSettingsModal(){
+      settingsModal.classList.remove('show');
+      overlay.classList.remove('show');
+    }
+
+    settingsBtn.addEventListener('click', openSettingsModal);
+    settingsCloseBtn.addEventListener('click', closeSettingsModal);
+
+    // Continues the day's rhythm for a newly-added lesson slot: a 5-minute
+    // gap after the previous lesson ends, then a standard 45-minute lesson —
+    // just a starting point, admins can fine-tune it via the grid header's
+    // own time editor afterward.
+    function nextDefaultLessonTime(times){
+      const last = times[times.length - 1];
+      if(!last || !last.end) return { start: "07:55", end: "08:40" };
+      const [h, m] = last.end.split(':').map(Number);
+      const startMin = (h * 60 + m) + 5;
+      const endMin = startMin + 45;
+      const toHHMM = (mins)=>{
+        const hh = String(Math.floor(mins / 60) % 24).padStart(2, '0');
+        const mm = String(mins % 60).padStart(2, '0');
+        return `${hh}:${mm}`;
+      };
+      return { start: toHHMM(startMin), end: toHHMM(endMin) };
+    }
+
+    lessonCountSaveBtn.addEventListener('click', async ()=>{
+      const n = Math.floor(Number(lessonCountInput.value));
+      lessonCountMsg.classList.remove('err');
+      if(!Number.isFinite(n) || n < MIN_LESSON_COUNT || n > MAX_LESSON_COUNT){
+        lessonCountMsg.textContent = `يجب أن يكون العدد بين ${MIN_LESSON_COUNT} و ${MAX_LESSON_COUNT}.`;
+        lessonCountMsg.classList.add('err');
+        return;
+      }
+      if(n === FIXED_LESSON_COUNT){
+        lessonCountMsg.textContent = 'لم يتغيّر العدد.';
+        return;
+      }
+
+      lessonCountSaveBtn.disabled = true;
+      lessonCountMsg.textContent = 'جاري الحفظ...';
+      try{
+        const newTimes = lessonTimes.slice(0, n);
+        while(newTimes.length < n){
+          newTimes.push(nextDefaultLessonTime(newTimes));
+        }
+
+        const payload = { times: newTimes, updatedAt: serverTimestamp() };
+        // Break selections that pointed at a lesson beyond the new count no
+        // longer make sense — clear them rather than leave a dangling
+        // reference to a lesson that doesn't exist anymore.
+        if(opportunityBreaks.firstAfter && opportunityBreaks.firstAfter > n) opportunityBreaks.firstAfter = null;
+        if(opportunityBreaks.secondAfter && opportunityBreaks.secondAfter > n) opportunityBreaks.secondAfter = null;
+        payload.opportunityBreaks = {
+          firstAfter: normalizeLessonNumber(opportunityBreaks.firstAfter),
+          secondAfter: normalizeLessonNumber(opportunityBreaks.secondAfter)
+        };
+
+        await setDoc(doc(db, 'settings', 'lessonTimes'), payload, { merge: true });
+
+        lessonTimes = newTimes;
+        FIXED_LESSON_COUNT = n;
+        LESSONS_AR = lessonTimes.map((_, i) => DEFAULT_LESSONS_AR[i] || `الحصة #${i + 1}`);
+
+        renderOpportunitySelectors();
+        renderGridFull();
+        await fetchExisting();
+
+        lessonCountMsg.textContent = 'تم الحفظ بنجاح.';
+        addStatusLine("ok", `تم تحديث عدد الحصص إلى ${n}.`);
+      }catch(error){
+        console.error('[lessonCountSave]', error);
+        lessonCountMsg.textContent = 'تعذّر حفظ عدد الحصص.';
+        lessonCountMsg.classList.add('err');
+      }finally{
+        lessonCountSaveBtn.disabled = false;
+      }
+    });
 
     function addNewCustomSchedule(seed = {}){
       customSchedules.push(makeCustomSchedule({
