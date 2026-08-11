@@ -376,11 +376,12 @@
       visibility: visible;
     }
 
-    .loader-overlay.leaving {
-      transition: opacity 0.4s cubic-bezier(0.5, 0, 0.75, 0), visibility 0.4s;
-      opacity: 0;
-    }
-
+    /* .loader-overlay.leaving is intentionally not a rule here — it used
+       to fade opacity to 0, which for its whole 0.4s duration made the
+       overlay see-through right before the hard navigation, flashing the
+       login form (and its still-visible "تم تسجيل الدخول بنجاح" message)
+       back into view. The overlay now stays fully opaque throughout;
+       only the content underneath gets a closing scale-down below. */
     .loader-overlay.leaving .loader-content {
       transition: transform 0.4s cubic-bezier(0.5, 0, 0.75, 0);
       transform: scale(calc(var(--loader-scale, 1) * 0.96));
@@ -1040,9 +1041,11 @@
           localStorage.removeItem('rememberLogin');
         }
 
+        // The loader overlay takes over the screen immediately and already
+        // greets the user by name — a form message here would only ever be
+        // seen if the overlay failed to stay opaque, so there's no reason
+        // to set one up in the first place.
         startLoaderThenRedirect(profile);
-
-        showMsg('تم تسجيل الدخول بنجاح', true);
       } catch (e) {
         console.error("Login error:", e);
         passEl.value = '';
