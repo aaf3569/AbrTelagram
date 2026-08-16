@@ -1665,6 +1665,33 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
     openForClass,
     openForEdit,
     canEditSession(sessionData) { return isWithinAttendanceEditWindow(sessionData?.date, sessionData?.lesson); },
+    // Deliberately NOT checkAllowed()/getMyActiveLessonMetaForNow() — those
+    // also fail on "already_taken", which is exactly the normal case for a
+    // host wanting to gate a "my attendance log" button on "what class is my
+    // current lesson", since by definition they're looking at a lesson they
+    // likely already submitted. This mirrors only the outside_lessons/
+    // not_my_lesson checks, then shows the same blocked-reason modal for
+    // consistency with the attendance-taking flow.
+    async getCurrentLessonClass(showFeedback = true) {
+      const user = auth.currentUser;
+      if (!user) {
+        if (showFeedback) showBlocked("not_logged_in");
+        return { ok: false, reason: "not_logged_in" };
+      }
+      const todayISO = kuwaitTodayISO();
+      const L = getActiveLessonIndex();
+      if (L === null) {
+        if (showFeedback) showBlocked("outside_lessons");
+        return { ok: false, reason: "outside_lessons" };
+      }
+      const map = await buildTodayMapWithOverrides(user.uid, todayISO);
+      const hit = map.get(String(L));
+      if (!hit || hit._coveredAway === true) {
+        if (showFeedback) showBlocked("not_my_lesson");
+        return { ok: false, reason: "not_my_lesson" };
+      }
+      return { ok: true, lesson: L, date: todayISO, classKey: resolveClassKeyFromScheduleHit(hit), scheduleData: hit };
+    },
     // For hosts that don't know the caller's role until auth resolves
     // (mountAttendanceSheet is called at module load) — e.g.
     // admin-late-attendance.html, which is also reachable by non-admin

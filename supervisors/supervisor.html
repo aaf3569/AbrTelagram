@@ -650,37 +650,6 @@
             <div id="logList" class="log-list"></div>
         </div>
     </section>
-    <!-- Attendance DETAIL (Edit) Sheet -->
-    <section id="logDetailSheet" class="sheet" aria-hidden="true">
-        <div class="sheet-header">
-            <button id="closeLogDetail" class="back-btn" aria-label="رجوع">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-                رجوع
-            </button>
-            <h3 class="sheet-title" id="detailTitle">تعديل التقرير</h3>
-        </div>
-        <div class="sheet-body">
-            <div class="att-hero">
-                <h2 id="detailClass" class="att-class">—</h2>
-                <div class="att-row">
-                    <div class="hint" id="detailMeta">—</div>
-                    <div class="hint" id="editWindowHint"></div>
-                </div>
-            </div>
-            <div id="detailList" class="att-list"></div>
-            <div class="stats">
-                <div class="chips">
-                    <span id="dCountPresent" class="pill g">حضور: 0</span>
-                    <span id="dCountLate" class="pill y">تأخير: 0</span>
-                    <span id="dCountAbsent" class="pill r">غياب: 0</span>
-                </div>
-                <div class="submit-row">
-                    <button id="saveDetail" class="btn submit" type="button">حفظ التعديلات</button>
-                </div>
-                <div id="detailLockMsg" class="warn" style="display:none;">انتهت مهلة التعديل (24 ساعة).</div>
-            </div>
-        </div>
-    </section>
     <!-- ===== Confirm Modal (Centered) - MODIFIED ===== -->
     <div id="confirmModal" class="modal" aria-hidden="true">
         <div class="overlay"></div>
@@ -820,18 +789,6 @@
         const logSheet = document.getElementById('logSheet');
         const closeLog = document.getElementById('closeLog');
         const logList = document.getElementById('logList');
-        const logDetailSheet = document.getElementById('logDetailSheet');
-        const closeLogDetail = document.getElementById('closeLogDetail');
-        const detailTitle = document.getElementById('detailTitle');
-        const detailClass = document.getElementById('detailClass');
-        const detailMeta = document.getElementById('detailMeta');
-        const editWindowHint = document.getElementById('editWindowHint');
-        const detailList = document.getElementById('detailList');
-        const saveDetail = document.getElementById('saveDetail');
-        const detailLockMsg = document.getElementById('detailLockMsg');
-        const dCountPresent = document.getElementById('dCountPresent');
-        const dCountLate = document.getElementById('dCountLate');
-        const dCountAbsent = document.getElementById('dCountAbsent');
         // Class sheet
         const classSheet = document.getElementById('classSheet');
         const closeClass = document.getElementById('closeClass');
@@ -2651,302 +2608,81 @@
             errorBody.textContent = body || 'حدث خطأ غير متوقع.';
             openModal(errorModal);
         }
-        /* ========= Attendance LOG ========= */
+        /* ========= Attendance LOG =========
+           Matches Teachers/user.html: only open the log while the supervisor
+           has an active lesson right now (via the shared attendance module's
+           own lesson-detection check, so the messaging/blocked-modal on
+           failure stays consistent with the attendance-taking flow), show
+           only today's records for that lesson's class, and edit exclusively
+           through the shared module — no separate local editor. This is a
+           distinct, log-scoped class key: it intentionally does not touch
+           `currentClass`, which tracks whatever class is open in the class
+           browser sheet elsewhere on this page. */
+        let logClassKey = null;
         logBtn.addEventListener('click', async ()=>{
+            const c = await attendance.getCurrentLessonClass(true);
+            if (!c.ok) return;
+            logClassKey = c.classKey;
             await loadMyAttendanceLog();
             openSheet(logSheet);
         });
         closeLog.addEventListener('click', ()=> closeSheet(logSheet));
-        
-        // NEW: Optimized attendance log loading with class and teacher scoping
+
         async function loadMyAttendanceLog(){
             logList.innerHTML = '';
-            if(!auth.currentUser || !currentClass) return; // Add currentClass check
-            
+            if(!auth.currentUser || !logClassKey) return;
+
             const loadingEl = document.createElement('div');
             loadingEl.className = 'loading';
             loadingEl.innerHTML = '<div class="spinner"></div><div class="muted">جاري تحميل سجل الغيابات...</div>';
             logList.appendChild(loadingEl);
 
-            // MODIFIED: Add class filter and teacher filter, unioned with the modern
-            // attendanceSessions schema (written by the shared attendance module).
-            const [legacySnap, modernSnap] = await Promise.all([
-                getDocs(query(
-                    collection(db, 'attendance'),
-                    where('class', '==', currentClass),
-                    where('createdBy', '==', auth.currentUser.uid)
-                )),
-                getDocs(query(
-                    collection(db, 'attendanceSessions'),
-                    where('classKey', '==', currentClass),
-                    where('teacherUid', '==', auth.currentUser.uid)
-                )),
-            ]);
-            if(legacySnap.empty && modernSnap.empty){
+            const todayISO = dateInTZ('Asia/Kuwait');
+            const qRef = query(
+                collection(db, 'attendanceSessions'),
+                where('classKey', '==', logClassKey),
+                where('teacherUid', '==', auth.currentUser.uid),
+                where('date', '==', todayISO)
+            );
+
+            const snap = await getDocs(qRef);
+            if(snap.empty){
                 logList.innerHTML = '';
                 const empty = document.createElement('div');
                 empty.className = 'error';
-                empty.textContent = 'لا توجد تقارير مسجلة لك.';
+                empty.textContent = 'لا توجد تقارير مسجلة لك لهذا اليوم.';
                 logList.appendChild(empty);
                 return;
             }
+
             const items = [];
-            legacySnap.forEach(d=>{
+            snap.forEach(d=>{
                 const data = d.data() || {};
-                items.push({ id: d.id, source: 'attendance', ...data });
+                items.push({ id: d.id, ...data });
             });
-            modernSnap.forEach(d=>{
-                const data = d.data() || {};
-                items.push({
-                    id: d.id,
-                    source: 'attendanceSessions',
-                    class: data.classKey || currentClass,
-                    lessonIndex: data.lesson || 0,
-                    ...data,
-                });
-            });
-            items.sort((a,b)=>{
-                if(a.date === b.date) return (b.lessonIndex||0) - (a.lessonIndex||0);
-                return a.date < b.date ? 1 : -1;
-            });
+            items.sort((a,b)=> (b.lesson||0) - (a.lesson||0));
+
             logList.innerHTML = '';
-
-            // NEW: Use document fragment for better performance
             const fragment = document.createDocumentFragment();
-
             items.forEach(item=>{
                 const div = document.createElement('div');
-                const canEdit = item.source === 'attendanceSessions'
-                    ? canEditAttendanceSessionByTime(item.createdAt)
-                    : canEditByTime(item.createdAt);
-                const classLabel = item.class ? formatClassLabel(item.class) : '—';
+                const classLabel = item.classKey ? formatClassLabel(item.classKey) : '—';
+                const lessonLabelText = item.lessonLabel || LESSON_NAMES[(item.lesson||1)-1] || `حصة ${item.lesson||''}`;
+                const canEdit = attendance.canEditSession(item);
                 div.className = 'log-item';
                 div.innerHTML = `
                     <h4 class="log-title">${classLabel}</h4>
-                    <div class="log-sub">التاريخ: ${item.date || '—'} — ${item.lessonLabel || ('حصة '+(item.lessonIndex||''))}</div>
+                    <div class="log-sub">التاريخ: ${item.date || '—'} — ${lessonLabelText}</div>
                     <div class="${canEdit ? 'ok':'warn'}">${canEdit ? 'متاح للتعديل' : 'انتهت مهلة التعديل'}</div>
                 `;
-                div.addEventListener('click', ()=> requestAnimationFrame(() => {
-                    if (item.source === 'attendanceSessions') attendance.openForEdit(item.id);
-                    else openLogDetail(item.id);
-                }));
+                div.addEventListener('click', ()=> {
+                    closeSheet(logSheet);
+                    attendance.openForEdit(item.id);
+                });
                 fragment.appendChild(div);
             });
-
             logList.appendChild(fragment);
         }
-        function canEditAttendanceSessionByTime(createdAtField){
-            if(!createdAtField) return false;
-            let created = null;
-            if (createdAtField?.toDate) created = createdAtField.toDate();
-            else if (createdAtField?.seconds) created = new Date(createdAtField.seconds*1000);
-            if(!created) return false;
-            return (Date.now() - created.getTime()) <= 45*60*1000;
-        }
-        function canEditByTime(createdAtField){
-            if(!createdAtField) return false;
-            let created = null;
-            if (createdAtField?.toDate) created = createdAtField.toDate();
-            else if (createdAtField?.seconds) created = new Date(createdAtField.seconds*1000);
-            if(!created) return false;
-            const now = new Date();
-            return (now - created) <= 24*60*60*1000;
-        }
-        /* ========= Attendance DETAIL / EDIT ========= */
-        closeLogDetail.addEventListener('click', ()=> closeSheet(logDetailSheet));
-        let detailSession = null; // {id,data}
-        let dStatuses = {}; // uid -> status
-        let dStudents = []; // [{uid,name}]
-        async function openLogDetail(sessionId){
-            const sRef = doc(db, 'attendance', sessionId);
-            const sSnap = await getDoc(sRef);
-            if(!sSnap.exists()){
-                openError('غير موجود','التقرير غير موجود.');
-                return;
-            }
-            const data = sSnap.data() || {};
-            detailSession = { id: sessionId, data };
-            detailTitle.textContent = 'تعديل التقرير';
-            detailClass.textContent = data.class ? formatClassLabel(data.class) : '—';
-            detailMeta.textContent = `التاريخ: ${data.date || '—'} — ${data.lessonLabel || ('حصة '+(data.lessonIndex||''))}`;
-            dStudents = await fetchStudentsByClass(data.class);
-            const nameByUid = {};
-            dStudents.forEach(s=> nameByUid[s.uid] = s.name);
-            dStatuses = {};
-            (data.present||[]).forEach(u=> dStatuses[u]='present');
-            (data.late||[]).forEach(u=> dStatuses[u]='late');
-            (data.absent||[]).forEach(u=> dStatuses[u]='absent');
-            renderDetailList(dStudents, nameByUid);
-            const canEdit = canEditByTime(data.createdAt);
-            saveDetail.disabled = !canEdit;
-            detailLockMsg.style.display = canEdit ? 'none' : 'block';
-            editWindowHint.textContent = canEdit ? 'متاح للتعديل حتى 24 ساعة من الإنشاء' : 'غير متاح للتعديل';
-            openSheet(logDetailSheet);
-        }
-        async function fetchStudentsByClass(cls){
-            // NEW: Check cache first
-            if (studentsCache[cls]) {
-                return studentsCache[cls];
-            }
-            
-            let list = await tryQueryStudents('students', cls);
-            if(list.length === 0){
-                const nested = await tryQueryStudents('students/uids', cls);
-                if(nested.length > 0) list = nested;
-            }
-            list = sortStudentsByStudentNumberOnly(list);
-            studentsCache[cls] = list; // NEW: Cache the results
-            return list;
-        }
-        function renderDetailList(students, nameByUid){
-            detailList.innerHTML = '';
-            if(students.length===0){
-                const empty = document.createElement('div');
-                empty.className = 'error';
-                empty.textContent = 'لا يوجد طلاب.';
-                detailList.appendChild(empty);
-                return;
-            }
-            
-            // NEW: Use document fragment for better performance
-            const fragment = document.createDocumentFragment();
-            
-            students.forEach(s=>{
-                const card = document.createElement('div');
-                card.className = 'att-card';
-                const name = document.createElement('div');
-                name.className = 'att-name';
-                
-                // NEW: Add special case icon in detail list if needed
-                if (s.specialCase) {
-                    const icon = document.createElement('img');
-                    icon.src = 'https://cdn-icons-png.freepik.com/256/8984/8984792.png?semt=ais_white_label';
-                    icon.alt = 'خاص';
-                    icon.className = 'special-case-icon';
-                    name.appendChild(icon);
-                }
-                
-                const nameText = document.createTextNode(s.name || '—');
-                name.appendChild(nameText);
-                
-                const seg = document.createElement('div');
-                seg.className = 'seg';
-                const bPres = document.createElement('button');
-                bPres.className = 'present';
-                bPres.textContent = 'حضور';
-                const sep1 = document.createElement('div');
-                sep1.className = 'sep';
-                const bLate = document.createElement('button');
-                bLate.className = 'late';
-                bLate.textContent = 'تأخير';
-                const sep2 = document.createElement('div');
-                sep2.className = 'sep';
-                const bAbs = document.createElement('button');
-                bAbs.className = 'absent';
-                bAbs.textContent = 'غياب';
-                const key = s.uid;
-                const cur = dStatuses[key] || 'present';
-                if(cur==='present') bPres.classList.add('active');
-                if(cur==='late') bLate.classList.add('active');
-                if(cur==='absent') bAbs.classList.add('active');
-                
-                // NEW: Use passive event listeners for better performance
-                bPres.addEventListener('click', () => setDStatus(key,'present', bPres,bLate,bAbs), { passive: true });
-                bLate.addEventListener('click', () => setDStatus(key,'late', bPres,bLate,bAbs), { passive: true });
-                bAbs.addEventListener('click', () => setDStatus(key,'absent', bPres,bLate,bAbs), { passive: true });
-                
-                seg.appendChild(bPres);
-                seg.appendChild(sep1);
-                seg.appendChild(bLate);
-                seg.appendChild(sep2);
-                seg.appendChild(bAbs);
-                card.appendChild(name);
-                card.appendChild(seg);
-                fragment.appendChild(card);
-            });
-            
-            detailList.appendChild(fragment);
-            recalcDetailStats();
-        }
-        function setDStatus(uid, status, btnP, btnL, btnA){
-            dStatuses[uid] = status;
-            btnP.classList.toggle('active', status==='present');
-            btnL.classList.toggle('active', status==='late');
-            btnA.classList.toggle('active', status==='absent');
-            recalcDetailStats();
-        }
-        function recalcDetailStats(){
-            const vals = Object.values(dStatuses);
-            const present = vals.filter(v=>v==='present').length;
-            const late = vals.filter(v=>v==='late').length;
-            const absent = vals.filter(v=>v==='absent').length;
-            dCountPresent.textContent = `حضور: ${present}`;
-            dCountLate.textContent = `تأخير: ${late}`;
-            dCountAbsent.textContent = `غياب: ${absent}`;
-        }
-        saveDetail.addEventListener('click', async ()=>{
-            try{
-                if(!auth.currentUser){
-                    openError('تعذّر الحفظ','يرجى تسجيل الدخول.');
-                    return;
-                }
-                if(!detailSession){
-                    openError('تعذّر الحفظ','لا يوجد تقرير مفتوح.');
-                    return;
-                }
-                const canEdit = canEditByTime(detailSession.data.createdAt);
-                if(!canEdit){
-                    openError('تعذّر الحفظ','انتهت مهلة التعديل (24 ساعة).');
-                    return;
-                }
-                const present=[], late=[], absent=[];
-                Object.entries(dStatuses).forEach(([uid,st])=>{
-                    if(st==='present') present.push(uid);
-                    else if(st==='late') late.push(uid);
-                    else if(st==='absent') absent.push(uid);
-                });
-                const sessionRef = doc(db, 'attendance', detailSession.id);
-                const batch = writeBatch(db);
-                batch.set(sessionRef, {
-                    present,
-                    late,
-                    absent,
-                    counts: { present: present.length, late: late.length, absent: absent.length, total: present.length+late.length+absent.length }
-                }, { merge: true });
-                const data = detailSession.data;
-                const all = [
-                    ...present.map(u=>({u,status:'present'})),
-                    ...late.map(u=>({u,status:'late'})),
-                    ...absent.map(u=>({u,status:'absent'}))
-                ];
-                const nameByUid = {};
-                dStudents.forEach(s=> nameByUid[s.uid] = s.name);
-                all.forEach(({u,status})=>{
-                    const subRef = doc(db, 'students', u, 'attendance', detailSession.id);
-                    batch.set(subRef, {
-                        sessionId: detailSession.id,
-                        class: data.class,
-                        date: data.date,
-                        lessonIndex: data.lessonIndex,
-                        lessonLabel: data.lessonLabel,
-                        status,
-                        updatedAt: serverTimestamp(),
-                        updatedBy: auth.currentUser.uid,
-                        sessionPath: sessionRef.path,
-                        studentName: nameByUid[u] || null
-                    }, { merge: true });
-                });
-                await batch.commit();
-                
-                // NEW: Invalidate cache after successful edit
-                cachedTakenLessons = null;
-                
-                goHomeAndToast('تم حفظ التعديلات', `للحصة: ${data.lessonLabel || ('حصة '+data.lessonIndex)}`);
-            }catch(e){
-                console.error(e);
-                openError('تعذّر الحفظ','تحقق من الصلاحيات أو الشبكة.');
-            }
-        });
         /* ========= Logout ========= */
         logoutBtn.addEventListener('click', async ()=>{
             const isConfirmed = await showActionPopup({
