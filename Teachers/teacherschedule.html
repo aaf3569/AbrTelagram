@@ -273,14 +273,25 @@
       display: grid;
       place-items: center;
       align-content: center;
+      animation: gridCellIn 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
     }
     .gcell {
       background: var(--card-bg); border: 1px solid var(--border-light); border-radius: var(--radius-sm);
       padding: 14px 10px; display: grid; align-items: center; justify-items: center; text-align: center;
       min-height: 60px; position: relative; font-weight: 800; transition: var(--transition);
+      animation: gridCellIn 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
     }
     .gcell:hover { border-color: var(--border); transform: translateY(-2px); box-shadow: var(--shadow-1); }
+    .gcell.empty { color: rgba(100, 116, 139, 0.45); font-weight: 600; }
+    .gcell.clickable { cursor: pointer; }
     .day-col { background: var(--primary-light); }
+    @keyframes gridCellIn {
+      from { opacity: 0; transform: translateY(5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .gth, .gcell { animation: none; }
+    }
 
     /* Status */
     .status-message {
@@ -375,11 +386,16 @@
     .sheet.open { transform: translateX(0); }
     .sheet-header {
       background: var(--card-bg); border-bottom: 1px solid var(--border);
-      padding: 18px 20px; display: flex; align-items: center; gap: 12px;
+      padding: 18px 20px;
       position: sticky; top: 0; z-index: 10;
+      display: flex; align-items: center; justify-content: center;
       box-shadow: 0 2px 8px rgba(2, 43, 66, 0.06);
     }
     .back-btn {
+      position: absolute;
+      right: 20px;
+      top: 50%;
+      transform: translateY(-50%);
       height: 44px; padding: 0 18px; border-radius: var(--radius-sm);
       border: 1px solid rgba(2, 43, 66, 0.25); background: var(--card-bg);
       color: var(--primary); font-weight: 900; cursor: pointer;
@@ -387,23 +403,36 @@
       display: flex; align-items: center; gap: 8px;
       font-family: "Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
     }
-    .back-btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-2); }
-    .sheet-title { margin: 0; font-size: 1.15rem; font-weight: 900; color: var(--primary); }
+    .back-btn:hover { transform: translateY(calc(-50% - 2px)); box-shadow: var(--shadow-2); }
+    .back-btn:active { transform: translateY(-50%) scale(0.97); }
+    /* Back button is absolutely positioned to one side, so the title is
+       centered against the header's full width rather than the leftover
+       space next to it — padding keeps it clear of the button at any
+       text length. */
+    .sheet-title { margin: 0; font-size: 1.15rem; font-weight: 900; color: var(--primary); text-align: center; padding: 0 112px; }
     .sheet-body {
       flex: 1 1 auto; overflow: auto; padding: 24px;
       max-width: 1200px; margin: 0 auto;
       display: flex; flex-direction: column; gap: 20px; width: 100%;
     }
 
+    .field-label {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 12.5px; font-weight: 900; color: var(--muted);
+      margin-bottom: 8px;
+    }
+    .field-label i { color: var(--primary-2); font-size: 0.95em; }
     .input-wrap {
-      display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 16px;
+      display: flex; align-items: center; gap: 12px; min-height: 54px; padding: 0 16px;
       background: var(--card-bg);
-      border: 1px solid var(--border);
+      border: 1.5px solid var(--border);
       border-radius: var(--radius-sm);
       box-shadow: var(--shadow-1);
       transition: var(--transition);
     }
-    .input-wrap:focus-within { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(2, 43, 66, 0.1); }
+    .input-wrap:hover { border-color: rgba(2, 43, 66, 0.3); }
+    .input-wrap:focus-within { border-color: var(--primary-2); box-shadow: 0 0 0 4px rgba(4, 69, 99, 0.12); }
+    .input-icon { color: var(--primary-2); font-size: 0.95rem; flex-shrink: 0; }
     .select, .input {
       flex: 1; height: 50px; border: none; outline: none; background: transparent;
       font-size: 1rem; font-weight: 800; color: var(--text);
@@ -455,31 +484,43 @@
       max-height: min(92vh, calc(100vh - 32px));
       background: rgba(255,255,255,0.97);
       border: 1px solid rgba(226, 232, 240, 0.9);
-      border-radius: 20px;
-      box-shadow: 0 24px 60px rgba(2, 43, 66, 0.25);
+      border-radius: 22px;
+      box-shadow: 0 28px 70px rgba(2, 43, 66, 0.28);
       overflow: hidden;
-      transform: translateY(10px) scale(0.98);
-      animation: popIn 0.18s ease both;
+      transform: translateY(14px) scale(0.97);
+      animation: popIn 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
       display: flex;
       flex-direction: column;
       padding-bottom: env(safe-area-inset-bottom, 0);
     }
     @keyframes popIn { to { transform: translateY(0) scale(1); } }
+    @media (prefers-reduced-motion: reduce) {
+      .modal-backdrop, .modal-card { animation: none; }
+    }
 
     .modal-head {
-      padding: 16px 18px;
-      background: linear-gradient(135deg, rgba(4, 69, 99, 0.12), rgba(2, 43, 66, 0.05));
+      padding: 18px;
+      background: linear-gradient(135deg, var(--primary-2), var(--primary));
       border-bottom: 1px solid rgba(226, 232, 240, 0.85);
       display: flex; align-items: center; justify-content: space-between; gap: 12px;
       flex-shrink: 0;
+      position: relative;
+      overflow: hidden;
+    }
+    .modal-head::after {
+      content: "";
+      position: absolute; inset: 0;
+      background: radial-gradient(120% 140% at 100% 0%, rgba(255,255,255,0.14), transparent 55%);
+      pointer-events: none;
     }
     .modal-title {
       font-weight: 900;
-      color: var(--primary);
+      color: var(--headerText);
       display: flex; align-items: center; gap: 10px;
       font-size: 1.05rem;
       flex: 1;
       min-width: 0;
+      position: relative;
     }
     .modal-title span:last-child {
       overflow: hidden;
@@ -487,25 +528,26 @@
       white-space: nowrap;
     }
     .icon-circle {
-      width: 36px; height: 36px; border-radius: 12px;
-      background: rgba(2, 43, 66, 0.08);
-      border: 1px solid rgba(2, 43, 66, 0.10);
+      width: 38px; height: 38px; border-radius: 12px;
+      background: rgba(255, 255, 255, 0.16);
+      border: 1px solid rgba(255, 255, 255, 0.22);
       display: grid; place-items: center;
-      color: var(--primary);
+      color: var(--headerText);
       flex-shrink: 0;
+      position: relative;
     }
     .modal-close {
       width: 44px; height: 44px; border-radius: 14px;
-      border: 1px solid rgba(2, 43, 66, 0.18);
-      background: rgba(255,255,255,0.75);
+      border: 1px solid rgba(255, 255, 255, 0.24);
+      background: rgba(255, 255, 255, 0.14);
       cursor: pointer;
       display: grid; place-items: center;
-      color: var(--primary);
-      box-shadow: var(--shadow-1);
+      color: var(--headerText);
       transition: var(--transition);
       flex-shrink: 0;
+      position: relative;
     }
-    .modal-close:hover { transform: translateY(-2px); box-shadow: var(--shadow-2); }
+    .modal-close:hover { transform: translateY(-2px) rotate(90deg); background: rgba(255, 255, 255, 0.22); }
     .modal-body {
       padding: 18px;
       display: flex;
@@ -536,8 +578,66 @@
       padding: 12px;
       box-shadow: 0 8px 18px rgba(2, 43, 66, 0.06);
     }
-    .info-k { color: var(--muted); font-weight: 800; font-size: 12px; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+    .info-k { color: var(--muted); font-weight: 800; font-size: 12px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+    .info-k i {
+      width: 22px; height: 22px; border-radius: 7px;
+      background: rgba(4, 69, 99, 0.08);
+      color: var(--primary-2);
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 11px; flex-shrink: 0;
+    }
     .info-v { color: var(--text); font-weight: 900; font-size: 14px; }
+
+    /* Teacher call card (تفاصيل الحصة) */
+    .teacher-call-card {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.10), rgba(16, 185, 129, 0.03));
+      border: 1px solid rgba(16, 185, 129, 0.28);
+      text-decoration: none;
+      color: var(--text);
+      transition: var(--transition);
+      cursor: pointer;
+    }
+    .teacher-call-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 26px rgba(16, 185, 129, 0.2);
+      border-color: rgba(16, 185, 129, 0.45);
+    }
+    .teacher-call-card:active { transform: translateY(0) scale(0.99); }
+    .tcc-icon {
+      width: 42px; height: 42px; border-radius: 12px; flex-shrink: 0;
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: #fff; font-size: 1.05rem;
+      display: grid; place-items: center;
+      box-shadow: 0 6px 14px rgba(16, 185, 129, 0.35);
+      animation: ringPulse 2.4s ease-in-out infinite;
+    }
+    @keyframes ringPulse {
+      0%, 100% { box-shadow: 0 6px 14px rgba(16, 185, 129, 0.35); }
+      50% { box-shadow: 0 6px 18px rgba(16, 185, 129, 0.5), 0 0 0 6px rgba(16, 185, 129, 0.10); }
+    }
+    .tcc-text { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
+    .tcc-label { font-size: 11px; font-weight: 800; color: var(--muted); }
+    .tcc-number { font-size: 15px; font-weight: 900; color: var(--text); direction: ltr; unicode-bidi: embed; text-align: right; }
+    .tcc-cta {
+      display: flex; align-items: center; gap: 6px; flex-shrink: 0;
+      font-size: 12.5px; font-weight: 900; color: #059669;
+      background: rgba(16, 185, 129, 0.14);
+      padding: 8px 12px; border-radius: 999px;
+    }
+    .teacher-call-card.is-disabled {
+      background: rgba(100, 116, 139, 0.06);
+      border-color: var(--border);
+      cursor: default;
+    }
+    .teacher-call-card.is-disabled:hover { transform: none; box-shadow: none; border-color: var(--border); }
+    .teacher-call-card.is-disabled .tcc-icon { background: var(--muted); animation: none; box-shadow: none; }
+    .teacher-call-card.is-disabled .tcc-number { color: var(--muted); font-weight: 700; }
+    @media (prefers-reduced-motion: reduce) {
+      .tcc-icon { animation: none; }
+    }
 
     .split {
       display: grid;
@@ -641,6 +741,8 @@
       .top-info .filter-btn { width: 44px; height: 44px; justify-content: center; padding: 0; }
       .badge { padding: 6px 10px; }
       .sheet-header { padding: 14px 16px; }
+      .back-btn { right: 16px; padding: 0 14px; }
+      .sheet-title { font-size: 1rem; padding: 0 84px; }
       .compact-cell, .compact-th { padding: 8px 6px; font-size: 0.85rem; min-height: 45px; }
       
       /* Extra small mobile improvements */
@@ -764,7 +866,9 @@
     </div>
     <div class="sheet-body">
       <div class="card">
+        <label class="field-label" for="classPicker"><i class="fas fa-chalkboard"></i> اختر الفصل</label>
         <div class="input-wrap">
+          <i class="fas fa-users input-icon"></i>
           <select id="classPicker" class="select">
             <option value="">اختر الفصل...</option>
           </select>
@@ -778,10 +882,6 @@
             <i class="fas fa-download"></i>
             <span>تنزيل هذا الفصل</span>
           </button>
-        </div>
-        <div class="muted" style="margin-top: 12px; display: flex; align-items: center; gap: 8px;">
-          <i class="fas fa-info-circle"></i>
-          <span>اختر فصلًا لعرض جدوله للأسبوع (غير قابل للتعديل).</span>
         </div>
       </div>
       <div class="card">
@@ -1108,6 +1208,7 @@
       classWeek: new Map(),   // classKey -> Map(iso -> Map(lesson->text))
       overridesByTeacher: new Map(), // uid -> Map(date->Map(lesson->overrideObj))
       teacherNameByUid: new Map(),
+      teacherPhoneByUid: new Map(),
       teacherList: null, // [{uid,name}]
       weekKey: "",
       customDayDocs: new Map() // "day:{dayIndex}" -> customDaySchedules rows
@@ -1353,6 +1454,51 @@
       }catch{
         return uid;
       }
+    }
+
+    async function getTeacherPhone(uid){
+      if(!uid) return '';
+      if(cache.teacherPhoneByUid.has(uid)) return cache.teacherPhoneByUid.get(uid);
+      try{
+        const snap = await getDoc(doc(db,'teachers',uid));
+        const phone = snap.exists() ? (snap.data()?.phone || '').toString().trim() : '';
+        cache.teacherPhoneByUid.set(uid, phone);
+        return phone;
+      }catch{
+        return '';
+      }
+    }
+
+    // tel: only tolerates digits and a leading '+' — strip whatever
+    // formatting (spaces, dashes) the phone was saved with in admins/teachers.html.
+    function telHrefFor(phone){
+      const cleaned = (phone || '').toString().trim().replace(/[^\d+]/g, '');
+      return cleaned;
+    }
+
+    function teacherCallCardHtml(phone){
+      const telHref = telHrefFor(phone);
+      if(!telHref){
+        return `
+          <div class="teacher-call-card is-disabled">
+            <span class="tcc-icon"><i class="fas fa-phone-slash"></i></span>
+            <span class="tcc-text">
+              <span class="tcc-label">رقم المعلم</span>
+              <span class="tcc-number">غير مسجل</span>
+            </span>
+          </div>
+        `;
+      }
+      return `
+        <a href="tel:${telHref}" class="teacher-call-card">
+          <span class="tcc-icon"><i class="fas fa-phone-volume"></i></span>
+          <span class="tcc-text">
+            <span class="tcc-label">رقم المعلم</span>
+            <span class="tcc-number">${escapeHtml(phone)}</span>
+          </span>
+          <span class="tcc-cta"><i class="fas fa-phone"></i> اتصال</span>
+        </a>
+      `;
     }
 
     async function loadTeachersList(){
@@ -2779,6 +2925,7 @@
             c.dataset.lesson = i;
           } else {
             c.textContent = '—';
+            c.classList.add('empty');
           }
           classWeekGrid.appendChild(c);
         }
@@ -2793,7 +2940,10 @@
           const cellData = row.get(Number(lesson));
           if (!cellData) return;
 
-          const teacherName = cellData.teacherName || await getTeacherName(cellData.teacherUid);
+          const [teacherName, teacherPhone] = await Promise.all([
+            cellData.teacherName ? Promise.resolve(cellData.teacherName) : getTeacherName(cellData.teacherUid),
+            getTeacherPhone(cellData.teacherUid)
+          ]);
           const dayName = dayNameByISO(date);
           const timeLabel = lessonTimeLabel(Number(lesson));
 
@@ -2807,6 +2957,11 @@
                 <div class="info-k"><i class="fas fa-user"></i> اسم المعلم</div>
                 <div class="info-v">${escapeHtml(teacherName)}</div>
               </div>
+            </div>
+
+            ${teacherCallCardHtml(teacherPhone)}
+
+            <div class="info-grid">
               <div class="info-box">
                 <div class="info-k"><i class="fas fa-users"></i> الصف</div>
                 <div class="info-v">${escapeHtml(cellData.classKey)}</div>
@@ -2815,7 +2970,7 @@
                 <div class="info-k"><i class="far fa-calendar"></i> اليوم + التاريخ</div>
                 <div class="info-v">${escapeHtml(dayName)} | ${escapeHtml(date)}</div>
               </div>
-              <div class="info-box">
+              <div class="info-box" style="grid-column: 1 / -1;">
                 <div class="info-k"><i class="far fa-clock"></i> الحصة + وقتها</div>
                 <div class="info-v">${escapeHtml(LESSONS_AR[lesson-1] || `الحصة #${lesson}`)} • ${escapeHtml(timeLabel)}</div>
               </div>
