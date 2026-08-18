@@ -13,6 +13,7 @@
 <script defer src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <link rel="stylesheet" href="/shared/base.css" />
 <link rel="stylesheet" href="/shared/attendance-tiles.css" />
+<link rel="stylesheet" href="/shared/warning-system.css" />
   <style>
 :root{
   --primary:#033C54;
@@ -620,46 +621,14 @@ body.student-profile-open #studentSheet .sheet-header{
   display:none;
 }
 /* .analytics-shell/.analytics-card/.analytics-head/.analytics-title now
-   live in shared/attendance-tiles.css. */
-.analytics-shell .warning-section{
-  margin-top:0;
-  box-shadow:none;
-  border:none;
-  background:transparent;
-  padding:0;
-}
+   live in shared/attendance-tiles.css. #warningBlock is a plain
+   .analytics-card like its siblings — see the warning-* rules further
+   down for its own content. */
 .soft-note{
   font-size:.84rem;
   color:#6b7f9f;
   text-align:center;
   margin-top:8px;
-}
-.warning-related{
-  border:1px solid rgba(3,60,84,.14);
-  border-radius:14px;
-  background:#f7fbff;
-  padding:12px;
-}
-.warning-related-title{
-  font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  font-weight:900;
-  font-size:.93rem;
-  color:#164264;
-  margin:0 0 10px 0;
-}
-.warning-hints{
-  display:flex;
-  gap:8px;
-  flex-wrap:wrap;
-}
-.warning-hint{
-  padding:6px 10px;
-  border-radius:999px;
-  font-weight:800;
-  font-size:.8rem;
-  border:1px solid rgba(3,60,84,.15);
-  color:#315472;
-  background:#fff;
 }
 
 /* === Accordion groups === */
@@ -1099,91 +1068,11 @@ html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%;
   display: block;
 }
 
-/* === NEW: Warning System Styles === */
-.warning-section {
-  background: white;
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 20px;
-  margin-top: 16px;
-  box-shadow: var(--shadow-1);
-}
-
-.warning-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-}
-
-.warning-title {
-  font-size: 1rem;
-  font-weight: 800;
-  color: var(--text);
-  margin: 0;
-}
-
-.warning-content {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.warning-stats {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.warning-stat {
-  text-align: center;
-  flex: 1;
-}
-
-.warning-stat-value {
-  font-size: 1.8rem;
-  font-weight: 900;
-  color: var(--red);
-}
-
-.warning-stat-label {
-  font-size: 0.85rem;
-  color: var(--muted);
-  margin-top: 4px;
-}
-
-.warning-level-badge {
-  padding: 8px 16px;
-  border-radius: 999px;
-  font-weight: 800;
-  font-size: 0.9rem;
-  text-align: center;
-  margin-top: 8px;
-}
-
-.warning-level-0 {
-  background: var(--greenBg);
-  color: var(--green);
-  border: 1px solid rgba(26, 127, 55, 0.25);
-}
-
-.warning-level-1 {
-  background: rgba(255, 193, 7, 0.15);
-  color: #b38f00;
-  border: 1px solid rgba(255, 193, 7, 0.3);
-}
-
-.warning-level-2 {
-  background: rgba(255, 152, 0, 0.15);
-  color: #cc7a00;
-  border: 1px solid rgba(255, 152, 0, 0.3);
-}
-
-.warning-level-3 {
-  background: rgba(244, 67, 54, 0.15);
-  color: #c62828;
-  border: 1px solid rgba(244, 67, 54, 0.3);
-}
+/* نظام التحذيرات (#warningBlock) styling now lives in
+   shared/warning-system.css — also used by
+   supervisors/supervisorstudents.html. #warningBlock itself is a plain
+   .analytics-card (shared/attendance-tiles.css) using the same
+   .analytics-head as its sibling cards, no extra card-in-a-card nesting. */
 
 /* === NEW: Excused Absence Button Styles === */
 .excused-btn {
@@ -1214,7 +1103,6 @@ html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%;
   .reorder-modal-overlay, .modal-overlay { padding: 0; align-items: flex-end; }
   .reorder-modal-overlay.active .reorder-modal, .modal-overlay.active .modal { transform: translateY(0); }
   .reorder-item { padding: 14px 16px; }
-  .warning-stats { flex-direction: column; gap: 16px; }
   .top-student-back{ inset-inline-start:12px; height:38px; padding:0 12px; font-size:.85rem; }
   .classes-floating-back{ right:12px; top:88px; min-width:94px; height:42px; font-size:.9rem; padding:0 12px; }
 }
@@ -1878,30 +1766,22 @@ html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%;
         </div>
       </div>
 
-      <div id="warningBlock" class="analytics-card warning-section">
-        <div class="warning-header">
-          <h4 class="warning-title">نظام التحذيرات</h4>
+      <div id="warningBlock" class="analytics-card">
+        <div class="analytics-head">
+          <h4 class="analytics-title">نظام التحذيرات</h4>
+          <span id="warningLevelBadge" class="warning-level-badge warning-level-0">لا يوجد</span>
         </div>
-        <div class="warning-content">
-          <div class="warning-related">
-            <h5 class="warning-related-title">ملخص التحذير</h5>
-            <div class="warning-stats">
-              <div class="warning-stat">
-                <div id="warningAbsenceCount" class="warning-stat-value">0</div>
-                <div class="warning-stat-label">عدد الغيابات بدون عذر</div>
-              </div>
-              <div class="warning-stat">
-                <div id="warningLevelBadge" class="warning-level-badge warning-level-0">لا يوجد</div>
-                <div class="warning-stat-label">مستوى التحذير الحالي</div>
-              </div>
-            </div>
-            <div class="warning-hints">
-              <span class="warning-hint">متابعة يومية</span>
-              <span class="warning-hint">تنبيه مبكر</span>
-              <span class="warning-hint">توثيق تلقائي</span>
-            </div>
-          </div>
+        <div class="warning-count-row">
+          <span id="warningAbsenceCount" class="warning-count-value">0</span>
+          <span class="warning-count-label">غياب بدون عذر</span>
         </div>
+        <div class="warning-progress-track">
+          <div id="warningProgressFill" class="warning-progress-fill"></div>
+        </div>
+        <div class="warning-scale">
+          <span>0</span><span>5</span><span>10</span><span>15+</span>
+        </div>
+        <div id="warningNextHint" class="warning-next-hint">لا توجد غيابات بدون عذر بعد.</div>
       </div>
 
       <div id="absencesBlock" class="analytics-card">
@@ -2202,6 +2082,7 @@ import { getAuth, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCrede
 import { initializeFirestore, persistentSingleTabManager, collection, collectionGroup, getDocs, query, where, orderBy, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp, writeBatch } from "/shared/firebase.js";
 import { mountAttendanceSheet } from "/shared/attendance.js";
 import { fetchStudentAttendanceData, makeAttTile, makeMorningLateTile } from "/shared/attendance-tiles.js";
+import { renderWarningState } from "/shared/warning-system.js";
 
 
 
@@ -2448,6 +2329,8 @@ const deleteAllProgress = document.getElementById('deleteAllProgress');
 // NEW: Warning system references
 const warningAbsenceCount = document.getElementById('warningAbsenceCount');
 const warningLevelBadge = document.getElementById('warningLevelBadge');
+const warningProgressFill = document.getElementById('warningProgressFill');
+const warningNextHint = document.getElementById('warningNextHint');
 
 // NEW: Excused absence references
 const excusedAttBtn = document.getElementById('excusedAttBtn');
@@ -4413,7 +4296,10 @@ async function loadStudentAttendance(studentId){
   warningAbsenceCount.textContent = '0';
   warningLevelBadge.textContent = 'لا يوجد';
   warningLevelBadge.className = 'warning-level-badge warning-level-0';
-  
+  warningProgressFill.style.width = '0%';
+  warningProgressFill.className = 'warning-progress-fill';
+  warningNextHint.textContent = '—';
+
   try{
     const { rows, allAbsences, combinedLates, present, late, absent } = await fetchStudentAttendanceData(db, studentId);
     currentStudentAttendance = rows;
@@ -4424,26 +4310,12 @@ async function loadStudentAttendance(studentId){
     absentCountPill.textContent = `غياب: ${toArabicDigits(allAbsences.length)}`;
     lateCountPill.textContent = `تأخير: ${toArabicDigits(late)}`;
 
-    // Calculate warning level
-    const warningAbsencesCount = absent;
-    warningAbsenceCount.textContent = toArabicDigits(warningAbsencesCount);
-
-    let warningLevel = 0;
-    let warningText = 'لا يوجد';
-
-    if (warningAbsencesCount >= 15) {
-      warningLevel = 3;
-      warningText = 'تحذير 3';
-    } else if (warningAbsencesCount >= 10) {
-      warningLevel = 2;
-      warningText = 'تحذير 2';
-    } else if (warningAbsencesCount >= 5) {
-      warningLevel = 1;
-      warningText = 'تحذير 1';
-    }
-
-    warningLevelBadge.textContent = warningText;
-    warningLevelBadge.className = `warning-level-badge warning-level-${warningLevel}`;
+    renderWarningState(absent, {
+      countEl: warningAbsenceCount,
+      badgeEl: warningLevelBadge,
+      progressFillEl: warningProgressFill,
+      hintEl: warningNextHint,
+    });
 
     const absencesFragment = document.createDocumentFragment();
     const latesFragment = document.createDocumentFragment();

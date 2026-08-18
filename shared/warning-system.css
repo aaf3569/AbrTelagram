@@ -1,0 +1,87 @@
+/* Shared نظام التحذيرات (absence warning level) card styling — used by
+   admins/students.html and supervisors/supervisorstudents.html. Pairs with
+   shared/warning-system.js, which computes the level/progress/hint text;
+   this file only styles the result. Meant to sit inside a plain
+   .analytics-card (shared/attendance-tiles.css) using that file's own
+   .analytics-head for the title+badge row — no extra card-in-a-card
+   nesting, which is what made this section feel crowded before. */
+
+.warning-level-badge {
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+.warning-level-0 {
+  background: var(--greenBg);
+  color: var(--green);
+  border: 1px solid rgba(26, 127, 55, 0.25);
+}
+.warning-level-1 {
+  background: rgba(255, 193, 7, 0.15);
+  color: #b38f00;
+  border: 1px solid rgba(255, 193, 7, 0.3);
+}
+.warning-level-2 {
+  background: rgba(255, 152, 0, 0.15);
+  color: #cc7a00;
+  border: 1px solid rgba(255, 152, 0, 0.3);
+}
+.warning-level-3 {
+  background: rgba(244, 67, 54, 0.15);
+  color: #c62828;
+  border: 1px solid rgba(244, 67, 54, 0.3);
+}
+
+.warning-count-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.warning-count-value {
+  font-size: 1.7rem;
+  font-weight: 900;
+  color: var(--red);
+  line-height: 1;
+}
+.warning-count-label {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.warning-progress-track {
+  height: 10px;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+}
+.warning-progress-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 999px;
+  background: var(--green);
+  transition: width 0.3s ease, background-color 0.3s ease;
+}
+.warning-progress-fill.level-1 { background: #d9a300; }
+.warning-progress-fill.level-2 { background: #e07b00; }
+.warning-progress-fill.level-3 { background: #d32f2f; }
+
+.warning-scale {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.warning-next-hint {
+  margin-top: 10px;
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--text);
+  text-align: center;
+}
