@@ -12,6 +12,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
 <script defer src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <link rel="stylesheet" href="/shared/base.css" />
+<link rel="stylesheet" href="/shared/attendance-tiles.css" />
   <style>
 :root{
   --primary:#033C54;
@@ -575,21 +576,9 @@ body.student-route-active #studentSheet .sheet-header{
 .stat-absent{ background: var(--redBg); border-color: rgba(180,35,24,.25) } .stat-absent .stat-value{ color: var(--red) }
 .pill{ background:var(--chip); color:#0f2743; border:1px solid var(--border); padding:6px 12px; border-radius:999px; font-size:.9rem; font-weight:800 }
 .pill.g{ color:var(--green); border-color:var(--greenBg); background:var(--greenBg) } .pill.y{ color:var(--yellow); border-color:var(--yellowBg); background:var(--yellowBg) } .pill.r{ color:var(--red); border-color:var(--redBg); background:var(--redBg) } .pill.e{ color:var(--excused); border-color:var(--excusedBg); background:var(--excusedBg) }
-.att-group{ display:flex; flex-direction:column; gap:12px }
-/* #absencesBlock/#latesBlock's label+count row is a bare .row with no
-   margin, and .analytics-card itself doesn't space its children (other
-   cards get spacing from .analytics-head's own margin-bottom instead) —
-   so the first tile sat flush against the row above it, and its hover
-   lift (translateY(-2px)) visibly rode up into it. */
-#absencesBlock > .row, #latesBlock > .row{ margin-bottom:14px; }
-.att-tile{
-  padding:14px 16px; border:1px solid var(--border); border-radius:16px; background:#fff; box-shadow: var(--shadow-1);
-  display:flex; align-items:center; justify-content:space-between; cursor:pointer; transition: var(--transition);
-}
-.att-tile:hover{ transform:translateY(-2px); box-shadow:0 16px 32px rgba(3,60,84,.18); border-color:rgba(3,60,84,.35); background:#fbfdff }
-.att-left{ display:flex; flex-direction:column; gap:6px; flex: 1; } .att-title{ font-weight:800; color:#033C54; } .att-sub{ color:#6b7f9f; font-weight:700; font-size:.94rem }
-.badge{ padding:6px 10px; border-radius:999px; font-weight:800; font-size:.84rem }
-.b-late{ background:var(--yellowBg); color:var(--yellow); border:1px solid rgba(160,109,0,.25) } .b-absent{ background:var(--redBg); color:var(--red); border:1px solid rgba(180,35,24,.25) } .b-present{ background:var(--greenBg); color:var(--green); border:1px solid rgba(26,127,55,.25) } .b-excused{ background:var(--excusedBg); color:var(--excused); border:1px solid rgba(147,51,234,.25) }
+/* .att-group/.att-tile/.badge/.b-* and .analytics-shell/.analytics-card/
+   .analytics-head/.analytics-title now live in shared/attendance-tiles.css
+   (also used by supervisors/supervisorstudents.html). */
 
 /* === Tabs === */
 .tabs{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; background:#fff; border:1px solid var(--border); border-radius:16px; padding:10px; box-shadow: var(--shadow-1); }
@@ -630,37 +619,14 @@ body.student-route-active #studentSheet .sheet-header{
 body.student-profile-open #studentSheet .sheet-header{
   display:none;
 }
-.analytics-shell{
-  display:flex;
-  flex-direction:column;
-  gap:14px;
-}
-.analytics-card{
-  background:#fff;
-  border:1px solid var(--border);
-  border-radius:16px;
-  box-shadow:var(--shadow-1);
-  padding:18px;
-}
+/* .analytics-shell/.analytics-card/.analytics-head/.analytics-title now
+   live in shared/attendance-tiles.css. */
 .analytics-shell .warning-section{
   margin-top:0;
   box-shadow:none;
   border:none;
   background:transparent;
   padding:0;
-}
-.analytics-head{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  margin-bottom:12px;
-}
-.analytics-title{
-  margin:0;
-  font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  font-weight:900;
-  font-size:1rem;
-  color:#0f2743;
 }
 .soft-note{
   font-size:.84rem;
@@ -2235,6 +2201,7 @@ import { initializeApp, getApp, getApps } from "/shared/firebase.js";
 import { getAuth, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from "/shared/firebase.js";
 import { initializeFirestore, persistentSingleTabManager, collection, collectionGroup, getDocs, query, where, orderBy, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp, writeBatch } from "/shared/firebase.js";
 import { mountAttendanceSheet } from "/shared/attendance.js";
+import { fetchStudentAttendanceData, makeAttTile, makeMorningLateTile } from "/shared/attendance-tiles.js";
 
 
 
@@ -4448,32 +4415,8 @@ async function loadStudentAttendance(studentId){
   warningLevelBadge.className = 'warning-level-badge warning-level-0';
   
   try{
-    // Lesson-based attendance (students/{uid}/attendance) and morning-ceremony
-    // lateness (a separate, unrelated morningLates collection keyed by
-    // studentUid — see Teachers/morning.html) are independent queries.
-    const [subSnap, morningSnap] = await Promise.all([
-      getDocs(collection(db,'students', studentId, 'attendance')),
-      getDocs(query(collection(db,'morningLates'), where('studentUid','==',studentId))).catch(e=>{ console.error('[loadStudentAttendance] morningLates:', e); return { forEach(){} }; })
-    ]);
-    const rows = [];
-    subSnap.forEach(d=> rows.push({ id:d.id, ...d.data() }));
-    rows.sort((a,b)=>{ if(a.date===b.date) return (b.lessonIndex||0) - (a.lessonIndex||0); return a.date < b.date ? 1 : -1; });
+    const { rows, allAbsences, combinedLates, present, late, absent } = await fetchStudentAttendanceData(db, studentId);
     currentStudentAttendance = rows;
-
-    const morningLateRows = [];
-    morningSnap.forEach(d=> morningLateRows.push({ id:d.id, source:'morningLate', ...d.data() }));
-    morningLateRows.sort((a,b)=>{ if(a.date===b.date) return (b.time||'').localeCompare(a.time||''); return a.date < b.date ? 1 : -1; });
-
-    // Calculate totals based on new rules
-    const present = rows.filter(r=> r.status==='present').length;
-    const late = rows.filter(r=> r.status==='late').length + morningLateRows.length;
-
-    // Count only absences without reason for totals and warnings
-    const absencesWithoutReason = rows.filter(r=> r.status==='absent' && r.hasReason !== true);
-    const absent = absencesWithoutReason.length;
-
-    // Count all absences for display
-    const allAbsences = rows.filter(r=> r.status==='absent');
 
     totPresent.textContent = toArabicDigits(present);
     totLate.textContent = toArabicDigits(late);
@@ -4506,16 +4449,9 @@ async function loadStudentAttendance(studentId){
     const latesFragment = document.createDocumentFragment();
 
     // Create attendance tiles for all absences (both excused and non-excused)
-    allAbsences.forEach(r=> absencesFragment.appendChild(makeAttTile(r)));
-    // Lesson lates and morning lates share one list, newest first.
-    const combinedLates = [
-      ...rows.filter(r=> r.status==='late'),
-      ...morningLateRows,
-    ].sort((a,b)=>{
-      if(a.date===b.date) return (b.time||'').localeCompare(a.time||'');
-      return a.date < b.date ? 1 : -1;
-    });
-    combinedLates.forEach(r=> latesFragment.appendChild(r.source==='morningLate' ? makeMorningLateTile(r) : makeAttTile(r)));
+    allAbsences.forEach(r=> absencesFragment.appendChild(makeAttTile(r, openAttDetail)));
+    // Lesson lates and morning lates share one list, newest first (already merged by fetchStudentAttendanceData).
+    combinedLates.forEach(r=> latesFragment.appendChild(r.source==='morningLate' ? makeMorningLateTile(r, openMorningLateDetail) : makeAttTile(r, openAttDetail)));
 
     absencesList.innerHTML = ''; latesList.innerHTML = '';
     absencesList.appendChild(absencesFragment); latesList.appendChild(latesFragment);
@@ -4532,49 +4468,7 @@ async function loadStudentAttendance(studentId){
   }
 }
 
-// MODIFIED: makeAttTile function to handle excused absences
-function makeAttTile(r){
-  const div = document.createElement('div');
-  div.className='att-tile will-change';
-  
-  let badgeClass = 'b-absent';
-  let badgeText = 'غياب';
-  
-  if (r.hasReason === true) {
-    badgeClass = 'b-excused';
-    badgeText = 'غياب بعذر';
-  } else if (r.status==='late') {
-    badgeClass = 'b-late';
-    badgeText = 'تأخير';
-  }
-  
-  const title = badgeText + ' — ' + (r.lessonLabel || ('حصة '+(r.lessonIndex||'')));
-  const sub = `${r.class || '—'} • ${toArabicDigits(r.date || '')}`;
-  div.innerHTML = `
-    <div class="att-left">
-      <div class="att-title">${title}</div>
-      <div class="att-sub">${sub}</div>
-    </div>
-    <span class="badge ${badgeClass}">${badgeText}</span>
-  `;
-  div.addEventListener('click', ()=> openAttDetail(r));
-  return div;
-}
-
-function makeMorningLateTile(r){
-  const div = document.createElement('div');
-  div.className='att-tile will-change';
-  const sub = `${r.classKey ? toArabicDigits(r.classKey) : '—'} • ${toArabicDigits(r.date || '')}${r.time ? ' • ' + toArabicDigits(r.time) : ''}`;
-  div.innerHTML = `
-    <div class="att-left">
-      <div class="att-title">تأخير عن طابور الصباح</div>
-      <div class="att-sub">${sub}</div>
-    </div>
-    <span class="badge b-late">تأخير صباح</span>
-  `;
-  div.addEventListener('click', ()=> openMorningLateDetail(r));
-  return div;
-}
+// makeAttTile/makeMorningLateTile now come from shared/attendance-tiles.js.
 
 let currentMorningLateRecord = null;
 function openMorningLateDetail(r){

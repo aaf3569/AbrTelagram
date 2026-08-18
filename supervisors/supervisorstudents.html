@@ -8,6 +8,7 @@
 <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()">
 <title>الفصول - ثانوية أحمد البشر الرومي</title>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800;900&family=Noto+Kufi+Arabic:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="/shared/attendance-tiles.css" />
 <style>
 :root{
   --primary:#033C54;
@@ -225,15 +226,9 @@ textarea.input{ height:100px; padding-block:14px; resize:vertical }
 .stat-absent{ background: var(--redBg); border-color: rgba(180,35,24,.25) } .stat-absent .stat-value{ color: var(--red) }
 .pill{ background:var(--chip); color:#0f2743; border:1px solid var(--border); padding:6px 12px; border-radius:999px; font-size:.9rem; font-weight:800 }
 .pill.g{ color:var(--green); border-color:var(--greenBg); background:var(--greenBg) } .pill.y{ color:var(--yellow); border-color:var(--yellowBg); background:var(--yellowBg) } .pill.r{ color:var(--red); border-color:var(--redBg); background:var(--redBg) }
-.att-group{ display:flex; flex-direction:column; gap:12px }
-.att-tile{
-  padding:14px 16px; border:1px solid var(--border); border-radius:16px; background:#fff; box-shadow: var(--shadow-1);
-  display:flex; align-items:center; justify-content:space-between; cursor:pointer; transition: var(--transition);
-}
-.att-tile:hover{ transform:translateY(-2px); box-shadow:0 16px 32px rgba(3,60,84,.18); border-color:rgba(3,60,84,.35); background:#fbfdff }
-.att-left{ display:flex; flex-direction:column; gap:6px; flex: 1; } .att-title{ font-weight:800; color:#033C54; } .att-sub{ color:#6b7f9f; font-weight:700; font-size:.94rem }
-.badge{ padding:6px 10px; border-radius:999px; font-weight:800; font-size:.84rem }
-.b-late{ background:var(--yellowBg); color:var(--yellow); border:1px solid rgba(160,109,0,.25) } .b-absent{ background:var(--redBg); color:var(--red); border:1px solid rgba(180,35,24,.25) } .b-present{ background:var(--greenBg); color:var(--green); border:1px solid rgba(26,127,55,.25) }
+/* .att-group/.att-tile/.badge/.b-* and .analytics-shell/.analytics-card/
+   .analytics-head/.analytics-title now live in shared/attendance-tiles.css
+   (also used by admins/students.html). */
 
 /* === Tabs === */
 .tabs{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; background:#fff; border:1px solid var(--border); border-radius:16px; padding:10px; box-shadow: var(--shadow-1); }
@@ -309,31 +304,8 @@ textarea.input{ height:100px; padding-block:14px; resize:vertical }
   color:#0f3c5c;
   border:1px solid rgba(3,60,84,.18);
 }
-.analytics-shell{
-  display:flex;
-  flex-direction:column;
-  gap:14px;
-}
-.analytics-card{
-  background:#fff;
-  border:1px solid var(--border);
-  border-radius:16px;
-  box-shadow:var(--shadow-1);
-  padding:18px;
-}
-.analytics-head{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  margin-bottom:12px;
-}
-.analytics-title{
-  margin:0;
-  font-family:"Cairo", "Noto Kufi Arabic", system-ui, sans-serif;
-  font-weight:900;
-  font-size:1rem;
-  color:#0f2743;
-}
+/* .analytics-shell/.analytics-card/.analytics-head/.analytics-title now
+   live in shared/attendance-tiles.css. */
 .warning-section { background: white; border: 1px solid var(--border); border-radius: 16px; padding: 20px; box-shadow: var(--shadow-1); }
 .warning-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
 .warning-title { font-size: 1rem; font-weight: 800; color: var(--text); margin: 0; font-family:"Cairo", "Noto Kufi Arabic", system-ui, sans-serif; }
@@ -1296,6 +1268,7 @@ import { initializeApp, getApp, getApps } from "https://www.gstatic.com/firebase
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
 import { initializeFirestore, persistentSingleTabManager, collection, getDocs, query, where, orderBy, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 import { getTeacherProfile, hasGuardAccess } from "/shared/auth-guard.js";
+import { fetchStudentAttendanceData, makeAttTile, makeMorningLateTile } from "/shared/attendance-tiles.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDxT9rEUi2KpCEgU52DrTE8bv-RogxhxBE",
@@ -1916,17 +1889,8 @@ async function loadStudentAttendance(studentId){
   warningLevelBadge.textContent = 'لا يوجد';
   warningLevelBadge.className = 'warning-level-badge warning-level-0';
   try{
-    const subSnap = await getDocs(collection(db,'students', studentId, 'attendance'));
-    const rows = [];
-    subSnap.forEach(d=> rows.push({ id:d.id, ...d.data() }));
-    rows.sort((a,b)=>{ if(a.date===b.date) return (b.lessonIndex||0) - (a.lessonIndex||0); return a.date < b.date ? 1 : -1; });
+    const { rows, allAbsences, combinedLates, present, late, absent } = await fetchStudentAttendanceData(db, studentId);
     currentStudentAttendance = rows;
-
-    const present = rows.filter(r=> r.status==='present').length;
-    const late = rows.filter(r=> r.status==='late').length;
-    const allAbsences = rows.filter(r=> r.status==='absent');
-    const absencesWithoutReason = rows.filter(r=> r.status==='absent' && r.hasReason !== true);
-    const absent = absencesWithoutReason.length;
 
     totPresent.textContent = toArabicDigits(present);
     totLate.textContent = toArabicDigits(late);
@@ -1945,8 +1909,9 @@ async function loadStudentAttendance(studentId){
 
     const absencesFragment = document.createDocumentFragment();
     const latesFragment = document.createDocumentFragment();
-    allAbsences.forEach(r=> absencesFragment.appendChild(makeAttTile(r)));
-    rows.filter(r=> r.status==='late').forEach(r=> latesFragment.appendChild(makeAttTile(r)));
+    allAbsences.forEach(r=> absencesFragment.appendChild(makeAttTile(r, openAttDetail)));
+    // Lesson lates and morning lates share one list, newest first (already merged by fetchStudentAttendanceData).
+    combinedLates.forEach(r=> latesFragment.appendChild(r.source==='morningLate' ? makeMorningLateTile(r, openAttDetail) : makeAttTile(r, openAttDetail)));
     absencesList.innerHTML = '';
     latesList.innerHTML = '';
     absencesList.appendChild(absencesFragment);
@@ -1955,7 +1920,7 @@ async function loadStudentAttendance(studentId){
     if(allAbsences.length===0){
       const empty=document.createElement('div'); empty.className='muted'; empty.textContent='لا توجد حالات غياب.'; absencesList.appendChild(empty);
     }
-    if(late===0){
+    if(combinedLates.length===0){
       const empty=document.createElement('div'); empty.className='muted'; empty.textContent='لا توجد حالات تأخير.'; latesList.appendChild(empty);
     }
   }catch(e){
@@ -1964,64 +1929,58 @@ async function loadStudentAttendance(studentId){
   }
 }
 
-function makeAttTile(r){
-  const div = document.createElement('div');
-  div.className='att-tile will-change';
-  const badgeClass = r.status==='late' ? 'b-late' : 'b-absent';
-  const badgeText = r.status==='late' ? 'تأخير' : 'غياب';
-  const title = (r.status==='late' ? 'تأخير' : 'غياب') + ' — ' + (r.lessonLabel || ('حصة '+(r.lessonIndex||'')));
-  const sub = `${r.class || '—'} • ${toArabicDigits(r.date || '')}`;
-  div.innerHTML = `
-    <div class="att-left">
-      <div class="att-title">${title}</div>
-      <div class="att-sub">${sub}</div>
-    </div>
-    <span class="badge ${badgeClass}">${badgeText}</span>
-  `;
-  div.addEventListener('click', ()=> openAttDetail(r));
-  return div;
-}
-
+// makeAttTile/makeMorningLateTile now come from shared/attendance-tiles.js.
 async function openAttDetail(r){
   currentAttendanceRecord = r; // Store the current record for editing
-  attDetailTitle.textContent = r.status==='late' ? 'تفاصيل التأخير' : 'تفاصيل الغياب';
-  dBadge.className = 'badge ' + (r.status==='late' ? 'b-late':'b-absent');
-  dBadge.textContent = r.status==='late' ? 'تأخير' : 'غياب';
+  const isMorningLate = r.source === 'morningLate';
+
+  attDetailTitle.textContent = isMorningLate ? 'تفاصيل تأخير الطابور' : (r.status==='late' ? 'تفاصيل التأخير' : 'تفاصيل الغياب');
+  dBadge.className = 'badge ' + (isMorningLate || r.status==='late' ? 'b-late' : 'b-absent');
+  dBadge.textContent = isMorningLate ? 'تأخير صباح' : (r.status==='late' ? 'تأخير' : 'غياب');
   dDate.textContent = toArabicDigits(r.date || '—');
-  dLesson.textContent = r.lessonLabel || ('حصة '+ (r.lessonIndex || '—'));
-  dClass.textContent = r.class || '—';
-  
-  const uid = r.updatedBy || r.createdBy;
+  dLesson.textContent = isMorningLate
+    ? ('تأخير عن طابور الصباح' + (r.time ? ' — ' + toArabicDigits(r.time) : ''))
+    : (r.lessonLabel || ('حصة '+ (r.lessonIndex || '—')));
+  dClass.textContent = isMorningLate ? (r.classKey || '—') : (r.class || '—');
+
   dTeacher.textContent = '—';
-  if(uid){
-    if(teacherNameCache.has(uid)){
-      dTeacher.textContent = teacherNameCache.get(uid);
-    }else{
-      try{ const t = await getDoc(doc(db,'teachers', uid)); const name = t.exists() ? (t.data().name || uid) : uid; teacherNameCache.set(uid, name); dTeacher.textContent = name; }
-      catch{ dTeacher.textContent = uid; }
+  if (isMorningLate) {
+    // Morning-late docs already carry the submitter's name — no lookup needed.
+    dTeacher.textContent = r.createdByName || '—';
+  } else {
+    const uid = r.updatedBy || r.createdBy;
+    if(uid){
+      if(teacherNameCache.has(uid)){
+        dTeacher.textContent = teacherNameCache.get(uid);
+      }else{
+        try{ const t = await getDoc(doc(db,'teachers', uid)); const name = t.exists() ? (t.data().name || uid) : uid; teacherNameCache.set(uid, name); dTeacher.textContent = name; }
+        catch{ dTeacher.textContent = uid; }
+      }
     }
   }
-  
+
   const cAt = tsToDate(r.createdAt); const uAt = tsToDate(r.updatedAt);
   dCreatedAt.textContent = cAt ? fmtDT(cAt) : '—';
-  dUpdatedAt.textContent = uAt ? fmtDT(uAt) : (cAt ? fmtDT(cAt) : '—');
-  
-  // Reset edit form - only for admin
-  if(!currentUserIsSupervisor) {
-    statusEditForm.classList.remove('active');
+  dUpdatedAt.textContent = isMorningLate ? (cAt ? fmtDT(cAt) : '—') : (uAt ? fmtDT(uAt) : (cAt ? fmtDT(cAt) : '—'));
+
+  // Reset edit form - only for admin, and morning-late records are never
+  // editable here regardless (they're not lesson attendance).
+  statusEditForm.classList.remove('active');
+  if(!currentUserIsSupervisor && !isMorningLate) {
     statusOptions.forEach(opt => opt.classList.remove('selected'));
     statusOptions.forEach(opt => { if(opt.dataset.status === r.status) { opt.classList.add('selected'); } });
   }
-  
+
   openSheet(attDetailSheet);
 }
 
 closeAttDetail.addEventListener('click', ()=> { closeSheet(attDetailSheet); statusEditForm.classList.remove('active'); });
 
-// Edit attendance status functionality - only for admin
-editAttBtn.addEventListener('click', () => { 
-  if(!currentUserIsSupervisor) {
-    statusEditForm.classList.toggle('active'); 
+// Edit attendance status functionality - only for admin, and never for
+// morning-late records (not lesson attendance, nothing here to edit).
+editAttBtn.addEventListener('click', () => {
+  if(!currentUserIsSupervisor && currentAttendanceRecord?.source !== 'morningLate') {
+    statusEditForm.classList.toggle('active');
   }
 });
 
