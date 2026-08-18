@@ -2083,9 +2083,7 @@
         // Send Telegram broadcast (non-critical)
         try {
           const tgLines = [
-            payload.importance === 'important' ? '🔴 إشعار مهم' : '📢 إشعار جديد',
-            'ثانوية أحمد البشر الرومي',
-            '',
+            ...(payload.importance === 'important' ? ['🔴 إشعار مهم', ''] : []),
             ...(payload.title ? [payload.title, ''] : []),
             payload.text
           ];
