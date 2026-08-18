@@ -57,21 +57,33 @@ body{
   margin:0; font-weight:900; letter-spacing:.2px; font-size:clamp(1.2rem,2.4vw,1.6rem);
   text-shadow:0 1px 0 rgba(255,255,255,.6)
 }
-.hub-back{
-  display:inline-flex;
+.classes-floating-back{
+  position:fixed;
+  right:22px;
+  top:106px;
+  z-index:24;
+  text-decoration:none;
+  display:none;
   align-items:center;
   justify-content:center;
-  min-width:120px;
-  height:46px;
-  padding:0 16px;
-  border-radius:12px;
-  text-decoration:none;
+  height:48px;
+  min-width:112px;
+  padding:0 18px;
+  border-radius:14px;
+  font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  font-weight:900;
+  font-size:1rem;
   color:#033C54;
   background:#fff;
   border:1px solid rgba(3,60,84,.2);
-  box-shadow:var(--shadow-1);
-  font-family:"Cairo", "Noto Kufi Arabic", system-ui, sans-serif;
-  font-weight:900;
+  box-shadow:0 14px 36px rgba(3,60,84,.22);
+  transition:var(--transition);
+}
+.classes-floating-back.show{ display:inline-flex; }
+.classes-floating-back:hover{
+  transform:translateY(-2px);
+  border-color:rgba(3,60,84,.45);
+  background:#f5fbff;
 }
 
 /* === Layout === */
@@ -823,6 +835,7 @@ textarea.input{ height:100px; padding-block:14px; resize:vertical }
   #paperPreviewPage{ min-height:calc(100vh - 170px); width:100%; }
   .stats-filters { flex-direction: column; } .chart-grid { grid-template-columns: 1fr; }
   .detailed-stats { grid-template-columns: repeat(2, 1fr); }
+  .classes-floating-back{ right:12px; top:88px; min-width:94px; height:42px; font-size:.9rem; padding:0 12px; }
 }
 @media (max-width: 480px) {
   .btn { height: 50px; font-size: 0.95rem; } .subject { padding: 14px 16px; } .item { padding: 14px 16px; }
@@ -859,6 +872,7 @@ textarea.input{ height:100px; padding-block:14px; resize:vertical }
 <header class="site-header">
   <h1 class="site-title">ثانوية أحمد البشر الرومي</h1>
 </header>
+<a id="classesFloatingBack" class="classes-floating-back" href="/supervisors/supervisor.html" aria-label="رجوع">رجوع</a>
 <main>
   <div class="column">
     <!-- Loading / gate -->
@@ -879,10 +893,6 @@ textarea.input{ height:100px; padding-block:14px; resize:vertical }
 
     <!-- Classes chooser -->
     <section id="stateClasses" class="state panel" aria-label="اختر الصف">
-      <div style="display:flex; justify-content:flex-start; margin-bottom:14px;">
-        <a class="hub-back" href="/supervisors/supervisor.html">رجوع</a>
-        <a class="hub-back" href="/Teachers/teacherschedule.html" style="margin-inline-start:8px;">جدول المعلم</a>
-      </div>
       <div class="group" id="g10">
         <button class="subject grade-hero" type="button"> <span>الصف العاشر</span> </button>
         <div class="group-body"> <div class="list" id="list10"></div> </div>
@@ -1275,6 +1285,7 @@ const sLoading = document.getElementById('stateLoading');
 const sNotLog = document.getElementById('stateNotLogged');
 const sDenied = document.getElementById('stateDenied');
 const sClasses = document.getElementById('stateClasses');
+const classesFloatingBack = document.getElementById('classesFloatingBack');
 const list10 = document.getElementById('list10');
 const list11 = document.getElementById('list11');
 const list12 = document.getElementById('list12');
@@ -1445,9 +1456,19 @@ const STUDENT_ROUTE_PARAM = 'student';
 const CLASS_ROUTE_PARAM = 'class';
 
 /* ========= Helpers ========= */
-const show = (el)=> { [sLoading, sNotLog, sDenied, sClasses].forEach(x=>x.classList.remove('active')); el.classList.add('active'); };
-const openSheet = (el)=> { el.classList.add('open'); el.setAttribute('aria-hidden','false'); };
-const closeSheet = (el)=> { el.classList.remove('open'); el.setAttribute('aria-hidden','true'); };
+function syncClassesBackVisibility(){
+  const mainVisible = sClasses.classList.contains('active');
+  const hasOpenSheet =
+    classSheet.classList.contains('open') ||
+    studentSheet.classList.contains('open') ||
+    attDetailSheet.classList.contains('open') ||
+    recordDetailSheet.classList.contains('open');
+  classesFloatingBack?.classList.toggle('show', mainVisible && !hasOpenSheet);
+}
+
+const show = (el)=> { [sLoading, sNotLog, sDenied, sClasses].forEach(x=>x.classList.remove('active')); el.classList.add('active'); syncClassesBackVisibility(); };
+const openSheet = (el)=> { el.classList.add('open'); el.setAttribute('aria-hidden','false'); syncClassesBackVisibility(); };
+const closeSheet = (el)=> { el.classList.remove('open'); el.setAttribute('aria-hidden','true'); syncClassesBackVisibility(); };
 const toArabicDigits = (str) => (str||"").toString().replace(/\d/g, d => '٠١٢٣٤٥٦٧٨٩'[d]);
 const arabicSort = (a,b) => (a||"").toString().localeCompare((b||"").toString(), 'ar', {sensitivity:'base'});
 const fmtDate = (d)=> new Intl.DateTimeFormat('ar-KW', { dateStyle:'medium', timeZone:'Asia/Kuwait' }).format(d);
