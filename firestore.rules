@@ -979,10 +979,11 @@ service cloud.firestore {
           || request.resource.data.createdAt is timestamp
         );
 
-      // Admins may only flip the read state, not rewrite someone's report.
+      // Admins may only flip the read/sorted state, not rewrite someone's report.
       allow update: if isAdmin()
-        && request.resource.data.diff(resource.data).changedKeys().hasOnly(['isRead'])
-        && (request.resource.data.isRead is bool);
+        && request.resource.data.diff(resource.data).changedKeys().hasOnly(['isRead', 'sorted'])
+        && (!('isRead' in request.resource.data) || request.resource.data.isRead is bool)
+        && (!('sorted' in request.resource.data) || request.resource.data.sorted is bool);
 
       allow delete: if isAdmin();
     }

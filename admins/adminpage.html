@@ -47,6 +47,21 @@
       box-shadow: 0 2px 10px rgba(3,60,84,.06);
     }
     .site-title{ margin:0; font-weight:900; letter-spacing:.2px; font-size:clamp(1.1rem,2.4vw,1.5rem); text-shadow:0 1px 0 rgba(255,255,255,.6) }
+    .bell-btn{
+      position:absolute; inset-inline-start:16px; top:50%; transform:translateY(-50%);
+      width:40px; height:40px; border-radius:12px; border:1px solid rgba(3,60,84,.18);
+      background:#fff; color:var(--primary); display:inline-flex; align-items:center; justify-content:center;
+      cursor:pointer; box-shadow:var(--shadow-1); transition:var(--transition);
+    }
+    .bell-btn svg{ width:19px; height:19px; }
+    .bell-btn:hover{ transform:translateY(-50%) translateY(-1px); box-shadow:0 12px 26px rgba(3,60,84,.18); }
+    .bell-badge{
+      position:absolute; top:-6px; inset-inline-end:-6px;
+      min-width:18px; height:18px; padding:0 4px; border-radius:999px;
+      background:#e11d2e; color:#fff; font-size:.68rem; font-weight:900;
+      display:flex; align-items:center; justify-content:center; line-height:1;
+      box-shadow:0 0 0 2px #fff;
+    }
 
     main{ flex:1; padding:24px 14px 32px; display:flex }
     .column{
@@ -477,6 +492,25 @@
     .notif-edit-cancel:hover { background:#f4f8fb; }
 
     /* Suggestions / reports inbox */
+    .sugg-tabs{ display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; }
+    .sugg-tab{
+      flex:1; min-width:88px; height:40px; border-radius:11px; border:1px solid var(--border);
+      background:#fff; color:var(--muted); font-weight:800; font-size:.86rem; cursor:pointer;
+      font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      transition:var(--transition);
+    }
+    .sugg-tab:hover{ border-color:rgba(3,60,84,.3); color:var(--primary); }
+    .sugg-tab.active{ background:var(--primary); border-color:var(--primary); color:#fff; box-shadow:var(--shadow-1); }
+    .sugg-sorted-section{ margin-top:22px; padding-top:16px; border-top:1px dashed var(--border); }
+    .sugg-sorted-title{ font-size:.82rem; font-weight:900; color:var(--muted); margin-bottom:10px; }
+    .sugg-card.sorted{ opacity:.66; }
+    .sugg-sort-btn{
+      height:44px; padding:0 18px; border-radius:12px; border:1px solid rgba(3,60,84,.25);
+      background:#fff; color:var(--primary); font-weight:900; cursor:pointer; box-shadow:var(--shadow-1);
+      transition:var(--transition); font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+    .sugg-sort-btn:hover{ transform:translateY(-2px); box-shadow:0 12px 26px rgba(3,60,84,.16); }
+    .sugg-sort-btn.active{ background:rgba(3,60,84,.08); }
     .sugg-card {
       border:1px solid var(--border); border-radius:14px; background:#fff;
       box-shadow:var(--shadow-1); padding:14px; cursor:pointer; margin-bottom:10px;
@@ -650,6 +684,13 @@
   <header class="site-header">
     <img class="site-logo" src="/images/schoollogo.png" alt="" aria-hidden="true">
     <h1 class="site-title">ثانوية أحمد البشر الرومي</h1>
+    <button id="suggBellBtn" class="bell-btn" type="button" aria-label="الاقتراحات والبلاغات الجديدة">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+        <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+      </svg>
+      <span id="suggBellBadge" class="bell-badge" hidden>0</span>
+    </button>
   </header>
 
   <main>
@@ -763,6 +804,9 @@
         <button id="closeSuggestionDetail" class="close-modal" aria-label="إغلاق">×</button>
       </div>
       <div id="suggestionDetailBody" class="sugg-detail-body"></div>
+      <div class="modal-footer">
+        <button id="suggestionSortBtn" class="sugg-sort-btn" type="button">تم الفرز</button>
+      </div>
     </div>
   </div>
 
@@ -1062,6 +1106,11 @@
       <h3 class="sheet-title">الاقتراحات والبلاغات</h3>
     </div>
     <div class="sheet-body">
+      <div id="suggTabs" class="sugg-tabs" role="tablist">
+        <button class="sugg-tab active" data-filter="all" type="button" role="tab" aria-selected="true">الكل</button>
+        <button class="sugg-tab" data-filter="report" type="button" role="tab" aria-selected="false">البلاغات</button>
+        <button class="sugg-tab" data-filter="suggestion" type="button" role="tab" aria-selected="false">الاقتراحات</button>
+      </div>
       <div id="suggestionsList">
         <div class="muted">—</div>
       </div>
@@ -1106,7 +1155,7 @@
     } from "/shared/firebase.js";
     import {
       initializeFirestore, persistentSingleTabManager, collection, getDocs, query, where, orderBy, limit,
-      doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp
+      doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp, writeBatch
     } from "/shared/firebase.js";
     import { showActionPopup } from "/shared/action-popup.js";
     import { mountTelegramSettings } from "/shared/telegram-settings.js";
@@ -1771,9 +1820,13 @@
     const suggestionsSheet = document.getElementById('suggestionsSheet');
     const closeSuggestions = document.getElementById('closeSuggestions');
     const suggestionsList = document.getElementById('suggestionsList');
+    const suggTabs = document.querySelectorAll('.sugg-tab');
     const suggestionDetailModal = document.getElementById('suggestionDetailModal');
     const closeSuggestionDetail = document.getElementById('closeSuggestionDetail');
     const suggestionDetailBody = document.getElementById('suggestionDetailBody');
+    const suggestionSortBtn = document.getElementById('suggestionSortBtn');
+    const suggBellBtn = document.getElementById('suggBellBtn');
+    const suggBellBadge = document.getElementById('suggBellBadge');
 
     /* ========= Helpers ========= */
     const show = (el)=>{ [sLoading, sNotLog, sDenied, sAdmin].forEach(x=>x.classList.remove('active')); el.classList.add('active'); };
@@ -1977,6 +2030,7 @@
         avatarUserUid = user.uid;
         loadStoredAvatar(user.uid);
         show(sAdmin);
+        refreshBellCountFromServer();
         initNotificationPopup(db, { uid: user.uid, name: data?.name || '' });
         if(window.location.hash === '#admins') openAdminsPanel();
         if(window.location.hash === NOTIFICATIONS_HASH) openNotificationsPanel(false);
@@ -2131,50 +2185,175 @@
     }
 
     /* ========= Suggestions / reports inbox ========= */
-    function openSuggestionsPanel(){
+    let allSuggestionsCache = []; // [{ id, data }] — fetched once per panel open, filtered/re-rendered client-side
+    let suggFilter = 'all'; // 'all' | 'report' | 'suggestion'
+    let currentSuggDetailId = null;
+
+    async function openSuggestionsPanel(){
+      resetSuggFilter();
       openSheet(suggestionsSheet);
-      loadSuggestions();
+      await loadSuggestions();
     }
+
+    function resetSuggFilter(){
+      suggFilter = 'all';
+      suggTabs.forEach(t => {
+        const on = t.dataset.filter === 'all';
+        t.classList.toggle('active', on);
+        t.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
+    }
+
+    suggTabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        suggTabs.forEach(t => { t.classList.remove('active'); t.setAttribute('aria-selected','false'); });
+        tab.classList.add('active');
+        tab.setAttribute('aria-selected','true');
+        suggFilter = tab.dataset.filter;
+        renderSuggestionsList();
+      });
+    });
 
     async function loadSuggestions(){
       suggestionsList.innerHTML = '<div class="muted" style="padding:4px 0;">جارٍ التحميل...</div>';
       try {
         const q = query(collection(db, 'suggestions'), orderBy('createdAt', 'desc'), limit(100));
         const snap = await getDocs(q);
-        if (snap.empty) {
-          suggestionsList.innerHTML = '<div class="muted">لا توجد اقتراحات أو بلاغات بعد.</div>';
-          return;
-        }
-        const stack = document.createElement('div');
-        snap.forEach(d => {
-          const sData = d.data() || {};
-          const isReport = sData.type === 'report';
-          const date = sData.createdAt?.toDate ? sData.createdAt.toDate() : null;
-          const card = document.createElement('div');
-          card.className = 'sugg-card' + (sData.isRead ? '' : ' unread');
-          card.innerHTML = `
-            <div class="sugg-card-top">
-              <div class="sugg-card-who">
-                ${sData.isRead ? '' : '<span class="sugg-unread-dot" aria-hidden="true"></span>'}
-                <span class="sugg-card-name">${escNotif(sData.createdByName || '—')}</span>
-              </div>
-              <span class="sugg-badge ${isReport ? 'report' : 'suggestion'}">${isReport ? 'بلاغ' : 'اقتراح'}</span>
-            </div>
-            <div class="sugg-card-preview">${escNotif(sData.message || '')}</div>
-            <div class="sugg-card-date">${date ? fmtDateTime(date) : ''}</div>
-          `;
-          card.addEventListener('click', () => openSuggestionDetail(d.id, sData, card));
-          stack.appendChild(card);
-        });
-        suggestionsList.innerHTML = '';
-        suggestionsList.appendChild(stack);
+        allSuggestionsCache = [];
+        snap.forEach(d => allSuggestionsCache.push({ id: d.id, data: d.data() || {} }));
+        renderSuggestionsList();
       } catch (e) {
         console.error('[suggestions] load failed:', e);
         suggestionsList.innerHTML = '<div class="muted">تعذّر تحميل القائمة.</div>';
       }
     }
 
+    function renderSuggestionsList(){
+      if (!allSuggestionsCache.length) {
+        suggestionsList.innerHTML = '<div class="muted">لا توجد اقتراحات أو بلاغات بعد.</div>';
+        return;
+      }
+      const filtered = allSuggestionsCache.filter(({data}) => suggFilter === 'all' || data.type === suggFilter);
+      if (!filtered.length) {
+        suggestionsList.innerHTML = '<div class="muted">لا توجد عناصر ضمن هذا التصنيف.</div>';
+        return;
+      }
+      const active = filtered.filter(({data}) => !data.sorted);
+      const sortedItems = filtered.filter(({data}) => data.sorted);
+
+      const wrap = document.createDocumentFragment();
+      wrap.appendChild(buildSuggCardStack(active.length ? active : []));
+      if (!active.length) {
+        const empty = document.createElement('div');
+        empty.className = 'muted';
+        empty.style.padding = '4px 0';
+        empty.textContent = 'لا توجد عناصر غير مفروزة ضمن هذا التصنيف.';
+        wrap.appendChild(empty);
+      }
+      if (sortedItems.length) {
+        const section = document.createElement('div');
+        section.className = 'sugg-sorted-section';
+        section.innerHTML = `<div class="sugg-sorted-title">مفروزة (${toArabicDigits(String(sortedItems.length))})</div>`;
+        section.appendChild(buildSuggCardStack(sortedItems));
+        wrap.appendChild(section);
+      }
+      suggestionsList.innerHTML = '';
+      suggestionsList.appendChild(wrap);
+    }
+
+    function buildSuggCardStack(items){
+      const stack = document.createElement('div');
+      items.forEach(({id, data: sData}) => {
+        const isReport = sData.type === 'report';
+        const date = sData.createdAt?.toDate ? sData.createdAt.toDate() : null;
+        const card = document.createElement('div');
+        card.className = 'sugg-card' + (sData.isRead ? '' : ' unread') + (sData.sorted ? ' sorted' : '');
+        card.innerHTML = `
+          <div class="sugg-card-top">
+            <div class="sugg-card-who">
+              ${sData.isRead ? '' : '<span class="sugg-unread-dot" aria-hidden="true"></span>'}
+              <span class="sugg-card-name">${escNotif(sData.createdByName || '—')}</span>
+            </div>
+            <span class="sugg-badge ${isReport ? 'report' : 'suggestion'}">${isReport ? 'بلاغ' : 'اقتراح'}</span>
+          </div>
+          <div class="sugg-card-preview">${escNotif(sData.message || '')}</div>
+          <div class="sugg-card-date">${date ? fmtDateTime(date) : ''}</div>
+        `;
+        card.addEventListener('click', () => openSuggestionDetail(id, sData, card));
+        stack.appendChild(card);
+      });
+      return stack;
+    }
+
+    function setBellCount(count){
+      if (count > 0) {
+        suggBellBadge.textContent = count > 99 ? toArabicDigits('99') + '+' : toArabicDigits(String(count));
+        suggBellBadge.hidden = false;
+      } else {
+        suggBellBadge.hidden = true;
+      }
+    }
+
+    function updateBellFromCache(){
+      setBellCount(allSuggestionsCache.filter(({data}) => !data.isRead).length);
+    }
+
+    async function refreshBellCountFromServer(){
+      try {
+        const q = query(collection(db, 'suggestions'), where('isRead', '==', false));
+        const snap = await getDocs(q);
+        setBellCount(snap.size);
+      } catch (e) {
+        console.error('[suggestions] bell refresh failed:', e);
+      }
+    }
+
+    async function markAllSuggestionsRead(){
+      const unread = allSuggestionsCache.filter(({data}) => !data.isRead);
+      if (!unread.length) { setBellCount(0); return; }
+      try {
+        const batch = writeBatch(db);
+        unread.forEach(({id}) => batch.update(doc(db, 'suggestions', id), { isRead: true }));
+        await batch.commit();
+        unread.forEach(entry => { entry.data.isRead = true; });
+        renderSuggestionsList();
+        setBellCount(0);
+      } catch (e) {
+        console.error('[suggestions] mark all read failed:', e);
+      }
+    }
+
+    suggBellBtn.addEventListener('click', async () => {
+      await openSuggestionsPanel();
+      await markAllSuggestionsRead();
+    });
+
+    function updateSuggestionSortBtn(isSorted){
+      suggestionSortBtn.textContent = isSorted ? 'إلغاء الفرز' : 'تم الفرز';
+      suggestionSortBtn.classList.toggle('active', isSorted);
+    }
+
+    suggestionSortBtn.addEventListener('click', async () => {
+      if (!currentSuggDetailId) return;
+      const goingSorted = !suggestionSortBtn.classList.contains('active');
+      suggestionSortBtn.disabled = true;
+      try {
+        await updateDoc(doc(db, 'suggestions', currentSuggDetailId), { sorted: goingSorted });
+        const entry = allSuggestionsCache.find(x => x.id === currentSuggDetailId);
+        if (entry) entry.data.sorted = goingSorted;
+        updateSuggestionSortBtn(goingSorted);
+        renderSuggestionsList();
+        closeModal(suggestionDetailModal);
+      } catch (e) {
+        console.error('[suggestions] sort toggle failed:', e);
+        alert('تعذّر تحديث حالة الفرز.');
+      } finally {
+        suggestionSortBtn.disabled = false;
+      }
+    });
+
     async function openSuggestionDetail(id, sData, cardEl){
+      currentSuggDetailId = id;
       const isReport = sData.type === 'report';
       const date = sData.createdAt?.toDate ? sData.createdAt.toDate() : null;
       suggestionDetailBody.innerHTML = `
@@ -2195,6 +2374,7 @@
           <div class="sugg-detail-message">${escNotif(sData.message || '')}</div>
         </div>
       `;
+      updateSuggestionSortBtn(sData.sorted === true);
       openModal(suggestionDetailModal);
 
       if (!sData.isRead) {
@@ -2203,6 +2383,7 @@
           sData.isRead = true;
           cardEl?.classList.remove('unread');
           cardEl?.querySelector('.sugg-unread-dot')?.remove();
+          updateBellFromCache();
         } catch (e) {
           console.error('[suggestions] mark read failed:', e);
         }
