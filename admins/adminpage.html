@@ -47,8 +47,8 @@
       box-shadow: 0 2px 10px rgba(3,60,84,.06);
     }
     .site-title{ margin:0; font-weight:900; letter-spacing:.2px; font-size:clamp(1.1rem,2.4vw,1.5rem); text-shadow:0 1px 0 rgba(255,255,255,.6) }
+    .bell-wrap{ position:relative; flex-shrink:0; margin-inline-start:auto; }
     .bell-btn{
-      position:relative; flex-shrink:0; margin-inline-start:auto;
       width:40px; height:40px; border-radius:12px; border:1px solid rgba(3,60,84,.18);
       background:#fff; color:var(--primary); display:inline-flex; align-items:center; justify-content:center;
       cursor:pointer; box-shadow:var(--shadow-1); transition:var(--transition);
@@ -62,6 +62,20 @@
       display:flex; align-items:center; justify-content:center; line-height:1;
       box-shadow:0 0 0 2px #fff;
     }
+    .bell-popover{
+      position:absolute; top:calc(100% + 10px); inset-inline-end:0; z-index:20;
+      width:min(320px, 86vw); max-height:360px; overflow-y:auto;
+      background:#fff; border:1px solid var(--border); border-radius:14px;
+      box-shadow:0 18px 40px rgba(3,60,84,.22); padding:10px;
+    }
+    .bell-popover-head{ font-weight:900; font-size:.82rem; color:var(--muted); padding:4px 6px 10px; }
+    .bell-popover-empty{ padding:14px 8px; text-align:center; color:var(--muted); font-size:.86rem; }
+    .bell-popover-item{
+      display:flex; flex-direction:column; gap:4px; padding:10px; border-radius:10px;
+      cursor:pointer; transition:background-color .12s ease;
+    }
+    .bell-popover-item:hover{ background:var(--page); }
+    .bell-popover-item + .bell-popover-item{ margin-top:4px; }
 
     main{ flex:1; padding:24px 14px 32px; display:flex }
     .column{
@@ -1097,13 +1111,19 @@
     <div class="sheet-header">
       <button id="closeSuggestions" class="back-btn" aria-label="رجوع">رجوع</button>
       <h3 class="sheet-title">الاقتراحات والبلاغات</h3>
-      <button id="suggBellBtn" class="bell-btn" type="button" aria-label="تحديد الكل كمقروء">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-          <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-        </svg>
-        <span id="suggBellBadge" class="bell-badge" hidden>0</span>
-      </button>
+      <div class="bell-wrap">
+        <button id="suggBellBtn" class="bell-btn" type="button" aria-label="الإشعارات الجديدة">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+          </svg>
+          <span id="suggBellBadge" class="bell-badge" hidden>0</span>
+        </button>
+        <div id="suggBellPopover" class="bell-popover" hidden>
+          <div class="bell-popover-head">إشعارات جديدة</div>
+          <div id="suggBellPopoverList" class="bell-popover-list"></div>
+        </div>
+      </div>
     </div>
     <div class="sheet-body">
       <div id="suggTabs" class="sugg-tabs" role="tablist">
@@ -1155,7 +1175,7 @@
     } from "/shared/firebase.js";
     import {
       initializeFirestore, persistentSingleTabManager, collection, getDocs, query, where, orderBy, limit,
-      doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp, writeBatch
+      doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp
     } from "/shared/firebase.js";
     import { showActionPopup } from "/shared/action-popup.js";
     import { mountTelegramSettings } from "/shared/telegram-settings.js";
@@ -1827,6 +1847,8 @@
     const suggestionSortBtn = document.getElementById('suggestionSortBtn');
     const suggBellBtn = document.getElementById('suggBellBtn');
     const suggBellBadge = document.getElementById('suggBellBadge');
+    const suggBellPopover = document.getElementById('suggBellPopover');
+    const suggBellPopoverList = document.getElementById('suggBellPopoverList');
 
     /* ========= Helpers ========= */
     const show = (el)=>{ [sLoading, sNotLog, sDenied, sAdmin].forEach(x=>x.classList.remove('active')); el.classList.add('active'); };
@@ -2072,7 +2094,7 @@
     closeNotifications.addEventListener('click', ()=> closeNotificationsPanel(true));
 
     openSuggestions.addEventListener('click', openSuggestionsPanel);
-    closeSuggestions.addEventListener('click', ()=> closeSheet(suggestionsSheet));
+    closeSuggestions.addEventListener('click', ()=> { closeBellPopover(); closeSheet(suggestionsSheet); });
     closeSuggestionDetail.addEventListener('click', ()=> closeModal(suggestionDetailModal));
     suggestionDetailModal.addEventListener('click', (e)=> { if (e.target === suggestionDetailModal) closeModal(suggestionDetailModal); });
     suggestBtn.addEventListener('click', ()=> feedback.open());
@@ -2190,6 +2212,7 @@
 
     async function openSuggestionsPanel(){
       resetSuggFilter();
+      closeBellPopover();
       openSheet(suggestionsSheet);
       await loadSuggestions();
     }
@@ -2279,7 +2302,7 @@
           <div class="sugg-card-preview">${escNotif(sData.message || '')}</div>
           <div class="sugg-card-date">${date ? fmtDateTime(date) : ''}</div>
         `;
-        card.addEventListener('click', () => openSuggestionDetail(id, sData, card));
+        card.addEventListener('click', () => openSuggestionDetail(id, sData));
         stack.appendChild(card);
       });
       return stack;
@@ -2298,21 +2321,53 @@
       setBellCount(allSuggestionsCache.filter(({data}) => !data.isRead).length);
     }
 
-    async function markAllSuggestionsRead(){
+    function renderBellPopover(){
       const unread = allSuggestionsCache.filter(({data}) => !data.isRead);
-      if (!unread.length) return;
-      try {
-        const batch = writeBatch(db);
-        unread.forEach(({id}) => batch.update(doc(db, 'suggestions', id), { isRead: true }));
-        await batch.commit();
-        unread.forEach(entry => { entry.data.isRead = true; });
-        renderSuggestionsList();
-      } catch (e) {
-        console.error('[suggestions] mark all read failed:', e);
+      if (!unread.length) {
+        suggBellPopoverList.innerHTML = '<div class="bell-popover-empty">لا توجد إشعارات جديدة.</div>';
+        return;
       }
+      suggBellPopoverList.innerHTML = '';
+      unread.forEach(({id, data: sData}) => {
+        const isReport = sData.type === 'report';
+        const item = document.createElement('div');
+        item.className = 'bell-popover-item';
+        item.innerHTML = `
+          <div class="sugg-card-top">
+            <span class="sugg-card-name">${escNotif(sData.createdByName || '—')}</span>
+            <span class="sugg-badge ${isReport ? 'report' : 'suggestion'}">${isReport ? 'بلاغ' : 'اقتراح'}</span>
+          </div>
+          <div class="sugg-card-preview">${escNotif(sData.message || '')}</div>
+        `;
+        item.addEventListener('click', () => {
+          closeBellPopover();
+          openSuggestionDetail(id, sData);
+        });
+        suggBellPopoverList.appendChild(item);
+      });
     }
 
-    suggBellBtn.addEventListener('click', () => { markAllSuggestionsRead(); });
+    function onDocClickCloseBellPopover(e){
+      if (suggBellPopover.contains(e.target) || suggBellBtn.contains(e.target)) return;
+      closeBellPopover();
+    }
+
+    function openBellPopover(){
+      renderBellPopover();
+      suggBellPopover.hidden = false;
+      document.addEventListener('click', onDocClickCloseBellPopover, { capture: true });
+    }
+
+    function closeBellPopover(){
+      suggBellPopover.hidden = true;
+      document.removeEventListener('click', onDocClickCloseBellPopover, { capture: true });
+    }
+
+    suggBellBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (suggBellPopover.hidden) openBellPopover();
+      else closeBellPopover();
+    });
 
     function updateSuggestionSortBtn(isSorted){
       suggestionSortBtn.textContent = isSorted ? 'إلغاء الفرز' : 'تم الفرز';
@@ -2338,7 +2393,7 @@
       }
     });
 
-    async function openSuggestionDetail(id, sData, cardEl){
+    async function openSuggestionDetail(id, sData){
       currentSuggDetailId = id;
       const isReport = sData.type === 'report';
       const date = sData.createdAt?.toDate ? sData.createdAt.toDate() : null;
@@ -2367,9 +2422,7 @@
         try {
           await updateDoc(doc(db, 'suggestions', id), { isRead: true });
           sData.isRead = true;
-          cardEl?.classList.remove('unread');
-          cardEl?.querySelector('.sugg-unread-dot')?.remove();
-          updateBellFromCache();
+          renderSuggestionsList();
         } catch (e) {
           console.error('[suggestions] mark read failed:', e);
         }
