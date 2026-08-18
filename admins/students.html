@@ -59,31 +59,14 @@ body{
   display:flex; align-items:center; justify-content:center;
   border-bottom:1px solid rgba(3,60,84,.08); box-shadow: 0 2px 12px rgba(3,60,84,.04);
 }
-.top-student-back{
+#studentTopBack{
   position:absolute;
   inset-inline-start:20px;
   top:50%;
   transform:translateY(-50%);
-  height:42px;
-  padding:0 16px;
-  border:none;
-  border-radius:12px;
-  cursor:pointer;
-  font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  font-weight:900;
-  font-size:.95rem;
-  background:linear-gradient(180deg, #065372, #033C54);
-  color:#fff;
-  box-shadow:0 10px 26px rgba(3,60,84,.28);
   display:none;
-  align-items:center;
-  justify-content:center;
 }
-body.student-profile-open .top-student-back{ display:inline-flex; }
-.top-student-back:hover{
-  filter:brightness(1.05);
-  transform:translateY(-50%) translateY(-1px);
-}
+body.student-profile-open #studentTopBack{ display:inline-flex; }
 .site-title{
   margin:0; font-weight:900; letter-spacing:.2px; font-size:clamp(1.2rem,2.4vw,1.6rem);
   text-shadow:0 1px 0 rgba(255,255,255,.6)
@@ -1103,7 +1086,7 @@ html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%;
   .reorder-modal-overlay, .modal-overlay { padding: 0; align-items: flex-end; }
   .reorder-modal-overlay.active .reorder-modal, .modal-overlay.active .modal { transform: translateY(0); }
   .reorder-item { padding: 14px 16px; }
-  .top-student-back{ inset-inline-start:12px; height:38px; padding:0 12px; font-size:.85rem; }
+  #studentTopBack{ inset-inline-start:12px; height:38px; padding:0 12px; font-size:.85rem; }
   .classes-floating-back{ right:12px; top:88px; min-width:94px; height:42px; font-size:.9rem; padding:0 12px; }
 }
 @media (max-width: 480px) {
@@ -1298,8 +1281,8 @@ html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%;
 </head>
 <body>
 <header class="site-header">
-  <button id="studentTopBack" class="top-student-back" type="button">رجوع</button>
-  <h1 class="site-title">ثانوية أحمد البشر الرومي</h1>
+  <button id="studentTopBack" class="back-btn" type="button">رجوع</button>
+  <h1 id="siteTitle" class="site-title">ثانوية أحمد البشر الرومي</h1>
 </header>
 <a id="classesFloatingBack" class="classes-floating-back" href="adminpage.html" aria-label="رجوع">رجوع</a>
 <main>
@@ -2163,6 +2146,9 @@ const studentSheet = document.getElementById('studentSheet');
 const closeStudent = document.getElementById('closeStudent');
 const studentTitle = document.getElementById('studentTitle');
 const studentTopBack = document.getElementById('studentTopBack');
+const siteTitle = document.getElementById('siteTitle');
+const SITE_TITLE_DEFAULT = siteTitle.textContent;
+let currentStudent = { id:null, data:null };
 // Collapsible header refs
 const studentHeaderCard = document.getElementById('studentHeaderCard');
 const studentHeaderName = document.getElementById('studentHeaderName');
@@ -2526,6 +2512,7 @@ function updateStudentDesktopLayout(){
 function syncStudentProfileChrome(){
   const profileOpen = studentSheet.classList.contains('open') || !!getRouteStudentId();
   document.body.classList.toggle('student-profile-open', profileOpen);
+  siteTitle.textContent = (profileOpen && currentStudent.data?.name) ? currentStudent.data.name : SITE_TITLE_DEFAULT;
 }
 
 function getRouteStudentId(){
@@ -4134,7 +4121,6 @@ function setupLongPress(element, studentId) {
 }
 
 /* ========= Student editor ========= */
-let currentStudent = { id:null, data:null };
 let currentStudentAttendance = [];
 let currentAttendanceRecord = null;
 const teacherNameCache = new Map();
