@@ -4510,12 +4510,15 @@ deleteMorningLateBtn.addEventListener('click', async ()=>{
 
 // MODIFIED: openAttDetail function to show excused absence details
 async function openAttDetail(r){
-  // Modern records (this student's mirror of an attendanceSessions doc) are
-  // edited through the shared attendance sheet, which writes back to the
-  // real session + records — not this page's own status editor, which can
-  // only ever touch the mirror. Only pre-migration legacy records (mirrored
-  // from the old top-level "attendance" collection) use the editor below.
-  if (r.sessionId && r.sessionPath && r.sessionPath.startsWith('attendanceSessions/')) {
+  // Absences always use the lightweight detail sheet below (with a status
+  // editor that can correct a mistaken mark back to حضور) instead of
+  // opening the whole class roster just to fix one student. Lates on
+  // modern records (this student's mirror of an attendanceSessions doc)
+  // still go through the shared attendance sheet, which writes back to the
+  // real session + records — saveStatusBtn below now does the same
+  // real-record write for absences, see its handler.
+  const isModernRecord = !!(r.sessionId && r.sessionPath && r.sessionPath.startsWith('attendanceSessions/'));
+  if (r.status !== 'absent' && isModernRecord) {
     attendance.openForEdit(r.sessionId);
     return;
   }
@@ -4609,9 +4612,27 @@ saveStatusBtn.addEventListener('click', async () => {
       updateData.hasReason = false;
       updateData.reasonText = null;
     }
-    
-    await updateDoc(doc(db, 'students', currentStudent.id, 'attendance', currentAttendanceRecord.id), updateData);
-    
+
+    // Modern records also have a real attendanceRecords doc — the mirror
+    // here is what every profile page reads, but the roster/reports/
+    // warnings read the real record, so both must move together (exactly
+    // like shared/attendance.js's own save batch does). hasReason/
+    // reasonText aren't part of the real record's schema, so only status
+    // + who/when go there.
+    const isModernRecord = !!(currentAttendanceRecord.sessionId && currentAttendanceRecord.sessionPath && currentAttendanceRecord.sessionPath.startsWith('attendanceSessions/'));
+    if (isModernRecord) {
+      const batch = writeBatch(db);
+      batch.set(doc(db, 'students', currentStudent.id, 'attendance', currentAttendanceRecord.id), updateData, { merge: true });
+      batch.set(doc(db, 'attendanceSessions', currentAttendanceRecord.sessionId, 'attendanceRecords', currentStudent.id), {
+        status: newStatus,
+        updatedBy: auth.currentUser.uid,
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+      await batch.commit();
+    } else {
+      await updateDoc(doc(db, 'students', currentStudent.id, 'attendance', currentAttendanceRecord.id), updateData);
+    }
+
     // Update badge based on new status
     if (newStatus === 'absent' && currentAttendanceRecord.hasReason === true) {
       dBadge.className = 'badge b-excused';
