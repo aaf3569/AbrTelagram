@@ -875,6 +875,19 @@
       font-size:16px;
       text-align:right;
     }
+    .pop-title-row{
+      display:flex; align-items:center; justify-content:space-between; gap:12px;
+      margin-bottom:16px;
+    }
+    .pop-title-row .pop-title{ margin-bottom:0; }
+    .pop-close{
+      width:32px; height:32px; flex-shrink:0; border-radius:10px;
+      border:1px solid var(--border); background:#fff; color:var(--muted);
+      display:inline-flex; align-items:center; justify-content:center; cursor:pointer;
+      transition: background .12s ease, color .12s ease, border-color .12s ease;
+    }
+    .pop-close svg{ width:16px; height:16px; }
+    .pop-close:hover{ background:var(--page); color:var(--primary); border-color:rgba(11,79,108,.3); }
 
     .row{ display:grid; grid-template-columns: 1fr; gap:16px; }
 
@@ -1145,7 +1158,12 @@
   <!-- Settings modal -->
   <div id="settingsModal" class="modal" aria-hidden="true">
     <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="settingsModalTitle">
-      <div id="settingsModalTitle" class="pop-title">الإعدادات</div>
+      <div class="pop-title-row">
+        <div id="settingsModalTitle" class="pop-title">الإعدادات</div>
+        <button id="settingsModalXBtn" class="pop-close" type="button" aria-label="إغلاق">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
       <div class="row">
         <div class="tc-row tc-row-lesson-count">
           <span class="tc-section-label">عدد الحصص في اليوم</span>
@@ -1304,6 +1322,7 @@
     const settingsBtn = document.getElementById('settingsBtn');
     const settingsModal = document.getElementById('settingsModal');
     const settingsCloseBtn = document.getElementById('settingsCloseBtn');
+    const settingsModalXBtn = document.getElementById('settingsModalXBtn');
     const lessonCountInput = document.getElementById('lessonCountInput');
     const lessonCountSaveBtn = document.getElementById('lessonCountSaveBtn');
     const lessonCountMsg = document.getElementById('lessonCountMsg');
@@ -2620,6 +2639,7 @@
 
     settingsBtn.addEventListener('click', openSettingsModal);
     settingsCloseBtn.addEventListener('click', closeSettingsModal);
+    settingsModalXBtn.addEventListener('click', closeSettingsModal);
 
     // Continues the day's rhythm for a newly-added lesson slot: a 5-minute
     // gap after the previous lesson ends, then a standard 45-minute lesson —
