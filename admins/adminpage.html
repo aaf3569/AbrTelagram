@@ -471,6 +471,36 @@
     .notif-edit-cancel { border:1px solid var(--border); background:#fff; color:#4a6072; }
     .notif-edit-cancel:hover { background:#f4f8fb; }
 
+    /* Suggestions / reports inbox */
+    .sugg-card {
+      border:1px solid var(--border); border-radius:14px; background:#fff;
+      box-shadow:var(--shadow-1); padding:14px; cursor:pointer; margin-bottom:10px;
+      display:flex; flex-direction:column; gap:6px;
+      transition:box-shadow .12s ease, transform .12s ease, border-color .12s ease;
+    }
+    .sugg-card:hover { box-shadow:0 10px 22px rgba(3,60,84,.14); transform:translateY(-1px); }
+    .sugg-card.unread { border-color:rgba(3,60,84,.35); background:#f7fbff; }
+    .sugg-card-top { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    .sugg-card-who { display:flex; align-items:center; gap:8px; min-width:0; }
+    .sugg-unread-dot { width:8px; height:8px; border-radius:999px; background:var(--primary); flex-shrink:0; }
+    .sugg-card-name { font-weight:900; font-size:.92rem; color:#083b57; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .sugg-badge { padding:4px 10px; border-radius:999px; font-size:.76rem; font-weight:900; flex-shrink:0; }
+    .sugg-badge.report { background:rgba(203,43,43,.12); color:#cb2b2b; }
+    .sugg-badge.suggestion { background:rgba(3,60,84,.10); color:#033C54; }
+    .sugg-card-preview {
+      font-size:.86rem; color:#4a6072; overflow:hidden;
+      text-overflow:ellipsis; white-space:nowrap;
+    }
+    .sugg-card-date { font-size:.76rem; color:var(--muted); }
+    .sugg-detail-body { padding:20px; display:flex; flex-direction:column; gap:16px; }
+    .sugg-detail-row { display:flex; flex-direction:column; gap:4px; }
+    .sugg-detail-label { font-size:.78rem; font-weight:900; color:var(--muted); }
+    .sugg-detail-value { font-size:.95rem; color:var(--text); font-weight:700; }
+    .sugg-detail-message {
+      white-space:pre-wrap; line-height:1.8; font-size:.92rem; color:var(--text);
+      background:#f7fafc; border:1px solid var(--border); border-radius:12px; padding:14px;
+    }
+
     /* Elements that only exist for the desktop dashboard layout below —
        hidden here so phones/tablets render exactly as before; the
        min-width:1024px block further down is the only place that turns
@@ -676,6 +706,16 @@
             <span class="dash-sub">إرسال ومتابعة الإشعارات</span>
           </button>
           <!-- /NEW -->
+          <button id="openSuggestions" class="btn ghost" type="button" aria-label="الاقتراحات والبلاغات">
+            <i class="fas fa-inbox dash-icon" aria-hidden="true"></i>
+            <span class="dash-title">الاقتراحات والبلاغات</span>
+            <span class="dash-sub">مراجعة ما يرسله المعلمون</span>
+          </button>
+          <button id="suggestBtn" class="btn ghost" type="button" aria-label="اقتراح / بلاغ">
+            <i class="fas fa-comment-dots dash-icon" aria-hidden="true"></i>
+            <span class="dash-title">اقتراح / بلاغ</span>
+            <span class="dash-sub">أرسل ملاحظة أو بلاغاً للإدارة</span>
+          </button>
           <div id="telegramSettingsSlot"></div>
           <button id="logoutBtn" class="btn ghost section-break" type="button" aria-label="تسجيل الخروج">
             <i class="fas fa-right-from-bracket dash-icon" aria-hidden="true"></i>
@@ -707,6 +747,17 @@
           <span>تدقيق في الغائب</span>
         </button>
       </div>
+    </div>
+  </div>
+
+  <!-- تفاصيل اقتراح/بلاغ -->
+  <div id="suggestionDetailModal" class="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title">تفاصيل الرسالة</h3>
+        <button id="closeSuggestionDetail" class="close-modal" aria-label="إغلاق">×</button>
+      </div>
+      <div id="suggestionDetailBody" class="sugg-detail-body"></div>
     </div>
   </div>
 
@@ -999,6 +1050,19 @@
     </div>
   </section>
 
+  <!-- الاقتراحات والبلاغات المرسلة من صفحات المستخدمين -->
+  <section id="suggestionsSheet" class="sheet" aria-hidden="true">
+    <div class="sheet-header">
+      <button id="closeSuggestions" class="back-btn" aria-label="رجوع">رجوع</button>
+      <h3 class="sheet-title">الاقتراحات والبلاغات</h3>
+    </div>
+    <div class="sheet-body">
+      <div id="suggestionsList">
+        <div class="muted">—</div>
+      </div>
+    </div>
+  </section>
+
   <!-- محرر المشرف -->
   <section id="adminSheet" class="sheet small" aria-hidden="true">
     <div class="sheet-header">
@@ -1042,6 +1106,7 @@
     import { showActionPopup } from "/shared/action-popup.js";
     import { mountTelegramSettings } from "/shared/telegram-settings.js";
     import { initNotificationPopup } from "/shared/notification-popup.js";
+    import { mountFeedbackSheet } from "/shared/feedback.js";
 
     
 
@@ -1084,6 +1149,12 @@
       : initializeApp(firebaseConfig, "AdminHelper");
     const helperAuth = getAuth(helperApp);
 
+    const feedback = mountFeedbackSheet({
+      db,
+      auth,
+      getUserName: () => currentAdminData?.name || ''
+    });
+
     /* ========= UI refs ========= */
     const sLoading = document.getElementById('stateLoading');
     const sNotLog  = document.getElementById('stateNotLogged');
@@ -1102,6 +1173,8 @@
     // NEW: schedules button ref
     const openSchedules = document.getElementById('openSchedules');
     const openNotifications = document.getElementById('openNotifications');
+    const openSuggestions = document.getElementById('openSuggestions');
+    const suggestBtn = document.getElementById('suggestBtn');
 
     mountTelegramSettings({
       auth,
@@ -1690,6 +1763,13 @@
     const closeNotifications = document.getElementById('closeNotifications');
     const NOTIFICATIONS_HASH = '#notifications';
 
+    const suggestionsSheet = document.getElementById('suggestionsSheet');
+    const closeSuggestions = document.getElementById('closeSuggestions');
+    const suggestionsList = document.getElementById('suggestionsList');
+    const suggestionDetailModal = document.getElementById('suggestionDetailModal');
+    const closeSuggestionDetail = document.getElementById('closeSuggestionDetail');
+    const suggestionDetailBody = document.getElementById('suggestionDetailBody');
+
     /* ========= Helpers ========= */
     const show = (el)=>{ [sLoading, sNotLog, sDenied, sAdmin].forEach(x=>x.classList.remove('active')); el.classList.add('active'); };
     const openSheet = (el)=>{ el.classList.add('open'); el.setAttribute('aria-hidden','false'); };
@@ -1868,6 +1948,7 @@
     }
 
     /* ========= Auth gate ========= */
+    let currentAdminData = null;
     show(sLoading);
     onAuthStateChanged(auth, async (user)=>{
       if(!user){
@@ -1886,6 +1967,7 @@
           show(sDenied);
           return;
         }
+        currentAdminData = data;
         adminName.textContent = data?.name || (user.email ? user.email.split('@')[0] : 'مشرف');
         avatarUserUid = user.uid;
         loadStoredAvatar(user.uid);
@@ -1930,6 +2012,12 @@
     openSchedules.addEventListener('click', ()=>{ window.location.href = '/admins/adminschedule.html'; });
     openNotifications.addEventListener('click', ()=> openNotificationsPanel(true));
     closeNotifications.addEventListener('click', ()=> closeNotificationsPanel(true));
+
+    openSuggestions.addEventListener('click', openSuggestionsPanel);
+    closeSuggestions.addEventListener('click', ()=> closeSheet(suggestionsSheet));
+    closeSuggestionDetail.addEventListener('click', ()=> closeModal(suggestionDetailModal));
+    suggestionDetailModal.addEventListener('click', (e)=> { if (e.target === suggestionDetailModal) closeModal(suggestionDetailModal); });
+    suggestBtn.addEventListener('click', ()=> feedback.open());
 
     // ===== Notification Admin Form =====
     const openNotifFormBtn    = document.getElementById('openNotifForm');
@@ -2037,6 +2125,85 @@
 
     function escNotif(str) {
       return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    /* ========= Suggestions / reports inbox ========= */
+    function openSuggestionsPanel(){
+      openSheet(suggestionsSheet);
+      loadSuggestions();
+    }
+
+    async function loadSuggestions(){
+      suggestionsList.innerHTML = '<div class="muted" style="padding:4px 0;">جارٍ التحميل...</div>';
+      try {
+        const q = query(collection(db, 'suggestions'), orderBy('createdAt', 'desc'), limit(100));
+        const snap = await getDocs(q);
+        if (snap.empty) {
+          suggestionsList.innerHTML = '<div class="muted">لا توجد اقتراحات أو بلاغات بعد.</div>';
+          return;
+        }
+        const stack = document.createElement('div');
+        snap.forEach(d => {
+          const sData = d.data() || {};
+          const isReport = sData.type === 'report';
+          const date = sData.createdAt?.toDate ? sData.createdAt.toDate() : null;
+          const card = document.createElement('div');
+          card.className = 'sugg-card' + (sData.isRead ? '' : ' unread');
+          card.innerHTML = `
+            <div class="sugg-card-top">
+              <div class="sugg-card-who">
+                ${sData.isRead ? '' : '<span class="sugg-unread-dot" aria-hidden="true"></span>'}
+                <span class="sugg-card-name">${escNotif(sData.createdByName || '—')}</span>
+              </div>
+              <span class="sugg-badge ${isReport ? 'report' : 'suggestion'}">${isReport ? 'بلاغ' : 'اقتراح'}</span>
+            </div>
+            <div class="sugg-card-preview">${escNotif(sData.message || '')}</div>
+            <div class="sugg-card-date">${date ? fmtDateTime(date) : ''}</div>
+          `;
+          card.addEventListener('click', () => openSuggestionDetail(d.id, sData, card));
+          stack.appendChild(card);
+        });
+        suggestionsList.innerHTML = '';
+        suggestionsList.appendChild(stack);
+      } catch (e) {
+        console.error('[suggestions] load failed:', e);
+        suggestionsList.innerHTML = '<div class="muted">تعذّر تحميل القائمة.</div>';
+      }
+    }
+
+    async function openSuggestionDetail(id, sData, cardEl){
+      const isReport = sData.type === 'report';
+      const date = sData.createdAt?.toDate ? sData.createdAt.toDate() : null;
+      suggestionDetailBody.innerHTML = `
+        <div class="sugg-detail-row">
+          <span class="sugg-detail-label">النوع</span>
+          <span class="sugg-badge ${isReport ? 'report' : 'suggestion'}" style="width:fit-content;">${isReport ? 'بلاغ' : 'اقتراح'}</span>
+        </div>
+        <div class="sugg-detail-row">
+          <span class="sugg-detail-label">اسم المرسل</span>
+          <span class="sugg-detail-value">${escNotif(sData.createdByName || '—')}</span>
+        </div>
+        <div class="sugg-detail-row">
+          <span class="sugg-detail-label">تاريخ الإرسال</span>
+          <span class="sugg-detail-value">${date ? fmtDateTime(date) : '—'}</span>
+        </div>
+        <div class="sugg-detail-row">
+          <span class="sugg-detail-label">الرسالة</span>
+          <div class="sugg-detail-message">${escNotif(sData.message || '')}</div>
+        </div>
+      `;
+      openModal(suggestionDetailModal);
+
+      if (!sData.isRead) {
+        try {
+          await updateDoc(doc(db, 'suggestions', id), { isRead: true });
+          sData.isRead = true;
+          cardEl?.classList.remove('unread');
+          cardEl?.querySelector('.sugg-unread-dot')?.remove();
+        } catch (e) {
+          console.error('[suggestions] mark read failed:', e);
+        }
+      }
     }
 
     async function loadCurrentNotif() {

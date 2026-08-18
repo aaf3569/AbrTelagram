@@ -719,6 +719,12 @@
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
                         </span>
                     </button>
+                    <button id="suggestBtn" class="btn ghost" type="button">
+                        <span>اقتراح / بلاغ</span>
+                        <span class="icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                        </span>
+                    </button>
                     <div id="telegramSettingsSlot"></div>
                     <button id="logoutBtn" class="btn ghost" type="button">تسجيل الخروج</button>
                 </div>
@@ -954,8 +960,9 @@
         import { mountTelegramSettings } from "/shared/telegram-settings.js";
         import { initNotificationPopup } from "/shared/notification-popup.js";
         import { mountAttendanceSheet } from "/shared/attendance.js";
+        import { mountFeedbackSheet } from "/shared/feedback.js";
 
-        
+
 
         const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
         let db;
@@ -970,6 +977,12 @@
             db,
             auth,
             onSaved: () => { show(sDash); }
+        });
+
+        const feedback = mountFeedbackSheet({
+            db,
+            auth,
+            getUserName: () => currentUserData?.name || ''
         });
 
         /* ========= Static Class Options ========= */
@@ -994,6 +1007,7 @@
         const g11List = document.getElementById('g11List');
         const g12List = document.getElementById('g12List');
         const logoutBtn = document.getElementById('logoutBtn');
+        const suggestBtn = document.getElementById('suggestBtn');
         const teacherScheduleBtn = document.getElementById('teacherScheduleBtn');
         const adminScheduleEditBtn = document.getElementById('adminScheduleEditBtn');
         const morningLateBtn = document.getElementById('morningLateBtn');
@@ -3510,6 +3524,9 @@
         /* ========= Attendance log editing now goes through the shared
            attendance module (attendance.openForEdit) instead of a separate
            local editor, so it always matches the attendance-taking UI. ========= */
+
+        /* ========= Suggest / Report ========= */
+        suggestBtn.addEventListener('click', ()=> feedback.open());
 
         /* ========= Logout ========= */
         logoutBtn.addEventListener('click', async ()=>{

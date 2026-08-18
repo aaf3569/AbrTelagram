@@ -962,6 +962,31 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
+    /* ---------- suggestions ---------- */
+    /* "Suggest / Report" button on every hub page (shared/feedback.js). */
+    match /suggestions/{id} {
+      allow read: if isAdmin();
+
+      allow create: if isTeacherSupervisorOrAdmin()
+        && (request.resource.data.type in ['report', 'suggestion'])
+        && nonEmptyString(request.resource.data.message)
+        && (request.resource.data.message.size() <= 4000)
+        && request.resource.data.createdByUid == request.auth.uid
+        && (request.resource.data.createdByName is string)
+        && (!('isRead' in request.resource.data) || request.resource.data.isRead == false)
+        && (
+          !('createdAt' in request.resource.data)
+          || request.resource.data.createdAt is timestamp
+        );
+
+      // Admins may only flip the read state, not rewrite someone's report.
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).changedKeys().hasOnly(['isRead'])
+        && (request.resource.data.isRead is bool);
+
+      allow delete: if isAdmin();
+    }
+
     /* ---------- siteLogs ---------- */
     match /siteLogs/{logId} {
       allow read: if isAdmin();
