@@ -1407,7 +1407,8 @@
     function lessonTimeLabel(idx){
       const t = LESSON_TIMES[idx-1];
       if(!t) return '—';
-      return `${to12HourLabel(t.start)} - ${to12HourLabel(t.end)}`;
+      // Read right-to-left in Arabic: end time first, then start time.
+      return `${to12HourLabel(t.end)} - ${to12HourLabel(t.start)}`;
     }
 
     function safeText(s){

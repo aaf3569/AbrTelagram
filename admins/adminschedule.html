@@ -1696,7 +1696,8 @@
       if (index < 0 || index >= FIXED_LESSON_COUNT) return "";
       const time = lessonTimes[index];
       if (!time) return "";
-      return `${to12HourLabel(time.start)} - ${to12HourLabel(time.end)}`;
+      // Read right-to-left in Arabic: end time first, then start time.
+      return `${to12HourLabel(time.end)} - ${to12HourLabel(time.start)}`;
     }
 
     async function saveLessonTime(index, startTime, endTime) {
@@ -2280,7 +2281,7 @@
         h.innerHTML = `
           <div class="lesson-word">الحصة</div>
           <div class="lesson-name">${lessonNameOnly(i)}</div>
-          <div class="time-display">${to12HourLabel(t.start)} - ${to12HourLabel(t.end)}</div>
+          <div class="time-display">${to12HourLabel(t.end)} - ${to12HourLabel(t.start)}</div>
         `;
         if(timeIndex < FIXED_LESSON_COUNT){
           h.addEventListener('click', ()=> openMainTimeEditor(timeIndex));
