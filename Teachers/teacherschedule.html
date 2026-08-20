@@ -293,6 +293,30 @@
       .gth, .gcell { animation: none; }
     }
 
+    /* Skeleton loader — shown in containerMain the instant a view starts
+       loading (today/week), in place of the real .table/.compact-table/.grid
+       markup it renders into, so the layout doesn't jump once real data
+       arrives a moment later. */
+    .skel {
+      background: linear-gradient(100deg, rgba(2,43,66,.08) 30%, rgba(2,43,66,.15) 45%, rgba(2,43,66,.08) 60%);
+      background-size: 250% 100%;
+      animation: skelShimmer 1.4s ease-in-out infinite;
+      border-radius: 6px;
+    }
+    @keyframes skelShimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .skel { animation: none; }
+    }
+    .skel-line { height: 14px; width: 70%; margin: 0 auto; }
+    .skel-line.wide { width: 90%; }
+    .skel-line.short { width: 45%; height: 11px; }
+    .skel-header { grid-column: 1 / -1; height: 44px; border-radius: var(--radius-sm); }
+    .skel-th { height: 40px; border-radius: var(--radius-sm); }
+    .skel-cell { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
+
     /* Status */
     .status-message {
       padding: 12px 16px; border-radius: var(--radius-sm); background: var(--primary-light);
@@ -1769,6 +1793,72 @@
       return dayMap ? (dayMap.get(Number(lesson)) || null) : null;
     }
 
+    /* ========= Skeleton loaders ========= */
+    // Mirrors the real .table/.compact-table shape from renderTodayTable()
+    // below, filled with shimmering placeholder blocks instead of data, so
+    // both the desktop and mobile layouts already exist (CSS toggles which
+    // one shows) and nothing visibly jumps once the real render replaces it.
+    function renderTodaySkeleton(){
+      containerMain.innerHTML = '';
+
+      const wrap = document.createElement('div');
+      wrap.className = 'table';
+      wrap.innerHTML = `
+        <div class="skel skel-header"></div>
+        <div class="skel skel-th"></div>
+        <div class="skel skel-th"></div>
+      `;
+      for(let i=1;i<=FIXED_LESSON_COUNT;i++){
+        wrap.innerHTML += `
+          <div class="cell skel-cell"><div class="skel skel-line wide"></div><div class="skel skel-line short"></div></div>
+          <div class="cell skel-cell"><div class="skel skel-line"></div></div>
+        `;
+      }
+
+      const compactWrap = document.createElement('div');
+      compactWrap.className = 'compact-table';
+      compactWrap.innerHTML = `
+        <div class="skel skel-header"></div>
+        <div class="skel skel-th"></div>
+        <div class="skel skel-th"></div>
+      `;
+      for(let i=1;i<=FIXED_LESSON_COUNT;i++){
+        const row = document.createElement('div');
+        row.className = 'compact-row';
+        row.innerHTML = `
+          <div class="compact-cell skel-cell"><div class="skel skel-line wide"></div><div class="skel skel-line short"></div></div>
+          <div class="compact-cell skel-cell"><div class="skel skel-line"></div></div>
+        `;
+        compactWrap.appendChild(row);
+      }
+
+      containerMain.appendChild(wrap);
+      containerMain.appendChild(compactWrap);
+    }
+
+    // Mirrors renderWeekAdminStyle()'s .grid-wrap > .grid shape.
+    function renderWeekSkeleton(){
+      containerMain.innerHTML = '';
+      const wrap = document.createElement('div');
+      wrap.className = 'grid-wrap';
+      const grid = document.createElement('div');
+      grid.className = 'grid';
+      grid.style.gridTemplateColumns = `140px repeat(${FIXED_LESSON_COUNT}, minmax(130px, 1fr))`;
+      wrap.appendChild(grid);
+      containerMain.appendChild(wrap);
+
+      grid.innerHTML += `<div class="gth skel skel-th"></div>`.repeat(1);
+      for(let i=1;i<=FIXED_LESSON_COUNT;i++){
+        grid.innerHTML += `<div class="gth skel skel-th"></div>`;
+      }
+      for(let r=0;r<5;r++){
+        grid.innerHTML += `<div class="gcell skel-cell"><div class="skel skel-line short"></div></div>`;
+        for(let i=1;i<=FIXED_LESSON_COUNT;i++){
+          grid.innerHTML += `<div class="gcell skel-cell"><div class="skel skel-line"></div></div>`;
+        }
+      }
+    }
+
     /* ========= Renders ========= */
     function renderTodayTable(dayISO, entriesByLesson){
       containerMain.innerHTML = '';
@@ -2164,6 +2254,7 @@
       clearStatus();
       setLoading(btnToday, true);
       currentView = 'today';
+      renderTodaySkeleton();
 
       const today = kuwaitTodayISO();
       let byLesson = new Map();
@@ -2569,6 +2660,7 @@
       clearStatus();
       setLoading(btnWeek, true);
       currentView = 'week';
+      renderWeekSkeleton();
 
       try{
         const map = await getWeekMapForTeacher(uid);
