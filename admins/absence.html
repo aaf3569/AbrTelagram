@@ -240,6 +240,39 @@
     .export-loading.active { display: flex; }
     .export-loading .spinner { width: 20px; height: 20px; border-width: 3px; }
 
+    /* Stats cards */
+    .stats-card{
+      width:100%; background:#fff; border:1px solid var(--border); border-radius:var(--radius-lg);
+      padding:16px; box-shadow: var(--shadow-1); display:flex; flex-direction:column; gap:12px;
+    }
+    .stats-header{ display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; }
+    .stats-title{ font-weight:900; color:var(--primary); font-size:1rem; }
+    .stats-grid{ display:grid; grid-template-columns:repeat(auto-fit, minmax(96px, 1fr)); gap:10px; }
+    .stat-card{
+      background:var(--page); border:1px solid var(--border); border-radius:var(--radius);
+      padding:12px 8px; text-align:center; display:flex; flex-direction:column; gap:4px;
+    }
+    .stat-num{ font-size:1.3rem; font-weight:900; color:var(--primary); line-height:1; }
+    .stat-label{ font-size:.78rem; color:var(--muted); font-weight:700; }
+    .stat-card.present .stat-num{ color:var(--green); }
+    .stat-card.absent .stat-num{ color:var(--red); }
+    .stat-card.late .stat-num{ color:var(--yellow); }
+    .stat-card.rate .stat-num{ color:var(--blue); }
+
+    /* Compact live stat strip inside the records sheet — reflects whatever
+       filters (time/lesson/class) are currently applied, regardless of
+       which status tab is active. */
+    .mini-stats{ display:flex; gap:8px; }
+    .mini-stat{
+      flex:1; background:#fff; border:1px solid var(--border); border-radius:var(--radius);
+      padding:10px 6px; text-align:center; box-shadow: var(--shadow-1);
+    }
+    .mini-stat .mini-num{ font-size:1.1rem; font-weight:900; line-height:1; }
+    .mini-stat .mini-label{ font-size:.76rem; color:var(--muted); font-weight:700; margin-top:2px; }
+    .mini-stat.present .mini-num{ color:var(--green); }
+    .mini-stat.absent .mini-num{ color:var(--red); }
+    .mini-stat.late .mini-num{ color:var(--yellow); }
+
     /* Responsive */
     @media (max-width: 768px) {
       .export-modal-content { padding:20px; margin:20px; }
@@ -251,6 +284,9 @@
       .date-actions{ width:100%; justify-content:space-between; }
       .export-actions { flex-direction:column; }
       .icon-btn{ width:36px; height:36px; }
+      .stats-grid{ grid-template-columns:repeat(2, 1fr); }
+      .mini-stats{ flex-wrap:wrap; }
+      .mini-stat{ min-width:calc(33% - 6px); }
     }
   </style>
 
@@ -361,6 +397,18 @@
       </div>
 
       <section id="stateHome" class="state panel" aria-label="الغياب">
+        <div class="stats-card" id="homeStatsCard" style="margin-bottom:18px;">
+          <div class="stats-header">
+            <div class="stats-title">نظرة عامة على كل المدرسة</div>
+          </div>
+          <div class="filters-bar stats-filter-row" id="homeStatsFilterBar">
+            <button class="filter-chip active" data-stats-filter="today" type="button">اليوم</button>
+            <button class="filter-chip" data-stats-filter="thisWeek" type="button">هذا الأسبوع</button>
+            <button class="filter-chip" data-stats-filter="thisMonth" type="button">هذا الشهر</button>
+            <button class="filter-chip" data-stats-filter="thisYear" type="button">هذه السنة</button>
+          </div>
+          <div class="stats-grid" id="homeStatsGrid"></div>
+        </div>
         <div class="center" style="text-align:center; display:flex; flex-direction:column; gap:8px;">
           <div style="font-size:1.18rem; font-weight:900; color:var(--primary);">تدقيق الغياب</div>
           <div class="muted" style="font-size:.92rem;">اختر الصف لاستعراض سجلات الغياب والتأخير والحضور بالتفصيل</div>
@@ -382,6 +430,18 @@
       <h3 id="classesTitle" class="sheet-title">—</h3>
     </div>
     <div class="sheet-body">
+      <div class="stats-card" id="gradeStatsCard">
+        <div class="stats-header">
+          <div class="stats-title" id="gradeStatsTitle">إحصائيات الصف</div>
+        </div>
+        <div class="filters-bar stats-filter-row" id="gradeStatsFilterBar">
+          <button class="filter-chip active" data-stats-filter="today" type="button">اليوم</button>
+          <button class="filter-chip" data-stats-filter="thisWeek" type="button">هذا الأسبوع</button>
+          <button class="filter-chip" data-stats-filter="thisMonth" type="button">هذا الشهر</button>
+          <button class="filter-chip" data-stats-filter="thisYear" type="button">هذه السنة</button>
+        </div>
+        <div class="stats-grid" id="gradeStatsGrid"></div>
+      </div>
       <div id="classesList" class="list"></div>
     </div>
   </section>
@@ -393,6 +453,11 @@
       <h3 id="absencesTitle" class="sheet-title">—</h3>
     </div>
     <div class="sheet-body">
+      <div class="mini-stats" id="miniStats">
+        <div class="mini-stat present"><div class="mini-num" id="miniPresent">٠</div><div class="mini-label">حضور</div></div>
+        <div class="mini-stat absent"><div class="mini-num" id="miniAbsent">٠</div><div class="mini-label">غياب</div></div>
+        <div class="mini-stat late"><div class="mini-num" id="miniLate">٠</div><div class="mini-label">تأخير</div></div>
+      </div>
       <div class="status-toggle" id="statusToggle">
         <button class="status-btn active absent" data-status="absent" type="button">الغياب</button>
         <button class="status-btn late" data-status="late" type="button">التأخير</button>
@@ -489,6 +554,14 @@
     const applyRangeBtn = document.getElementById('applyRange');
     const clearRangeBtn = document.getElementById('clearRange');
     const classesFilterBar = document.getElementById('classesFilterBar');
+    const homeStatsFilterBar = document.getElementById('homeStatsFilterBar');
+    const homeStatsGrid = document.getElementById('homeStatsGrid');
+    const gradeStatsFilterBar = document.getElementById('gradeStatsFilterBar');
+    const gradeStatsGrid = document.getElementById('gradeStatsGrid');
+    const gradeStatsTitle = document.getElementById('gradeStatsTitle');
+    const miniPresent = document.getElementById('miniPresent');
+    const miniAbsent = document.getElementById('miniAbsent');
+    const miniLate = document.getElementById('miniLate');
 
     backBtn.addEventListener('click', () => { window.location.href = '/admins/adminpage.html'; });
 
@@ -502,6 +575,8 @@
     let customStart = null, customEnd = null; // ISO date strings ('YYYY-MM-DD')
     let cachedStudents = [];
     let cachedRows = [];
+    let statsTimeFilter = 'today'; // shared by the home + grade stats cards
+    let statsRequestId = 0; // guards against a slow fetch overwriting a newer one
 
     // Helper functions
     const show = (el) => {
@@ -677,6 +752,85 @@
       return { students, rows };
     }
 
+    // ---------- Stats cards (home overview + per-grade) ----------
+    function computeStats(students, rows) {
+      const present = rows.filter(r => r.status === 'present').length;
+      const absent = rows.filter(r => r.status === 'absent').length;
+      const late = rows.filter(r => r.status === 'late').length;
+      const recorded = present + absent + late;
+      const rate = recorded ? Math.round((present / recorded) * 100) : 0;
+      return { total: students.length, present, absent, late, rate };
+    }
+
+    function renderStatCards(grid, stats) {
+      grid.innerHTML = `
+        <div class="stat-card"><div class="stat-num">${toArabicDigits(stats.total)}</div><div class="stat-label">الطلاب</div></div>
+        <div class="stat-card present"><div class="stat-num">${toArabicDigits(stats.present)}</div><div class="stat-label">حضور</div></div>
+        <div class="stat-card absent"><div class="stat-num">${toArabicDigits(stats.absent)}</div><div class="stat-label">غياب</div></div>
+        <div class="stat-card late"><div class="stat-num">${toArabicDigits(stats.late)}</div><div class="stat-label">تأخير</div></div>
+        <div class="stat-card rate"><div class="stat-num">${toArabicDigits(stats.rate)}٪</div><div class="stat-label">نسبة الحضور</div></div>
+      `;
+    }
+
+    function renderStatsLoading(grid) {
+      grid.innerHTML = `
+        <div class="stat-card"><div class="stat-num">…</div><div class="stat-label">الطلاب</div></div>
+        <div class="stat-card present"><div class="stat-num">…</div><div class="stat-label">حضور</div></div>
+        <div class="stat-card absent"><div class="stat-num">…</div><div class="stat-label">غياب</div></div>
+        <div class="stat-card late"><div class="stat-num">…</div><div class="stat-label">تأخير</div></div>
+        <div class="stat-card rate"><div class="stat-num">…</div><div class="stat-label">نسبة الحضور</div></div>
+      `;
+    }
+
+    async function loadHomeStats() {
+      const myRequestId = ++statsRequestId;
+      renderStatsLoading(homeStatsGrid);
+      try {
+        const { startISO, endISO } = rangeForFilter(statsTimeFilter);
+        const { students, rows } = await fetchAttendanceForScope({ type: 'all' }, startISO, endISO);
+        if (myRequestId !== statsRequestId) return; // a newer request/filter change superseded this one
+        renderStatCards(homeStatsGrid, computeStats(students, rows));
+      } catch (e) {
+        console.error('[absence] home stats failed', e);
+        if (myRequestId === statsRequestId) homeStatsGrid.innerHTML = `<div class="muted">تعذّر تحميل الإحصائيات.</div>`;
+      }
+    }
+
+    async function loadGradeStats(grade) {
+      const titleMap = { 10: 'الصف العاشر', 11: 'الصف الحادي عشر', 12: 'الصف الثاني عشر' };
+      gradeStatsTitle.textContent = `إحصائيات ${titleMap[grade]}`;
+      const myRequestId = ++statsRequestId;
+      renderStatsLoading(gradeStatsGrid);
+      try {
+        const { startISO, endISO } = rangeForFilter(statsTimeFilter);
+        const { students, rows } = await fetchAttendanceForScope({ type: 'grade', grade }, startISO, endISO);
+        if (myRequestId !== statsRequestId) return;
+        renderStatCards(gradeStatsGrid, computeStats(students, rows));
+      } catch (e) {
+        console.error('[absence] grade stats failed', e);
+        if (myRequestId === statsRequestId) gradeStatsGrid.innerHTML = `<div class="muted">تعذّر تحميل الإحصائيات.</div>`;
+      }
+    }
+
+    // Both stats cards share one time filter — picking a period in either
+    // updates both chip rows and refreshes whichever card(s) are visible.
+    function setStatsTimeFilter(key) {
+      statsTimeFilter = key;
+      document.querySelectorAll('.stats-filter-row .filter-chip').forEach(c => c.classList.toggle('active', c.dataset.statsFilter === key));
+      if (sHome.classList.contains('active')) loadHomeStats();
+      if (classesSheet.classList.contains('open')) loadGradeStats(selectedGrade);
+    }
+    homeStatsFilterBar.addEventListener('click', (e) => {
+      const b = e.target.closest('.filter-chip');
+      if (!b) return;
+      setStatsTimeFilter(b.dataset.statsFilter);
+    });
+    gradeStatsFilterBar.addEventListener('click', (e) => {
+      const b = e.target.closest('.filter-chip');
+      if (!b) return;
+      setStatsTimeFilter(b.dataset.statsFilter);
+    });
+
     // Auth gate
     onAuthStateChanged(auth, async (user) => {
       if (!user) { show(sNotLog); return; }
@@ -689,6 +843,7 @@
           return;
         }
         show(sHome);
+        loadHomeStats();
       } catch (e) {
         console.error(e);
         show(sDenied);
@@ -703,6 +858,7 @@
         classesTitle.textContent = titleMap[selectedGrade];
         renderClassesForGrade(selectedGrade);
         openSheet(classesSheet);
+        loadGradeStats(selectedGrade);
       });
     });
     document.querySelector('#stateHome .btn[data-scope-all]').addEventListener('click', () => {
@@ -804,7 +960,24 @@
       absCount.textContent = `${toArabicDigits(n)} ${label}`;
     }
 
+    // Live counts across all three statuses at once, reflecting every filter
+    // except the status tab itself — reuses the already-fetched cachedRows,
+    // so it updates instantly as lesson/class/time filters change.
+    function renderMiniStats() {
+      const base = cachedRows.filter(r => {
+        const lessonOK = (lessonFilter === '__all') ? true : ((+r.lessonIndex || 0) === lessonFilter);
+        const classOK = (currentScope?.type !== 'class')
+          ? (classFilter === '__all' ? true : ((r.class || '') === classFilter))
+          : true;
+        return lessonOK && classOK;
+      });
+      miniPresent.textContent = toArabicDigits(base.filter(r => r.status === 'present').length);
+      miniAbsent.textContent = toArabicDigits(base.filter(r => r.status === 'absent').length);
+      miniLate.textContent = toArabicDigits(base.filter(r => r.status === 'late').length);
+    }
+
     function renderFilteredList() {
+      renderMiniStats();
       const filtered = cachedRows.filter(r => {
         const statusOK = (r.status === statusFilter);
         const lessonOK = (lessonFilter === '__all') ? true : ((+r.lessonIndex || 0) === lessonFilter);
