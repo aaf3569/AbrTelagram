@@ -151,7 +151,35 @@
     .modal-title {
       display: flex;
       flex-direction: column;
+      align-items: center;
+      text-align: center;
       gap: 4px;
+      flex: 1;
+    }
+
+    /* Compact single-line teacher display — was a full bordered .section
+       with a header row + pill chips, way more visual weight than "one
+       name" needs. */
+    .teacher-line {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 10px 14px;
+      border-radius: 12px;
+      background: var(--chip);
+      font-size: 0.92rem;
+      font-weight: 800;
+      color: var(--text);
+    }
+    .teacher-line .teacher-label {
+      color: var(--muted);
+      font-weight: 900;
+      flex-shrink: 0;
+    }
+    .teacher-line .teacher-name {
+      color: var(--primary);
+      font-weight: 900;
     }
 
     .modal-title b {
@@ -995,7 +1023,14 @@
       display: none;
     }
     .tab-content.active {
-      display: block;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    #originalModalContent {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
     }
 
     /* Mobile tweaks */
@@ -2039,7 +2074,7 @@
       const currentCellInfo = { className, lessonIndex, cell };
 
       if (mode === 'missed') {
-        modalTitle.textContent = `${niceClass} • الحصة ${niceLesson}`;
+        modalTitle.textContent = `${niceClass} | الحصة ${niceLesson}`;
         modalSubtitle.textContent = `التاريخ: ${niceDate}`;
 
         const expectedNames = [...cell.expectedTeacherNames].filter(Boolean);
@@ -2170,7 +2205,7 @@
       } else {
         if (cell.count <= 0) return;
 
-        modalTitle.textContent = `${niceClass} • الحصة ${niceLesson}`;
+        modalTitle.textContent = `${niceClass} | الحصة ${niceLesson}`;
         modalSubtitle.textContent = `التاريخ: ${niceDate}`;
 
         modalBody.innerHTML = `
@@ -2180,14 +2215,10 @@
           </div>
 
           <div class="tab-content active" id="panelAbsent">
-            <div class="section">
-              <div class="sec-title">
-                <span>المعلّم</span>
-                <span style="font-weight:900; color:var(--red)">${toArabicDigits(cell.count)} طالب</span>
-              </div>
-              <div class="chips" id="teacherChips">
-                <span class="chip">جاري التحميل…</span>
-              </div>
+            <div class="teacher-line" id="teacherLine">
+              <i class="fas fa-chalkboard-teacher"></i>
+              <span class="teacher-label">المعلّم:</span>
+              <span class="teacher-name" id="teacherChips">جاري التحميل…</span>
             </div>
 
             <div class="section">
@@ -2231,7 +2262,7 @@
               <div class="meta">متأخر</div>
             `;
             row.addEventListener('click', () => {
-              window.location.href = `students.html?studentId=${encodeURIComponent(student.id)}&class=${encodeURIComponent(student.className || className)}`;
+              window.location.href = `students.html?student=${encodeURIComponent(student.id)}&class=${encodeURIComponent(student.className || className)}`;
             });
             getStudentWarningLevel(student.id).then(w => row.classList.add(`warning-${w}`)).catch(() => row.classList.add('warning-0'));
             latesList.appendChild(row);
@@ -2261,7 +2292,7 @@
           row.addEventListener('click', () => {
             const studentId = row.dataset.studentId;
             const studentClass = row.dataset.studentClass || "";
-            window.location.href = `students.html?studentId=${encodeURIComponent(studentId)}&class=${encodeURIComponent(studentClass)}`;
+            window.location.href = `students.html?student=${encodeURIComponent(studentId)}&class=${encodeURIComponent(studentClass)}`;
           });
 
           stWrap.appendChild(row);
@@ -2275,19 +2306,13 @@
         }
 
         const teacherWrap = modalBody.querySelector('#teacherChips');
-        teacherWrap.innerHTML = '';
         const uids = [...cell.teacherUids].filter(Boolean);
         if (uids.length === 0){
-          teacherWrap.innerHTML = `<span class="chip">غير محدد</span>`;
+          teacherWrap.textContent = 'غير محدد';
         } else {
           const tnames = await Promise.all(uids.map(uid => getTeacherName(uid)));
           const uniq = [...new Set(tnames.filter(Boolean))];
-          uniq.forEach(n => {
-            const chip = document.createElement('span');
-            chip.className = 'chip';
-            chip.textContent = n;
-            teacherWrap.appendChild(chip);
-          });
+          teacherWrap.textContent = uniq.length ? uniq.join('، ') : 'غير محدد';
         }
       }
 
