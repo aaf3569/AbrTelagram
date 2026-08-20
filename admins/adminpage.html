@@ -1221,6 +1221,7 @@
     import { mountTelegramSettings } from "/shared/telegram-settings.js";
     import { initNotificationPopup } from "/shared/notification-popup.js";
     import { mountFeedbackSheet } from "/shared/feedback.js";
+    import { startPresenceHeartbeat } from "/shared/presence.js";
     import { mountAttendanceSheet } from "/shared/attendance.js";
 
     
@@ -2119,6 +2120,7 @@
         renderMyClasses(data?.classes);
         show(sAdmin);
         initNotificationPopup(db, { uid: user.uid, name: data?.name || '' });
+        startPresenceHeartbeat(db, user.uid);
         if(window.location.hash === '#admins') openAdminsPanel();
         if(window.location.hash === NOTIFICATIONS_HASH) openNotificationsPanel(false);
       }catch(e){ console.error(e); show(sDenied); }

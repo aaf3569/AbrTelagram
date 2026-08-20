@@ -298,6 +298,19 @@ service cloud.firestore {
       allow get, list: if isTeacherSupervisorOrAdmin();
     }
 
+    /* ---------- presence ---------- */
+    /* One doc per signed-in user (shared/presence.js), holding only when
+       they were last seen. A user may only ever write their own doc, and
+       only that one field — this is a heartbeat, not profile data. */
+    match /presence/{uid} {
+      allow read: if isTeacherSupervisorOrAdmin();
+      allow create, update: if signedIn()
+        && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['lastSeenAt'])
+        && request.resource.data.lastSeenAt is timestamp;
+      allow delete: if false;
+    }
+
     /* ---------- teachers ---------- */
     match /teachers/{uid} {
       allow get, list: if isTeacherOrAdmin();

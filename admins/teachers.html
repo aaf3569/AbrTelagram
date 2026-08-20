@@ -76,6 +76,11 @@
     .teacher-item:hover{transform:translateY(-2px);box-shadow:0 16px 32px rgba(3,60,84,.18);border-color:rgba(3,60,84,.35)}
     .teacher-sub{font-size:.86rem;color:#6b7f9f;font-weight:700}
     .teachers-separator{height:10px}
+    .presence-dot{width:9px;height:9px;border-radius:50%;background:#c3ccd6;flex-shrink:0;box-shadow:0 0 0 2px #fff}
+    .presence-dot.online{background:#22c55e}
+    .presence-text{font-weight:700}
+    .profile-lastseen{display:flex;align-items:center;gap:6px}
+    .profile-lastseen .presence-dot{box-shadow:0 0 0 2px rgba(255,255,255,.9)}
     .sheet{position:fixed;inset:0;z-index:50;background:var(--page);display:flex;flex-direction:column;transform:translateX(100%);transition:transform .28s cubic-bezier(.22,.7,.25,1)}
     .sheet.open{transform:translateX(0)}
     .sheet-header{background:#fff;border-bottom:1px solid var(--border);padding:14px 12px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10}
@@ -468,6 +473,7 @@
             <div class="profile-name-wrap">
               <div id="profileName" class="profile-name">—</div>
               <div id="profileEmail" class="profile-email">—</div>
+              <div class="profile-email profile-lastseen"><span id="profileLastSeenDot" class="presence-dot" aria-hidden="true"></span><span id="profileLastSeenText">—</span></div>
             </div>
           </div>
           <div class="profile-badges">
@@ -561,6 +567,7 @@
             <div class="profile-name-wrap">
               <div id="adminProfileName" class="profile-name">—</div>
               <div id="adminProfileCivilId" class="profile-email">—</div>
+              <div class="profile-email profile-lastseen"><span id="adminLastSeenDot" class="presence-dot" aria-hidden="true"></span><span id="adminLastSeenText">—</span></div>
             </div>
           </div>
         </section>
@@ -710,6 +717,7 @@
     import { initializeApp, getApp, getApps } from "/shared/firebase.js";
     import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signOut, EmailAuthProvider, reauthenticateWithCredential } from "/shared/firebase.js";
     import { initializeFirestore, persistentSingleTabManager, collection, getDocs, query, where, doc, getDoc, setDoc, updateDoc, deleteDoc, deleteField, serverTimestamp } from "/shared/firebase.js";
+    import { startPresenceHeartbeat, watchPresence } from "/shared/presence.js";
 
 
     const app=getApps().length?getApp():initializeApp(firebaseConfig);
@@ -754,6 +762,8 @@
     const teacherAvatar=document.getElementById('teacherAvatar');
     const profileName=document.getElementById('profileName');
     const profileEmail=document.getElementById('profileEmail');
+    const profileLastSeenDot=document.getElementById('profileLastSeenDot');
+    const profileLastSeenText=document.getElementById('profileLastSeenText');
     const profileRolePill=document.getElementById('profileRolePill');
     const profileSupervisorPill=document.getElementById('profileSupervisorPill');
     const vEdTName=document.getElementById('vEdTName');
@@ -839,6 +849,8 @@
     const adminAvatar=document.getElementById('adminAvatar');
     const adminProfileName=document.getElementById('adminProfileName');
     const adminProfileCivilId=document.getElementById('adminProfileCivilId');
+    const adminLastSeenDot=document.getElementById('adminLastSeenDot');
+    const adminLastSeenText=document.getElementById('adminLastSeenText');
     const edAName=document.getElementById('edAName');
     const edAEmail=document.getElementById('edAEmail');
     const edAPhone=document.getElementById('edAPhone');
@@ -1076,6 +1088,7 @@
 
     let selectedSubject=null;
     let currentTeacher={uid:null,data:null};
+    let unsubscribeTeacherPresence=null;
     let teacherEditMode=false;
     let displayedPasswordRevealed=false;
     let isCurrentUserAdmin=false;
@@ -1377,6 +1390,7 @@
     }
     closeSubject.addEventListener('click',()=>{
       closeSheet(subjectSheet);
+      clearTeacherListPresence();
       Array.from(subjectsList.children).forEach(b=>b.classList.remove('subject-selected'));
     });
 
@@ -1388,19 +1402,30 @@
     }
     closeAdmins.addEventListener('click',()=>{
       closeSheet(adminsSheet);
+      clearAdminListPresence();
       openAdminsTop.classList.remove('subject-selected');
     });
-    function closeAdminView(){ closeSheet(adminSheet); }
+    function closeAdminView(){
+      if(unsubscribeAdminPresence){ unsubscribeAdminPresence(); unsubscribeAdminPresence=null; }
+      closeSheet(adminSheet);
+    }
     closeAdmin.addEventListener('click', closeAdminView);
 
     let currentAdmin={uid:null,data:null};
+    let unsubscribeAdminPresence=null;
     function renderAdminsListEmpty(){
       const empty=document.createElement('div');
       empty.className='teacher-item';
       empty.textContent='لا يوجد مشرفون بعد.';
       adminsList.appendChild(empty);
     }
+    let adminListPresenceUnsubs=[];
+    function clearAdminListPresence(){
+      adminListPresenceUnsubs.forEach(unsub=>unsub());
+      adminListPresenceUnsubs=[];
+    }
     async function loadAdmins(){
+      clearAdminListPresence();
       adminsList.innerHTML='';
       try{
         const q=query(collection(db,'teachers'), where('role','==','admin'));
@@ -1411,9 +1436,15 @@
           const civilId=getTeacherCivilId(t);
           const el=document.createElement('div');
           el.className='teacher-item';
-          el.innerHTML=`<div><div>${t.name||civilId||t.email||t.uid}</div><div class="teacher-sub">${civilId||t.email||''}</div></div><svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>`;
+          el.innerHTML=`<div><div style="display:flex;align-items:center;gap:8px;"><span class="presence-dot" aria-hidden="true"></span><span>${t.name||civilId||t.email||t.uid}</span></div><div class="teacher-sub">${civilId||t.email||''}<span class="presence-text"></span></div></div><svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>`;
           el.addEventListener('click',()=>openAdminEditor(t.uid));
           adminsList.appendChild(el);
+          const presenceDotEl=el.querySelector('.presence-dot');
+          const presenceTextEl=el.querySelector('.presence-text');
+          adminListPresenceUnsubs.push(watchPresence(db, t.uid, (state)=>{
+            presenceDotEl.classList.toggle('online', state.online);
+            presenceTextEl.textContent = state.label ? ' • '+state.label : '';
+          }));
         });
       }catch(e){
         const err=document.createElement('div');
@@ -1480,6 +1511,11 @@
         cls.forEach(v=>edAClasses.appendChild(makeClassRow(v, updateAdminProfileSummary)));
         setAdminEditMode(false);
         openSheet(adminSheet);
+        if(unsubscribeAdminPresence) unsubscribeAdminPresence();
+        unsubscribeAdminPresence=watchPresence(db, uid, (state)=>{
+          adminLastSeenDot.classList.toggle('online', state.online);
+          adminLastSeenText.textContent=state.label;
+        });
       }catch{
         alert('تعذّر فتح صفحة المشرف.');
       }
@@ -1591,6 +1627,7 @@
       }catch(e){adErr.textContent=e?.message||'تعذّر إنشاء الحساب.';adErr.style.display='block';}
     });
     function closeTeacherView(){
+      if(unsubscribeTeacherPresence){ unsubscribeTeacherPresence(); unsubscribeTeacherPresence=null; }
       if(getRouteTeacherId()){
         clearTeacherRoute();
         syncTeacherRouteMode();
@@ -1705,7 +1742,13 @@
     successModal.addEventListener('click',(e)=>{if(e.target===successModal)closeSuccessModalFn();});
     updateSupervisorCheckboxLabels();
 
+    let teacherListPresenceUnsubs=[];
+    function clearTeacherListPresence(){
+      teacherListPresenceUnsubs.forEach(unsub=>unsub());
+      teacherListPresenceUnsubs=[];
+    }
     async function loadTeachers(subject){
+      clearTeacherListPresence();
       teachersList.innerHTML='';
       try{
         const subjectFilters=getDepartmentSubjectFilters(subject).filter(Boolean);
@@ -1738,13 +1781,20 @@
           const meta=[teacherCivilId||t.email||'', isHead?'رئيس القسم':'مدرس'];
           if(isSupervisor) meta.push(getSupervisorStatusLabel(true, supervisorGrade));
           if(showTeacherSubject) meta.push(teacherSubject);
+          const presenceDotHtml=`<span class="presence-dot" aria-hidden="true"></span>`;
           const nameLine = isHead
-            ? `<div style="display:flex;align-items:center;gap:8px;"><span aria-hidden="true" title="رئيس القسم">👑</span><span>${t.name||teacherCivilId||t.email||t.uid}</span></div>`
-            : `<div>${t.name||teacherCivilId||t.email||t.uid}</div>`;
-          let html=`<div>${nameLine}<div class="teacher-sub">${meta.filter(Boolean).join(' | ')}</div></div>`;
+            ? `<div style="display:flex;align-items:center;gap:8px;">${presenceDotHtml}<span aria-hidden="true" title="رئيس القسم">👑</span><span>${t.name||teacherCivilId||t.email||t.uid}</span></div>`
+            : `<div style="display:flex;align-items:center;gap:8px;">${presenceDotHtml}<span>${t.name||teacherCivilId||t.email||t.uid}</span></div>`;
+          let html=`<div>${nameLine}<div class="teacher-sub">${meta.filter(Boolean).join(' | ')}<span class="presence-text"></span></div></div>`;
           if(isSupervisor){html=`<div style="display:flex;align-items:center;gap:8px;"><span style="color:gold">⭐</span>${html}</div>`;}
           el.innerHTML=html + `<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>`;
           el.addEventListener('click',()=>openTeacherEditor(t.uid,{ syncRoute:true }));teachersList.appendChild(el);
+          const presenceDotEl=el.querySelector('.presence-dot');
+          const presenceTextEl=el.querySelector('.presence-text');
+          teacherListPresenceUnsubs.push(watchPresence(db, t.uid, (state)=>{
+            presenceDotEl.classList.toggle('online', state.online);
+            presenceTextEl.textContent = state.label ? ' • '+state.label : '';
+          }));
         });
       }catch(e){const err=document.createElement('div');err.className='teacher-item';err.textContent='تعذّر تحميل القائمة.';teachersList.appendChild(err);}
     }
@@ -1781,6 +1831,11 @@
         openSheet(teacherSheet);
         if(syncRoute){ setTeacherRoute(uid); }
         syncTeacherRouteMode();
+        if(unsubscribeTeacherPresence) unsubscribeTeacherPresence();
+        unsubscribeTeacherPresence=watchPresence(db, uid, (state)=>{
+          profileLastSeenDot.classList.toggle('online', state.online);
+          profileLastSeenText.textContent=state.label;
+        });
       }catch{alert('تعذّر فتح صفحة المعلّم.');}
     }
 
@@ -1979,6 +2034,7 @@
         const data=snap.exists()?snap.data():{};
         if((data?.role||'').toString().toLowerCase()!=='admin'){isCurrentUserAdmin=false;show(sDenied);return;}
         isCurrentUserAdmin=true;
+        startPresenceHeartbeat(db, user.uid);
         renderSubjects();
         show(sTeachers);
         await applyTeacherRoute();

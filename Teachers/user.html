@@ -960,6 +960,7 @@
         import { mountTelegramSettings } from "/shared/telegram-settings.js";
         import { initNotificationPopup } from "/shared/notification-popup.js";
         import { mountAttendanceSheet } from "/shared/attendance.js";
+        import { startPresenceHeartbeat } from "/shared/presence.js";
         import { mountFeedbackSheet } from "/shared/feedback.js";
 
 
@@ -2652,6 +2653,7 @@
                 show(sDash);
                 initNotificationPopup(db, { uid: user.uid, name: data?.name || '' });
                 startClassHighlightTicker();
+                startPresenceHeartbeat(db, user.uid);
             }catch(e){
                 console.error(e);
                 stopClassHighlightTicker();

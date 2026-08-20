@@ -723,6 +723,7 @@
         /* ========= Firebase ========= */
         import { initializeApp, getApp, getApps } from "/shared/firebase.js";
         import { getAuth, onAuthStateChanged, signOut } from "/shared/firebase.js";
+        import { startPresenceHeartbeat } from "/shared/presence.js";
         import { initializeFirestore, persistentSingleTabManager, doc, getDoc, collection, getDocs, query, where, setDoc, serverTimestamp, writeBatch } from "/shared/firebase.js";
         import { showActionPopup } from "/shared/action-popup.js";
         import { mountTelegramSettings } from "/shared/telegram-settings.js";
@@ -1821,6 +1822,7 @@
                 show(sDash);
                 initNotificationPopup(db, { uid: user.uid, name: data?.name || '' });
                 startClassHighlightTicker();
+                startPresenceHeartbeat(db, user.uid);
             }catch(e){
                 console.error(e);
                 stopClassHighlightTicker();
