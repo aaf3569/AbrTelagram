@@ -1042,15 +1042,15 @@
       }
     }
 
-    function makeClassRow(initialValue=""){
+    function makeClassRow(initialValue="", onChange=updateProfileSummary){
       const row=document.createElement('div');row.className='class-row';
       const top=document.createElement('div');top.className='top';
       const wrap=document.createElement('div');wrap.className='input-wrap';
       const sel=document.createElement('select');sel.className='input';
       classOptions.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=toArabicDigits(v);sel.appendChild(o);});
       const removeBtn=document.createElement('button');removeBtn.type='button';removeBtn.className='remove';removeBtn.textContent='حذف';removeBtn.addEventListener('click',()=>row.remove());
-      sel.addEventListener('change',()=>updateProfileSummary());
-      removeBtn.addEventListener('click',()=>setTimeout(updateProfileSummary,0));
+      sel.addEventListener('change',()=>onChange());
+      removeBtn.addEventListener('click',()=>setTimeout(onChange,0));
       if(initialValue && !classOptions.includes(initialValue)){
         const customOption=document.createElement('option');
         customOption.value=initialValue;
@@ -1477,7 +1477,7 @@
         edASubject.value=d.subject||'';
         edAClasses.innerHTML='';
         const cls=Array.isArray(d.classes)?d.classes:[];
-        cls.forEach(v=>edAClasses.appendChild(makeClassRow(v)));
+        cls.forEach(v=>edAClasses.appendChild(makeClassRow(v, updateAdminProfileSummary)));
         setAdminEditMode(false);
         openSheet(adminSheet);
       }catch{
@@ -1493,10 +1493,10 @@
       edASubject.value=d.subject||'';
       edAClasses.innerHTML='';
       const cls=Array.isArray(d.classes)?d.classes:[];
-      cls.forEach(v=>edAClasses.appendChild(makeClassRow(v)));
+      cls.forEach(v=>edAClasses.appendChild(makeClassRow(v, updateAdminProfileSummary)));
       setAdminEditMode(false);
     });
-    edAAddClass.addEventListener('click',()=>{edAClasses.appendChild(makeClassRow(""));updateAdminProfileSummary();});
+    edAAddClass.addEventListener('click',()=>{edAClasses.appendChild(makeClassRow("", updateAdminProfileSummary));updateAdminProfileSummary();});
     [edAName,edAEmail,edAPhone,edASubject].forEach(el=>el.addEventListener('input', updateAdminProfileSummary));
     edAEmail.addEventListener('input',()=>{const digits=edAEmail.value.replace(/\D+/g,''); if(edAEmail.value!==digits) edAEmail.value=digits;});
     saveAdmin.addEventListener('click', async ()=>{
