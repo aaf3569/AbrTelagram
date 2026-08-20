@@ -141,6 +141,7 @@
     .profile-actions{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
     .profile-actions-group{display:flex;gap:10px;flex-wrap:wrap}
     #saveTeacher[hidden], #cancelTeacherEdit[hidden], #editTeacher[hidden], #deleteTeacher[hidden], #changeTeacherPassword[hidden]{display:none}
+    #saveAdmin[hidden], #cancelAdminEdit[hidden], #editAdmin[hidden], #deleteAdminBtn[hidden]{display:none}
     .pill[hidden]{display:none}
     .teacher-readonly .classes-editor{display:none !important}
     .teacher-readonly .edit-only{display:none !important}
@@ -553,19 +554,64 @@
       <h3 id="adminTitle" class="sheet-title">بيانات المشرف</h3>
     </div>
     <div class="sheet-body">
-      <div class="section">
-        <div class="field"><label class="label" for="edAName">الاسم الكامل</label><div class="input-wrap"><input id="edAName" class="input" type="text"></div></div>
-        <div class="field"><label class="label" for="edAEmail">البريد الإلكتروني</label><div class="input-wrap"><input id="edAEmail" class="input" type="email" dir="ltr"></div></div>
-      </div>
-      <div class="section">
-        <div class="profile-actions">
-          <button id="saveAdmin" class="btn primary" type="button">حفظ</button>
-          <button id="deleteAdminBtn" class="btn danger" type="button">حذف</button>
+      <div class="profile-shell teacher-readonly" id="adminProfileShell">
+        <section class="profile-hero">
+          <div class="profile-head">
+            <div id="adminAvatar" class="avatar">--</div>
+            <div class="profile-name-wrap">
+              <div id="adminProfileName" class="profile-name">—</div>
+              <div id="adminProfileCivilId" class="profile-email">—</div>
+            </div>
+          </div>
+        </section>
+
+        <div class="profile-grid">
+          <section class="profile-card profile-card-basic">
+            <h4 class="profile-card-title">البيانات الأساسية</h4>
+            <div class="info-grid">
+              <div class="field"><label class="label" for="edAName">الاسم الكامل</label><div class="plain-value view-only"><span id="vEdAName" class="view-value">—</span></div><div class="input-wrap edit-only"><input id="edAName" class="input" type="text"></div></div>
+              <div class="field"><label class="label" for="edAEmail">الرقم المدني</label><div class="plain-value view-only"><span id="vEdAEmail" class="view-value">—</span></div><div class="input-wrap edit-only"><input id="edAEmail" class="input" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="مثال: 298040100633"></div></div>
+              <div class="field"><label class="label" for="edAPhone">رقم الهاتف</label><div class="plain-value view-only"><span id="vEdAPhone" class="view-value">—</span></div><div class="input-wrap edit-only"><input id="edAPhone" class="input" type="tel"></div></div>
+              <div class="field"><label class="label" for="edASubject">المادة (عند التدريس)</label><div class="plain-value view-only"><span id="vEdASubject" class="view-value">—</span></div><div class="input-wrap edit-only"><input id="edASubject" class="input" type="text" placeholder="اختياري"></div></div>
+            </div>
+          </section>
+
+          <section class="profile-card profile-card-classes">
+            <h4 class="profile-card-title">الفصول</h4>
+            <p class="perm-empty" style="margin:0 0 10px;">إن كان هذا المشرف يُدرّس أيضًا، أضف فصوله هنا لتظهر له في لوحته الرئيسية ويمكن تعيينه في الجدول.</p>
+            <div id="adminClassesView" class="class-chips"></div>
+            <div id="adminClassesEditorWrap" class="classes-editor" hidden>
+              <div id="edAClasses" class="classes-list"></div>
+              <div class="inline-add"><button id="edAAddClass" class="add" type="button">+ إضافة</button></div>
+            </div>
+          </section>
         </div>
-        <div id="edAOk" class="ok"></div><div id="edAErr" class="err"></div>
+
+        <section class="profile-card">
+          <div class="profile-actions">
+            <div class="profile-actions-group">
+              <button id="editAdmin" class="btn ghost" type="button">تعديل</button>
+              <button id="cancelAdminEdit" class="btn ghost" type="button" hidden>إلغاء</button>
+              <button id="saveAdmin" class="btn primary" type="button" hidden>حفظ</button>
+            </div>
+            <button id="deleteAdminBtn" class="btn danger" type="button" hidden>حذف</button>
+          </div>
+          <div id="edAOk" class="ok"></div><div id="edAErr" class="err"></div>
+        </section>
       </div>
     </div>
   </section>
+
+  <div id="deleteAdminModal" class="modal-overlay" aria-hidden="true">
+    <div class="modal">
+      <div class="modal-header"><h3 class="modal-title">حذف ملف المشرف</h3><button class="close-modal" aria-label="إغلاق">×</button></div>
+      <div class="modal-body">
+        <p class="delete-confirm-text">هل تريد حذف ملف المشرف <strong id="daName"></strong> نهائيًا؟ لا يمكن التراجع عن هذا الإجراء.</p>
+        <div id="daErr" class="err"></div>
+      </div>
+      <div class="modal-footer"><button id="cancelDeleteAdmin" class="btn ghost" type="button">إلغاء</button><button id="confirmDeleteAdmin" class="btn danger" type="button">حذف نهائيًا</button></div>
+    </div>
+  </div>
 
   <div id="addAdminModal" class="modal-overlay" aria-hidden="true">
     <div class="modal add-teacher-modal">
@@ -573,7 +619,9 @@
       <div class="modal-body add-teacher-body">
         <div class="field"><label class="label" for="adName">الاسم الكامل</label><div class="input-wrap"><input id="adName" class="input" type="text"></div></div>
         <div class="field"><label class="label" for="adEmail">رقم البطاقة المدنية</label><div class="input-wrap"><input id="adEmail" class="input" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="مثال: 298040100633"></div></div>
-        <div class="field add-teacher-full"><label class="label" for="adPassword">كلمة المرور</label><div class="input-wrap"><input id="adPassword" class="input" type="password"></div></div>
+        <div class="field"><label class="label" for="adPhone">رقم الهاتف</label><div class="input-wrap"><input id="adPhone" class="input" type="tel"></div></div>
+        <div class="field"><label class="label" for="adPassword">كلمة المرور</label><div class="input-wrap"><input id="adPassword" class="input" type="password"></div></div>
+        <div class="field add-teacher-full"><label class="label">الفصول (اختياري، عند التدريس)</label><div id="adClasses" class="classes-list"></div><div class="inline-add"><button id="adAddClass" class="add" type="button">+ إضافة</button></div></div>
         <div id="adOk" class="ok add-teacher-full"></div><div id="adErr" class="err add-teacher-full"></div>
       </div>
       <div class="modal-footer"><button id="cancelAddAdmin" class="btn ghost" type="button">إلغاء</button><button id="createAdminBtn" class="btn primary" type="button">إنشاء الحساب</button></div>
@@ -787,17 +835,42 @@
     const adminSheet=document.getElementById('adminSheet');
     const closeAdmin=document.getElementById('closeAdmin');
     const adminTitle=document.getElementById('adminTitle');
+    const adminProfileShell=document.getElementById('adminProfileShell');
+    const adminAvatar=document.getElementById('adminAvatar');
+    const adminProfileName=document.getElementById('adminProfileName');
+    const adminProfileCivilId=document.getElementById('adminProfileCivilId');
     const edAName=document.getElementById('edAName');
     const edAEmail=document.getElementById('edAEmail');
+    const edAPhone=document.getElementById('edAPhone');
+    const edASubject=document.getElementById('edASubject');
+    const vEdAName=document.getElementById('vEdAName');
+    const vEdAEmail=document.getElementById('vEdAEmail');
+    const vEdAPhone=document.getElementById('vEdAPhone');
+    const vEdASubject=document.getElementById('vEdASubject');
+    const adminClassesView=document.getElementById('adminClassesView');
+    const adminClassesEditorWrap=document.getElementById('adminClassesEditorWrap');
+    const edAClasses=document.getElementById('edAClasses');
+    const edAAddClass=document.getElementById('edAAddClass');
+    const editAdmin=document.getElementById('editAdmin');
+    const cancelAdminEdit=document.getElementById('cancelAdminEdit');
     const saveAdmin=document.getElementById('saveAdmin');
     const deleteAdminBtn=document.getElementById('deleteAdminBtn');
     const edAOk=document.getElementById('edAOk');
     const edAErr=document.getElementById('edAErr');
+    const deleteAdminModal=document.getElementById('deleteAdminModal');
+    const closeDeleteAdminModal=document.querySelector('#deleteAdminModal .close-modal');
+    const cancelDeleteAdmin=document.getElementById('cancelDeleteAdmin');
+    const confirmDeleteAdmin=document.getElementById('confirmDeleteAdmin');
+    const daName=document.getElementById('daName');
+    const daErr=document.getElementById('daErr');
     const addAdminModal=document.getElementById('addAdminModal');
     const closeAddAdminModal=document.querySelector('#addAdminModal .close-modal');
     const cancelAddAdmin=document.getElementById('cancelAddAdmin');
     const adName=document.getElementById('adName');
     const adEmail=document.getElementById('adEmail');
+    const adPhone=document.getElementById('adPhone');
+    const adClasses=document.getElementById('adClasses');
+    const adAddClass=document.getElementById('adAddClass');
     const adPassword=document.getElementById('adPassword');
     const createAdminBtn=document.getElementById('createAdminBtn');
     const adOk=document.getElementById('adOk');
@@ -841,7 +914,7 @@
 
     let lastFocusedBeforeSuccessModal=null;
     function syncBodyScrollLock(){
-      const anyOverlayOpen=addTeacherModal.classList.contains('active') || addAdminModal.classList.contains('active') || supervisorGradeModal.classList.contains('active') || changePasswordModal.classList.contains('active') || deleteTeacherModal.classList.contains('active') || successModal.classList.contains('show');
+      const anyOverlayOpen=addTeacherModal.classList.contains('active') || addAdminModal.classList.contains('active') || supervisorGradeModal.classList.contains('active') || changePasswordModal.classList.contains('active') || deleteTeacherModal.classList.contains('active') || deleteAdminModal.classList.contains('active') || successModal.classList.contains('show');
       document.body.style.overflow=anyOverlayOpen?'hidden':'';
     }
     function focusIfPossible(el){
@@ -1018,21 +1091,21 @@
       if(words.length>=2) return (words[0][0]+words[1][0]).toUpperCase();
       return source.slice(0,2).toUpperCase();
     }
-    function renderClassesPreview(classes){
-      classesView.innerHTML='';
+    function renderClassesPreview(classes, container=classesView){
+      container.innerHTML='';
       const list=Array.isArray(classes)?classes.filter(Boolean):[];
       if(!list.length){
         const empty=document.createElement('div');
         empty.className='class-empty';
         empty.textContent='لا توجد فصول مضافة.';
-        classesView.appendChild(empty);
+        container.appendChild(empty);
         return;
       }
       list.forEach(c=>{
         const chip=document.createElement('span');
         chip.className='class-chip';
         chip.textContent=toArabicDigits(c);
-        classesView.appendChild(chip);
+        container.appendChild(chip);
       });
     }
     function normalizePermissions(data){
@@ -1349,6 +1422,47 @@
         adminsList.appendChild(err);
       }
     }
+    let adminEditMode=false;
+    let adminEditSnapshot=null;
+    function serializeAdminEditForm(){
+      return JSON.stringify({
+        name:edAName.value.trim(),
+        civilId:edAEmail.value.trim(),
+        phone:edAPhone.value.trim(),
+        subject:edASubject.value.trim(),
+        classes:getClassesFrom(edAClasses),
+      });
+    }
+    function captureAdminEditSnapshot(){ adminEditSnapshot=serializeAdminEditForm(); }
+    function isAdminEditFormDirty(){ return adminEditSnapshot!==null && serializeAdminEditForm()!==adminEditSnapshot; }
+    function updateAdminProfileSummary(){
+      const name=edAName.value.trim() || currentAdmin?.data?.name || currentAdmin?.uid || '—';
+      const civilId=(edAEmail.value||'').replace(/\D+/g,'') || getTeacherCivilId(currentAdmin?.data) || '—';
+      const phone=edAPhone.value.trim() || '—';
+      const subject=edASubject.value.trim() || '—';
+      adminProfileName.textContent=name;
+      adminProfileCivilId.textContent=civilId;
+      adminAvatar.textContent=getInitials(name,civilId,currentAdmin?.uid);
+      setViewValue(vEdAName,name);
+      setViewValue(vEdAEmail,civilId);
+      setViewValue(vEdAPhone,phone);
+      setViewValue(vEdASubject,subject);
+      renderClassesPreview(getClassesFrom(edAClasses), adminClassesView);
+      if(adminEditMode) saveAdmin.hidden=!isAdminEditFormDirty();
+    }
+    function setAdminEditMode(isEdit){
+      adminEditMode=!!isEdit;
+      adminProfileShell.classList.toggle('teacher-readonly', !adminEditMode);
+      adminProfileShell.classList.toggle('teacher-editing', adminEditMode);
+      [edAName,edAEmail,edAPhone,edASubject].forEach(el=>el.disabled=!adminEditMode);
+      adminClassesEditorWrap.hidden=!adminEditMode;
+      editAdmin.hidden=adminEditMode;
+      deleteAdminBtn.hidden=!adminEditMode;
+      cancelAdminEdit.hidden=!adminEditMode;
+      if(adminEditMode) captureAdminEditSnapshot(); else adminEditSnapshot=null;
+      saveAdmin.hidden=true;
+      updateAdminProfileSummary();
+    }
     async function openAdminEditor(uid){
       edAOk.style.display='none';edAErr.style.display='none';
       try{
@@ -1356,40 +1470,93 @@
         if(!s.exists()){alert('الملف غير موجود.');return;}
         const d=s.data();
         currentAdmin={uid,data:d};
-        adminTitle.textContent=d.name||d.email||uid;
+        adminTitle.textContent=d.name||getTeacherCivilId(d)||uid;
         edAName.value=d.name||'';
-        edAEmail.value=d.email||'';
+        edAEmail.value=getTeacherCivilId(d);
+        edAPhone.value=d.phone||'';
+        edASubject.value=d.subject||'';
+        edAClasses.innerHTML='';
+        const cls=Array.isArray(d.classes)?d.classes:[];
+        cls.forEach(v=>edAClasses.appendChild(makeClassRow(v)));
+        setAdminEditMode(false);
         openSheet(adminSheet);
       }catch{
         alert('تعذّر فتح صفحة المشرف.');
       }
     }
+    editAdmin.addEventListener('click',()=>setAdminEditMode(true));
+    cancelAdminEdit.addEventListener('click',()=>{
+      const d=currentAdmin.data||{};
+      edAName.value=d.name||'';
+      edAEmail.value=getTeacherCivilId(d);
+      edAPhone.value=d.phone||'';
+      edASubject.value=d.subject||'';
+      edAClasses.innerHTML='';
+      const cls=Array.isArray(d.classes)?d.classes:[];
+      cls.forEach(v=>edAClasses.appendChild(makeClassRow(v)));
+      setAdminEditMode(false);
+    });
+    edAAddClass.addEventListener('click',()=>{edAClasses.appendChild(makeClassRow(""));updateAdminProfileSummary();});
+    [edAName,edAEmail,edAPhone,edASubject].forEach(el=>el.addEventListener('input', updateAdminProfileSummary));
+    edAEmail.addEventListener('input',()=>{const digits=edAEmail.value.replace(/\D+/g,''); if(edAEmail.value!==digits) edAEmail.value=digits;});
     saveAdmin.addEventListener('click', async ()=>{
       edAOk.style.display='none';edAErr.style.display='none';
       try{
         const {uid}=currentAdmin;if(!uid) throw new Error('لم يتم اختيار مشرف.');
-        const name=edAName.value.trim(), email=edAEmail.value.trim();
+        const name=edAName.value.trim(), civilId=edAEmail.value.trim().replace(/\D+/g,'');
+        const phone=edAPhone.value.trim(), subject=edASubject.value.trim();
+        const classes=getClassesFrom(edAClasses);
+        const email=buildTeacherEmailFromCivilId(civilId);
         if(!name) throw new Error('أدخل الاسم.');
-        if(!emailRx.test(email)) throw new Error('أدخل بريدًا صالحًا.');
-        await updateDoc(doc(db,'teachers',uid),{name,email});
+        if(!civilId) throw new Error('أدخل الرقم المدني بالأرقام فقط.');
+        if(!emailRx.test(email)) throw new Error('تعذّر توليد الحساب من الرقم المدني.');
+        await updateDoc(doc(db,'teachers',uid),{name,email,civilId,phone,subject,classes});
+        currentAdmin.data={...(currentAdmin.data||{}),name,email,civilId,phone,subject,classes};
+        adminTitle.textContent=name||civilId||uid;
+        setAdminEditMode(false);
         edAOk.textContent='تم حفظ التعديلات.';edAOk.style.display='block';
-        setTimeout(()=>{edAOk.style.display='none';closeAdminView();},900);
+        setTimeout(()=>{edAOk.style.display='none';},900);
         await loadAdmins();
       }catch(e){edAErr.textContent=e?.message||'تعذّر الحفظ.';edAErr.style.display='block';}
     });
-    deleteAdminBtn.addEventListener('click', async ()=>{
+    deleteAdminBtn.addEventListener('click',()=>{
+      if(!currentAdmin.uid) return;
+      daErr.style.display='none';
+      daName.textContent=currentAdmin?.data?.name||edAName.value.trim()||'';
+      openModal(deleteAdminModal,{ fallbackFocus:deleteAdminBtn });
+    });
+    closeDeleteAdminModal.addEventListener('click',()=>closeModal(deleteAdminModal,{fallbackFocus:deleteAdminBtn}));
+    cancelDeleteAdmin.addEventListener('click',()=>closeModal(deleteAdminModal,{fallbackFocus:deleteAdminBtn}));
+    deleteAdminModal.addEventListener('click',(e)=>{
+      if(e.target===deleteAdminModal) closeModal(deleteAdminModal,{fallbackFocus:deleteAdminBtn});
+    });
+    confirmDeleteAdmin.addEventListener('click', async ()=>{
+      daErr.style.display='none';
       edAOk.style.display='none';edAErr.style.display='none';
+      const {uid}=currentAdmin;
+      if(!uid) return;
+      confirmDeleteAdmin.disabled=true;
+      cancelDeleteAdmin.disabled=true;
+      const originalLabel=confirmDeleteAdmin.textContent;
+      confirmDeleteAdmin.textContent='جارٍ الحذف...';
       try{
-        const {uid}=currentAdmin;if(!uid) return;
-        if(!confirm('حذف ملف المشرف من Firestore؟')) return;
         await deleteDoc(doc(db,'teachers',uid));
+        closeModal(deleteAdminModal,{fallbackFocus:deleteAdminBtn});
         edAOk.textContent='تم الحذف.';edAOk.style.display='block';
         setTimeout(()=>{edAOk.style.display='none';closeAdminView();},700);
         await loadAdmins();
-      }catch(e){edAErr.textContent=e?.message||'تعذّر الحذف.';edAErr.style.display='block';}
+      }catch(e){
+        daErr.textContent=e?.message||'تعذّر الحذف.';
+        daErr.style.display='block';
+      }finally{
+        confirmDeleteAdmin.disabled=false;
+        cancelDeleteAdmin.disabled=false;
+        confirmDeleteAdmin.textContent=originalLabel;
+      }
     });
     function resetAddAdminForm(){
-      adName.value='';adEmail.value='';adPassword.value='';
+      adName.value='';adEmail.value='';adPhone.value='';adPassword.value='';
+      adClasses.innerHTML='';
       adOk.style.display='none';adErr.style.display='none';
     }
     openAddAdmin.addEventListener('click',()=>{
@@ -1400,12 +1567,15 @@
     closeAddAdminModal.addEventListener('click',()=>closeModal(addAdminModal,{fallbackFocus:openAddAdmin}));
     cancelAddAdmin.addEventListener('click',()=>closeModal(addAdminModal,{fallbackFocus:openAddAdmin}));
     adEmail.addEventListener('input',()=>{const digits=adEmail.value.replace(/\D+/g,''); if(adEmail.value!==digits) adEmail.value=digits;});
+    adAddClass.addEventListener('click',()=>adClasses.appendChild(makeClassRow("")));
     addAdminModal.addEventListener('click',(e)=>{if(e.target===addAdminModal) closeModal(addAdminModal,{fallbackFocus:openAddAdmin});});
     createAdminBtn.addEventListener('click', async ()=>{
       adOk.style.display='none';adErr.style.display='none';
       try{
         const name=adName.value.trim(), civilId=adEmail.value.trim().replace(/\D+/g,'');
         const email=civilId?`t${civilId}@gmail.com`:'';
+        const phone=adPhone.value.trim();
+        const classes=getClassesFrom(adClasses);
         const pass=adPassword.value;
         if(!name) throw new Error('أدخل الاسم.');
         if(!civilId) throw new Error('أدخل رقم البطاقة المدنية بالأرقام فقط.');
@@ -1413,7 +1583,7 @@
         if(!pass||pass.length<6) throw new Error('كلمة المرور ٦ أحرف على الأقل.');
         const cred=await createUserWithEmailAndPassword(helperAuth,email,pass);
         const newUid=cred.user.uid;
-        await setDoc(doc(db,'teachers',newUid),{uid:newUid,name,email,civilId,role:'admin',createdAt:serverTimestamp()},{merge:true});
+        await setDoc(doc(db,'teachers',newUid),{uid:newUid,name,email,civilId,phone,classes,role:'admin',createdAt:serverTimestamp()},{merge:true});
         try{await signOut(helperAuth);}catch{}
         closeModal(addAdminModal,{fallbackFocus:openAddAdmin});
         openSuccessModal();
@@ -1829,6 +1999,7 @@
         if(addAdminModal.classList.contains('active')) closeModal(addAdminModal,{fallbackFocus:openAddAdmin});
         if(changePasswordModal.classList.contains('active')) closeModal(changePasswordModal,{fallbackFocus:changeTeacherPasswordBtn});
         if(deleteTeacherModal.classList.contains('active')) closeModal(deleteTeacherModal,{fallbackFocus:deleteTeacherBtn});
+        if(deleteAdminModal.classList.contains('active')) closeModal(deleteAdminModal,{fallbackFocus:deleteAdminBtn});
         if(successModal.classList.contains('show')) closeSuccessModalFn();
         syncTeacherRouteMode();
       }

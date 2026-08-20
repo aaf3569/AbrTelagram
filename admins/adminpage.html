@@ -21,6 +21,9 @@
       --primary:#033C54; --page:#f6f8fb; --text:#0f172a; --muted:#6b7f9f;
       --border:#e6edf7; --shadow-1:0 8px 22px rgba(3,60,84,.14); --radius:16px;
       --focus:#79b3c8; --primary-light:#065372; --transition: transform .12s ease, box-shadow .12s ease, background-color .12s ease, border-color .12s ease, color .12s ease, opacity .12s ease;
+      --green:#1a7f37; --yellow:#a06d00; --red:#b42318;
+      --greenBg: rgba(26,127,55,.08); --yellowBg: rgba(160,109,0,.10); --redBg: rgba(180,35,24,.10);
+      --chip:#eef5fb;
     }
     *{ box-sizing:border-box }
     html,body{ height:100%; margin:0; padding:0; }
@@ -265,6 +268,38 @@
       justify-content: flex-end;
       gap: 10px;
     }
+
+    /* Host chrome for shared/attendance.js's injected modals (the "my
+       classes" widget below). Scoped strictly to those 5 IDs — this page's
+       own .modal-overlay/.modal already mean something different (the
+       absence/suggestion popups above), so a bare .modal rule would break
+       those instead of just adding new styling. */
+    #attConfirmModal, #attErrorModal, #attBlockedModal, #attSuccessModal, #attLessonDetailModal{
+      position: fixed; inset: 0; z-index: 1100; display: none;
+      background: transparent; width: auto; max-height: none; overflow: visible;
+      border-radius: 0; box-shadow: none; transform: none; opacity: 1; transition: none;
+    }
+    #attConfirmModal.open, #attErrorModal.open, #attBlockedModal.open, #attSuccessModal.open, #attLessonDetailModal.open{
+      display: grid; place-items: center;
+    }
+    #attConfirmModal .overlay, #attErrorModal .overlay, #attBlockedModal .overlay, #attSuccessModal .overlay, #attLessonDetailModal .overlay{
+      position: absolute; inset: 0; background: rgba(15,23,42,.35); backdrop-filter: blur(4px);
+    }
+    #attConfirmModal .card, #attErrorModal .card, #attBlockedModal .card, #attSuccessModal .card, #attLessonDetailModal .card{
+      position: relative; z-index: 1; width: min(560px,92vw);
+      background: #fff; border: 1px solid var(--border); border-radius: 20px;
+      box-shadow: 0 24px 60px rgba(3,60,84,.28); padding: 20px;
+    }
+    #attConfirmModal h3, #attErrorModal h3, #attBlockedModal h3, #attSuccessModal h3, #attLessonDetailModal h3{
+      margin: 0 0 8px; font-size: 1.15rem; color: var(--primary); font-weight: 900;
+    }
+    #attConfirmModal p, #attErrorModal p, #attBlockedModal p, #attSuccessModal p, #attLessonDetailModal p{
+      margin: 0 0 12px; color: var(--muted); font-weight: 800;
+    }
+    #attConfirmModal .row, #attErrorModal .row, #attBlockedModal .row, #attSuccessModal .row, #attLessonDetailModal .row{
+      display: flex; gap: 10px; justify-content: flex-start; margin-top: 16px; flex-wrap: wrap;
+    }
+    .btn.cancel{ background:#fff; color:var(--primary); border:1px solid rgba(3,60,84,.25); }
 
     /* Add Teacher Modal refinements */
     #addTeacherModal .modal {
@@ -728,6 +763,11 @@
           </div>
         </div>
 
+        <section id="myClassesSection" hidden>
+          <h2 class="dash-section-title">فصولي</h2>
+          <div id="myClassesButtons" class="stack" role="group" aria-label="فصولي"></div>
+        </section>
+
         <div class="divider" aria-hidden="true"></div>
 
         <h2 class="dash-section-title">الإجراءات السريعة</h2>
@@ -1181,6 +1221,7 @@
     import { mountTelegramSettings } from "/shared/telegram-settings.js";
     import { initNotificationPopup } from "/shared/notification-popup.js";
     import { mountFeedbackSheet } from "/shared/feedback.js";
+    import { mountAttendanceSheet } from "/shared/attendance.js";
 
     
 
@@ -1229,6 +1270,8 @@
       getUserName: () => currentAdminData?.name || ''
     });
 
+    const attendance = mountAttendanceSheet({ db, auth });
+
     /* ========= UI refs ========= */
     const sLoading = document.getElementById('stateLoading');
     const sNotLog  = document.getElementById('stateNotLogged');
@@ -1237,6 +1280,8 @@
 
     const profileAvatar = document.getElementById('profileAvatar');
     const adminName     = document.getElementById('adminName');
+    const myClassesSection = document.getElementById('myClassesSection');
+    const myClassesButtons = document.getElementById('myClassesButtons');
 
     const openAbsence  = document.getElementById('openAbsence');
     const openTeachers = document.getElementById('openTeachers');
@@ -2030,6 +2075,26 @@
     /* ========= Auth gate ========= */
     let currentAdminData = null;
     show(sLoading);
+    function renderMyClasses(classes){
+      const list = Array.isArray(classes) ? classes.filter(Boolean) : [];
+      myClassesButtons.innerHTML = '';
+      if(!list.length){ myClassesSection.hidden = true; return; }
+      list.forEach(classKey => {
+        const btn = document.createElement('button');
+        btn.className = 'btn ghost';
+        btn.type = 'button';
+        btn.setAttribute('aria-label', `تسجيل الحضور — ${classKey}`);
+        btn.innerHTML = `
+          <i class="fas fa-chalkboard dash-icon" aria-hidden="true"></i>
+          <span class="dash-title">${toArabicDigits(classKey)}</span>
+          <span class="dash-sub">تسجيل الحضور لهذا الفصل</span>
+        `;
+        btn.addEventListener('click', () => attendance.openForClass(classKey));
+        myClassesButtons.appendChild(btn);
+      });
+      myClassesSection.hidden = false;
+    }
+
     onAuthStateChanged(auth, async (user)=>{
       if(!user){
         avatarUserUid = null;
@@ -2051,6 +2116,7 @@
         adminName.textContent = data?.name || (user.email ? user.email.split('@')[0] : 'مشرف');
         avatarUserUid = user.uid;
         loadStoredAvatar(user.uid);
+        renderMyClasses(data?.classes);
         show(sAdmin);
         initNotificationPopup(db, { uid: user.uid, name: data?.name || '' });
         if(window.location.hash === '#admins') openAdminsPanel();
