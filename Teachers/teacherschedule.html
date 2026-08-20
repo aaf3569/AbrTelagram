@@ -1363,10 +1363,20 @@
       const idx = weekDates.indexOf(iso);
       return idx>=0 ? DAYS_AR[idx] : '';
     }
+    // Lesson times are stored/edited as 24-hour "HH:MM" (settings/lessonTimes),
+    // but displayed here in 12-hour form with no leading zero and no AM/PM —
+    // e.g. "14:07" shows as "2:07", not "02:07 PM".
+    function to12HourLabel(hhmm){
+      const m = /^(\d{1,2}):(\d{2})$/.exec((hhmm || '').toString());
+      if(!m) return hhmm || '—';
+      let h = parseInt(m[1], 10) % 12;
+      if(h === 0) h = 12;
+      return `${h}:${m[2]}`;
+    }
     function lessonTimeLabel(idx){
       const t = LESSON_TIMES[idx-1];
       if(!t) return '—';
-      return `${t.start} - ${t.end}`;
+      return `${to12HourLabel(t.start)} - ${to12HourLabel(t.end)}`;
     }
 
     function safeText(s){
