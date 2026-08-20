@@ -457,6 +457,70 @@
       .more-actions .filter-btn { width: 100%; flex: initial; }
     }
 
+    /* طلبات القسم (department heads only) — ported from depHead/schedual.html.
+       #btnRequests starts hidden and is only ever revealed via JS for role
+       'head'. .filter-btn's own display:inline-flex is an author-origin rule,
+       which beats the browser's [hidden]{display:none} UA rule regardless of
+       specificity — so without this, the button would show for everyone. */
+    #btnRequests[hidden]{ display:none; }
+    .request-card {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      background: var(--card-bg);
+      box-shadow: var(--shadow-1);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .request-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .request-type {
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      font-weight: 900;
+    }
+    .type-cover { background: rgba(59, 130, 246, 0.12); color: #1d4ed8; }
+    .type-swap { background: rgba(168, 85, 247, 0.12); color: #7c3aed; }
+    .request-body { display: grid; gap: 8px; }
+    .request-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 700;
+    }
+    .request-label {
+      color: var(--muted);
+      font-size: 0.85rem;
+      min-width: 70px;
+    }
+    .request-value {
+      color: var(--text);
+      font-weight: 800;
+    }
+    .status-badge {
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      font-weight: 900;
+    }
+    .status-pending { background: rgba(245, 158, 11, 0.12); color: #92400e; }
+    .status-accepted { background: rgba(16, 185, 129, 0.12); color: #065f46; }
+    .status-denied { background: rgba(239, 68, 68, 0.12); color: #991b1b; }
+    .request-footer {
+      display: flex;
+      gap: 8px;
+      margin-top: 4px;
+    }
+    @media (max-width: 768px) {
+      .request-footer { flex-wrap: wrap; }
+      .request-footer .filter-btn { flex: 1; min-width: 120px; }
+    }
+
     /* Modal - IMPROVED FOR MOBILE */
     .modal {
       position: fixed; inset: 0; z-index: 70;
@@ -828,6 +892,11 @@
           </button>
         </div>
 
+        <button id="btnRequests" class="filter-btn btn-ghost" type="button" hidden>
+          <i class="fas fa-inbox"></i>
+          <span>طلبات القسم</span>
+        </button>
+
         <button id="btnDownloadPdf" class="filter-btn btn-solid" type="button">
           <i class="fas fa-file-pdf"></i>
           <span>تنزيل PDF</span>
@@ -889,6 +958,20 @@
           <div id="classWeekGrid" class="grid"></div>
         </div>
       </div>
+    </div>
+  </section>
+
+  <!-- REQUESTS SHEET (department heads only) -->
+  <section id="requestsSheet" class="sheet" aria-hidden="true">
+    <div class="sheet-header">
+      <button id="closeRequests" class="back-btn" type="button">
+        <i class="fas fa-arrow-right"></i>
+        <span>رجوع</span>
+      </button>
+      <h3 class="sheet-title">طلبات القسم</h3>
+    </div>
+    <div class="sheet-body">
+      <div id="requestsContainer"></div>
     </div>
   </section>
 
@@ -1173,6 +1256,11 @@
     const btnWeek  = document.getElementById('btnWeek');
     const btnDownloadPdf = document.getElementById('btnDownloadPdf');
     const btnMore  = document.getElementById('btnMore');
+
+    const btnRequests = document.getElementById('btnRequests');
+    const requestsSheet = document.getElementById('requestsSheet');
+    const closeRequests = document.getElementById('closeRequests');
+    const requestsContainer = document.getElementById('requestsContainer');
 
     const moreSheet   = document.getElementById('moreSheet');
     const closeMore   = document.getElementById('closeMore');
@@ -3622,6 +3710,329 @@
       });
     }
 
+    /* ========= Requests Sheet (طلبات القسم — department heads only) =========
+       Ported from depHead/schedual.html so heads no longer need that separate
+       page. headUid is set once auth confirms currentRole === 'head'. */
+    let headUid = '';
+    let unsubRequestsFrom = null;
+    let unsubRequestsTo = null;
+
+    function openRequestsSheet(){
+      requestsSheet.classList.add('open');
+      requestsSheet.setAttribute('aria-hidden','false');
+      document.body.style.overflow = 'hidden';
+      loadRequests();
+    }
+
+    function closeRequestsSheet(){
+      requestsSheet.classList.remove('open');
+      requestsSheet.setAttribute('aria-hidden','true');
+      document.body.style.overflow = '';
+      if(unsubRequestsFrom) unsubRequestsFrom();
+      if(unsubRequestsTo) unsubRequestsTo();
+    }
+
+    function renderRequestCard(requestDocId, request){
+      const card = document.createElement('div');
+      card.className = 'request-card';
+      card.dataset.id = requestDocId;
+
+      const typeLabel = request.type === 'cover' ? 'تغطية' : 'تبديل';
+      const typeClass = request.type === 'cover' ? 'type-cover' : 'type-swap';
+
+      let statusLabel = '';
+      let statusClass = '';
+      switch(request.status) {
+        case 'pending_head_from':
+          statusLabel = 'بانتظار موافقة رئيس قسم المرسل';
+          statusClass = 'status-pending';
+          break;
+        case 'pending_head_to':
+          statusLabel = 'بانتظار موافقة رئيس قسم المستلم';
+          statusClass = 'status-pending';
+          break;
+        case 'accepted':
+          statusLabel = 'مقبول';
+          statusClass = 'status-accepted';
+          break;
+        case 'denied':
+          statusLabel = 'مرفوض';
+          statusClass = 'status-denied';
+          break;
+        default:
+          statusLabel = request.status || '—';
+          statusClass = 'status-pending';
+      }
+
+      const isToMe = request.toHeadUid === headUid;
+      const isFromMe = request.fromHeadUid === headUid;
+
+      // Show action buttons only when THIS head must act
+      let actionsHtml = '';
+      if(request.status === 'pending_head_from' && isFromMe){
+        actionsHtml = `
+          <button class="filter-btn btn-solid btn-approve" data-id="${requestDocId}">
+            <i class="fas fa-check"></i> موافقة
+          </button>
+          <button class="filter-btn btn-danger btn-deny" data-id="${requestDocId}">
+            <i class="fas fa-xmark"></i> رفض
+          </button>
+        `;
+      } else if(request.status === 'pending_head_to' && isToMe){
+        actionsHtml = `
+          <button class="filter-btn btn-solid btn-approve" data-id="${requestDocId}">
+            <i class="fas fa-check"></i> قبول
+          </button>
+          <button class="filter-btn btn-danger btn-deny" data-id="${requestDocId}">
+            <i class="fas fa-xmark"></i> رفض
+          </button>
+        `;
+      }
+
+      const fromDate = request.fromDate || request.date || '—';
+      const fromLessonNumber = Number(request.fromLesson || request.lesson) || 0;
+      const fromLessonLabel = fromLessonNumber ? `${LESSONS_AR[fromLessonNumber - 1] || `الحصة #${fromLessonNumber}`} (#${fromLessonNumber})` : '—';
+      const toDate = request.toDate || '—';
+      const toLessonNumber = Number(request.toLesson) || 0;
+      const toLessonLabel = toLessonNumber ? `${LESSONS_AR[toLessonNumber - 1] || `الحصة #${toLessonNumber}`} (#${toLessonNumber})` : '—';
+
+      card.innerHTML = `
+        <div class="request-header">
+          <span class="request-type ${typeClass}">${typeLabel}</span>
+          <span class="status-badge ${statusClass}">${statusLabel}</span>
+        </div>
+        <div class="request-body">
+          <div class="request-row">
+            <span class="request-label"><i class="far fa-calendar"></i> تاريخ الحصة الأساسية</span>
+            <span class="request-value">${escapeHtml(fromDate)}</span>
+          </div>
+          <div class="request-row">
+            <span class="request-label"><i class="far fa-clock"></i> الحصة الأساسية</span>
+            <span class="request-value">${escapeHtml(fromLessonLabel)}</span>
+          </div>
+          ${request.type === 'swap' ? `
+          <div class="request-row">
+            <span class="request-label"><i class="fas fa-calendar-week"></i> تاريخ الحصة المقابلة</span>
+            <span class="request-value">${escapeHtml(toDate)}</span>
+          </div>
+          <div class="request-row">
+            <span class="request-label"><i class="fas fa-arrows-left-right"></i> الحصة المقابلة</span>
+            <span class="request-value">${escapeHtml(toLessonLabel)}</span>
+          </div>
+          ` : ''}
+          <div class="request-row">
+            <span class="request-label"><i class="fas fa-users"></i> الصف</span>
+            <span class="request-value">${escapeHtml(request.fromClassKey || '—')}</span>
+          </div>
+          <div class="request-row">
+            <span class="request-label"><i class="fas fa-user"></i> المرسل</span>
+            <span class="request-value">${escapeHtml(request.fromTeacherName || '—')} (${escapeHtml(request.fromSubject || '—')})</span>
+          </div>
+          <div class="request-row">
+            <span class="request-label"><i class="fas fa-user-tie"></i> المُرسل إليه</span>
+            <span class="request-value">${escapeHtml(request.toTeacherName || '—')} (${escapeHtml(request.toSubject || '—')})</span>
+          </div>
+          ${request.message ? `
+          <div class="request-row">
+            <span class="request-label"><i class="fas fa-message"></i> الملاحظة</span>
+            <span class="request-value">${escapeHtml(request.message)}</span>
+          </div>
+          ` : ''}
+        </div>
+        ${actionsHtml ? `<div class="request-footer">${actionsHtml}</div>` : ''}
+      `;
+
+      return card;
+    }
+
+    async function loadRequests(){
+      requestsContainer.innerHTML = '<div style="text-align:center; padding:20px; color:var(--muted);">جاري التحميل...</div>';
+
+      if(unsubRequestsFrom) unsubRequestsFrom();
+      if(unsubRequestsTo) unsubRequestsTo();
+
+      const qFrom = query(
+        collection(db,'swapRequests'),
+        where('fromHeadUid','==', headUid),
+        orderBy('createdAt','desc')
+      );
+
+      const qTo = query(
+        collection(db,'swapRequests'),
+        where('toHeadUid','==', headUid),
+        orderBy('createdAt','desc')
+      );
+
+      let requestsMap = new Map();
+
+      function renderAllRequests() {
+        requestsContainer.innerHTML = '';
+
+        if(requestsMap.size === 0){
+          requestsContainer.innerHTML = '<div style="text-align:center; padding:40px; color:var(--muted); font-weight:700;">لا توجد طلبات حالياً.</div>';
+          return;
+        }
+
+        const allRequests = Array.from(requestsMap.values()).sort((a, b) => {
+          const aTime = a.request.createdAt?.toMillis() || 0;
+          const bTime = b.request.createdAt?.toMillis() || 0;
+          return bTime - aTime;
+        });
+
+        allRequests.forEach(({id, request}) => {
+          const card = renderRequestCard(id, request);
+          requestsContainer.appendChild(card);
+        });
+
+        requestsContainer.querySelectorAll('.btn-approve').forEach(btn => {
+          btn.addEventListener('click', () => handleRequestApprove(btn.dataset.id));
+        });
+        requestsContainer.querySelectorAll('.btn-deny').forEach(btn => {
+          btn.addEventListener('click', () => handleRequestDeny(btn.dataset.id));
+        });
+      }
+
+      unsubRequestsFrom = onSnapshot(qFrom, (snap) => {
+        snap.docChanges().forEach(change => {
+          const id = change.doc.id;
+          const request = change.doc.data();
+          if(change.type === 'added' || change.type === 'modified') {
+            requestsMap.set(id, { id, request });
+          } else if(change.type === 'removed') {
+            requestsMap.delete(id);
+          }
+        });
+        renderAllRequests();
+      }, (error) => {
+        console.error('Error loading fromHeadUid requests:', error);
+        toast({ title: 'خطأ', text: 'حدث خطأ في تحميل بعض الطلبات.', icon: 'fa-triangle-exclamation' });
+      });
+
+      unsubRequestsTo = onSnapshot(qTo, (snap) => {
+        snap.docChanges().forEach(change => {
+          const id = change.doc.id;
+          const request = change.doc.data();
+          if(change.type === 'added' || change.type === 'modified') {
+            requestsMap.set(id, { id, request });
+          } else if(change.type === 'removed') {
+            requestsMap.delete(id);
+          }
+        });
+        renderAllRequests();
+      }, (error) => {
+        console.error('Error loading toHeadUid requests:', error);
+        toast({ title: 'خطأ', text: 'حدث خطأ في تحميل بعض الطلبات.', icon: 'fa-triangle-exclamation' });
+      });
+
+      try {
+        const [fromSnap, toSnap] = await Promise.all([getDocs(qFrom), getDocs(qTo)]);
+        requestsMap.clear();
+        fromSnap.forEach(docSnap => { requestsMap.set(docSnap.id, { id: docSnap.id, request: docSnap.data() }); });
+        toSnap.forEach(docSnap => { requestsMap.set(docSnap.id, { id: docSnap.id, request: docSnap.data() }); });
+        renderAllRequests();
+      } catch (error) {
+        console.error('Error loading initial requests:', error);
+        requestsContainer.innerHTML = '<div style="text-align:center; padding:20px; color:var(--danger); font-weight:700;">حدث خطأ في تحميل الطلبات.</div>';
+      }
+    }
+
+    async function handleRequestApprove(requestId){
+      try {
+        await runTransaction(db, async (tx) => {
+          const requestRef = doc(db, 'swapRequests', requestId);
+          const requestSnap = await tx.get(requestRef);
+
+          if(!requestSnap.exists()) {
+            throw new Error('الطلب غير موجود');
+          }
+
+          const request = requestSnap.data();
+
+          if(request.status === 'pending_head_from' && request.fromHeadUid === headUid) {
+            if(request.fromDepartment === request.toDepartment || request.toHeadUid === request.fromHeadUid) {
+              tx.update(requestRef, { status: 'accepted', respondedAt: serverTimestamp() });
+              await createOverridesInTransaction(tx, request, requestId);
+            } else {
+              tx.update(requestRef, { status: 'pending_head_to', respondedAt: serverTimestamp() });
+            }
+          } else if(request.status === 'pending_head_to' && request.toHeadUid === headUid) {
+            tx.update(requestRef, { status: 'accepted', respondedAt: serverTimestamp() });
+            await createOverridesInTransaction(tx, request, requestId);
+          } else {
+            throw new Error('غير مصرح لك بالموافقة على هذا الطلب في هذه المرحلة');
+          }
+        });
+
+        toast({ title: 'تم القبول', text: 'تمت الموافقة على الطلب بنجاح.', icon: 'fa-circle-check' });
+
+        if(currentView === 'today' && activeTodayISO === kuwaitTodayISO()){
+          loadTodayForTeacher(currentUser.uid);
+        } else if (currentView === 'week') {
+          loadWeekForTeacher(currentUser.uid);
+        }
+      } catch (error) {
+        console.error('Error approving request:', error);
+        toast({ title: 'خطأ', text: error.message || 'تعذّر تنفيذ العملية.', icon: 'fa-triangle-exclamation' });
+      }
+    }
+
+    async function handleRequestDeny(requestId){
+      try {
+        const requestRef = doc(db, 'swapRequests', requestId);
+        const requestSnap = await getDoc(requestRef);
+
+        if(!requestSnap.exists()) return;
+
+        const request = requestSnap.data();
+
+        if((request.status === 'pending_head_from' && request.fromHeadUid === headUid) ||
+           (request.status === 'pending_head_to' && request.toHeadUid === headUid)) {
+          await updateDoc(requestRef, { status: 'denied', respondedAt: serverTimestamp() });
+          toast({ title: 'تم الرفض', text: 'تم رفض الطلب.', icon: 'fa-circle-xmark' });
+        } else {
+          toast({ title: 'غير مصرح', text: 'غير مصرح لك برفض هذا الطلب.', icon: 'fa-circle-exclamation' });
+        }
+      } catch (error) {
+        console.error('Error denying request:', error);
+        toast({ title: 'خطأ', text: 'تعذّر تنفيذ العملية.', icon: 'fa-triangle-exclamation' });
+      }
+    }
+
+    async function createOverridesInTransaction(tx, request, requestId){
+      const fromDate = request.fromDate || request.date;
+      const fromLesson = Number(request.fromLesson || request.lesson);
+
+      if(request.type === 'cover') {
+        const overrideId = `cover_${fromDate}_${fromLesson}_${request.fromTeacherUid}_${request.toTeacherUid}`;
+        const overrideRef = doc(db, 'scheduleOverrides', overrideId);
+        tx.set(overrideRef, {
+          date: fromDate, lesson: fromLesson, classKey: request.fromClassKey,
+          originalTeacherUid: request.fromTeacherUid, newTeacherUid: request.toTeacherUid,
+          active: true, createdAt: serverTimestamp(), sourceRequestId: requestId, type: 'cover'
+        }, { merge: true });
+      } else if(request.type === 'swap') {
+        const toDate = request.toDate || fromDate;
+        const toLesson = Number(request.toLesson || request.lesson);
+
+        const overrideId1 = `swapA_${fromDate}_${fromLesson}_${request.fromTeacherUid}_${request.toTeacherUid}`;
+        const overrideRef1 = doc(db, 'scheduleOverrides', overrideId1);
+        tx.set(overrideRef1, {
+          date: fromDate, lesson: fromLesson, classKey: request.fromClassKey,
+          originalTeacherUid: request.fromTeacherUid, newTeacherUid: request.toTeacherUid,
+          active: true, createdAt: serverTimestamp(), sourceRequestId: requestId, type: 'swap'
+        }, { merge: true });
+
+        const toClassKey = request.toClassKey || '—';
+        const overrideId2 = `swapB_${toDate}_${toLesson}_${request.toTeacherUid}_${request.fromTeacherUid}`;
+        const overrideRef2 = doc(db, 'scheduleOverrides', overrideId2);
+        tx.set(overrideRef2, {
+          date: toDate, lesson: toLesson, classKey: toClassKey,
+          originalTeacherUid: request.toTeacherUid, newTeacherUid: request.fromTeacherUid,
+          active: true, createdAt: serverTimestamp(), sourceRequestId: requestId, type: 'swap'
+        }, { merge: true });
+      }
+    }
+
     /* ========= Incoming requests listener ========= */
     function buildIncomingRequestText(req){
       const fromName = req.fromTeacherName || 'معلّم';
@@ -3970,6 +4381,8 @@
 
     btnMore.addEventListener('click', openMore);
     closeMore.addEventListener('click', closeMoreSheet);
+    btnRequests.addEventListener('click', openRequestsSheet);
+    closeRequests.addEventListener('click', closeRequestsSheet);
     btnBackMain.addEventListener('click', () => {
       location.href = '/Teachers/user.html';
     });
@@ -4018,6 +4431,11 @@
         profilePromise,
         loadTodayForTeacher(user.uid)
       ]);
+
+      if(currentRole === 'head'){
+        headUid = user.uid;
+        btnRequests.hidden = false;
+      }
 
       startPendingRequestsListener();
     });
