@@ -358,8 +358,8 @@
       display: flex; align-items: center; justify-content: center; gap: 8px;
     }
     .compact-cell {
-      background: var(--card-bg); border: 1px solid var(--border-light);
-      border-radius: var(--radius-sm); padding: 12px 8px; text-align: center;
+      background: transparent; border: none;
+      border-radius: var(--radius-sm); padding: 10px 8px; text-align: center;
       min-height: 50px; display: flex; flex-direction: column; align-items: center; justify-content: center;
       font-weight: 800; font-size: 0.9rem;
       position: relative;
@@ -374,19 +374,23 @@
       justify-content: center;
     }
     .compact-cell.clickable { cursor: pointer; }
-    .compact-cell.clickable:hover { border-color: var(--border); box-shadow: var(--shadow-1); transform: translateY(-1px); }
+    .compact-cell.clickable:hover { background: var(--primary-light); }
     /* الحصة + الصف for one lesson slot — spans both grid columns so it keeps
-       the same footprint as a normal row. Plain wrapper by default (its two
-       .compact-cell children look identical to any other row); when it's the
-       current lesson, the wrapper itself becomes the single blue container
-       and the two cells sit inside it as smaller sub-boxes, instead of each
-       cell getting its own separate blue border. */
+       the same footprint as a normal row. Individual cells have no border/
+       background of their own (avoids a boxed-container look per lesson,
+       which felt crowded with 7+ rows on screen) — rows are separated by a
+       plain hairline instead. When it's the current lesson, the wrapper
+       becomes the single blue container and the two cells sit inside it as
+       smaller sub-boxes. */
     .compact-row {
       grid-column: 1 / -1;
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 8px;
+      border-bottom: 1px solid var(--border-light);
+      padding-bottom: 6px;
     }
+    .compact-row:last-child { border-bottom: none; padding-bottom: 0; }
     .compact-row.current-lesson {
       background-color: rgba(4, 69, 99, 0.10);
       border: 2px solid var(--primary-2);
