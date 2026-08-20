@@ -1681,11 +1681,22 @@
       }
     }
 
+    // Stored/edited as 24-hour "HH:MM" (and <input type="time"> requires that
+    // format), but displayed in 12-hour form with no leading zero and no
+    // AM/PM — e.g. "13:55" shows as "1:55".
+    function to12HourLabel(hhmm) {
+      const m = /^(\d{1,2}):(\d{2})$/.exec((hhmm || '').toString());
+      if (!m) return hhmm || '';
+      let h = parseInt(m[1], 10) % 12;
+      if (h === 0) h = 12;
+      return `${h}:${m[2]}`;
+    }
+
     function formatLessonTime(index) {
       if (index < 0 || index >= FIXED_LESSON_COUNT) return "";
       const time = lessonTimes[index];
       if (!time) return "";
-      return `${time.start} - ${time.end}`;
+      return `${to12HourLabel(time.start)} - ${to12HourLabel(time.end)}`;
     }
 
     async function saveLessonTime(index, startTime, endTime) {
@@ -2269,7 +2280,7 @@
         h.innerHTML = `
           <div class="lesson-word">الحصة</div>
           <div class="lesson-name">${lessonNameOnly(i)}</div>
-          <div class="time-display">${t.start} - ${t.end}</div>
+          <div class="time-display">${to12HourLabel(t.start)} - ${to12HourLabel(t.end)}</div>
         `;
         if(timeIndex < FIXED_LESSON_COUNT){
           h.addEventListener('click', ()=> openMainTimeEditor(timeIndex));
