@@ -1734,16 +1734,6 @@
             return -1;
         }
 
-        // NEW HELPER: Get weekday name in Arabic (optional, for display)
-        function getKuwaitWeekdayArabic() {
-            const now = new Date();
-            const formatter = new Intl.DateTimeFormat('ar-KW', { 
-                weekday: 'long', 
-                timeZone: 'Asia/Kuwait' 
-            });
-            return formatter.format(now);
-        }
-
         // NEW HELPER A: getLessonWindowStatus
         function getLessonWindowStatus(lessonIndex) {
             const lesson = LESSON_TIMES.find(l => l.index === lessonIndex);
@@ -1767,10 +1757,8 @@
             
             try {
                 // Today's weekday index (0=Sun..4=Thu) — the standing schedule's
-                // real identity field — plus the Arabic name for legacy documents
-                // that predate the dayIndex field.
+                // real identity field.
                 const todayDayIndex = getKuwaitDayIndexSunThu();
-                const todayWeekdayArabic = getKuwaitWeekdayArabic();
 
                 // 1. Get all schedules for this teacher
                 const schedulesQuery = query(
@@ -1793,11 +1781,12 @@
                     if (todayDayIndex >= 0 && Number(data.dayIndex) === todayDayIndex) {
                         appliesToday = true;
                     }
-                    // Case B: legacy documents with an Arabic day name but no dayIndex yet
-                    else if (data.day === todayWeekdayArabic) {
-                        appliesToday = true;
-                    }
-                    // Case C: legacy exact-date entries from before the schedule was recurring
+                    // Case B: legacy exact-date entries from before the schedule was recurring.
+                    // No Arabic-day-name-only fallback here on purpose — that branch used to
+                    // match ANY doc with a matching day field regardless of dayIndex, including
+                    // orphaned legacy docs left behind by old teacher reassignments, which is
+                    // what caused the pulsing "current lesson" highlight (and, most likely, the
+                    // backend's Telegram reminder) to fire for lessons a teacher no longer has.
                     else if (data.date === dateISO) {
                         appliesToday = true;
                     }

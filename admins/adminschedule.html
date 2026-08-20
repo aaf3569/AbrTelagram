@@ -1189,6 +1189,17 @@
             </div>
           </div>
         </div>
+
+        <div class="tc-divider"></div>
+
+        <div class="tc-row tc-row-cleanup">
+          <span class="tc-section-label">تنظيف الجداول القديمة</span>
+          <div class="pop-desc">يحذف سجلات جدول قديمة (من قبل نظام التكرار الأسبوعي) لا تظهر في الجدول الحالي، لكنها تبقى تُشعِر المعلمين بحصص لم تعد لديهم. يمكن أن يستغرق هذا بضع ثوانٍ.</div>
+          <div class="lesson-count-row">
+            <button id="cleanupLegacyBtn" class="btn ghost" type="button">تنظيف الآن</button>
+          </div>
+          <div id="cleanupLegacyMsg" class="pop-desc"></div>
+        </div>
       </div>
       <div class="pop-actions">
         <button id="settingsCloseBtn" class="btn primary" type="button">تم</button>
@@ -1326,6 +1337,8 @@
     const lessonCountInput = document.getElementById('lessonCountInput');
     const lessonCountSaveBtn = document.getElementById('lessonCountSaveBtn');
     const lessonCountMsg = document.getElementById('lessonCountMsg');
+    const cleanupLegacyBtn = document.getElementById('cleanupLegacyBtn');
+    const cleanupLegacyMsg = document.getElementById('cleanupLegacyMsg');
 
     /* ========= State ========= */
     // Remember the last-viewed grade/class across page reloads — otherwise every
@@ -2628,6 +2641,8 @@
       lessonCountInput.value = FIXED_LESSON_COUNT;
       lessonCountMsg.textContent = '';
       lessonCountMsg.classList.remove('err');
+      cleanupLegacyMsg.textContent = '';
+      cleanupLegacyMsg.classList.remove('err');
       overlay.classList.add('show');
       settingsModal.classList.add('show');
     }
@@ -2709,6 +2724,27 @@
         lessonCountMsg.classList.add('err');
       }finally{
         lessonCountSaveBtn.disabled = false;
+      }
+    });
+
+    cleanupLegacyBtn.addEventListener('click', async ()=>{
+      const confirmed = window.confirm('سيتم حذف سجلات جدول قديمة (من قبل نظام التكرار الأسبوعي) عبر كل فصول المدرسة. لا يمكن التراجع عن هذا. متابعة؟');
+      if(!confirmed) return;
+      cleanupLegacyBtn.disabled = true;
+      cleanupLegacyMsg.classList.remove('err');
+      cleanupLegacyMsg.textContent = 'جارٍ التنظيف...';
+      try{
+        const removed = await cleanupAllLegacySchedules();
+        cleanupLegacyMsg.textContent = removed
+          ? `تم حذف ${removed} سجلاً قديمًا.`
+          : 'لا توجد سجلات قديمة ليتم حذفها.';
+        if(selectedClassKey) await fetchExisting();
+      }catch(error){
+        console.error('[cleanupLegacyBtn]', error);
+        cleanupLegacyMsg.textContent = 'تعذّر إتمام التنظيف.';
+        cleanupLegacyMsg.classList.add('err');
+      }finally{
+        cleanupLegacyBtn.disabled = false;
       }
     });
 
@@ -2880,6 +2916,13 @@
           renderGridFull();
           setDirty(false);
           setStatusHTML(`<div class="muted">تم التحميل. يمكنك التعديل ثم الضغط على حفظ.</div>`);
+          // This class already has a standing (dayIndex-keyed) schedule, so any
+          // leftover legacy docs for it are pure dead weight — they were either
+          // never migrated into the new scheme (superseded the moment an admin
+          // manually re-entered this slot) or are older weeks migrateLegacyWeeklySchedule
+          // never reached. Sweep them now so they stop matching weekday-only
+          // "current lesson" queries for teachers no longer assigned here.
+          cleanupLegacySchedulesFor(grade, section, selectedClassKey, track, trackKey).catch(e=>console.error("[cleanupLegacySchedulesFor]", e));
         }
       }catch(e){
         console.error("[fetchExisting]", e);
@@ -2896,6 +2939,15 @@
       for(let w = 0; w <= 8; w++){
         const prevDates = [0,1,2,3,4].map(i => addDaysISO(weekDates[0], -(w * 7) + i));
         let inherited = false;
+        // Every legacy (date-keyed) doc matched below is superseded the moment we
+        // copy it into the new dayIndex-keyed scheme — left alone, it just sits in
+        // Firestore forever still carrying the old teacherUid, and any query that
+        // matches purely by weekday (the self-service "is this my current lesson"
+        // checks in shared/attendance.js and Teachers/user.html) keeps treating it
+        // as a live lesson indefinitely, even after the slot is reassigned in the
+        // new scheme. Deleted in the same batch as the copy, so this can never
+        // leave data half-migrated.
+        const legacyRefsToDelete = [];
 
         // Fire all 5 day queries in parallel
         const prevSnaps = await Promise.all(prevDates.map(prevIso =>
@@ -2921,6 +2973,8 @@
               (track === "" && (xTrack === "" || xTrack === "_" || xTrackKey === "_" || !("track" in x))) ||
               (track !== "" && (xTrack === track || xTrackKey === trackKey));
             if(!matchByClassKey && !matchByTrack) return;
+
+            legacyRefsToDelete.push(d.ref);
 
             if(!(x.subject || '').toString().trim()) return;
 
@@ -2970,6 +3024,7 @@
                 existingMap.set(k2, { id: id2, ...payload2 });
               }
             }
+            legacyRefsToDelete.forEach(ref => batch.delete(ref));
             await batch.commit();
           }catch(saveErr){
             console.error("[migrateLegacyWeeklySchedule auto-save]", saveErr);
@@ -2985,6 +3040,59 @@
       renderGridFull();
       setDirty(false);
       setStatusHTML(`<div class="muted">تم التحميل. يمكنك التعديل ثم الضغط على حفظ.</div>`);
+    }
+
+    // Deletes leftover legacy (pre-dayIndex-scheme) schedules docs for one
+    // grade/section/classKey/track combo. A doc is "legacy" here purely by not
+    // having a valid dayIndex (0-4) — every doc ever written or migrated through
+    // the current UI always sets one, so its absence means the doc predates this
+    // scheme and was never cleaned up. Safe to call whenever this slot already
+    // has a standing schedule (see fetchExisting), since the current data has
+    // already fully superseded whatever these hold. Returns how many were removed.
+    async function cleanupLegacySchedulesFor(grade, section, classKey, track, trackKey){
+      const snap = await getDocs(query(
+        collection(db,'schedules'),
+        where('grade','==', String(grade)),
+        where('section','==', String(section))
+      ));
+      const toDelete = [];
+      snap.forEach(d => {
+        const x = d.data() || {};
+        const di = Number(x.dayIndex);
+        if(di >= 0 && di <= 4) return; // current-scheme doc — keep
+        const xClassKey = (x.classKey || '').toString();
+        const xTrack = (x.track || '').toString();
+        const xTrackKey = (x.trackKey || '').toString();
+        const matchByClassKey = xClassKey && xClassKey === classKey;
+        const matchByTrack =
+          (track === "" && (xTrack === "" || xTrack === "_" || xTrackKey === "_" || !("track" in x))) ||
+          (track !== "" && (xTrack === track || xTrackKey === trackKey));
+        if(!matchByClassKey && !matchByTrack) return;
+        toDelete.push(d.ref);
+      });
+      if(!toDelete.length) return 0;
+      const batch = writeBatch(db);
+      toDelete.forEach(ref => batch.delete(ref));
+      await batch.commit();
+      return toDelete.length;
+    }
+
+    // Same sweep as cleanupLegacySchedulesFor, but across every grade/section/
+    // track in the school in one pass — for clearing out orphaned legacy docs
+    // the admin hasn't happened to reopen in the editor yet (each one only gets
+    // swept the moment its own class is opened otherwise).
+    async function cleanupAllLegacySchedules(){
+      let total = 0;
+      for(const classKey of ALL_CLASS_KEYS){
+        const {grade, section, track} = parseClassKey(classKey);
+        const trackKey = trackKeyOf(track);
+        try{
+          total += await cleanupLegacySchedulesFor(grade, section, classKey, track, trackKey);
+        }catch(e){
+          console.error("[cleanupAllLegacySchedules]", classKey, e);
+        }
+      }
+      return total;
     }
 
     /* ======= Conflict prefetch ======= */
