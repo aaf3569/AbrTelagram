@@ -2209,18 +2209,18 @@
         modalSubtitle.textContent = `التاريخ: ${niceDate}`;
 
         modalBody.innerHTML = `
+          <div class="teacher-line" id="teacherLine">
+            <i class="fas fa-chalkboard-teacher"></i>
+            <span class="teacher-label">المعلّم:</span>
+            <span class="teacher-name" id="teacherChips">جاري التحميل…</span>
+          </div>
+
           <div class="tabs">
             <button class="tab-btn active" id="tabAbsent">الغياب (${toArabicDigits(cell.count)})</button>
             <button class="tab-btn" id="tabLates">المتأخرون (${toArabicDigits(cell.lateCount)})</button>
           </div>
 
           <div class="tab-content active" id="panelAbsent">
-            <div class="teacher-line" id="teacherLine">
-              <i class="fas fa-chalkboard-teacher"></i>
-              <span class="teacher-label">المعلّم:</span>
-              <span class="teacher-name" id="teacherChips">جاري التحميل…</span>
-            </div>
-
             <div class="section">
               <div class="sec-title">
                 <span>أسماء الغياب</span>
