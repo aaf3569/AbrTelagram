@@ -3131,15 +3131,6 @@
 
       const body = `
         ${lessonInfoBox(meta)}
-        <div class="hint">
-          <i class="fas fa-lightbulb" style="margin-top:2px"></i>
-          <div>
-            <div style="font-weight:900; margin-bottom:2px">اختيار أسهل</div>
-            <div style="color:rgba(2,43,66,0.75)">
-              يمكنك الآن اختيار تاريخ وحصة مختلفة داخل نفس الأسبوع أو أسابيع مستقبلية. التبديل يسمح بحصص في أيام وأوقات مختلفة، والتغطية لا تحتاج أن يكون لدى المعلم الآخر حصة.
-            </div>
-          </div>
-        </div>
       `;
 
       const footer = `
@@ -4384,7 +4375,21 @@
     btnRequests.addEventListener('click', openRequestsSheet);
     closeRequests.addEventListener('click', closeRequestsSheet);
     btnBackMain.addEventListener('click', () => {
-      location.href = '/Teachers/user.html';
+      // This page is reached from several different hubs depending on the
+      // signed-in user's role (Teachers/user.html, depHead/dptlead.html,
+      // supervisors/supervisor.html, admins/admin-late-attendance.html) —
+      // each records its own path right before navigating here, so رجوع
+      // returns to wherever the user actually came from instead of always
+      // landing on the plain teacher hub.
+      let returnTo = '/Teachers/user.html';
+      try {
+        const stored = sessionStorage.getItem('teacherScheduleReturnTo');
+        if (stored) {
+          returnTo = stored;
+          sessionStorage.removeItem('teacherScheduleReturnTo');
+        }
+      } catch {}
+      location.href = returnTo;
     });
     btnDownloadPdf.addEventListener('click', downloadWeeklySchedulePdf);
     btnDownloadAllClassesPdf.addEventListener('click', downloadAllClassSchedulesPdf);

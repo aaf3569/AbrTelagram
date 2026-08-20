@@ -1721,6 +1721,7 @@
             window.location.href = '/supervisors/supervisorstudents.html';
         });
         teacherScheduleBtn.addEventListener('click', () => {
+            try { sessionStorage.setItem('teacherScheduleReturnTo', '/supervisors/supervisor.html'); } catch {}
             window.location.href = '/Teachers/teacherschedule.html';
         });
         adminScheduleEditBtn.addEventListener('click', () => {

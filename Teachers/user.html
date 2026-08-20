@@ -3536,6 +3536,7 @@
         /* ========= Teacher Schedule Redirect ========= */
         if (teacherScheduleBtn) {
             teacherScheduleBtn.addEventListener('click', ()=> {
+                try { sessionStorage.setItem('teacherScheduleReturnTo', '/Teachers/user.html'); } catch {}
                 location.href = '/Teachers/teacherschedule.html';
             });
         }

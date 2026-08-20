@@ -1700,6 +1700,7 @@
     /* ========= NEW: Teacher Schedule Redirect ========= */
     if (teacherScheduleBtn) {
         teacherScheduleBtn.addEventListener('click', ()=> {
+            try { sessionStorage.setItem('teacherScheduleReturnTo', '/admins/admin-late-attendance.html'); } catch {}
             location.href = '/Teachers/teacherschedule.html';
         });
     }

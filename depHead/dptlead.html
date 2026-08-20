@@ -2169,6 +2169,7 @@
         scheduleModal.querySelector('.overlay').addEventListener('click', () => closeModal(scheduleModal));
         
         myScheduleBtn.addEventListener('click', () => {
+            try { sessionStorage.setItem('teacherScheduleReturnTo', '/depHead/dptlead.html'); } catch {}
             window.location.href = '/Teachers/teacherschedule.html';
         });
         
