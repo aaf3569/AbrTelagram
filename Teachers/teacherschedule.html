@@ -375,6 +375,37 @@
     }
     .compact-cell.clickable { cursor: pointer; }
     .compact-cell.clickable:hover { border-color: var(--border); box-shadow: var(--shadow-1); transform: translateY(-1px); }
+    /* الحصة + الصف for one lesson slot — spans both grid columns so it keeps
+       the same footprint as a normal row. Plain wrapper by default (its two
+       .compact-cell children look identical to any other row); when it's the
+       current lesson, the wrapper itself becomes the single blue container
+       and the two cells sit inside it as smaller sub-boxes, instead of each
+       cell getting its own separate blue border. */
+    .compact-row {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .compact-row.current-lesson {
+      background-color: rgba(4, 69, 99, 0.10);
+      border: 2px solid var(--primary-2);
+      box-shadow: 0 0 0 2px rgba(2, 43, 66, 0.22);
+      border-radius: var(--radius-sm);
+      padding: 4px;
+    }
+    /* Cells lose their own border/background inside the mother box (avoids a
+       double-boxed look) and shrink their padding by roughly what the mother's
+       own border+padding just added, so the highlighted row's overall height
+       still matches a normal row instead of growing taller than its neighbors. */
+    .compact-row.current-lesson .compact-cell {
+      color: var(--primary-2);
+      font-weight: 900;
+      background: transparent;
+      border-color: transparent;
+      padding: 8px 6px;
+      min-height: 42px;
+    }
 
     /* Sheet */
     .sheet {
@@ -1864,13 +1895,16 @@
           }
         }
 
+        const compactRow = document.createElement('div');
+        compactRow.className = 'compact-row';
+        compactRow.dataset.lessonIndex = String(i);
         if (activeLesson === i) {
-          compactLesson.classList.add('current-lesson');
-          compactClass.classList.add('current-lesson');
+          compactRow.classList.add('current-lesson');
         }
+        compactRow.appendChild(compactLesson);
+        compactRow.appendChild(compactClass);
 
-        compactWrap.appendChild(compactLesson);
-        compactWrap.appendChild(compactClass);
+        compactWrap.appendChild(compactRow);
         renderOpportunityDivider(compactWrap, i);
       }
 
@@ -4330,18 +4364,16 @@
         const activeLesson = getActiveLessonIndex();
         
         containerMain.querySelectorAll('.cell.current-lesson').forEach(el => el.classList.remove('current-lesson'));
-        containerMain.querySelectorAll('.compact-cell.current-lesson').forEach(el => el.classList.remove('current-lesson'));
-        
+        containerMain.querySelectorAll('.compact-row.current-lesson').forEach(el => el.classList.remove('current-lesson'));
+
         if (activeLesson !== null) {
           const mainLessonCell = containerMain.querySelector(`.table .cell[data-row-role="lesson"][data-lesson-index="${activeLesson}"]`);
           const mainClassCell = containerMain.querySelector(`.table .cell[data-row-role="class"][data-lesson-index="${activeLesson}"]`);
           if (mainLessonCell) mainLessonCell.classList.add('current-lesson');
           if (mainClassCell) mainClassCell.classList.add('current-lesson');
 
-          const compactLessonCell = containerMain.querySelector(`.compact-table .compact-cell[data-row-role="lesson"][data-lesson-index="${activeLesson}"]`);
-          const compactClassCell = containerMain.querySelector(`.compact-table .compact-cell[data-row-role="class"][data-lesson-index="${activeLesson}"]`);
-          if (compactLessonCell) compactLessonCell.classList.add('current-lesson');
-          if (compactClassCell) compactClassCell.classList.add('current-lesson');
+          const compactRow = containerMain.querySelector(`.compact-table .compact-row[data-lesson-index="${activeLesson}"]`);
+          if (compactRow) compactRow.classList.add('current-lesson');
         }
       }
     }
