@@ -695,8 +695,9 @@
       box-shadow: 0 4px 12px rgba(3,60,84,.08);
     }
 
-    /* Sticky columns with explicit classes */
-    .class-col, .morning-col {
+    /* الصف column - rightmost, frozen so it stays visible while the lesson
+       columns scroll horizontally underneath it. */
+    .class-col {
       position: sticky;
       background: #fff;
       text-align: center;
@@ -704,32 +705,29 @@
       z-index: 15;
       border-left: 2px solid var(--border);
     }
-
-    /* الصف column - rightmost */
     th.class-col, td.class-col {
       right: 0;
       width: 140px;
       min-width: 140px;
       z-index: 16;
     }
-
-    /* الصبح column - left of الصف */
-    th.morning-col, td.morning-col {
-      right: 140px;
-      width: 80px;
-      min-width: 80px;
-      z-index: 15;
-    }
-
-    /* Higher z-index for sticky headers */
     thead th.class-col {
       z-index: 26;
       box-shadow: 4px 0 12px rgba(3,60,84,.08);
     }
 
-    thead th.morning-col {
-      z-index: 25;
-      box-shadow: 4px 0 12px rgba(3,60,84,.08);
+    /* الصبح column - a normal (non-frozen) column now; it scrolls away with
+       the rest of the table like every lesson column instead of staying
+       pinned in place. */
+    .morning-col {
+      background: #fff;
+      text-align: center;
+      padding: 12px 10px;
+      border-left: 2px solid var(--border);
+    }
+    th.morning-col, td.morning-col {
+      width: 80px;
+      min-width: 80px;
     }
 
     tbody td{
@@ -1013,7 +1011,6 @@
         min-width: 132px;
       }
       th.morning-col, td.morning-col {
-        right: 132px;
         width: 70px;
         min-width: 70px;
       }
