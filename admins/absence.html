@@ -3,27 +3,25 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.gstatic.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; manifest-src 'self'; upgrade-insecure-requests; block-all-mixed-content">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.gstatic.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; manifest-src 'self'; upgrade-insecure-requests; block-all-mixed-content">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
-  <title>نظام الغياب - ثانوية أحمد البشر الرومي</title>
+  <title>تدقيق الغياب - ثانوية أحمد البشر الرومي</title>
 
   <!-- Noto Kufi Arabic -->
   <link href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
 
-  <!-- Chart.js for statistics -->
-  <script defer src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <!-- jsPDF -->
+  <!-- jsPDF (export) -->
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
 
   <link rel="stylesheet" href="/shared/base.css" />
   <style>
     :root{
-      --primary:#0A4B78; --secondary:#1A73E8; --accent:#34A853; 
+      --primary:#0A4B78; --secondary:#1A73E8; --accent:#34A853;
       --page:#f8fafc; --text:#1e293b; --muted:#64748b;
       --border:#e2e8f0; --shadow-1:0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
       --shadow-2:0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
@@ -55,77 +53,23 @@
       backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
       color:var(--primary);
       padding:16px 20px;
-      display:flex; align-items:center; justify-content:space-between;
+      display:flex; align-items:center; justify-content:space-between; gap:12px;
       border-bottom:1px solid rgba(10,75,120,.08);
       box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     }
-    .site-title{ margin:0; font-weight:900; letter-spacing:.2px; font-size:clamp(1.1rem,2.4vw,1.5rem); }
-    .header-actions{ display:flex; gap:12px; align-items:center; }
+    .site-title{ margin:0; font-weight:900; letter-spacing:.2px; font-size:clamp(1rem,2.4vw,1.4rem); text-align:center; flex:1; }
+    .header-actions{ display:flex; gap:10px; align-items:center; }
     .icon-btn{
       width:40px; height:40px; border-radius:50%; border:none; background:var(--primary); color:white;
       display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s;
-      box-shadow: var(--shadow-1);
+      box-shadow: var(--shadow-1); flex-shrink:0;
     }
     .icon-btn:hover{ transform:translateY(-2px); box-shadow: var(--shadow-2); }
+    .icon-btn.ghost{ background:#fff; color:var(--primary); border:1px solid rgba(10,75,120,.25); box-shadow:none; }
 
     /* Layout */
     main{ flex:1; padding:20px 16px; display:flex; flex-direction:column; }
     .container{ width:min(100%, 1200px); margin:0 auto; }
-
-    /* Stats Dashboard */
-    .stats-dashboard{
-      background:white; border-radius:var(--radius-lg); padding:20px; margin-bottom:24px;
-      box-shadow: var(--shadow-1); border:1px solid var(--border);
-    }
-    .date-time-display{
-      display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;
-      padding-bottom:16px; border-bottom:1px solid var(--border);
-    }
-    .date-display{ display:flex; flex-direction:column; }
-    .today-date{ font-size:1.25rem; font-weight:800; color:var(--primary); }
-    .today-time{ font-size:1rem; color:var(--muted); font-weight:600; }
-    .stats-grid{
-      display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:16px;
-      margin-bottom:24px;
-    }
-    .stat-card{
-      background:white; border-radius:var(--radius); padding:20px; 
-      box-shadow: var(--shadow-1); border:1px solid var(--border);
-      display:flex; flex-direction:column; gap:12px;
-    }
-    .stat-header{ display:flex; justify-content:space-between; align-items:center; }
-    .stat-title{ font-size:0.9rem; color:var(--muted); font-weight:700; }
-    .stat-icon{
-      width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center;
-    }
-    .stat-icon.students{ background:var(--blueBg); color:var(--blue); }
-    .stat-icon.present{ background:var(--greenBg); color:var(--green); }
-    .stat-icon.absent{ background:var(--redBg); color:var(--red); }
-    .stat-icon.late{ background:var(--yellowBg); color:var(--yellow); }
-    .stat-value{ font-size:1.75rem; font-weight:900; color:var(--text); line-height:1; }
-    .stat-change{ display:flex; align-items:center; gap:4px; font-size:0.85rem; font-weight:700; }
-    .stat-change.positive{ color:var(--green); }
-    .stat-change.negative{ color:var(--red); }
-    
-    /* Charts Section */
-    .charts-section{
-      display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:20px;
-      margin-bottom:24px;
-    }
-    .chart-card{
-      background:white; border-radius:var(--radius-lg); padding:20px; 
-      box-shadow: var(--shadow-1); border:1px solid var(--border);
-    }
-    .chart-header{ display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
-    .chart-title{ font-size:1rem; font-weight:800; color:var(--primary); }
-    .chart-actions{ display:flex; gap:8px; }
-    .chart-action-btn{
-      padding:6px 12px; border-radius:8px; border:1px solid var(--border); background:white;
-      font-size:0.85rem; font-weight:700; cursor:pointer; transition:all 0.2s;
-    }
-    .chart-action-btn:hover{ background:var(--chip); }
-    .chart-action-btn.active{ background:var(--primary); color:white; border-color:var(--primary); }
-    .chart-container{ position:relative; height:240px; }
 
     /* Panels / states */
     .panel{ width:100%; background:#fff; border:1px solid var(--border); border-radius:var(--radius-lg); padding:20px; box-shadow: var(--shadow-1) }
@@ -154,14 +98,6 @@
     .btn.ghost{ background:#fff; color:var(--primary); border:1px solid rgba(10,75,120,.25); box-shadow: var(--shadow-1) }
     .btn.ghost:hover{ transform:translateY(-2px); box-shadow: 0 14px 34px rgba(10,75,120,.12); border-color:rgba(10,75,120,.45) }
 
-    .subject{
-      width:100%; background:#fff; border:1px solid var(--border); border-radius:var(--radius); padding:16px;
-      display:flex; align-items:center; justify-content:space-between; gap:10px; cursor:pointer; box-shadow: var(--shadow-1);
-      color:var(--text); font-weight:600;
-      transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease, background .12s ease;
-    }
-    .subject:hover{ transform:translateY(-2px); box-shadow:var(--shadow-2); border-color:rgba(10,75,120,.25); background:#fbfdff }
-    .subject:active{ transform:translateY(0) scale(.997) }
     .chev{ width:22px; height:22px }
     .chev path{ stroke:var(--muted); stroke-width:2.4; fill:none; stroke-linecap:round; stroke-linejoin:round }
 
@@ -194,10 +130,10 @@
       transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease, background .12s ease;
     }
     .att-tile:hover{ transform:translateY(-2px); box-shadow:var(--shadow-2); border-color:rgba(10,75,120,.25); background:#fbfdff }
-    .att-left{ display:flex; flex-direction:column; gap:4px }
+    .att-left{ display:flex; flex-direction:column; gap:4px; min-width:0; }
     .att-title{ font-weight:900; color:var(--primary); }
     .att-sub{ color:var(--muted); font-weight:800; font-size:.92rem }
-    .badge{ padding:6px 12px; border-radius:999px; font-weight:900; font-size:.82rem }
+    .badge{ padding:6px 12px; border-radius:999px; font-weight:900; font-size:.82rem; flex-shrink:0; }
     .b-absent{ background:var(--redBg); color:var(--red); border:1px solid rgba(239,68,68,.25) }
     .b-late{ background:var(--yellowBg); color:var(--yellow); border:1px solid rgba(245,158,11,.25) }
     .b-present{ background:var(--greenBg); color:var(--green); border:1px solid rgba(16,185,129,.25) }
@@ -206,12 +142,11 @@
     .expand{ display:none; padding:12px 16px 0 16px; color:var(--text); background:#f8fafc; border-radius:0 0 var(--radius) var(--radius); margin-top:-8px; border:1px solid var(--border); border-top:none; }
     .att-tile.open + .expand{ display:block; }
 
-    /* Status toggle + time filters */
+    /* Status toggle + filter chip rows (shared look) */
     .status-toggle{
       display:flex; gap:8px; align-items:center; flex-wrap:wrap;
       background:#fff; border:1px solid var(--border); border-radius:var(--radius); padding:8px;
       box-shadow: var(--shadow-1);
-      font-family:"Noto Kufi Arabic";
     }
     .status-btn{
       border:1px solid rgba(10,75,120,.25); background:#fff; color:var(--primary);
@@ -224,27 +159,25 @@
     .status-btn.active.late{ background:var(--yellowBg); color:var(--yellow); border-color:rgba(245,158,11,.35) }
     .status-btn.active.present{ background:var(--greenBg); color:var(--green); border-color:rgba(16,185,129,.35) }
 
-    .filters-bar{
+    .filters-bar, .classes-filter, .lesson-filter{
       display:flex; gap:8px; flex-wrap:wrap; align-items:center;
       background:#fff; border:1px solid var(--border); border-radius:var(--radius); padding:10px;
       box-shadow: var(--shadow-1);
-      font-family:"Noto Kufi Arabic";
     }
-    .filter-chip{
+    .filter-chip, .class-chip, .lesson-chip{
       border:1px solid rgba(10,75,120,.25); background:#fff; color:var(--primary);
       height:36px; padding:0 14px; border-radius:999px; cursor:pointer; font-weight:800; font-size:.92rem;
       transition:transform .12s, box-shadow .12s, background .12s, border-color .12s;
-      font-family:"Noto Kufi Arabic";
+      font-family:"Noto Kufi Arabic"; white-space:nowrap;
     }
-    .filter-chip:hover{ transform:translateY(-1px); box-shadow: var(--shadow-1); }
-    .filter-chip.active{ background:linear-gradient(180deg, var(--secondary), var(--primary)); color:#fff; border-color:var(--primary); box-shadow:0 4px 12px rgba(10,75,120,.2) }
+    .filter-chip:hover, .class-chip:hover, .lesson-chip:hover{ transform:translateY(-1px); box-shadow: var(--shadow-1); }
+    .filter-chip.active, .class-chip.active, .lesson-chip.active{ background:linear-gradient(180deg, var(--secondary), var(--primary)); color:#fff; border-color:var(--primary); box-shadow:0 4px 12px rgba(10,75,120,.2) }
 
     /* Custom date range */
     .date-range{
       display:none; gap:8px; align-items:center; flex-wrap:wrap;
       background:#fff; border:1px solid var(--border); border-radius:var(--radius); padding:12px;
       box-shadow: var(--shadow-1);
-      font-family:"Noto Kufi Arabic";
     }
     .date-range.open{ display:flex }
     .date-label{ font-weight:800; color:var(--primary); font-size:.95rem }
@@ -265,179 +198,65 @@
       box-shadow:0 4px 12px rgba(10,75,120,.2)
     }
 
-    /* Classes filter bar */
-    .classes-filter{
-      display:none; gap:8px; flex-wrap:wrap; align-items:center;
-      background:#fff; border:1px solid var(--border); border-radius:var(--radius); padding:10px;
-      box-shadow: var(--shadow-1);
-      font-family:"Noto Kufi Arabic";
-    }
-    .classes-filter.open{ display:flex }
-    .class-chip{
-      border:1px solid rgba(10,75,120,.25); background:#fff; color:var(--primary);
-      height:34px; padding:0 14px; border-radius:999px; cursor:pointer; font-weight:800; font-size:.9rem;
-      transition:transform .12s, box-shadow .12s, background .12s, border-color .12s;
-      font-family:"Noto Kufi Arabic";
-      white-space:nowrap;
-    }
-    .class-chip:hover{ transform:translateY(-1px); box-shadow: var(--shadow-1); }
-    .class-chip.active{ background:linear-gradient(180deg, var(--secondary), var(--primary)); color:#fff; border-color:var(--primary); box-shadow:0 4px 12px rgba(10,75,120,.2) }
-
-    /* Tabs */
-    .tabs{ display:flex; gap:0; background:#f1f5f9; border-radius:10px; padding:4px; }
-    .tab{ padding:10px 16px; border-radius:8px; cursor:pointer; font-weight:800; transition:all 0.2s; text-align:center; flex:1; }
-    .tab:hover{ background:rgba(255,255,255,0.7); }
-    .tab.active{ background:white; box-shadow: var(--shadow-1); color:var(--primary); }
-
     /* Export Modal */
     .export-modal {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0,0,0,0.5);
-      backdrop-filter: blur(4px);
-      display: none;
-      justify-content: center;
-      align-items: center;
-      z-index: 1000;
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);
+      display: none; justify-content: center; align-items: center; z-index: 1000;
     }
     .export-modal.active { display: flex; }
     .export-modal-content {
-      background: white;
-      border-radius: var(--radius-lg);
-      padding: 24px;
-      width: 90%;
-      max-width: 400px;
-      box-shadow: var(--shadow-2);
-      border: 1px solid var(--border);
+      background: white; border-radius: var(--radius-lg); padding: 24px;
+      width: 90%; max-width: 400px; box-shadow: var(--shadow-2); border: 1px solid var(--border);
     }
     .export-modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 20px;
-      padding-bottom: 16px;
-      border-bottom: 1px solid var(--border);
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--border);
     }
-    .export-modal-title {
-      font-size: 1.2rem;
-      font-weight: 900;
-      color: var(--primary);
-      margin: 0;
-    }
+    .export-modal-title { font-size: 1.2rem; font-weight: 900; color: var(--primary); margin: 0; }
     .close-export-modal {
-      background: none;
-      border: none;
-      color: var(--muted);
-      cursor: pointer;
-      padding: 8px;
-      border-radius: 8px;
-      transition: all 0.2s;
-      font-size: 1.5rem;
-      line-height: 1;
+      background: none; border: none; color: var(--muted); cursor: pointer;
+      padding: 8px; border-radius: 8px; transition: all 0.2s; font-size: 1.5rem; line-height: 1;
     }
     .close-export-modal:hover { background: var(--chip); color: var(--text); }
     .export-option-group { margin-bottom: 24px; }
-    .export-label {
-      display: block;
-      margin-bottom: 8px;
-      font-weight: 800;
-      color: var(--primary);
-      font-size: 0.95rem;
-    }
+    .export-label { display: block; margin-bottom: 8px; font-weight: 800; color: var(--primary); font-size: 0.95rem; }
     .export-select {
-      width: 100%;
-      padding: 12px 16px;
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      background: white;
-      font-family: "Noto Kufi Arabic";
-      font-size: 0.95rem;
-      font-weight: 700;
-      color: var(--text);
+      width: 100%; padding: 12px 16px; border: 1px solid var(--border); border-radius: var(--radius);
+      background: white; font-family: "Noto Kufi Arabic"; font-size: 0.95rem; font-weight: 700; color: var(--text);
     }
-    .export-select:focus {
-      outline: none;
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(10,75,120,0.1);
-    }
-    .export-actions {
-      display: flex;
-      gap: 12px;
-      margin-top: 32px;
-    }
+    .export-select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(10,75,120,0.1); }
+    .export-actions { display: flex; gap: 12px; margin-top: 32px; }
     .export-btn {
-      flex: 1;
-      padding: 14px 20px;
-      border: none;
-      border-radius: var(--radius);
-      font-family: "Noto Kufi Arabic";
-      font-weight: 900;
-      font-size: 1rem;
-      cursor: pointer;
-      transition: all 0.2s;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
+      flex: 1; padding: 14px 20px; border: none; border-radius: var(--radius);
+      font-family: "Noto Kufi Arabic"; font-weight: 900; font-size: 1rem; cursor: pointer;
+      transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px;
     }
-    .export-btn.primary {
-      background: linear-gradient(180deg, var(--secondary), var(--primary));
-      color: white;
-      box-shadow: var(--shadow-2);
-    }
-    .export-btn.primary:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 16px 36px rgba(10,75,120,0.2);
-    }
-    .export-btn.ghost {
-      background: white;
-      color: var(--primary);
-      border: 1px solid rgba(10,75,120,0.25);
-    }
-    .export-btn.ghost:hover {
-      background: var(--chip);
-      transform: translateY(-1px);
-    }
-    .export-loading {
-      display: none;
-      align-items: center;
-      justify-content: center;
-      gap: 12px;
-      margin-top: 16px;
-      padding: 12px;
-      background: var(--chip);
-      border-radius: var(--radius);
-    }
+    .export-btn.primary { background: linear-gradient(180deg, var(--secondary), var(--primary)); color: white; box-shadow: var(--shadow-2); }
+    .export-btn.primary:hover { transform: translateY(-2px); box-shadow: 0 16px 36px rgba(10,75,120,0.2); }
+    .export-btn.ghost { background: white; color: var(--primary); border: 1px solid rgba(10,75,120,0.25); }
+    .export-btn.ghost:hover { background: var(--chip); transform: translateY(-1px); }
+    .export-loading { display: none; align-items: center; justify-content: center; gap: 12px; margin-top: 16px; padding: 12px; background: var(--chip); border-radius: var(--radius); }
     .export-loading.active { display: flex; }
-    .export-loading .spinner {
-      width: 20px;
-      height: 20px;
-      border-width: 3px;
-    }
+    .export-loading .spinner { width: 20px; height: 20px; border-width: 3px; }
 
     /* Responsive */
     @media (max-width: 768px) {
-      .stats-grid{ grid-template-columns:1fr 1fr; }
-      .charts-section{ grid-template-columns:1fr; }
-      .date-time-display{ flex-direction:column; align-items:flex-start; gap:8px; }
-      .header-actions{ display:none; }
       .export-modal-content { padding:20px; margin:20px; }
+      .site-title{ font-size:1rem; }
     }
     @media (max-width: 480px) {
-      .stats-grid{ grid-template-columns:1fr; }
-      .filters-bar{ justify-content:center; }
+      .filters-bar, .classes-filter, .lesson-filter{ justify-content:center; }
       .date-range{ flex-direction:column; align-items:flex-start; }
       .date-actions{ width:100%; justify-content:space-between; }
       .export-actions { flex-direction:column; }
+      .icon-btn{ width:36px; height:36px; }
     }
   </style>
 
   <!-- iOS home screen icon -->
   <link rel="apple-touch-icon" sizes="180x180" href="/images/appicon.png" />
-  
+
   <link rel="manifest" href="/manifest.webmanifest" />
   <meta name="theme-color" content="#033C54" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -447,28 +266,35 @@
   <link rel="shortcut icon" href="/images/favicon.png" />
 
   <!-- Social / Safari preview (Open Graph & Twitter) -->
-  <meta property="og:title" content="نظام الغياب - ثانوية أحمد البشر الرومي">
-  <meta property="og:description" content="???? ?????? ???? ????? ??????.">
+  <meta property="og:title" content="تدقيق الغياب - ثانوية أحمد البشر الرومي">
+  <meta property="og:description" content="تدقيق تفصيلي في سجلات غياب وتأخير وحضور الطلاب.">
   <meta property="og:type" content="website">
   <meta property="og:image" content="https://framerusercontent.com/images/jRnZLlPr90qwKsuUwfIlvDS9E.png?width=1200&height=630">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
 
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="نظام الغياب - ثانوية أحمد البشر الرومي">
-  <meta name="twitter:description" content="???? ?????? ???? ????? ??????.">
+  <meta name="twitter:title" content="تدقيق الغياب - ثانوية أحمد البشر الرومي">
+  <meta name="twitter:description" content="تدقيق تفصيلي في سجلات غياب وتأخير وحضور الطلاب.">
   <meta name="twitter:image" content="https://framerusercontent.com/images/jRnZLlPr90qwKsuUwfIlvDS9E.png?width=1200&height=630">
 </head>
 <body>
   <header class="site-header">
-    <h1 class="site-title">ثانوية أحمد البشر الرومي</h1>
     <div class="header-actions">
-      <button class="icon-btn" id="refreshStats" title="تحديث الإحصائيات">
+      <button class="icon-btn ghost" id="backBtn" title="رجوع" aria-label="رجوع">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
+          <path d="M15 6l-6 6 6 6"/>
+        </svg>
+      </button>
+    </div>
+    <h1 class="site-title">تدقيق الغياب</h1>
+    <div class="header-actions">
+      <button class="icon-btn" id="refreshView" title="تحديث">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
         </svg>
       </button>
-      <button class="icon-btn" id="exportData" title="تصدير البيانات">
+      <button class="icon-btn" id="exportData" title="تصدير تقرير">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
         </svg>
@@ -480,12 +306,13 @@
   <div class="export-modal" id="exportModal">
     <div class="export-modal-content">
       <div class="export-modal-header">
-        <h3 class="export-modal-title">تصدير تقرير الغياب</h3>
+        <h3 class="export-modal-title">تصدير تقرير غياب مفصّل</h3>
         <button class="close-export-modal" id="closeExportModal">&times;</button>
       </div>
       <div class="export-option-group">
         <label class="export-label">اختر الصف:</label>
         <select class="export-select" id="exportGradeSelect">
+          <option value="all">كل الصفوف</option>
           <option value="10">الصف العاشر</option>
           <option value="11">الصف الحادي عشر</option>
           <option value="12">الصف الثاني عشر</option>
@@ -495,8 +322,8 @@
         <label class="export-label">اختر الفترة:</label>
         <select class="export-select" id="exportPeriodSelect">
           <option value="today">اليوم</option>
-          <option value="week">هذا الأسبوع</option>
-          <option value="month">هذا الشهر</option>
+          <option value="thisWeek">هذا الأسبوع</option>
+          <option value="thisMonth">هذا الشهر</option>
         </select>
       </div>
       <div class="export-actions">
@@ -517,133 +344,6 @@
 
   <main>
     <div class="container">
-      <section class="stats-dashboard" id="statsDashboard">
-        <div class="date-time-display">
-          <div class="date-display">
-            <div class="today-date" id="todayDate">الثلاثاء - ١٠ ديسمبر ٢٠٢٤</div>
-            <div class="today-time" id="todayTime">١٢:٤٥:٣٢ م</div>
-          </div>
-          <div class="tabs" id="statsTabs">
-            <div class="tab active" data-tab="overview">نظرة عامة</div>
-            <div class="tab" data-tab="grades">حسب الصف</div>
-            <div class="tab" data-tab="classes">حسب الفصل</div>
-          </div>
-        </div>
-
-        <div class="stats-grid" id="statsOverview">
-          <div class="stat-card">
-            <div class="stat-header">
-              <div class="stat-title">إجمالي الطلاب</div>
-              <div class="stat-icon students">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                  <circle cx="9" cy="7" r="4"/>
-                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                  <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                </svg>
-              </div>
-            </div>
-            <div class="stat-value" id="totalStudents">٠</div>
-            <div class="stat-change positive">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="18 15 12 9 6 15"/>
-              </svg>
-              <span>+٠ منذ البداية</span>
-            </div>
-          </div>
-
-          <div class="stat-card">
-            <div class="stat-header">
-              <div class="stat-title">الطلاب الحاضرون</div>
-              <div class="stat-icon present">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                  <polyline points="22 4 12 14.01 9 11.01"/>
-                </svg>
-              </div>
-            </div>
-            <div class="stat-value" id="presentStudents">٠</div>
-            <div class="stat-change positive">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="18 15 12 9 6 15"/>
-              </svg>
-              <span>٠٪ نسبة الحضور</span>
-            </div>
-          </div>
-
-          <div class="stat-card">
-            <div class="stat-header">
-              <div class="stat-title">الطلاب الغائبون</div>
-              <div class="stat-icon absent">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <circle cx="12" cy="12" r="10"/>
-                  <line x1="15" y1="9" x2="9" y2="15"/>
-                  <line x1="9" y1="9" x2="15" y2="15"/>
-                </svg>
-              </div>
-            </div>
-            <div class="stat-value" id="absentStudents">٠</div>
-            <div class="stat-change negative">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="6 9 12 15 18 9"/>
-              </svg>
-              <span>٠٪ نسبة الغياب</span>
-            </div>
-          </div>
-
-          <div class="stat-card">
-            <div class="stat-header">
-              <div class="stat-title">الطلاب المتأخرون</div>
-              <div class="stat-icon late">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <circle cx="12" cy="12" r="10"/>
-                  <polyline points="12 6 12 12 16 14"/>
-                </svg>
-              </div>
-            </div>
-            <div class="stat-value" id="lateStudents">٠</div>
-            <div class="stat-change negative">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="6 9 12 15 18 9"/>
-              </svg>
-              <span>٠٪ نسبة التأخير</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="charts-section">
-          <div class="chart-card">
-            <div class="chart-header">
-              <div class="chart-title">نسبة الحضور والغياب</div>
-              <div class="chart-actions">
-                <button class="chart-action-btn active" data-chart="today">اليوم</button>
-                <button class="chart-action-btn" data-chart="week">هذا الأسبوع</button>
-                <button class="chart-action-btn" data-chart="month">هذا الشهر</button>
-              </div>
-            </div>
-            <div class="chart-container">
-              <canvas id="attendanceChart"></canvas>
-            </div>
-          </div>
-
-          <div class="chart-card">
-            <div class="chart-header">
-              <div class="chart-title">توزيع الغياب حسب الصف</div>
-              <div class="chart-actions">
-                <button class="chart-action-btn active" data-chart="grades">حسب الصف</button>
-                <button class="chart-action-btn" data-chart="classes">حسب الفصل</button>
-              </div>
-            </div>
-            <div class="chart-container">
-              <canvas id="distributionChart"></canvas>
-            </div>
-          </div>
-        </div>
-
-        <div class="stats-grid" id="statsGrades" style="display: none;"></div>
-        <div class="stats-grid" id="statsClasses" style="display: none;"></div>
-      </section>
-
       <div id="stateLoading" class="state active panel">
         <div class="loading">
           <div class="spinner"></div>
@@ -662,36 +362,18 @@
 
       <section id="stateHome" class="state panel" aria-label="الغياب">
         <div class="center" style="text-align:center; display:flex; flex-direction:column; gap:8px;">
-          <div style="font-size:1.18rem; font-weight:900; color:var(--primary);">الغياب</div>
-          <div class="muted" style="font-size:.92rem;">اختر الحصة لاستعراض الحالات</div>
+          <div style="font-size:1.18rem; font-weight:900; color:var(--primary);">تدقيق الغياب</div>
+          <div class="muted" style="font-size:.92rem;">اختر الصف لاستعراض سجلات الغياب والتأخير والحضور بالتفصيل</div>
         </div>
         <div class="stack" style="margin-top:12px;">
-          <button class="btn primary" data-lesson="1" type="button">الحصة الأولى</button>
-          <button class="btn ghost" data-lesson="2" type="button">الحصة الثانية</button>
-          <button class="btn ghost" data-lesson="3" type="button">الحصة الثالثة</button>
-          <button class="btn ghost" data-lesson="4" type="button">الحصة الرابعة</button>
-          <button class="btn ghost" data-lesson="5" type="button">الحصة الخامسة</button>
-          <button class="btn ghost" data-lesson="6" type="button">الحصة السادسة</button>
-          <button class="btn ghost" data-lesson="7" type="button">الحصة السابعة</button>
+          <button class="btn primary" data-scope-all="1" type="button">كل الصفوف</button>
+          <button class="btn ghost" data-grade="10" type="button">الصف العاشر</button>
+          <button class="btn ghost" data-grade="11" type="button">الصف الحادي عشر</button>
+          <button class="btn ghost" data-grade="12" type="button">الصف الثاني عشر</button>
         </div>
       </section>
     </div>
   </main>
-
-  <!-- GRADE SHEET -->
-  <section id="gradeSheet" class="sheet" aria-hidden="true">
-    <div class="sheet-header">
-      <button id="closeGrade" class="back-btn" aria-label="رجوع">رجوع</button>
-      <h3 id="gradeTitle" class="sheet-title">—</h3>
-    </div>
-    <div class="sheet-body">
-      <div class="stack">
-        <button class="btn primary" data-grade="10" type="button">الصف العاشر</button>
-        <button class="btn ghost"   data-grade="11" type="button">الصف الحادي عشر</button>
-        <button class="btn ghost"   data-grade="12" type="button">الصف الثاني عشر</button>
-      </div>
-    </div>
-  </section>
 
   <!-- CLASSES SHEET -->
   <section id="classesSheet" class="sheet" aria-hidden="true">
@@ -704,7 +386,7 @@
     </div>
   </section>
 
-  <!-- CLASS / ALL ATTENDANCE SHEET -->
+  <!-- CLASS / GRADE / ALL ATTENDANCE SHEET -->
   <section id="absencesSheet" class="sheet" aria-hidden="true">
     <div class="sheet-header">
       <button id="closeAbsences" class="back-btn" aria-label="رجوع">رجوع</button>
@@ -715,6 +397,16 @@
         <button class="status-btn active absent" data-status="absent" type="button">الغياب</button>
         <button class="status-btn late" data-status="late" type="button">التأخير</button>
         <button class="status-btn present" data-status="present" type="button">الحضور</button>
+      </div>
+      <div class="lesson-filter" id="lessonFilterBar">
+        <button class="lesson-chip active" data-lesson="__all" type="button">كل الحصص</button>
+        <button class="lesson-chip" data-lesson="1" type="button">١</button>
+        <button class="lesson-chip" data-lesson="2" type="button">٢</button>
+        <button class="lesson-chip" data-lesson="3" type="button">٣</button>
+        <button class="lesson-chip" data-lesson="4" type="button">٤</button>
+        <button class="lesson-chip" data-lesson="5" type="button">٥</button>
+        <button class="lesson-chip" data-lesson="6" type="button">٦</button>
+        <button class="lesson-chip" data-lesson="7" type="button">٧</button>
       </div>
       <div class="filters-bar" id="filtersBar">
         <button class="filter-chip active" data-filter="today"      type="button">اليوم</button>
@@ -750,10 +442,9 @@
     import { getAuth, onAuthStateChanged } from "/shared/firebase.js";
     import {
       initializeFirestore, persistentSingleTabManager, collection, getDocs, query, where,
-      doc, getDoc, Timestamp, orderBy
+      doc, getDoc
     } from "/shared/firebase.js";
-
-
+    import { kuwaitTodayISO } from "/shared/kuwait-time.js";
 
     const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
     let db;
@@ -769,17 +460,8 @@
     const sNotLog  = document.getElementById('stateNotLogged');
     const sDenied  = document.getElementById('stateDenied');
     const sHome    = document.getElementById('stateHome');
-    const todayDate = document.getElementById('todayDate');
-    const todayTime = document.getElementById('todayTime');
-    const statsTabs = document.getElementById('statsTabs');
-    const statsOverview = document.getElementById('statsOverview');
-    const statsGrades = document.getElementById('statsGrades');
-    const statsClasses = document.getElementById('statsClasses');
-    const totalStudents = document.getElementById('totalStudents');
-    const presentStudents = document.getElementById('presentStudents');
-    const absentStudents = document.getElementById('absentStudents');
-    const lateStudents = document.getElementById('lateStudents');
-    const refreshStats = document.getElementById('refreshStats');
+    const backBtn = document.getElementById('backBtn');
+    const refreshView = document.getElementById('refreshView');
     const exportData = document.getElementById('exportData');
     const exportModal = document.getElementById('exportModal');
     const closeExportModal = document.getElementById('closeExportModal');
@@ -788,9 +470,6 @@
     const exportGradeSelect = document.getElementById('exportGradeSelect');
     const exportPeriodSelect = document.getElementById('exportPeriodSelect');
     const exportLoading = document.getElementById('exportLoading');
-    const gradeSheet = document.getElementById('gradeSheet');
-    const closeGrade = document.getElementById('closeGrade');
-    const gradeTitle = document.getElementById('gradeTitle');
     const classesSheet = document.getElementById('classesSheet');
     const closeClasses = document.getElementById('closeClasses');
     const classesTitle = document.getElementById('classesTitle');
@@ -802,6 +481,7 @@
     const absCount = document.getElementById('absCount');
     const absencesList = document.getElementById('absencesList');
     const statusToggle = document.getElementById('statusToggle');
+    const lessonFilterBar = document.getElementById('lessonFilterBar');
     const filtersBar = document.getElementById('filtersBar');
     const dateRangeBox = document.getElementById('dateRange');
     const startDateEl = document.getElementById('startDate');
@@ -810,19 +490,18 @@
     const clearRangeBtn = document.getElementById('clearRange');
     const classesFilterBar = document.getElementById('classesFilterBar');
 
+    backBtn.addEventListener('click', () => { window.location.href = '/admins/adminpage.html'; });
+
     // State variables
-    let allStudents = [];
-    let attendanceChart, distributionChart;
-    let selectedLessonIndex = 1;
     let selectedGrade = null;
-    let selectedClass = null;
-    let viewMode = 'class';
+    let currentScope = null;      // {type:'class', className} | {type:'grade', grade} | {type:'all'}
     let statusFilter = 'absent';
-    let timeFilter = 'today';
+    let lessonFilter = '__all';
     let classFilter = '__all';
-    let customStart = null, customEnd = null;
-    let currentChartPeriod = 'today';
-    let currentChartType = 'grades';
+    let timeFilter = 'today';
+    let customStart = null, customEnd = null; // ISO date strings ('YYYY-MM-DD')
+    let cachedStudents = [];
+    let cachedRows = [];
 
     // Helper functions
     const show = (el) => {
@@ -854,97 +533,67 @@
         const [y, m, d] = r.date.split('-').map(n => +n);
         return new Date(y, m - 1, d);
       }
-      if (r?.createdAt) return tsToDate(r.createdAt);
       if (r?.updatedAt) return tsToDate(r.updatedAt);
       return null;
     }
 
-    // Date range helpers
-    function startOfDay(d) {
-      const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-      x.setHours(0, 0, 0, 0);
-      return x;
-    }
-    function endOfDay(d) {
-      const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-      x.setHours(23, 59, 59, 999);
-      return x;
-    }
-    function startOfWeek(d) {
-      const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-      const day = x.getDay();
-      x.setDate(x.getDate() - day);
-      x.setHours(0, 0, 0, 0);
-      return x;
-    }
-    function endOfWeek(d) {
-      const s = startOfWeek(d);
-      const e = new Date(s);
-      e.setDate(s.getDate() + 7);
-      e.setMilliseconds(-1);
-      return e;
-    }
-    function startOfMonth(d) {
-      const x = new Date(d.getFullYear(), d.getMonth(), 1);
-      x.setHours(0, 0, 0, 0);
-      return x;
-    }
-    function endOfMonth(d) {
-      const x = new Date(d.getFullYear(), d.getMonth() + 1, 1);
-      x.setMilliseconds(-1);
-      return x;
-    }
-    function startOfYear(d) {
-      const x = new Date(d.getFullYear(), 0, 1);
-      x.setHours(0, 0, 0, 0);
-      return x;
-    }
-    function endOfYear(d) {
-      const x = new Date(d.getFullYear() + 1, 0, 1);
-      x.setMilliseconds(-1);
-      return x;
-    }
-    function lastMonthRange(d) {
-      const firstThis = startOfMonth(d);
-      const lastEnd = new Date(firstThis - 1);
-      const lastStart = startOfMonth(lastEnd);
-      const end = new Date(lastEnd);
-      end.setHours(23, 59, 59, 999);
-      return { start: lastStart, end };
-    }
-    function lastWeekRange(d) {
-      const thisStart = startOfWeek(d);
-      const end = new Date(thisStart - 1);
-      const start = startOfWeek(end);
-      end.setHours(23, 59, 59, 999);
-      return { start, end };
+    // Concurrency-limited promise pool — avoids firing hundreds of parallel
+    // Firestore reads at once when a scope covers many students.
+    async function promisePool(items, worker, concurrency = 15) {
+      const results = [];
+      let i = 0;
+      const runners = new Array(Math.min(concurrency, items.length)).fill(0).map(async () => {
+        while (i < items.length) {
+          const idx = i++;
+          try { results[idx] = await worker(items[idx], idx); }
+          catch { results[idx] = undefined; }
+        }
+      });
+      await Promise.all(runners);
+      return results;
     }
 
-    function inRange(date, rangeKey) {
-      if (!date) return false;
+    // Calendar-date range helpers — every filter resolves to a plain
+    // 'YYYY-MM-DD' start/end pair, matching the string 'date' field every
+    // attendance record is actually written with (never a Timestamp), so
+    // the range can be applied server-side instead of pulling everything
+    // ever recorded and filtering client-side.
+    function toISODateStr(d) {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const da = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${da}`;
+    }
+    function startOfWeek(d) { const x = new Date(d.getFullYear(), d.getMonth(), d.getDate()); x.setDate(x.getDate() - x.getDay()); return x; }
+    function endOfWeek(d) { const s = startOfWeek(d); const e = new Date(s); e.setDate(s.getDate() + 6); return e; }
+    function startOfMonth(d) { return new Date(d.getFullYear(), d.getMonth(), 1); }
+    function endOfMonth(d) { return new Date(d.getFullYear(), d.getMonth() + 1, 0); }
+    function startOfYear(d) { return new Date(d.getFullYear(), 0, 1); }
+    function endOfYear(d) { return new Date(d.getFullYear(), 11, 31); }
+    function lastWeekRange(d) { const e = new Date(startOfWeek(d)); e.setDate(e.getDate() - 1); return { start: startOfWeek(e), end: e }; }
+    function lastMonthRange(d) { const e = new Date(startOfMonth(d)); e.setDate(e.getDate() - 1); return { start: startOfMonth(e), end: e }; }
+
+    function rangeForFilter(key) {
       const now = new Date();
-      const todayStart = startOfDay(now);
-      const todayEnd = endOfDay(now);
-
-      switch (rangeKey) {
-        case 'today': return date >= todayStart && date <= todayEnd;
-        case 'thisWeek': return date >= startOfWeek(now) && date <= endOfWeek(now);
-        case 'lastWeek': { const r = lastWeekRange(now); return date >= r.start && date <= r.end; }
-        case 'thisMonth': return date >= startOfMonth(now) && date <= endOfMonth(now);
-        case 'lastMonth': { const r = lastMonthRange(now); return date >= r.start && date <= r.end; }
-        case 'thisYear': return date >= startOfYear(now) && date <= endOfYear(now);
-        case 'custom': return (!!customStart && !!customEnd) ? (date >= customStart && date <= customEnd) : true;
-        default: return true;
+      switch (key) {
+        case 'today': { const s = toISODateStr(now); return { startISO: s, endISO: s }; }
+        case 'thisWeek': return { startISO: toISODateStr(startOfWeek(now)), endISO: toISODateStr(endOfWeek(now)) };
+        case 'lastWeek': { const r = lastWeekRange(now); return { startISO: toISODateStr(r.start), endISO: toISODateStr(r.end) }; }
+        case 'thisMonth': return { startISO: toISODateStr(startOfMonth(now)), endISO: toISODateStr(endOfMonth(now)) };
+        case 'lastMonth': { const r = lastMonthRange(now); return { startISO: toISODateStr(r.start), endISO: toISODateStr(r.end) }; }
+        case 'thisYear': return { startISO: toISODateStr(startOfYear(now)), endISO: toISODateStr(endOfYear(now)) };
+        case 'custom': return { startISO: customStart || toISODateStr(now), endISO: customEnd || toISODateStr(now) };
+        default: { const s = toISODateStr(now); return { startISO: s, endISO: s }; }
       }
     }
 
-    // Classes options
+    // Classes
     const CLASS_OPTIONS_RAW = [
       "10 / 1", "10 / 2", "10 / 3", "10 / 4", "10 / 5", "10 / 6", "10 / 7",
       "11 / 1 ع", "11 / 2 ع", "11 / 3 ع", "11 / 4 ع", "11 / 5 ع", "11 / 1 د",
       "12 / 1 ع", "12 / 2 ع", "12 / 3 ع", "12 / 4 ع", "12 / 5 ع", "12 / 1 د"
     ];
-    function sorted(list) {
+    function sortClasses(list) {
       const parse = (s) => {
         const m = s.match(/^(\d+)\s*\/\s*(\d+)(?:\s*(.*))?$/);
         return m ? { g: +m[1], s: +m[2], suf: (m[3] || '').trim() } : { g: 999, s: 999, suf: "" };
@@ -956,11 +605,17 @@
         return a.suf.localeCompare(b.suf, 'ar');
       });
     }
-    const GROUP_10 = sorted(CLASS_OPTIONS_RAW.filter(x => /^10\b/.test(x)));
-    const GROUP_11 = sorted(CLASS_OPTIONS_RAW.filter(x => /^11\b/.test(x)));
-    const GROUP_12 = sorted(CLASS_OPTIONS_RAW.filter(x => /^12\b/.test(x)));
+    const GROUP_10 = sortClasses(CLASS_OPTIONS_RAW.filter(x => /^10\b/.test(x)));
+    const GROUP_11 = sortClasses(CLASS_OPTIONS_RAW.filter(x => /^11\b/.test(x)));
+    const GROUP_12 = sortClasses(CLASS_OPTIONS_RAW.filter(x => /^12\b/.test(x)));
+    const ALL_CLASSES_SORTED = sortClasses(CLASS_OPTIONS_RAW);
     function groupForGrade(g) {
       return g === 10 ? GROUP_10 : g === 11 ? GROUP_11 : GROUP_12;
+    }
+    function classesForScope(scope) {
+      if (scope.type === 'class') return [scope.className];
+      if (scope.type === 'grade') return groupForGrade(scope.grade);
+      return ALL_CLASSES_SORTED;
     }
 
     // Cache teacher names
@@ -976,523 +631,51 @@
       } catch { return uid; }
     }
 
-    // Update date/time display
-    function updateDateTime() {
-      const now = new Date();
-      const dateFormatter = new Intl.DateTimeFormat('ar-KW', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        timeZone: 'Asia/Kuwait'
-      });
-      const timeFormatter = new Intl.DateTimeFormat('ar-KW', {
-        hour: 'numeric',
-        minute: 'numeric',
-        second: 'numeric',
-        timeZone: 'Asia/Kuwait'
-      });
-      todayDate.textContent = toArabicDigits(dateFormatter.format(now));
-      todayTime.textContent = toArabicDigits(timeFormatter.format(now));
+    // Fetch students for a scope (single query for a class; pooled queries
+    // per-class for a grade; one unfiltered read for the whole school).
+    async function fetchStudentsForScope(scope) {
+      if (scope.type === 'class') {
+        const snap = await getDocs(query(collection(db, 'students'), where('class', '==', scope.className)));
+        const list = []; snap.forEach(d => list.push({ id: d.id, ...d.data() }));
+        return list;
+      }
+      if (scope.type === 'grade') {
+        const classes = groupForGrade(scope.grade);
+        const lists = await promisePool(classes, async (cn) => {
+          const snap = await getDocs(query(collection(db, 'students'), where('class', '==', cn)));
+          const list = []; snap.forEach(d => list.push({ id: d.id, ...d.data() }));
+          return list;
+        }, 10);
+        return lists.flat();
+      }
+      const snap = await getDocs(collection(db, 'students'));
+      const list = []; snap.forEach(d => list.push({ id: d.id, ...d.data() }));
+      return list;
     }
-    updateDateTime();
-    setInterval(updateDateTime, 1000);
 
-    // Load all students (cached)
-    async function loadAllStudents() {
-      if (allStudents.length > 0) return allStudents;
-      try {
-        const studentsSnap = await getDocs(collection(db, 'students'));
-        allStudents = [];
-        studentsSnap.forEach(doc => {
-          allStudents.push({ id: doc.id, ...doc.data() });
+    // Fetch attendance records for a scope, bounded to a date range. Every
+    // record written by shared/attendance.js's mirror into
+    // students/{uid}/attendance carries a plain 'date' string ('YYYY-MM-DD')
+    // — NOT a 'createdAt' Timestamp — so the range query below is what
+    // actually matches real data (the previous version of this page queried
+    // 'createdAt', which the mirror never writes, so every query always came
+    // back empty).
+    async function fetchAttendanceForScope(scope, startISO, endISO) {
+      const students = await fetchStudentsForScope(scope);
+      students.sort((a, b) => arabicSort(a.name, b.name));
+      const rows = [];
+      await promisePool(students, async (st) => {
+        const ref = collection(db, 'students', st.id, 'attendance');
+        const q = query(ref, where('date', '>=', startISO), where('date', '<=', endISO));
+        const sub = await getDocs(q);
+        sub.forEach(docSnap => {
+          const r = { id: docSnap.id, ...docSnap.data(), _student: st };
+          if (!r.class) r.class = st.class;
+          rows.push(r);
         });
-        return allStudents;
-      } catch (error) {
-        console.error('Error loading students:', error);
-        return [];
-      }
+      }, 15);
+      return { students, rows };
     }
-
-    // Get unique student status for a day (most recent record)
-    function getUniqueStatusForDay(records) {
-      if (records.length === 0) return null;
-      // Sort by updatedAt or createdAt, most recent first
-      const sorted = records.sort((a, b) => {
-        const aTime = a.updatedAt || a.createdAt;
-        const bTime = b.updatedAt || b.createdAt;
-        return (bTime?.seconds || 0) - (aTime?.seconds || 0);
-      });
-      return sorted[0].status;
-    }
-
-    // Calculate statistics for a period
-    async function calculateStatsForPeriod(period) {
-      const students = await loadAllStudents();
-      const now = new Date();
-      let start, end;
-      
-      switch (period) {
-        case 'today':
-          start = startOfDay(now);
-          end = endOfDay(now);
-          break;
-        case 'week':
-          start = startOfWeek(now);
-          end = endOfWeek(now);
-          break;
-        case 'month':
-          start = startOfMonth(now);
-          end = endOfMonth(now);
-          break;
-        default:
-          start = startOfDay(now);
-          end = endOfDay(now);
-      }
-
-      const startTimestamp = Timestamp.fromDate(start);
-      const endTimestamp = Timestamp.fromDate(end);
-
-      // Group records by student and day
-      const studentRecords = new Map();
-      const stats = {
-        total: students.length,
-        present: 0,
-        absent: 0,
-        late: 0,
-        byGrade: { 10: { total: 0, present: 0, absent: 0, late: 0 }, 11: { total: 0, present: 0, absent: 0, late: 0 }, 12: { total: 0, present: 0, absent: 0, late: 0 } },
-        byClass: {}
-      };
-
-      // Initialize byClass
-      CLASS_OPTIONS_RAW.forEach(className => {
-        stats.byClass[className] = { total: 0, present: 0, absent: 0, late: 0 };
-      });
-
-      // Count students by grade and class
-      students.forEach(student => {
-        const grade = parseInt(student.class.split(' / ')[0]);
-        const className = student.class;
-        if (stats.byGrade[grade]) stats.byGrade[grade].total++;
-        if (stats.byClass[className]) stats.byClass[className].total++;
-      });
-
-      // Fetch attendance records for period
-      for (const student of students) {
-        const attendanceRef = collection(db, 'students', student.id, 'attendance');
-        const q = query(
-          attendanceRef,
-          where('createdAt', '>=', startTimestamp),
-          where('createdAt', '<=', endTimestamp)
-        );
-        const snap = await getDocs(q);
-        
-        const dayRecords = new Map();
-        snap.forEach(docSnap => {
-          const record = docSnap.data();
-          const date = tsToDate(record.createdAt);
-          if (date) {
-            const dateKey = date.toDateString();
-            if (!dayRecords.has(dateKey)) dayRecords.set(dateKey, []);
-            dayRecords.get(dateKey).push(record);
-          }
-        });
-
-        // Get unique status for each day
-        for (const [dateKey, records] of dayRecords) {
-          const status = getUniqueStatusForDay(records);
-          if (!status) continue;
-          
-          const grade = parseInt(student.class.split(' / ')[0]);
-          const className = student.class;
-          
-          if (status === 'absent') {
-            stats.absent++;
-            if (stats.byGrade[grade]) stats.byGrade[grade].absent++;
-            if (stats.byClass[className]) stats.byClass[className].absent++;
-          } else if (status === 'late') {
-            stats.late++;
-            if (stats.byGrade[grade]) stats.byGrade[grade].late++;
-            if (stats.byClass[className]) stats.byClass[className].late++;
-          }
-        }
-      }
-
-      // Calculate present (total - absent - late)
-      stats.present = stats.total - stats.absent - stats.late;
-      
-      // Calculate present by grade and class
-      for (const grade in stats.byGrade) {
-        const gradeData = stats.byGrade[grade];
-        gradeData.present = gradeData.total - gradeData.absent - gradeData.late;
-      }
-      for (const className in stats.byClass) {
-        const classData = stats.byClass[className];
-        classData.present = classData.total - classData.absent - classData.late;
-      }
-
-      return stats;
-    }
-
-    // Load and display statistics
-    async function loadStatistics(period = 'today') {
-      try {
-        const stats = await calculateStatsForPeriod(period);
-        
-        // Update overview
-        totalStudents.textContent = toArabicDigits(stats.total);
-        presentStudents.textContent = toArabicDigits(stats.present);
-        absentStudents.textContent = toArabicDigits(stats.absent);
-        lateStudents.textContent = toArabicDigits(stats.late);
-        
-        // Update grade stats
-        statsGrades.innerHTML = '';
-        for (const grade in stats.byGrade) {
-          const gradeData = stats.byGrade[grade];
-          if (gradeData.total === 0) continue;
-          const presentPercentage = Math.round((gradeData.present / gradeData.total) * 100);
-          const card = document.createElement('div');
-          card.className = 'stat-card';
-          card.innerHTML = `
-            <div class="stat-header">
-              <div class="stat-title">الصف ${toArabicDigits(grade)}</div>
-              <div class="stat-icon students">👥</div>
-            </div>
-            <div class="stat-value">${toArabicDigits(gradeData.total)} طالب</div>
-            <div class="stat-change ${presentPercentage >= 80 ? 'positive' : 'negative'}">
-              ${presentPercentage >= 80 ? '↑' : '↓'}
-              <span>${toArabicDigits(presentPercentage)}% حضور</span>
-            </div>
-          `;
-          statsGrades.appendChild(card);
-        }
-        
-        // Update class stats
-        statsClasses.innerHTML = '';
-        for (const className in stats.byClass) {
-          const classData = stats.byClass[className];
-          if (classData.total === 0) continue;
-          const presentPercentage = Math.round((classData.present / classData.total) * 100);
-          const card = document.createElement('div');
-          card.className = 'stat-card';
-          card.innerHTML = `
-            <div class="stat-header">
-              <div class="stat-title">${toArabicDigits(className)}</div>
-              <div class="stat-icon students">👥</div>
-            </div>
-            <div class="stat-value">${toArabicDigits(classData.total)} طالب</div>
-            <div class="stat-change ${presentPercentage >= 80 ? 'positive' : 'negative'}">
-              ${presentPercentage >= 80 ? '↑' : '↓'}
-              <span>${toArabicDigits(presentPercentage)}% حضور</span>
-            </div>
-          `;
-          statsClasses.appendChild(card);
-        }
-        
-        renderCharts(stats);
-      } catch (error) {
-        console.error('Error loading statistics:', error);
-      }
-    }
-
-    // Render charts
-    function renderCharts(stats) {
-      // Attendance Chart
-      const attendanceCtx = document.getElementById('attendanceChart').getContext('2d');
-      if (attendanceChart) attendanceChart.destroy();
-      attendanceChart = new Chart(attendanceCtx, {
-        type: 'doughnut',
-        data: {
-          labels: ['حاضرون', 'غائبون', 'متأخرون'],
-          datasets: [{
-            data: [stats.present, stats.absent, stats.late],
-            backgroundColor: ['#10b981', '#ef4444', '#f59e0b'],
-            borderWidth: 1
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { position: 'bottom', rtl: true } }
-        }
-      });
-
-      // Distribution Chart
-      const distributionCtx = document.getElementById('distributionChart').getContext('2d');
-      if (distributionChart) distributionChart.destroy();
-      const gradeLabels = [];
-      const presentData = [];
-      const absentData = [];
-      const lateData = [];
-      for (const grade in stats.byGrade) {
-        const gradeData = stats.byGrade[grade];
-        if (gradeData.total > 0) {
-          gradeLabels.push(`الصف ${toArabicDigits(grade)}`);
-          presentData.push(gradeData.present);
-          absentData.push(gradeData.absent);
-          lateData.push(gradeData.late);
-        }
-      }
-      distributionChart = new Chart(distributionCtx, {
-        type: 'bar',
-        data: {
-          labels: gradeLabels,
-          datasets: [
-            { label: 'حاضرون', data: presentData, backgroundColor: '#10b981' },
-            { label: 'غائبون', data: absentData, backgroundColor: '#ef4444' },
-            { label: 'متأخرون', data: lateData, backgroundColor: '#f59e0b' }
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { position: 'bottom', rtl: true } },
-          scales: { x: { grid: { display: false } }, y: { beginAtZero: true } }
-        }
-      });
-    }
-
-    // Export PDF functions
-    let logoImage = null;
-    function loadLogo() {
-      return new Promise((resolve) => {
-        if (logoImage) { resolve(logoImage); return; }
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
-        img.src = 'https://framerusercontent.com/images/Q9RdKm2z3o4K64mIC5QUx1JqGrA.png?width=1080&height=1350';
-        img.onload = () => { logoImage = img; resolve(img); };
-        img.onerror = () => resolve(null);
-      });
-    }
-
-    function getDateRange(period) {
-      const now = new Date();
-      switch (period) {
-        case 'today': return { start: startOfDay(now), end: endOfDay(now) };
-        case 'week': return { start: startOfWeek(now), end: endOfWeek(now) };
-        case 'month': return { start: startOfMonth(now), end: endOfMonth(now) };
-        default: return { start: startOfDay(now), end: endOfDay(now) };
-      }
-    }
-
-    async function generatePDFReport(grade, period) {
-      try {
-        exportLoading.classList.add('active');
-        generatePDF.disabled = true;
-
-        await loadLogo();
-        const dateRange = getDateRange(period);
-        const startTimestamp = Timestamp.fromDate(dateRange.start);
-        const endTimestamp = Timestamp.fromDate(dateRange.end);
-
-        // Fetch students for grade
-        const students = [];
-        const allStudents = await loadAllStudents();
-        allStudents.forEach(student => {
-          if (parseInt(student.class.split(' / ')[0]) === parseInt(grade)) {
-            students.push(student);
-          }
-        });
-
-        // Fetch attendance records
-        const attendanceData = [];
-        for (const student of students) {
-          const attendanceRef = collection(db, 'students', student.id, 'attendance');
-          const q = query(
-            attendanceRef,
-            where('createdAt', '>=', startTimestamp),
-            where('createdAt', '<=', endTimestamp)
-          );
-          const snap = await getDocs(q);
-          snap.forEach(docSnap => {
-            const record = docSnap.data();
-            attendanceData.push({
-              ...record,
-              studentId: student.id,
-              studentName: student.name,
-              studentClass: student.class
-            });
-          });
-        }
-
-        // Group by day to get unique status per student per day
-        const dayMap = new Map();
-        attendanceData.forEach(record => {
-          const date = tsToDate(record.createdAt);
-          if (!date) return;
-          const dateKey = date.toDateString();
-          const studentKey = `${record.studentId}_${dateKey}`;
-          if (!dayMap.has(studentKey)) {
-            dayMap.set(studentKey, []);
-          }
-          dayMap.get(studentKey).push(record);
-        });
-
-        // Get most recent record per student per day
-        const uniqueRecords = [];
-        for (const [studentKey, records] of dayMap) {
-          if (records.length === 0) continue;
-          const sorted = records.sort((a, b) => {
-            const aTime = a.updatedAt || a.createdAt;
-            const bTime = b.updatedAt || b.createdAt;
-            return (bTime?.seconds || 0) - (aTime?.seconds || 0);
-          });
-          uniqueRecords.push(sorted[0]);
-        }
-
-        // Filter by status
-        const lateRecords = uniqueRecords.filter(r => r.status === 'late');
-        const absentRecords = uniqueRecords.filter(r => r.status === 'absent');
-
-        // Create PDF
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-        doc.setR2L(true);
-
-        // Page 1: Overview
-        if (logoImage) {
-          try { doc.addImage(logoImage, 'PNG', 140, 10, 50, 50); } catch {}
-        }
-        doc.setFontSize(24);
-        doc.setFont('helvetica', 'bold');
-        doc.text('ثانوية أحمد البشر الرومي', 105, 20, { align: 'center' });
-        doc.setFontSize(18);
-        doc.text('تقرير الغياب والتأخير', 105, 35, { align: 'center' });
-        doc.setFontSize(12);
-        doc.text(`الصف: ${toArabicDigits(grade)}`, 20, 50);
-        doc.text(`الفترة: ${period === 'today' ? 'اليوم' : period === 'week' ? 'هذا الأسبوع' : 'هذا الشهر'}`, 20, 60);
-        doc.text(`من: ${fmtDate(dateRange.start)}`, 20, 70);
-        doc.text(`إلى: ${fmtDate(dateRange.end)}`, 20, 80);
-        
-        // Stats
-        doc.setFillColor(240, 248, 255);
-        doc.rect(15, 90, 180, 80, 'F');
-        doc.setDrawColor(10, 75, 120);
-        doc.rect(15, 90, 180, 80);
-        doc.setFontSize(16);
-        doc.text('الإحصائيات العامة', 105, 100, { align: 'center' });
-        doc.setFontSize(12);
-        doc.text('إجمالي الطلاب:', 30, 115);
-        doc.text(toArabicDigits(students.length.toString()), 70, 115);
-        doc.text('الطلاب الحاضرون:', 100, 115);
-        doc.text(toArabicDigits((students.length - lateRecords.length - absentRecords.length).toString()), 150, 115);
-        doc.text('الطلاب الغائبون:', 30, 130);
-        doc.text(toArabicDigits(absentRecords.length.toString()), 70, 130);
-        doc.text('الطلاب المتأخرون:', 100, 130);
-        doc.text(toArabicDigits(lateRecords.length.toString()), 150, 130);
-        doc.text('نسبة الحضور:', 30, 145);
-        const attendanceRate = students.length > 0 ? Math.round(((students.length - lateRecords.length - absentRecords.length) / students.length) * 100) : 0;
-        doc.text(`${toArabicDigits(attendanceRate.toString())}%`, 70, 145);
-
-        // Late records page
-        if (lateRecords.length > 0) {
-          doc.addPage();
-          doc.setFontSize(20);
-          doc.text('التأخيرات', 105, 20, { align: 'center' });
-          const tableData = lateRecords.map((record, index) => [
-            toArabicDigits((index + 1).toString()),
-            record.studentName || 'غير معروف',
-            record.studentClass || 'غير معروف',
-            record.lessonIndex ? `الحصة ${toArabicDigits(record.lessonIndex.toString())}` : 'غير معروف',
-            record.createdAt ? fmtDate(tsToDate(record.createdAt)) : 'غير معروف'
-          ]);
-          doc.autoTable({
-            startY: 30,
-            head: [['#', 'اسم الطالب', 'الفصل', 'الحصة', 'التاريخ']],
-            body: tableData,
-            theme: 'striped',
-            headStyles: { fillColor: [245, 158, 11], textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center' },
-            bodyStyles: { halign: 'center' }
-          });
-        }
-
-        // Absent records page
-        if (absentRecords.length > 0) {
-          doc.addPage();
-          doc.setFontSize(20);
-          doc.text('الغياب', 105, 20, { align: 'center' });
-          const tableData = absentRecords.map((record, index) => [
-            toArabicDigits((index + 1).toString()),
-            record.studentName || 'غير معروف',
-            record.studentClass || 'غير معروف',
-            record.lessonIndex ? `الحصة ${toArabicDigits(record.lessonIndex.toString())}` : 'غير معروف',
-            record.createdAt ? fmtDate(tsToDate(record.createdAt)) : 'غير معروف'
-          ]);
-          doc.autoTable({
-            startY: 30,
-            head: [['#', 'اسم الطالب', 'الفصل', 'الحصة', 'التاريخ']],
-            body: tableData,
-            theme: 'striped',
-            headStyles: { fillColor: [239, 68, 68], textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center' },
-            bodyStyles: { halign: 'center' }
-          });
-        }
-
-        // Save PDF
-        const periodName = period === 'today' ? 'اليوم' : period === 'week' ? 'الأسبوع' : 'الشهر';
-        doc.save(`تقرير_الغياب_الصف_${grade}_${periodName}_${new Date().toISOString().split('T')[0]}.pdf`);
-        
-      } catch (error) {
-        console.error('Error generating PDF:', error);
-        alert('حدث خطأ أثناء إنشاء التقرير');
-      } finally {
-        exportLoading.classList.remove('active');
-        generatePDF.disabled = false;
-        closeExportModalFunc();
-      }
-    }
-
-    // Export modal functions
-    function openExportModal() {
-      exportModal.classList.add('active');
-      document.body.style.overflow = 'hidden';
-    }
-    function closeExportModalFunc() {
-      exportModal.classList.remove('active');
-      document.body.style.overflow = '';
-    }
-    exportData.addEventListener('click', openExportModal);
-    closeExportModal.addEventListener('click', closeExportModalFunc);
-    cancelExport.addEventListener('click', closeExportModalFunc);
-    generatePDF.addEventListener('click', () => {
-      const grade = exportGradeSelect.value;
-      const period = exportPeriodSelect.value;
-      if (!grade || !period) {
-        alert('يرجى اختيار الصف والفترة');
-        return;
-      }
-      generatePDFReport(grade, period);
-    });
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && exportModal.classList.contains('active')) closeExportModalFunc();
-    });
-    exportModal.addEventListener('click', (e) => {
-      if (e.target === exportModal) closeExportModalFunc();
-    });
-
-    // Chart period switching
-    document.addEventListener('click', (e) => {
-      if (e.target.classList.contains('chart-action-btn')) {
-        const parent = e.target.closest('.chart-actions');
-        parent.querySelectorAll('.chart-action-btn').forEach(btn => btn.classList.remove('active'));
-        e.target.classList.add('active');
-        const period = e.target.dataset.chart;
-        currentChartPeriod = period;
-        loadStatistics(period);
-      }
-    });
-
-    // Stats tabs
-    statsTabs.addEventListener('click', (e) => {
-      const tab = e.target.closest('.tab');
-      if (!tab) return;
-      const tabName = tab.dataset.tab;
-      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-      statsOverview.style.display = tabName === 'overview' ? 'grid' : 'none';
-      statsGrades.style.display = tabName === 'grades' ? 'grid' : 'none';
-      statsClasses.style.display = tabName === 'classes' ? 'grid' : 'none';
-    });
 
     // Auth gate
     onAuthStateChanged(auth, async (user) => {
@@ -1506,128 +689,88 @@
           return;
         }
         show(sHome);
-        loadStatistics();
       } catch (e) {
         console.error(e);
         show(sDenied);
       }
     });
 
-    // Lesson chooser
-    document.querySelectorAll('#stateHome .btn').forEach(btn => {
+    // Home: grade picker
+    document.querySelectorAll('#stateHome .btn[data-grade]').forEach(btn => {
       btn.addEventListener('click', () => {
-        selectedLessonIndex = +btn.dataset.lesson;
-        gradeTitle.textContent = `الحصة ${toArabicDigits(selectedLessonIndex)}`;
-        openSheet(gradeSheet);
+        selectedGrade = +btn.dataset.grade;
+        const titleMap = { 10: 'الصف العاشر', 11: 'الصف الحادي عشر', 12: 'الصف الثاني عشر' };
+        classesTitle.textContent = titleMap[selectedGrade];
+        renderClassesForGrade(selectedGrade);
+        openSheet(classesSheet);
       });
     });
-    closeGrade.addEventListener('click', () => closeSheet(gradeSheet));
-
-    // Grade chooser
-    gradeSheet.addEventListener('click', (e) => {
-      const b = e.target.closest('button[data-grade]');
-      if (!b) return;
-      selectedGrade = +b.dataset.grade;
-      const titleMap = { 10: 'الصف العاشر', 11: 'الصف الحادي عشر', 12: 'الصف الثاني عشر' };
-      classesTitle.textContent = `${titleMap[selectedGrade]} • الحصة ${toArabicDigits(selectedLessonIndex)}`;
-      renderClassesForGrade(selectedGrade);
-      openSheet(classesSheet);
+    document.querySelector('#stateHome .btn[data-scope-all]').addEventListener('click', () => {
+      absencesTitle.textContent = 'كل الصفوف';
+      prepareViewAndFetch({ type: 'all' });
     });
     closeClasses.addEventListener('click', () => closeSheet(classesSheet));
 
     function renderClassesForGrade(g) {
       classesList.innerHTML = '';
       const list = groupForGrade(g);
-      // All button
+      const titleMap = { 10: 'الصف العاشر', 11: 'الصف الحادي عشر', 12: 'الصف الثاني عشر' };
       const allEl = document.createElement('div');
       allEl.className = 'item all-sep';
       allEl.innerHTML = `
-        <div><div>الكل</div><div class="sub">عرض جميع الفصول لهذا الصف</div></div>
+        <div><div>الكل</div><div class="sub">عرض جميع فصول ${titleMap[g]}</div></div>
         <svg class="chev" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>
       `;
-      allEl.addEventListener('click', () => openAllAttendanceForGrade());
+      allEl.addEventListener('click', () => {
+        absencesTitle.textContent = `${titleMap[g]} • الكل`;
+        prepareViewAndFetch({ type: 'grade', grade: g });
+      });
       classesList.appendChild(allEl);
-      // Class buttons
       list.forEach(val => {
         const el = document.createElement('div');
         el.className = 'item';
         el.innerHTML = `
-          <div><div>${toArabicDigits(val)}</div><div class="sub">اضغط لعرض الحالات</div></div>
+          <div><div>${toArabicDigits(val)}</div><div class="sub">اضغط لعرض السجلات</div></div>
           <svg class="chev" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>
         `;
-        el.addEventListener('click', () => openClassAttendance(val));
+        el.addEventListener('click', () => {
+          absencesTitle.textContent = toArabicDigits(val);
+          prepareViewAndFetch({ type: 'class', className: val });
+        });
         classesList.appendChild(el);
       });
     }
 
-    // Class attendance view
-    let cachedStudents = [];
-    let cachedRows = [];
-    let availableClassesInView = [];
-
-    async function openClassAttendance(className) {
-      viewMode = 'class';
-      selectedClass = className;
+    function prepareViewAndFetch(scope) {
+      currentScope = scope;
       classFilter = '__all';
-      absencesTitle.textContent = `${toArabicDigits(className)} • الحصة ${toArabicDigits(selectedLessonIndex)}`;
-      classesFilterBar.classList.remove('open');
-      classesFilterBar.innerHTML = '';
-      prepareViewAndFetch(async () => {
-        const qy = query(collection(db, 'students'), where('class', '==', className));
-        const snap = await getDocs(qy);
-        const students = [];
-        snap.forEach(d => students.push({ id: d.id, ...d.data() }));
-        students.sort((a, b) => arabicSort(a.name, b.name));
-        cachedStudents = students;
-        let rows = [];
-        await Promise.all(students.map(async (st) => {
-          const sub = await getDocs(collection(db, 'students', st.id, 'attendance'));
-          sub.forEach(docSnap => {
-            const r = { id: docSnap.id, ...docSnap.data(), _student: st };
-            if ((+r.lessonIndex || 0) === selectedLessonIndex) {
-              if (!r.class) r.class = st.class;
-              rows.push(r);
-            }
-          });
-        }));
-        cachedRows = rows;
-        availableClassesInView = [className];
-      });
+      absencesList.innerHTML = '';
+      absMeta.textContent = 'جاري التحميل…';
+      setCountBadge(0);
+      setActiveStatus('absent');
+      setActiveLesson('__all');
+      setActiveTime('today');
+      hideCustomRange();
+      const showClassChips = scope.type !== 'class';
+      classesFilterBar.classList.toggle('open', showClassChips);
+      if (showClassChips) buildClassesFilterChips();
+      openSheet(absencesSheet);
+      refetchAndRender();
     }
 
-    async function openAllAttendanceForGrade() {
-      viewMode = 'gradeAll';
-      selectedClass = null;
-      classFilter = '__all';
-      const titleMap = { 10: 'الصف العاشر', 11: 'الصف الحادي عشر', 12: 'الصف الثاني عشر' };
-      absencesTitle.textContent = `${titleMap[selectedGrade]} • الحصة ${toArabicDigits(selectedLessonIndex)} • الكل`;
-      classesFilterBar.classList.add('open');
-      classesFilterBar.innerHTML = '';
-      buildClassesFilterChips();
-      prepareViewAndFetch(async () => {
-        const list = groupForGrade(selectedGrade);
-        availableClassesInView = [...list];
-        cachedStudents = [];
-        cachedRows = [];
-        await Promise.all(list.map(async (className) => {
-          const qy = query(collection(db, 'students'), where('class', '==', className));
-          const snap = await getDocs(qy);
-          const students = [];
-          snap.forEach(d => students.push({ id: d.id, ...d.data() }));
-          students.sort((a, b) => arabicSort(a.name, b.name));
-          cachedStudents.push(...students);
-          await Promise.all(students.map(async (st) => {
-            const sub = await getDocs(collection(db, 'students', st.id, 'attendance'));
-            sub.forEach(docSnap => {
-              const r = { id: docSnap.id, ...docSnap.data(), _student: st };
-              if ((+r.lessonIndex || 0) === selectedLessonIndex) {
-                if (!r.class) r.class = st.class || className;
-                cachedRows.push(r);
-              }
-            });
-          }));
-        }));
-      });
+    async function refetchAndRender() {
+      if (!currentScope) return;
+      absMeta.textContent = 'جاري التحميل…';
+      try {
+        const { startISO, endISO } = rangeForFilter(timeFilter);
+        const { students, rows } = await fetchAttendanceForScope(currentScope, startISO, endISO);
+        cachedStudents = students;
+        cachedRows = rows;
+        renderFilteredList();
+      } catch (e) {
+        console.error('[absence] fetch failed', e);
+        absMeta.textContent = 'تعذّر التحميل.';
+      }
     }
 
     function buildClassesFilterChips() {
@@ -1637,40 +780,22 @@
       allChip.dataset.class = '__all';
       allChip.textContent = 'الكل';
       classesFilterBar.appendChild(allChip);
-      const list = groupForGrade(selectedGrade);
-      list.forEach(cn => {
+      classesForScope(currentScope).forEach(cn => {
         const chip = document.createElement('button');
         chip.className = 'class-chip';
         chip.dataset.class = cn;
         chip.textContent = toArabicDigits(cn);
         classesFilterBar.appendChild(chip);
       });
-      classesFilterBar.addEventListener('click', onClassChipClick, { once: true });
     }
-
-    function onClassChipClick(e) {
+    classesFilterBar.addEventListener('click', (e) => {
       const chip = e.target.closest('.class-chip');
       if (!chip) return;
       classFilter = chip.dataset.class;
-      document.querySelectorAll('.class-chip').forEach(c => c.classList.remove('active'));
+      classesFilterBar.querySelectorAll('.class-chip').forEach(c => c.classList.remove('active'));
       chip.classList.add('active');
       renderFilteredList();
-      classesFilterBar.addEventListener('click', onClassChipClick, { once: true });
-    }
-
-    function prepareViewAndFetch(fetcher) {
-      absencesList.innerHTML = '';
-      absMeta.textContent = 'جاري التحميل…';
-      setCountBadge(0);
-      setActiveStatus('absent');
-      setActiveTime('today');
-      hideCustomRange();
-      openSheet(absencesSheet);
-      fetcher().then(() => renderFilteredList()).catch(e => {
-        console.error('[open]', e);
-        absMeta.textContent = 'تعذّر التحميل.';
-      });
-    }
+    });
 
     function setCountBadge(n) {
       const label = statusFilter === 'absent' ? 'حالة غياب' : statusFilter === 'late' ? 'حالة تأخير' : 'حالة حضور';
@@ -1682,28 +807,24 @@
     function renderFilteredList() {
       const filtered = cachedRows.filter(r => {
         const statusOK = (r.status === statusFilter);
-        const d = parseAttendanceDate(r);
-        const timeOK = inRange(d, timeFilter);
-        const classOK = (viewMode === 'gradeAll')
+        const lessonOK = (lessonFilter === '__all') ? true : ((+r.lessonIndex || 0) === lessonFilter);
+        const classOK = (currentScope?.type !== 'class')
           ? (classFilter === '__all' ? true : ((r.class || '') === classFilter))
           : true;
-        return statusOK && timeOK && classOK;
+        return statusOK && lessonOK && classOK;
       });
 
       filtered.sort((a, b) => {
-        const da = parseAttendanceDate(a), db = parseAttendanceDate(b);
-        if (da && db && da.getTime() !== db.getTime()) return db - da;
-        if (viewMode === 'gradeAll') {
+        const da = parseAttendanceDate(a), db_ = parseAttendanceDate(b);
+        if (da && db_ && da.getTime() !== db_.getTime()) return db_ - da;
+        if (currentScope?.type !== 'class') {
           const ca = (a.class || ''); const cb = (b.class || '');
           if (ca !== cb) return ca.localeCompare(cb, 'ar', { sensitivity: 'base' });
         }
         return arabicSort(a._student?.name, b._student?.name);
       });
 
-      const studentsCount = (viewMode === 'gradeAll')
-        ? new Set(cachedStudents.map(s => s.id)).size
-        : cachedStudents.length;
-
+      const studentsCount = new Set(cachedStudents.map(s => s.id)).size;
       absMeta.textContent = `الطلاب: ${toArabicDigits(studentsCount)} • ${statusFilter === 'absent' ? 'الغياب' : statusFilter === 'late' ? 'التأخير' : 'الحضور'}: ${toArabicDigits(filtered.length)}`;
       setCountBadge(filtered.length);
 
@@ -1729,8 +850,9 @@
         const tile = document.createElement('div');
         tile.className = 'att-tile';
 
-        const classLabel = toArabicDigits(r.class || selectedClass || '—');
-        const title = `${r._student?.name || '—'} — ${statusFilter === 'absent' ? 'غياب' : statusFilter === 'late' ? 'تأخير' : 'حضور'} الحصة ${toArabicDigits(r.lessonIndex || selectedLessonIndex)}`;
+        const classLabel = toArabicDigits(r.class || '—');
+        const statusWord = statusFilter === 'absent' ? 'غياب' : statusFilter === 'late' ? 'تأخير' : 'حضور';
+        const title = `${r._student?.name || r.studentName || '—'} — ${statusWord} الحصة ${toArabicDigits(r.lessonIndex || '؟')}`;
         const sub = `${classLabel} • ${toArabicDigits(dateStr)}`;
 
         tile.innerHTML = `
@@ -1745,14 +867,12 @@
         expand.className = 'expand';
         expand.innerHTML = `
           <div style="display:flex; flex-direction:column; gap:6px;">
-            <div><b>الطالب:</b> ${r._student?.name || '—'}</div>
+            <div><b>الطالب:</b> ${r._student?.name || r.studentName || '—'}</div>
             <div><b>التاريخ:</b> ${toArabicDigits(dateStr || '—')}</div>
             <div><b>الحصة:</b> ${r.lessonLabel || ('حصة ' + toArabicDigits(r.lessonIndex || ''))}</div>
             <div><b>الفصل:</b> ${classLabel}</div>
-            <div><b>Session ID:</b> <span style="font-family:'Noto Kufi Arabic', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif">${r.sessionId || '—'}</span></div>
             <div id="who-${r.id}"><b>أُضيفت/عُدلت بواسطة:</b> —</div>
-            <div><b>وقت الإضافة:</b> ${r.createdAt ? toArabicDigits(fmtDT(tsToDate(r.createdAt))) : '—'}</div>
-            <div><b>آخر تعديل:</b> ${r.updatedAt ? toArabicDigits(fmtDT(tsToDate(r.updatedAt))) : (r.createdAt ? toArabicDigits(fmtDT(tsToDate(r.createdAt))) : '—')}</div>
+            <div><b>آخر تعديل:</b> ${r.updatedAt ? toArabicDigits(fmtDT(tsToDate(r.updatedAt))) : '—'}</div>
           </div>
         `;
 
@@ -1777,88 +897,214 @@
       const btn = statusToggle.querySelector(`.status-btn[data-status="${st}"]`);
       if (btn) btn.classList.add('active', st);
     }
-
-    function setActiveTime(key) {
-      timeFilter = key;
-      document.querySelectorAll('.filter-chip').forEach(c => c.classList.toggle('active', c.dataset.filter === key));
-      if (key === 'custom') {
-        showCustomRange();
-      } else {
-        hideCustomRange();
-      }
-    }
-
     statusToggle.addEventListener('click', (e) => {
       const b = e.target.closest('.status-btn');
       if (!b) return;
       const st = b.dataset.status;
-      if (st !== statusFilter) {
-        setActiveStatus(st);
-        renderFilteredList();
-      }
+      if (st !== statusFilter) { setActiveStatus(st); renderFilteredList(); }
     });
 
+    function setActiveLesson(key) {
+      lessonFilter = key === '__all' ? '__all' : +key;
+      document.querySelectorAll('.lesson-chip').forEach(c => c.classList.toggle('active', c.dataset.lesson === String(key)));
+    }
+    lessonFilterBar.addEventListener('click', (e) => {
+      const b = e.target.closest('.lesson-chip');
+      if (!b) return;
+      const key = b.dataset.lesson;
+      if (key !== String(lessonFilter)) { setActiveLesson(key); renderFilteredList(); }
+    });
+
+    function setActiveTime(key) {
+      timeFilter = key;
+      document.querySelectorAll('.filter-chip').forEach(c => c.classList.toggle('active', c.dataset.filter === key));
+      if (key === 'custom') showCustomRange(); else hideCustomRange();
+    }
     filtersBar.addEventListener('click', (e) => {
       const c = e.target.closest('.filter-chip');
       if (!c) return;
       const key = c.dataset.filter;
       if (key !== timeFilter) {
         setActiveTime(key);
-        if (key !== 'custom') renderFilteredList();
+        if (key !== 'custom') refetchAndRender();
       }
     });
 
     function showCustomRange() {
       dateRangeBox.classList.add('open');
-      const now = new Date();
-      const s = new Date(now.getFullYear(), now.getMonth(), 1);
-      const e = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-      startDateEl.value = toInputDate(s);
-      endDateEl.value = toInputDate(e);
-      customStart = startOfDay(s);
-      customEnd = endOfDay(e);
+      if (!startDateEl.value || !endDateEl.value) {
+        const now = new Date();
+        startDateEl.value = toISODateStr(startOfMonth(now));
+        endDateEl.value = toISODateStr(now);
+      }
     }
-    function hideCustomRange() {
-      dateRangeBox.classList.remove('open');
-    }
-    function toInputDate(d) {
-      const y = d.getFullYear();
-      const m = String(d.getMonth() + 1).padStart(2, '0');
-      const da = String(d.getDate()).padStart(2, '0');
-      return `${y}-${m}-${da}`;
-    }
+    function hideCustomRange() { dateRangeBox.classList.remove('open'); }
 
     applyRangeBtn.addEventListener('click', () => {
-      const s = startDateEl.value ? new Date(startDateEl.value) : null;
-      const e = endDateEl.value ? new Date(endDateEl.value) : null;
+      const s = startDateEl.value, e = endDateEl.value;
       if (s && e && e >= s) {
-        customStart = startOfDay(s);
-        customEnd = endOfDay(e);
+        customStart = s;
+        customEnd = e;
         setActiveTime('custom');
-        renderFilteredList();
+        refetchAndRender();
       } else {
         alert('الرجاء اختيار مدى تاريخ صحيح.');
       }
     });
-
     clearRangeBtn.addEventListener('click', () => {
-      startDateEl.value = '';
-      endDateEl.value = '';
-      customStart = null;
-      customEnd = null;
+      startDateEl.value = ''; endDateEl.value = '';
+      customStart = null; customEnd = null;
       setActiveTime('today');
-      renderFilteredList();
+      refetchAndRender();
     });
 
     closeAbsences.addEventListener('click', () => closeSheet(absencesSheet));
+    refreshView.addEventListener('click', () => { if (currentScope) refetchAndRender(); });
 
-    // Refresh stats
-    refreshStats.addEventListener('click', () => loadStatistics(currentChartPeriod));
+    // ---------- PDF export ----------
+    let logoImage = null;
+    function loadLogo() {
+      return new Promise((resolve) => {
+        if (logoImage) { resolve(logoImage); return; }
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.src = 'https://framerusercontent.com/images/Q9RdKm2z3o4K64mIC5QUx1JqGrA.png?width=1080&height=1350';
+        img.onload = () => { logoImage = img; resolve(img); };
+        img.onerror = () => resolve(null);
+      });
+    }
+
+    function openExportModal() { exportModal.classList.add('active'); document.body.style.overflow = 'hidden'; }
+    function closeExportModalFunc() { exportModal.classList.remove('active'); document.body.style.overflow = ''; }
+    exportData.addEventListener('click', openExportModal);
+    closeExportModal.addEventListener('click', closeExportModalFunc);
+    cancelExport.addEventListener('click', closeExportModalFunc);
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && exportModal.classList.contains('active')) closeExportModalFunc();
+    });
+    exportModal.addEventListener('click', (e) => { if (e.target === exportModal) closeExportModalFunc(); });
+
+    generatePDF.addEventListener('click', () => {
+      const grade = exportGradeSelect.value;
+      const period = exportPeriodSelect.value;
+      generatePDFReport(grade, period);
+    });
+
+    async function generatePDFReport(gradeValue, period) {
+      try {
+        exportLoading.classList.add('active');
+        generatePDF.disabled = true;
+
+        await loadLogo();
+        const { startISO, endISO } = rangeForFilter(period);
+        const scope = gradeValue === 'all' ? { type: 'all' } : { type: 'grade', grade: +gradeValue };
+        const { students, rows } = await fetchAttendanceForScope(scope, startISO, endISO);
+
+        const lateRecords = rows.filter(r => r.status === 'late');
+        const absentRecords = rows.filter(r => r.status === 'absent');
+
+        // Resolve teacher names up front (small, deduped set — cheap even
+        // unpooled since teacherNameCache collapses repeats).
+        const uids = new Set([...lateRecords, ...absentRecords].map(r => r.updatedBy || r.createdBy).filter(Boolean));
+        await Promise.all([...uids].map(getTeacherName));
+
+        const { jsPDF } = window.jspdf;
+        const docPdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        docPdf.setR2L(true);
+
+        if (logoImage) {
+          try { docPdf.addImage(logoImage, 'PNG', 140, 10, 50, 50); } catch {}
+        }
+        docPdf.setFontSize(24);
+        docPdf.setFont('helvetica', 'bold');
+        docPdf.text('ثانوية أحمد البشر الرومي', 105, 20, { align: 'center' });
+        docPdf.setFontSize(18);
+        docPdf.text('تقرير تدقيق الغياب والتأخير', 105, 35, { align: 'center' });
+        docPdf.setFontSize(12);
+        const gradeLabel = gradeValue === 'all' ? 'كل الصفوف' : `الصف ${toArabicDigits(gradeValue)}`;
+        const periodLabel = period === 'today' ? 'اليوم' : period === 'thisWeek' ? 'هذا الأسبوع' : 'هذا الشهر';
+        docPdf.text(`الصف: ${gradeLabel}`, 20, 50);
+        docPdf.text(`الفترة: ${periodLabel}`, 20, 60);
+        docPdf.text(`من: ${toArabicDigits(startISO)}`, 20, 70);
+        docPdf.text(`إلى: ${toArabicDigits(endISO)}`, 20, 80);
+
+        docPdf.setFillColor(240, 248, 255);
+        docPdf.rect(15, 90, 180, 60, 'F');
+        docPdf.setDrawColor(10, 75, 120);
+        docPdf.rect(15, 90, 180, 60);
+        docPdf.setFontSize(16);
+        docPdf.text('الإحصائيات العامة', 105, 100, { align: 'center' });
+        docPdf.setFontSize(12);
+        docPdf.text('إجمالي الطلاب:', 30, 115);
+        docPdf.text(toArabicDigits(students.length.toString()), 70, 115);
+        docPdf.text('حالات الغياب:', 100, 115);
+        docPdf.text(toArabicDigits(absentRecords.length.toString()), 150, 115);
+        docPdf.text('حالات التأخير:', 30, 130);
+        docPdf.text(toArabicDigits(lateRecords.length.toString()), 70, 130);
+        docPdf.text('إجمالي السجلات:', 100, 130);
+        docPdf.text(toArabicDigits(rows.length.toString()), 150, 130);
+
+        const buildRows = (records) => records
+          .slice()
+          .sort((a, b) => (a.date || '').localeCompare(b.date || ''))
+          .map((record, index) => [
+            toArabicDigits((index + 1).toString()),
+            record._student?.name || record.studentName || 'غير معروف',
+            record.class || 'غير معروف',
+            record.lessonIndex ? `الحصة ${toArabicDigits(record.lessonIndex.toString())}` : 'غير معروف',
+            record.date ? toArabicDigits(record.date) : 'غير معروف',
+            teacherNameCache.get(record.updatedBy || record.createdBy) || '—'
+          ]);
+
+        if (lateRecords.length > 0) {
+          docPdf.addPage();
+          docPdf.setFontSize(20);
+          docPdf.text('التأخيرات', 105, 20, { align: 'center' });
+          docPdf.autoTable({
+            startY: 30,
+            head: [['#', 'اسم الطالب', 'الفصل', 'الحصة', 'التاريخ', 'بواسطة']],
+            body: buildRows(lateRecords),
+            theme: 'striped',
+            headStyles: { fillColor: [245, 158, 11], textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center' },
+            bodyStyles: { halign: 'center' }
+          });
+        }
+
+        if (absentRecords.length > 0) {
+          docPdf.addPage();
+          docPdf.setFontSize(20);
+          docPdf.text('الغياب', 105, 20, { align: 'center' });
+          docPdf.autoTable({
+            startY: 30,
+            head: [['#', 'اسم الطالب', 'الفصل', 'الحصة', 'التاريخ', 'بواسطة']],
+            body: buildRows(absentRecords),
+            theme: 'striped',
+            headStyles: { fillColor: [239, 68, 68], textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center' },
+            bodyStyles: { halign: 'center' }
+          });
+        }
+
+        if (lateRecords.length === 0 && absentRecords.length === 0) {
+          docPdf.setFontSize(14);
+          docPdf.text('لا توجد حالات غياب أو تأخير خلال هذه الفترة.', 105, 110, { align: 'center' });
+        }
+
+        docPdf.save(`تدقيق_الغياب_${gradeLabel}_${periodLabel}_${startISO}.pdf`);
+
+      } catch (error) {
+        console.error('Error generating PDF:', error);
+        alert('حدث خطأ أثناء إنشاء التقرير');
+      } finally {
+        exportLoading.classList.remove('active');
+        generatePDF.disabled = false;
+        closeExportModalFunc();
+      }
+    }
 
     // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
-        [gradeSheet, classesSheet, absencesSheet].forEach(s => {
+        [classesSheet, absencesSheet].forEach(s => {
           if (s.classList.contains('open')) closeSheet(s);
         });
       }
@@ -1869,12 +1115,3 @@
 <script src="/name-glow.js" defer></script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
