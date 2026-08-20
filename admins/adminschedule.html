@@ -1189,17 +1189,6 @@
             </div>
           </div>
         </div>
-
-        <div class="tc-divider"></div>
-
-        <div class="tc-row tc-row-cleanup">
-          <span class="tc-section-label">تنظيف الجداول القديمة</span>
-          <div class="pop-desc">يحذف سجلات جدول قديمة (من قبل نظام التكرار الأسبوعي) لا تظهر في الجدول الحالي، لكنها تبقى تُشعِر المعلمين بحصص لم تعد لديهم. يمكن أن يستغرق هذا بضع ثوانٍ.</div>
-          <div class="lesson-count-row">
-            <button id="cleanupLegacyBtn" class="btn ghost" type="button">تنظيف الآن</button>
-          </div>
-          <div id="cleanupLegacyMsg" class="pop-desc"></div>
-        </div>
       </div>
       <div class="pop-actions">
         <button id="settingsCloseBtn" class="btn primary" type="button">تم</button>
@@ -1337,8 +1326,6 @@
     const lessonCountInput = document.getElementById('lessonCountInput');
     const lessonCountSaveBtn = document.getElementById('lessonCountSaveBtn');
     const lessonCountMsg = document.getElementById('lessonCountMsg');
-    const cleanupLegacyBtn = document.getElementById('cleanupLegacyBtn');
-    const cleanupLegacyMsg = document.getElementById('cleanupLegacyMsg');
 
     /* ========= State ========= */
     // Remember the last-viewed grade/class across page reloads — otherwise every
@@ -2641,8 +2628,6 @@
       lessonCountInput.value = FIXED_LESSON_COUNT;
       lessonCountMsg.textContent = '';
       lessonCountMsg.classList.remove('err');
-      cleanupLegacyMsg.textContent = '';
-      cleanupLegacyMsg.classList.remove('err');
       overlay.classList.add('show');
       settingsModal.classList.add('show');
     }
@@ -2724,27 +2709,6 @@
         lessonCountMsg.classList.add('err');
       }finally{
         lessonCountSaveBtn.disabled = false;
-      }
-    });
-
-    cleanupLegacyBtn.addEventListener('click', async ()=>{
-      const confirmed = window.confirm('سيتم حذف سجلات جدول قديمة (من قبل نظام التكرار الأسبوعي) عبر كل فصول المدرسة. لا يمكن التراجع عن هذا. متابعة؟');
-      if(!confirmed) return;
-      cleanupLegacyBtn.disabled = true;
-      cleanupLegacyMsg.classList.remove('err');
-      cleanupLegacyMsg.textContent = 'جارٍ التنظيف...';
-      try{
-        const removed = await cleanupAllLegacySchedules();
-        cleanupLegacyMsg.textContent = removed
-          ? `تم حذف ${removed} سجلاً قديمًا.`
-          : 'لا توجد سجلات قديمة ليتم حذفها.';
-        if(selectedClassKey) await fetchExisting();
-      }catch(error){
-        console.error('[cleanupLegacyBtn]', error);
-        cleanupLegacyMsg.textContent = 'تعذّر إتمام التنظيف.';
-        cleanupLegacyMsg.classList.add('err');
-      }finally{
-        cleanupLegacyBtn.disabled = false;
       }
     });
 
@@ -3075,24 +3039,6 @@
       toDelete.forEach(ref => batch.delete(ref));
       await batch.commit();
       return toDelete.length;
-    }
-
-    // Same sweep as cleanupLegacySchedulesFor, but across every grade/section/
-    // track in the school in one pass — for clearing out orphaned legacy docs
-    // the admin hasn't happened to reopen in the editor yet (each one only gets
-    // swept the moment its own class is opened otherwise).
-    async function cleanupAllLegacySchedules(){
-      let total = 0;
-      for(const classKey of ALL_CLASS_KEYS){
-        const {grade, section, track} = parseClassKey(classKey);
-        const trackKey = trackKeyOf(track);
-        try{
-          total += await cleanupLegacySchedulesFor(grade, section, classKey, track, trackKey);
-        }catch(e){
-          console.error("[cleanupAllLegacySchedules]", classKey, e);
-        }
-      }
-      return total;
     }
 
     /* ======= Conflict prefetch ======= */
