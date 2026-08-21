@@ -2384,7 +2384,35 @@
         }, { merge: true });
         schedule.docId = docId;
 
-        setStatus(`<div class="ok">تم حفظ الجدول الخاص بنجاح.</div>`);
+        // createSchoolWideCustomSchedule() creates one customDaySchedules doc
+        // per class (all disabled by default), but this function only ever
+        // touches the one class currently selected in this card — so
+        // "تفعيل أسبوعي"/day/name changes here would otherwise silently never
+        // reach the other classes' copies of the same schedule, leaving them
+        // permanently disabled even after the admin "enables" it. Propagate
+        // just the shared/identity fields to every sibling doc; each class's
+        // own lessons/times/classKey/grade/section/track are left untouched.
+        try {
+          const siblingsSnap = await getDocs(query(collection(db, 'customDaySchedules'), where('id', '==', schedule.id)));
+          const siblingBatch = writeBatch(db);
+          let siblingWrites = 0;
+          siblingsSnap.forEach((d) => {
+            if (d.id === docId) return;
+            siblingBatch.set(d.ref, {
+              name: payload.name,
+              dayIndex: payload.dayIndex,
+              day: payload.day,
+              enabled: payload.enabled,
+              updatedAt: serverTimestamp(),
+            }, { merge: true });
+            siblingWrites++;
+          });
+          if (siblingWrites > 0) await siblingBatch.commit();
+        } catch (e) {
+          console.error('[saveCustomSchedule] sibling propagation:', e);
+        }
+
+        setStatus(`<div class="ok">تم حفظ الجدول الخاص بنجاح (لجميع الفصول).</div>`);
       }catch(e){
         console.error('[saveCustomSchedule]', e);
         setStatus(`<div class="err">تعذّر حفظ الجدول الخاص.</div>`);
