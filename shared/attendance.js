@@ -767,23 +767,6 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
     // internally, so a hit here is guaranteed usable.
     if (customHit?.ok) return customHit;
 
-    // TEMP DEBUG — remove once diagnosed.
-    {
-      const __dayIndex = getKuwaitDayIndexSunSat();
-      const __rows = __dayIndex >= 0 ? await getCustomSchedulesForToday(__dayIndex) : [];
-      console.log("[attendance][debug]", JSON.stringify({
-        wallClock: new Date().toString(),
-        kuwaitNowMin: getCurrentKuwaitMinutes(),
-        uid: user.uid, todayISO, G, L, customHit,
-        mapKeys: [...map.keys()],
-        customRows: __rows.map(r => ({
-          classKey: r.classKey, enabled: r.enabled,
-          lessonTeacherUids: (r.lessons || []).map(l => l?.teacherUid || null),
-          times: (r.times || []).map(t => `${t?.start || "?"}-${t?.end || "?"}`),
-        })),
-      }, null, 2));
-    }
-
     // A lesson that just ended and is still inside its grace window takes
     // priority over one that just started — otherwise the teacher who had
     // the previous lesson would be silently locked out the moment the next

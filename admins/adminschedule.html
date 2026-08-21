@@ -2275,19 +2275,18 @@
         const h = document.createElement('div');
         h.className = 'th';
         const timeIndex = i - 1;
-        const t = timeIndex < FIXED_LESSON_COUNT
-          ? defaultLessonTimeAt(timeIndex)
-          : (schedule.times[timeIndex] || defaultLessonTimeAt(timeIndex));
+        // Every lesson slot in a custom/extra-day schedule is independently
+        // editable and defaults to the site-wide time only as a starting
+        // point — it must NOT keep tracking settings/lessonTimes after that,
+        // since a special day (e.g. a Saturday event) commonly needs its own
+        // bell times distinct from the normal school day.
+        const t = schedule.times[timeIndex] || defaultLessonTimeAt(timeIndex);
         h.innerHTML = `
           <div class="lesson-word">الحصة</div>
           <div class="lesson-name">${lessonNameOnly(i)}</div>
           <div class="time-display">${to12HourLabel(t.end)} - ${to12HourLabel(t.start)}</div>
         `;
-        if(timeIndex < FIXED_LESSON_COUNT){
-          h.addEventListener('click', ()=> openMainTimeEditor(timeIndex));
-        }else{
-          h.addEventListener('click', ()=> openCustomTimeEditor(schedule.id, timeIndex));
-        }
+        h.addEventListener('click', ()=> openCustomTimeEditor(schedule.id, timeIndex));
         g.appendChild(h);
       }
 
@@ -2365,10 +2364,13 @@
           enabled: !!schedule.enabled,
           lessonCount: schedule.lessonCount,
           lessons: schedule.values.slice(0, schedule.lessonCount).map(v => normalizeLesson(v)),
+          // Always persist this schedule's OWN per-lesson time (falling back
+          // to the site-wide default only when none has been set yet) —
+          // previously every slot below FIXED_LESSON_COUNT was unconditionally
+          // overwritten with the site-wide time here, silently discarding
+          // whatever the admin had just edited in the grid above.
           times: Array.from({ length: schedule.lessonCount }, (_, idx) => {
-            const t = idx < FIXED_LESSON_COUNT
-              ? defaultLessonTimeAt(idx)
-              : (schedule.times[idx] || defaultLessonTimeAt(idx));
+            const t = schedule.times[idx] || defaultLessonTimeAt(idx);
             return {
               start: (t?.start || defaultLessonTimeAt(idx).start).toString(),
               end: (t?.end || defaultLessonTimeAt(idx).end).toString()
