@@ -634,6 +634,11 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
         getDocs(query(collection(db, "schedules"), where("teacherUid", "==", teacherUid))),
         getDocs(query(collection(db, "scheduleOverrides"), where("date", "==", dateISO))),
       ]);
+      // TEMP DEBUG — remove once the "not my lesson" report is diagnosed.
+      console.log("[attendance][debug] schedSnap", {
+        teacherUid, todayDayIndex, size: schedSnap.size,
+        docs: schedSnap.docs.map(d => ({ id: d.id, ...d.data() })),
+      });
       schedSnap.forEach(d => {
         const data = d.data();
         if (!data.lesson) return;
