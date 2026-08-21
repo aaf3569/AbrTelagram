@@ -2275,18 +2275,19 @@
         const h = document.createElement('div');
         h.className = 'th';
         const timeIndex = i - 1;
-        // Every lesson slot in a custom/extra-day schedule is independently
-        // editable and defaults to the site-wide time only as a starting
-        // point — it must NOT keep tracking settings/lessonTimes after that,
-        // since a special day (e.g. a Saturday event) commonly needs its own
-        // bell times distinct from the normal school day.
-        const t = schedule.times[timeIndex] || defaultLessonTimeAt(timeIndex);
+        const t = timeIndex < FIXED_LESSON_COUNT
+          ? defaultLessonTimeAt(timeIndex)
+          : (schedule.times[timeIndex] || defaultLessonTimeAt(timeIndex));
         h.innerHTML = `
           <div class="lesson-word">الحصة</div>
           <div class="lesson-name">${lessonNameOnly(i)}</div>
           <div class="time-display">${to12HourLabel(t.end)} - ${to12HourLabel(t.start)}</div>
         `;
-        h.addEventListener('click', ()=> openCustomTimeEditor(schedule.id, timeIndex));
+        if(timeIndex < FIXED_LESSON_COUNT){
+          h.addEventListener('click', ()=> openMainTimeEditor(timeIndex));
+        }else{
+          h.addEventListener('click', ()=> openCustomTimeEditor(schedule.id, timeIndex));
+        }
         g.appendChild(h);
       }
 
@@ -2364,13 +2365,10 @@
           enabled: !!schedule.enabled,
           lessonCount: schedule.lessonCount,
           lessons: schedule.values.slice(0, schedule.lessonCount).map(v => normalizeLesson(v)),
-          // Always persist this schedule's OWN per-lesson time (falling back
-          // to the site-wide default only when none has been set yet) —
-          // previously every slot below FIXED_LESSON_COUNT was unconditionally
-          // overwritten with the site-wide time here, silently discarding
-          // whatever the admin had just edited in the grid above.
           times: Array.from({ length: schedule.lessonCount }, (_, idx) => {
-            const t = schedule.times[idx] || defaultLessonTimeAt(idx);
+            const t = idx < FIXED_LESSON_COUNT
+              ? defaultLessonTimeAt(idx)
+              : (schedule.times[idx] || defaultLessonTimeAt(idx));
             return {
               start: (t?.start || defaultLessonTimeAt(idx).start).toString(),
               end: (t?.end || defaultLessonTimeAt(idx).end).toString()
@@ -2386,35 +2384,7 @@
         }, { merge: true });
         schedule.docId = docId;
 
-        // createSchoolWideCustomSchedule() creates one customDaySchedules doc
-        // per class (all disabled by default), but this function only ever
-        // touches the one class currently selected in this card — so
-        // "تفعيل أسبوعي"/day/name changes here would otherwise silently never
-        // reach the other classes' copies of the same schedule, leaving them
-        // permanently disabled even after the admin "enables" it. Propagate
-        // just the shared/identity fields to every sibling doc; each class's
-        // own lessons/times/classKey/grade/section/track are left untouched.
-        try {
-          const siblingsSnap = await getDocs(query(collection(db, 'customDaySchedules'), where('id', '==', schedule.id)));
-          const siblingBatch = writeBatch(db);
-          let siblingWrites = 0;
-          siblingsSnap.forEach((d) => {
-            if (d.id === docId) return;
-            siblingBatch.set(d.ref, {
-              name: payload.name,
-              dayIndex: payload.dayIndex,
-              day: payload.day,
-              enabled: payload.enabled,
-              updatedAt: serverTimestamp(),
-            }, { merge: true });
-            siblingWrites++;
-          });
-          if (siblingWrites > 0) await siblingBatch.commit();
-        } catch (e) {
-          console.error('[saveCustomSchedule] sibling propagation:', e);
-        }
-
-        setStatus(`<div class="ok">تم حفظ الجدول الخاص بنجاح (لجميع الفصول).</div>`);
+        setStatus(`<div class="ok">تم حفظ الجدول الخاص بنجاح.</div>`);
       }catch(e){
         console.error('[saveCustomSchedule]', e);
         setStatus(`<div class="err">تعذّر حفظ الجدول الخاص.</div>`);
