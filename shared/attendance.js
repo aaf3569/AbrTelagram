@@ -767,6 +767,15 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
     // internally, so a hit here is guaranteed usable.
     if (customHit?.ok) return customHit;
 
+    // TEMP DEBUG — remove once the "not my lesson" report is diagnosed.
+    console.log("[attendance][debug]", {
+      uid: user.uid, todayISO, G, L,
+      mapKeys: [...map.keys()],
+      hitForL: L !== null ? map.get(String(L)) : undefined,
+      hitForG: G !== null ? map.get(String(G)) : undefined,
+      customHit,
+    });
+
     // A lesson that just ended and is still inside its grace window takes
     // priority over one that just started — otherwise the teacher who had
     // the previous lesson would be silently locked out the moment the next
