@@ -634,11 +634,6 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
         getDocs(query(collection(db, "schedules"), where("teacherUid", "==", teacherUid))),
         getDocs(query(collection(db, "scheduleOverrides"), where("date", "==", dateISO))),
       ]);
-      // TEMP DEBUG — remove once the "not my lesson" report is diagnosed.
-      console.log("[attendance][debug] schedSnap", {
-        teacherUid, todayDayIndex, size: schedSnap.size,
-        docs: schedSnap.docs.map(d => ({ id: d.id, ...d.data() })),
-      });
       schedSnap.forEach(d => {
         const data = d.data();
         if (!data.lesson) return;
@@ -704,6 +699,15 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
     if (dayIndex < 0) return null;
     const nowMin = getCurrentKuwaitMinutes();
     const rows = await getCustomSchedulesForToday(dayIndex);
+    // TEMP DEBUG — remove once the "just-started lesson" report is diagnosed.
+    console.log("[attendance][debug] custom rows", {
+      teacherUid, dayIndex, nowMin,
+      rows: rows.map(r => ({
+        classKey: r.classKey, enabled: r.enabled,
+        lessons: (r.lessons || []).map(l => l?.teacherUid || null),
+        times: r.times,
+      })),
+    });
     for (const row of rows) {
       const lessons = Array.isArray(row.lessons) ? row.lessons : [];
       const times = Array.isArray(row.times) ? row.times : [];
@@ -771,15 +775,6 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
     // getMyActiveCustomLessonMetaForNow already skips already-taken slots
     // internally, so a hit here is guaranteed usable.
     if (customHit?.ok) return customHit;
-
-    // TEMP DEBUG — remove once the "not my lesson" report is diagnosed.
-    console.log("[attendance][debug]", {
-      uid: user.uid, todayISO, G, L,
-      mapKeys: [...map.keys()],
-      hitForL: L !== null ? map.get(String(L)) : undefined,
-      hitForG: G !== null ? map.get(String(G)) : undefined,
-      customHit,
-    });
 
     // A lesson that just ended and is still inside its grace window takes
     // priority over one that just started — otherwise the teacher who had
