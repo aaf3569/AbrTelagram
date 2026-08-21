@@ -700,14 +700,12 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
     const nowMin = getCurrentKuwaitMinutes();
     const rows = await getCustomSchedulesForToday(dayIndex);
     // TEMP DEBUG — remove once the "just-started lesson" report is diagnosed.
-    console.log("[attendance][debug] custom rows", {
-      teacherUid, dayIndex, nowMin,
-      rows: rows.map(r => ({
-        classKey: r.classKey, enabled: r.enabled,
-        lessons: (r.lessons || []).map(l => l?.teacherUid || null),
-        times: r.times,
-      })),
-    });
+    console.log("[attendance][debug] raw rows", JSON.stringify(rows.map(r => ({
+      classKey: r.classKey, enabled: r.enabled,
+      lessonTeacherUids: (r.lessons || []).map(l => l?.teacherUid || null),
+      times: (r.times || []).map(t => `${t?.start || "?"}-${t?.end || "?"}`),
+    })), null, 2));
+    const __debugTrace = [];
     for (const row of rows) {
       const lessons = Array.isArray(row.lessons) ? row.lessons : [];
       const times = Array.isArray(row.times) ? row.times : [];
@@ -719,16 +717,20 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
         const slot = times[i] || {};
         const sMin = parseTimeToMinutes((slot.start || fb.start || "00:00").toString());
         const eMin = parseTimeToMinutes((slot.end || fb.end || "00:00").toString());
-        if (nowMin < sMin || nowMin > eMin + LESSON_END_GRACE_MINUTES) continue;
+        const inWindow = nowMin >= sMin && nowMin <= eMin + LESSON_END_GRACE_MINUTES;
         let classKey = (row.classKey || "").toString().trim() || (lesson.classKey || "").toString().trim();
         if (!classKey && row.grade && row.section) {
           classKey = `${row.grade} / ${row.section}${row.track ? ` ${row.track}` : ""}`;
         }
+        const alreadyTaken = inWindow ? await hasExistingAttendanceSession(dateISO, i + 1, classKey) : null;
+        __debugTrace.push({ classKey: row.classKey, lessonIndex: i + 1, start: slot.start || fb.start, end: slot.end || fb.end, sMin, eMin, nowMin, inWindow, alreadyTaken });
+        if (!inWindow) continue;
         // A just-ended lesson still in grace can be already-taken while a
         // later overlapping one for the same teacher isn't — keep scanning
         // instead of getting stuck reporting "already taken" for the wrong
         // lesson.
-        if (await hasExistingAttendanceSession(dateISO, i + 1, classKey)) continue;
+        if (alreadyTaken) continue;
+        console.log("[attendance][debug] custom trace", JSON.stringify({ teacherUid, dayIndex, nowMin, rowCount: rows.length, trace: __debugTrace, result: "HIT" }, null, 2));
         return {
           ok: true,
           lesson: i + 1,
@@ -742,6 +744,7 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
         };
       }
     }
+    console.log("[attendance][debug] custom trace", JSON.stringify({ teacherUid, dayIndex, nowMin, rowCount: rows.length, trace: __debugTrace, result: "NO_HIT" }, null, 2));
     return null;
   }
 
