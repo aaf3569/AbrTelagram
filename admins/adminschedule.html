@@ -1700,31 +1700,54 @@
       return `${to12HourLabel(time.end)} - ${to12HourLabel(time.start)}`;
     }
 
+    // Minimum gap (minutes) required between one lesson's end and the next
+    // lesson's start, e.g. lesson ends 2:00 -> next lesson can't start before 2:05.
+    const MIN_LESSON_GAP_MINUTES = 5;
+    function timeStrToMinutes(t) {
+      const [h, m] = (t || "00:00").split(':').map(Number);
+      return h * 60 + m;
+    }
+
     async function saveLessonTime(index, startTime, endTime) {
       if (index < 0 || index >= FIXED_LESSON_COUNT) return false;
-      
+
       try {
         // Validate times
         if (!startTime || !endTime) {
           addStatusLine("err", "يجب تحديد وقت البداية والنهاية");
           return false;
         }
-        
+
         // Convert to Date objects for comparison
         const [startHours, startMinutes] = startTime.split(':').map(Number);
         const [endHours, endMinutes] = endTime.split(':').map(Number);
-        
+
         const startDate = new Date();
         startDate.setHours(startHours, startMinutes, 0, 0);
-        
+
         const endDate = new Date();
         endDate.setHours(endHours, endMinutes, 0, 0);
-        
+
         if (endDate <= startDate) {
           addStatusLine("err", "وقت النهاية يجب أن يكون بعد وقت البداية");
           return false;
         }
-        
+
+        // Require at least MIN_LESSON_GAP_MINUTES between this lesson and
+        // whichever lessons sit immediately before/after it.
+        const startMin = timeStrToMinutes(startTime);
+        const endMin = timeStrToMinutes(endTime);
+        const prev = index > 0 ? lessonTimes[index - 1] : null;
+        if (prev && startMin - timeStrToMinutes(prev.end) < MIN_LESSON_GAP_MINUTES) {
+          addStatusLine("err", `يجب أن يفصل ${MIN_LESSON_GAP_MINUTES} دقائق على الأقل بين نهاية ${LESSONS_AR[index - 1]} وبداية ${LESSONS_AR[index]}.`);
+          return false;
+        }
+        const next = index < FIXED_LESSON_COUNT - 1 ? lessonTimes[index + 1] : null;
+        if (next && timeStrToMinutes(next.start) - endMin < MIN_LESSON_GAP_MINUTES) {
+          addStatusLine("err", `يجب أن يفصل ${MIN_LESSON_GAP_MINUTES} دقائق على الأقل بين نهاية ${LESSONS_AR[index]} وبداية ${LESSONS_AR[index + 1]}.`);
+          return false;
+        }
+
         // Update local cache
         lessonTimes[index] = { start: startTime, end: endTime };
         
@@ -2076,9 +2099,24 @@
       }else{
         const schedule = findCustomScheduleById(currentTimeEditCtx.scheduleId);
         if(schedule){
-          schedule.times[currentTimeEditCtx.lessonIndex] = { start:startTime, end:endTime };
-          renderCustomSchedules();
-          success = true;
+          const idx = currentTimeEditCtx.lessonIndex;
+          if (timeStrToMinutes(endTime) <= timeStrToMinutes(startTime)) {
+            addStatusLine("err", "وقت النهاية يجب أن يكون بعد وقت البداية");
+          } else {
+            const startMin = timeStrToMinutes(startTime);
+            const endMin = timeStrToMinutes(endTime);
+            const prev = idx > 0 ? (schedule.times[idx - 1] || defaultLessonTimeAt(idx - 1)) : null;
+            const next = idx < schedule.lessonCount - 1 ? (schedule.times[idx + 1] || defaultLessonTimeAt(idx + 1)) : null;
+            if (prev && startMin - timeStrToMinutes(prev.end) < MIN_LESSON_GAP_MINUTES) {
+              addStatusLine("err", `يجب أن يفصل ${MIN_LESSON_GAP_MINUTES} دقائق على الأقل بين نهاية الحصة السابقة وبداية هذه الحصة.`);
+            } else if (next && timeStrToMinutes(next.start) - endMin < MIN_LESSON_GAP_MINUTES) {
+              addStatusLine("err", `يجب أن يفصل ${MIN_LESSON_GAP_MINUTES} دقائق على الأقل بين نهاية هذه الحصة وبداية الحصة التالية.`);
+            } else {
+              schedule.times[idx] = { start: startTime, end: endTime };
+              renderCustomSchedules();
+              success = true;
+            }
+          }
         }
       }
 

@@ -886,6 +886,10 @@
           <span class="absence-modal-icon">🔍</span>
           <span>تدقيق في الغائب</span>
         </button>
+        <button id="morningLateBtn" class="absence-modal-btn ghost" type="button">
+          <span class="absence-modal-icon">⏰</span>
+          <span>تسجيل التأخير الصباحي</span>
+        </button>
       </div>
     </div>
   </div>
@@ -1354,6 +1358,7 @@
     const closeAbsenceModal = document.getElementById('closeAbsenceModal');
     const overallAbsenceBtn = document.getElementById('overallAbsenceBtn');
     const detailedAbsenceBtn = document.getElementById('detailedAbsenceBtn');
+    const morningLateBtn = document.getElementById('morningLateBtn');
 
     // Teachers sheets
     const teachersSheet = document.getElementById('teachersSheet');
@@ -2193,8 +2198,12 @@
       window.location.href = '/admins/overallabsence.html';
     });
     
-    detailedAbsenceBtn.addEventListener('click', ()=>{ 
+    detailedAbsenceBtn.addEventListener('click', ()=>{
       window.location.href = '/admins/absence.html';
+    });
+
+    morningLateBtn.addEventListener('click', ()=>{
+      window.location.href = '/Teachers/morning.html';
     });
 
     const openTeachersHandler = ()=>{ window.location.href = '/admins/teachers.html'; };
