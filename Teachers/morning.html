@@ -73,7 +73,6 @@
     }
     .header-text{ display:flex; flex-direction:column; gap:1px; text-align:right; }
     .site-title{ font-weight:900; color:var(--primary); font-size:clamp(1rem,2.4vw,1.28rem); letter-spacing:.2px; line-height:1.25; }
-    .site-subtitle{ font-weight:700; color:var(--muted); font-size:.82rem; }
 
     /* Floating return button — top-right, above the header */
     .fab-back{
@@ -128,16 +127,6 @@
       font-weight:900;
     }
 
-    .panel-title{
-      display:flex; align-items:center; gap:8px;
-      font-weight:900; color:var(--primary); font-size:.98rem;
-      margin-bottom:12px;
-    }
-    .panel-title::before{
-      content:''; width:8px; height:8px; border-radius:999px; flex-shrink:0;
-      background:linear-gradient(145deg,var(--primary),var(--primary-2));
-    }
-
     .top-controls{
       display:grid;
       grid-template-columns:1fr;
@@ -158,7 +147,8 @@
       color:#fff;
       font-weight:900;
       padding:12px 14px;
-      padding-inline-end:44px;
+      padding-inline-start:44px;
+      text-align:right;
       cursor:pointer;
       box-shadow:0 14px 32px rgba(3,60,84,.22);
       transition:var(--transition);
@@ -394,7 +384,6 @@
       <div class="header-icon">⏰</div>
       <div class="header-text">
         <h1 class="site-title">تسجيل التأخير الصباحي</h1>
-        <div class="site-subtitle">طابور الصباح</div>
       </div>
     </div>
   </header>
@@ -415,7 +404,6 @@
 
       <section id="stateApp" class="state" aria-label="Late App">
         <div class="panel">
-          <div class="panel-title">اختر الصف والفصل</div>
           <div class="top-controls">
             <div class="select-wrap">
               <select id="gradeSelect" class="select" aria-label="الصف">
