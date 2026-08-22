@@ -1190,13 +1190,15 @@
       parentEl.appendChild(divider);
     }
 
-    function lessonMetaHtml(lessonNumber){
+    function lessonMetaHtml(lessonNumber, overrideTimes){
       const lesson = normalizeLessonNumber(lessonNumber) || 1;
       const lessonLabel = LESSONS_AR[lesson - 1] || `الحصة #${lesson}`;
+      const t = overrideTimes && overrideTimes.start && overrideTimes.end ? overrideTimes : null;
+      const timeAttrs = t ? ` data-lesson-time-start="${escapeHtml(t.start)}" data-lesson-time-end="${escapeHtml(t.end)}"` : '';
       return `
-        <div class="lesson-meta" data-lesson-meta="${lesson}">
+        <div class="lesson-meta" data-lesson-meta="${lesson}"${timeAttrs}>
           <div class="lesson-title-row">${escapeHtml(lessonLabel)}</div>
-          <div class="lesson-time-row" data-lesson-time>${escapeHtml(lessonTimeLabel(lesson))}</div>
+          <div class="lesson-time-row" data-lesson-time>${escapeHtml(lessonTimeLabel(lesson, t))}</div>
         </div>
       `;
     }
@@ -1208,7 +1210,15 @@
         if(!lessonNumber) return;
 
         const timeEl = metaEl.querySelector('[data-lesson-time]');
-        if(timeEl) timeEl.textContent = lessonTimeLabel(lessonNumber);
+        if(!timeEl) return;
+        // A custom/extra-day schedule's own lesson time (stamped as
+        // data-lesson-time-* when this cell was rendered) must survive the
+        // site-wide settings/lessonTimes listener refreshing every rendered
+        // cell — otherwise it gets stomped back to the generic bell time.
+        const overrideStart = metaEl.dataset.lessonTimeStart;
+        const overrideEnd = metaEl.dataset.lessonTimeEnd;
+        const override = (overrideStart && overrideEnd) ? { start: overrideStart, end: overrideEnd } : null;
+        timeEl.textContent = lessonTimeLabel(lessonNumber, override);
       });
     }
 
@@ -1432,8 +1442,8 @@
       if(h === 0) h = 12;
       return `${h}:${m[2]}`;
     }
-    function lessonTimeLabel(idx){
-      const t = LESSON_TIMES[idx-1];
+    function lessonTimeLabel(idx, overrideTimes){
+      const t = (overrideTimes && overrideTimes.start && overrideTimes.end) ? overrideTimes : LESSON_TIMES[idx-1];
       if(!t) return '—';
       // Read right-to-left in Arabic: end time first, then start time.
       return `${to12HourLabel(t.end)} - ${to12HourLabel(t.start)}`;
@@ -1568,6 +1578,20 @@
         }
       }
       return null;
+    }
+
+    // A custom/extra-day lesson runs on its own bell time, not the site-wide
+    // one `activeLesson` (from getActiveLessonIndex) was computed against —
+    // check it independently instead of comparing against activeLesson.
+    function isLessonCurrentNow(dayISO, todayISO, lessonNumber, activeLesson, customTimes){
+      if (dayISO !== todayISO) return false;
+      if (customTimes) {
+        const minutes = getCurrentKuwaitMinutes();
+        const start = parseTimeToMinutes(customTimes.start);
+        const end = parseTimeToMinutes(customTimes.end);
+        return minutes >= start && minutes < end;
+      }
+      return activeLesson === lessonNumber;
     }
 
     /* ========= Modal helpers ========= */
@@ -1888,16 +1912,18 @@
       wrap.appendChild(thL);
 
       for(let i=1;i<=FIXED_LESSON_COUNT;i++){
+        const hit = entriesByLesson.get(String(i));
+        const customTimes = hit && hit.activeStart && hit.activeEnd ? { start: hit.activeStart, end: hit.activeEnd } : null;
+
         const cLesson = document.createElement('div');
         cLesson.className='cell';
         cLesson.dataset.rowRole = 'lesson';
         cLesson.dataset.lessonIndex = String(i);
-        cLesson.innerHTML = lessonMetaHtml(i);
+        cLesson.innerHTML = lessonMetaHtml(i, customTimes);
         const cClass  = document.createElement('div');
         cClass.className='cell';
         cClass.dataset.rowRole = 'class';
         cClass.dataset.lessonIndex = String(i);
-        const hit = entriesByLesson.get(String(i));
 
         if (hit && hit._coveredAway){
           cClass.innerHTML = `
@@ -1932,7 +1958,7 @@
           });
         }
 
-        if (activeLesson === i) {
+        if (isLessonCurrentNow(dayISO, todayISO, i, activeLesson, customTimes)) {
           cLesson.classList.add('current-lesson');
           cClass.classList.add('current-lesson');
         }
@@ -1961,18 +1987,20 @@
       compactWrap.appendChild(compactThClass);
 
       for(let i=1;i<=FIXED_LESSON_COUNT;i++){
+        const hit = entriesByLesson.get(String(i));
+        const customTimes = hit && hit.activeStart && hit.activeEnd ? { start: hit.activeStart, end: hit.activeEnd } : null;
+
         const compactLesson = document.createElement('div');
         compactLesson.className = 'compact-cell lesson-cell';
         compactLesson.dataset.rowRole = 'lesson';
         compactLesson.dataset.lessonIndex = String(i);
-        compactLesson.innerHTML = lessonMetaHtml(i);
+        compactLesson.innerHTML = lessonMetaHtml(i, customTimes);
 
         const compactClass = document.createElement('div');
         compactClass.className = 'compact-cell';
         compactClass.dataset.rowRole = 'class';
         compactClass.dataset.lessonIndex = String(i);
 
-        const hit = entriesByLesson.get(String(i));
         if (hit && hit._coveredAway){
           compactClass.innerHTML = `
             <div style="font-weight:900">—</div>
@@ -1993,7 +2021,7 @@
         const compactRow = document.createElement('div');
         compactRow.className = 'compact-row';
         compactRow.dataset.lessonIndex = String(i);
-        if (activeLesson === i) {
+        if (isLessonCurrentNow(dayISO, todayISO, i, activeLesson, customTimes)) {
           compactRow.classList.add('current-lesson');
         }
         compactRow.appendChild(compactLesson);
@@ -2135,6 +2163,7 @@
     function mergeCustomScheduleIntoMap(byLesson, uid, customRows){
       customRows.forEach(row=>{
         const lessonsArr = Array.isArray(row.lessons) ? row.lessons : [];
+        const timesArr = Array.isArray(row.times) ? row.times : [];
         const max = Math.min(FIXED_LESSON_COUNT, Number(row.lessonCount) || lessonsArr.length || FIXED_LESSON_COUNT);
         for(let i=0;i<max;i++){
           const lessonRow = lessonsArr[i] || {};
@@ -2146,7 +2175,15 @@
             classKey = `${row.grade} / ${row.section}${row.track ? ` ${row.track}` : ''}`;
           }
           if(!classKey) continue;
-          byLesson.set(key, { ...lessonRow, classKey, lesson: key, _source: 'custom' });
+          // Custom/extra-day schedules carry their own per-lesson bell times
+          // (set in admins/adminschedule.html), independent of the site-wide
+          // settings/lessonTimes used by the normal Sun-Thu grid.
+          const t = timesArr[i];
+          byLesson.set(key, {
+            ...lessonRow, classKey, lesson: key, _source: 'custom',
+            activeStart: t?.start || '',
+            activeEnd: t?.end || ''
+          });
         }
       });
     }
