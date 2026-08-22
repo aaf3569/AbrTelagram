@@ -2699,6 +2699,10 @@
         snap.forEach(d=>{
           const x = d.data() || {};
           if(x.deletedAt) return;
+          // TEMP DEBUG — remove once diagnosed.
+          console.log('[fetchCustomSchedules][debug] raw doc read from Firestore', JSON.stringify({
+            docId: d.id, lessonCount: x.lessonCount, times: x.times,
+          }, null, 2));
           customSchedules.push(makeCustomSchedule({
             id: x.id || d.id,
             docId: d.id,
