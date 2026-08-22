@@ -2404,6 +2404,12 @@
       }
 
       try{
+        // TEMP DEBUG — remove once diagnosed.
+        console.log('[saveCustomSchedule][debug] in-memory schedule.times before payload build', JSON.stringify({
+          scheduleId: schedule.id, classKey: schedule.classKey, lessonCount: schedule.lessonCount,
+          times: schedule.times,
+        }, null, 2));
+
         const {grade, section, track} = parseClassKey(schedule.classKey);
         const trackKey = trackKeyOf(track);
         const payload = {
@@ -2435,11 +2441,17 @@
         };
 
         const docId = customDocIdFor(schedule.classKey, schedule.id);
+        console.log('[saveCustomSchedule][debug] payload.times about to be written', JSON.stringify({ docId, times: payload.times }, null, 2));
         await setDoc(doc(db, 'customDaySchedules', docId), {
           ...payload,
           createdAt: serverTimestamp()
         }, { merge: true });
         schedule.docId = docId;
+
+        {
+          const verifySnap = await getDoc(doc(db, 'customDaySchedules', docId));
+          console.log('[saveCustomSchedule][debug] read-back immediately after write', JSON.stringify({ docId, times: verifySnap.exists() ? verifySnap.data().times : 'MISSING' }, null, 2));
+        }
 
         // createSchoolWideCustomSchedule() creates one customDaySchedules doc
         // per class (all disabled by default), but this function only ever
