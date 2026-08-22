@@ -1744,20 +1744,9 @@
       return `${to12HourLabel(time.end)} - ${to12HourLabel(time.start)}`;
     }
 
-    // Minimum gap (minutes) required between one lesson's end and the next
-    // lesson's start, e.g. lesson ends 2:00 -> next lesson can't start before 2:05.
-    const MIN_LESSON_GAP_MINUTES = 5;
     function timeStrToMinutes(t) {
       const [h, m] = (t || "00:00").split(':').map(Number);
       return h * 60 + m;
-    }
-    // "00:00"-"00:00" is the placeholder defaultLessonTimeAt() falls back to
-    // for a lesson slot that has never actually been configured — treat it
-    // as "no real neighbor to compare against" rather than a literal
-    // midnight lesson, otherwise the gap check produces bogus huge negative
-    // gaps against a slot nobody has set up yet.
-    function isUnsetLessonTime(t) {
-      return !t || (!t.start && !t.end) || (t.start === "00:00" && t.end === "00:00");
     }
 
     async function saveLessonTime(index, startTime, endTime) {
@@ -1782,31 +1771,6 @@
 
         if (endDate <= startDate) {
           addStatusLine("err", "وقت النهاية يجب أن يكون بعد وقت البداية");
-          return false;
-        }
-
-        // Require at least MIN_LESSON_GAP_MINUTES between this lesson and
-        // whichever lessons sit immediately before/after it — but only when
-        // that neighbor actually has a real configured time. A lesson that
-        // was never set up yet is stored as the "00:00"-"00:00" placeholder
-        // (see defaultLessonTimeAt's fallback), and comparing against that
-        // as if it were a real 00:00 lesson produced huge bogus negative
-        // gaps that blocked perfectly valid saves.
-        const startMin = timeStrToMinutes(startTime);
-        const endMin = timeStrToMinutes(endTime);
-        const prev = index > 0 ? lessonTimes[index - 1] : null;
-        if (prev && !isUnsetLessonTime(prev) && startMin - timeStrToMinutes(prev.end) < MIN_LESSON_GAP_MINUTES) {
-          // Show the raw stored (24-hour) times, not just the lesson names —
-          // the grid displays times in 12-hour form with no AM/PM, so a
-          // lesson stored as e.g. 23:50 instead of the intended 11:50 looks
-          // completely fine on screen while still genuinely violating the
-          // gap. Seeing the raw values makes a mismatch like that obvious.
-          addStatusLine("err", `يجب أن يفصل ${MIN_LESSON_GAP_MINUTES} دقائق على الأقل بين نهاية ${LESSONS_AR[index - 1]} (${prev.end}) وبداية ${LESSONS_AR[index]} (${startTime}).\nإذا كان هناك فرق واضح بينهما بالساعة الاثني عشرية، تحقق من أن الوقتين مضبوطان صباحًا/مساءً بشكل صحيح — القيم أعلاه بنظام ٢٤ ساعة.`);
-          return false;
-        }
-        const next = index < FIXED_LESSON_COUNT - 1 ? lessonTimes[index + 1] : null;
-        if (next && !isUnsetLessonTime(next) && timeStrToMinutes(next.start) - endMin < MIN_LESSON_GAP_MINUTES) {
-          addStatusLine("err", `يجب أن يفصل ${MIN_LESSON_GAP_MINUTES} دقائق على الأقل بين نهاية ${LESSONS_AR[index]} (${endTime}) وبداية ${LESSONS_AR[index + 1]} (${next.start}).\nإذا كان هناك فرق واضح بينهما بالساعة الاثني عشرية، تحقق من أن الوقتين مضبوطان صباحًا/مساءً بشكل صحيح — القيم أعلاه بنظام ٢٤ ساعة.`);
           return false;
         }
 
@@ -2166,19 +2130,9 @@
           if (timeStrToMinutes(endTime) <= timeStrToMinutes(startTime)) {
             addStatusLine("err", "وقت النهاية يجب أن يكون بعد وقت البداية");
           } else {
-            const startMin = timeStrToMinutes(startTime);
-            const endMin = timeStrToMinutes(endTime);
-            const prev = idx > 0 ? (schedule.times[idx - 1] || defaultLessonTimeAt(idx - 1)) : null;
-            const next = idx < schedule.lessonCount - 1 ? (schedule.times[idx + 1] || defaultLessonTimeAt(idx + 1)) : null;
-            if (prev && !isUnsetLessonTime(prev) && startMin - timeStrToMinutes(prev.end) < MIN_LESSON_GAP_MINUTES) {
-              addStatusLine("err", `يجب أن يفصل ${MIN_LESSON_GAP_MINUTES} دقائق على الأقل بين نهاية الحصة السابقة (${prev.end}) وبداية هذه الحصة (${startTime}).\nإذا كان هناك فرق واضح بينهما بالساعة الاثني عشرية، تحقق من أن الوقتين مضبوطان صباحًا/مساءً بشكل صحيح — القيم أعلاه بنظام ٢٤ ساعة.`);
-            } else if (next && !isUnsetLessonTime(next) && timeStrToMinutes(next.start) - endMin < MIN_LESSON_GAP_MINUTES) {
-              addStatusLine("err", `يجب أن يفصل ${MIN_LESSON_GAP_MINUTES} دقائق على الأقل بين نهاية هذه الحصة (${endTime}) وبداية الحصة التالية (${next.start}).\nإذا كان هناك فرق واضح بينهما بالساعة الاثني عشرية، تحقق من أن الوقتين مضبوطان صباحًا/مساءً بشكل صحيح — القيم أعلاه بنظام ٢٤ ساعة.`);
-            } else {
-              schedule.times[idx] = { start: startTime, end: endTime };
-              renderCustomSchedules();
-              success = true;
-            }
+            schedule.times[idx] = { start: startTime, end: endTime };
+            renderCustomSchedules();
+            success = true;
           }
         }
       }
