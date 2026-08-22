@@ -237,15 +237,8 @@
     }
     .student-card:hover{ transform:translateY(-2px); box-shadow:0 14px 30px rgba(3,60,84,.14); border-color:rgba(3,60,84,.2); }
     .student-card.is-late{ background:var(--dangerBg); border-color:rgba(180,35,24,.22); }
-    .student-avatar{
-      width:42px; height:42px; border-radius:12px; flex-shrink:0;
-      display:grid; place-items:center;
-      background:linear-gradient(145deg, var(--primary-2), var(--primary));
-      color:#fff; font-weight:900; font-size:.95rem;
-    }
-    .student-card.is-late .student-avatar{ background:linear-gradient(145deg, #b42318, #8f1f14); }
     .student-info{ flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; }
-    .student-name{ font-weight:900; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .student-name{ font-weight:900; color:var(--text); white-space:normal; overflow-wrap:break-word; line-height:1.35; }
     .student-number{ font-weight:700; color:var(--muted); font-size:.82rem; }
 
     .late-btn{
@@ -652,12 +645,6 @@
       return t;
     }
 
-    function initialsFor(name){
-      const clean = (name || "").trim();
-      if(!clean) return "؟";
-      return clean.slice(0, 1);
-    }
-
     function getGradeForClass(name=""){
       const m = String(name).match(/\b(10|11|12)\b/);
       return m ? parseInt(m[1],10) : null;
@@ -834,10 +821,6 @@
         const card = document.createElement("div");
         card.className = `student-card${s.isLate ? " is-late" : ""}`;
 
-        const avatar = document.createElement("div");
-        avatar.className = "student-avatar";
-        avatar.textContent = initialsFor(s.name);
-
         const info = document.createElement("div");
         info.className = "student-info";
         const numberText = (s.studentNumber === null || s.studentNumber === undefined || s.studentNumber === "")
@@ -847,7 +830,6 @@
           <div class="student-number">رقم: ${numberText}</div>
         `;
 
-        card.appendChild(avatar);
         card.appendChild(info);
 
         if (s.isLate) {
