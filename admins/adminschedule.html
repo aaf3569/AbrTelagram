@@ -1138,6 +1138,23 @@
     </div>
   </div>
 
+  <!-- Error alert modal — every addStatusLine("err", ...) call across the
+       page routes through this instead of an easy-to-miss inline status
+       line (which sits below the grid and is often hidden behind whatever
+       modal is open when the error actually happens). -->
+  <div id="errorModal" class="modal" aria-hidden="true">
+    <div class="modal-card" role="alertdialog" aria-modal="true" aria-labelledby="errorModalTitle">
+      <div id="errorModalTitle" class="pop-title" style="display:flex; align-items:center; gap:8px; color:var(--danger);">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="13"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span>تنبيه</span>
+      </div>
+      <div id="errorModalText" style="font-size:14px; font-weight:800; color:var(--text); line-height:1.9; margin-bottom:4px;">—</div>
+      <div class="pop-actions">
+        <button id="errorModalOkBtn" class="btn primary" type="button">حسنًا</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal for creating a custom schedule -->
   <div id="createScheduleModal" class="modal" aria-hidden="true">
     <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="createScheduleTitle">
@@ -1283,6 +1300,9 @@
     const newScheduleBtn = document.getElementById('newScheduleBtn');
     const backToAdminBtn = document.getElementById('backToAdminBtn');
     const statusEl = document.getElementById('status');
+    const errorModal = document.getElementById('errorModal');
+    const errorModalText = document.getElementById('errorModalText');
+    const errorModalOkBtn = document.getElementById('errorModalOkBtn');
     const customSchedulesWrap = document.getElementById('customSchedules');
     const scheduleCard = document.getElementById('scheduleCard');
     const containerLoader = document.getElementById('containerLoader');
@@ -1530,8 +1550,32 @@
       statusEl.innerHTML = html || "";
     }
 
+    function openErrorModal(text){
+      errorModalText.textContent = text || 'حدث خطأ غير متوقع.';
+      overlay.classList.add('show');
+      errorModal.classList.add('show');
+      errorModal.setAttribute('aria-hidden', 'false');
+    }
+    function closeErrorModal(){
+      errorModal.classList.remove('show');
+      errorModal.setAttribute('aria-hidden', 'true');
+      if(!modal.classList.contains('show') && !timeModal.classList.contains('show')
+        && !createScheduleModal.classList.contains('show') && !settingsModal.classList.contains('show')){
+        overlay.classList.remove('show');
+      }
+    }
+    errorModalOkBtn.addEventListener('click', closeErrorModal);
+
+    // Every error across the page shows as this popup instead of the easy-
+    // to-miss inline status line below the grid — especially important
+    // since most errors fire while a different modal (e.g. the time editor)
+    // is still open on top of it. "ok"/"warn" keep the inline line.
     function addStatusLine(type, text){
-      const cls = type === "ok" ? "ok" : type === "warn" ? "warn" : "err";
+      if(type === 'err'){
+        openErrorModal(text);
+        return;
+      }
+      const cls = type === "ok" ? "ok" : "warn";
       const div = document.createElement('div');
       div.className = cls;
       div.textContent = text;
@@ -1707,6 +1751,14 @@
       const [h, m] = (t || "00:00").split(':').map(Number);
       return h * 60 + m;
     }
+    // "00:00"-"00:00" is the placeholder defaultLessonTimeAt() falls back to
+    // for a lesson slot that has never actually been configured — treat it
+    // as "no real neighbor to compare against" rather than a literal
+    // midnight lesson, otherwise the gap check produces bogus huge negative
+    // gaps against a slot nobody has set up yet.
+    function isUnsetLessonTime(t) {
+      return !t || (!t.start && !t.end) || (t.start === "00:00" && t.end === "00:00");
+    }
 
     async function saveLessonTime(index, startTime, endTime) {
       if (index < 0 || index >= FIXED_LESSON_COUNT) return false;
@@ -1734,16 +1786,21 @@
         }
 
         // Require at least MIN_LESSON_GAP_MINUTES between this lesson and
-        // whichever lessons sit immediately before/after it.
+        // whichever lessons sit immediately before/after it — but only when
+        // that neighbor actually has a real configured time. A lesson that
+        // was never set up yet is stored as the "00:00"-"00:00" placeholder
+        // (see defaultLessonTimeAt's fallback), and comparing against that
+        // as if it were a real 00:00 lesson produced huge bogus negative
+        // gaps that blocked perfectly valid saves.
         const startMin = timeStrToMinutes(startTime);
         const endMin = timeStrToMinutes(endTime);
         const prev = index > 0 ? lessonTimes[index - 1] : null;
-        if (prev && startMin - timeStrToMinutes(prev.end) < MIN_LESSON_GAP_MINUTES) {
+        if (prev && !isUnsetLessonTime(prev) && startMin - timeStrToMinutes(prev.end) < MIN_LESSON_GAP_MINUTES) {
           addStatusLine("err", `يجب أن يفصل ${MIN_LESSON_GAP_MINUTES} دقائق على الأقل بين نهاية ${LESSONS_AR[index - 1]} وبداية ${LESSONS_AR[index]}.`);
           return false;
         }
         const next = index < FIXED_LESSON_COUNT - 1 ? lessonTimes[index + 1] : null;
-        if (next && timeStrToMinutes(next.start) - endMin < MIN_LESSON_GAP_MINUTES) {
+        if (next && !isUnsetLessonTime(next) && timeStrToMinutes(next.start) - endMin < MIN_LESSON_GAP_MINUTES) {
           addStatusLine("err", `يجب أن يفصل ${MIN_LESSON_GAP_MINUTES} دقائق على الأقل بين نهاية ${LESSONS_AR[index]} وبداية ${LESSONS_AR[index + 1]}.`);
           return false;
         }
@@ -2041,6 +2098,7 @@
         closeTimeModal();
         closeCreateScheduleModal();
         closeSettingsModal();
+        closeErrorModal();
       }
     });
 
@@ -2107,9 +2165,9 @@
             const endMin = timeStrToMinutes(endTime);
             const prev = idx > 0 ? (schedule.times[idx - 1] || defaultLessonTimeAt(idx - 1)) : null;
             const next = idx < schedule.lessonCount - 1 ? (schedule.times[idx + 1] || defaultLessonTimeAt(idx + 1)) : null;
-            if (prev && startMin - timeStrToMinutes(prev.end) < MIN_LESSON_GAP_MINUTES) {
+            if (prev && !isUnsetLessonTime(prev) && startMin - timeStrToMinutes(prev.end) < MIN_LESSON_GAP_MINUTES) {
               addStatusLine("err", `يجب أن يفصل ${MIN_LESSON_GAP_MINUTES} دقائق على الأقل بين نهاية الحصة السابقة وبداية هذه الحصة.`);
-            } else if (next && timeStrToMinutes(next.start) - endMin < MIN_LESSON_GAP_MINUTES) {
+            } else if (next && !isUnsetLessonTime(next) && timeStrToMinutes(next.start) - endMin < MIN_LESSON_GAP_MINUTES) {
               addStatusLine("err", `يجب أن يفصل ${MIN_LESSON_GAP_MINUTES} دقائق على الأقل بين نهاية هذه الحصة وبداية الحصة التالية.`);
             } else {
               schedule.times[idx] = { start: startTime, end: endTime };
@@ -2468,7 +2526,7 @@
         setStatusHTML(`<div class="ok">تم حذف الجدول من جميع الفصول.</div>`);
       }catch(e){
         console.error('[deleteCustomSchedule]', e);
-        setStatusHTML(`<div class="err">تعذّر حذف الجدول من جميع الفصول.</div>`);
+        openErrorModal('تعذّر حذف الجدول من جميع الفصول.');
       }
     }
 
@@ -2793,7 +2851,7 @@
         closeCreateScheduleModal();
       }catch(e){
         console.error('[createSchoolWideCustomSchedule]', e);
-        setStatusHTML(`<div class="err">تعذّر إنشاء الجدول لجميع الفصول: ${(e && e.message) ? e.message : e}</div>`);
+        openErrorModal(`تعذّر إنشاء الجدول لجميع الفصول: ${(e && e.message) ? e.message : e}`);
       }finally{
         createScheduleConfirmBtn.disabled = false;
         setLoading(false);
@@ -2852,7 +2910,9 @@
     /* ======= Escape key handler ======= */
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
-        if (modal.classList.contains('show')) {
+        if (errorModal.classList.contains('show')) {
+          closeErrorModal();
+        } else if (modal.classList.contains('show')) {
           closeModal();
         } else if (timeModal.classList.contains('show')) {
           closeTimeModal();
@@ -2940,7 +3000,7 @@
         }
       }catch(e){
         console.error("[fetchExisting]", e);
-        setStatusHTML(`<div class="err">تعذّر تحميل البيانات: ${(e && e.message) ? e.message : e}</div>`);
+        openErrorModal(`تعذّر تحميل البيانات: ${(e && e.message) ? e.message : e}`);
       } finally{
         setLoading(false);
       }
@@ -3246,7 +3306,7 @@
         }
       }catch(e){
         console.error("[saveAll]", e);
-        setStatusHTML(`<div class="err">تعذّر الحفظ: ${(e && e.message) ? e.message : e}</div>`);
+        openErrorModal(`تعذّر الحفظ: ${(e && e.message) ? e.message : e}`);
       } finally{
         setDirty(false);
         setLoading(false);
