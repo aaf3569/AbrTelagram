@@ -1148,7 +1148,7 @@
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="13"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
         <span>تنبيه</span>
       </div>
-      <div id="errorModalText" style="font-size:14px; font-weight:800; color:var(--text); line-height:1.9; margin-bottom:4px;">—</div>
+      <div id="errorModalText" style="font-size:14px; font-weight:800; color:var(--text); line-height:1.9; margin-bottom:4px; white-space:pre-line;">—</div>
       <div class="pop-actions">
         <button id="errorModalOkBtn" class="btn primary" type="button">حسنًا</button>
       </div>
@@ -1796,12 +1796,17 @@
         const endMin = timeStrToMinutes(endTime);
         const prev = index > 0 ? lessonTimes[index - 1] : null;
         if (prev && !isUnsetLessonTime(prev) && startMin - timeStrToMinutes(prev.end) < MIN_LESSON_GAP_MINUTES) {
-          addStatusLine("err", `يجب أن يفصل ${MIN_LESSON_GAP_MINUTES} دقائق على الأقل بين نهاية ${LESSONS_AR[index - 1]} وبداية ${LESSONS_AR[index]}.`);
+          // Show the raw stored (24-hour) times, not just the lesson names —
+          // the grid displays times in 12-hour form with no AM/PM, so a
+          // lesson stored as e.g. 23:50 instead of the intended 11:50 looks
+          // completely fine on screen while still genuinely violating the
+          // gap. Seeing the raw values makes a mismatch like that obvious.
+          addStatusLine("err", `يجب أن يفصل ${MIN_LESSON_GAP_MINUTES} دقائق على الأقل بين نهاية ${LESSONS_AR[index - 1]} (${prev.end}) وبداية ${LESSONS_AR[index]} (${startTime}).\nإذا كان هناك فرق واضح بينهما بالساعة الاثني عشرية، تحقق من أن الوقتين مضبوطان صباحًا/مساءً بشكل صحيح — القيم أعلاه بنظام ٢٤ ساعة.`);
           return false;
         }
         const next = index < FIXED_LESSON_COUNT - 1 ? lessonTimes[index + 1] : null;
         if (next && !isUnsetLessonTime(next) && timeStrToMinutes(next.start) - endMin < MIN_LESSON_GAP_MINUTES) {
-          addStatusLine("err", `يجب أن يفصل ${MIN_LESSON_GAP_MINUTES} دقائق على الأقل بين نهاية ${LESSONS_AR[index]} وبداية ${LESSONS_AR[index + 1]}.`);
+          addStatusLine("err", `يجب أن يفصل ${MIN_LESSON_GAP_MINUTES} دقائق على الأقل بين نهاية ${LESSONS_AR[index]} (${endTime}) وبداية ${LESSONS_AR[index + 1]} (${next.start}).\nإذا كان هناك فرق واضح بينهما بالساعة الاثني عشرية، تحقق من أن الوقتين مضبوطان صباحًا/مساءً بشكل صحيح — القيم أعلاه بنظام ٢٤ ساعة.`);
           return false;
         }
 
@@ -2166,9 +2171,9 @@
             const prev = idx > 0 ? (schedule.times[idx - 1] || defaultLessonTimeAt(idx - 1)) : null;
             const next = idx < schedule.lessonCount - 1 ? (schedule.times[idx + 1] || defaultLessonTimeAt(idx + 1)) : null;
             if (prev && !isUnsetLessonTime(prev) && startMin - timeStrToMinutes(prev.end) < MIN_LESSON_GAP_MINUTES) {
-              addStatusLine("err", `يجب أن يفصل ${MIN_LESSON_GAP_MINUTES} دقائق على الأقل بين نهاية الحصة السابقة وبداية هذه الحصة.`);
+              addStatusLine("err", `يجب أن يفصل ${MIN_LESSON_GAP_MINUTES} دقائق على الأقل بين نهاية الحصة السابقة (${prev.end}) وبداية هذه الحصة (${startTime}).\nإذا كان هناك فرق واضح بينهما بالساعة الاثني عشرية، تحقق من أن الوقتين مضبوطان صباحًا/مساءً بشكل صحيح — القيم أعلاه بنظام ٢٤ ساعة.`);
             } else if (next && !isUnsetLessonTime(next) && timeStrToMinutes(next.start) - endMin < MIN_LESSON_GAP_MINUTES) {
-              addStatusLine("err", `يجب أن يفصل ${MIN_LESSON_GAP_MINUTES} دقائق على الأقل بين نهاية هذه الحصة وبداية الحصة التالية.`);
+              addStatusLine("err", `يجب أن يفصل ${MIN_LESSON_GAP_MINUTES} دقائق على الأقل بين نهاية هذه الحصة (${endTime}) وبداية الحصة التالية (${next.start}).\nإذا كان هناك فرق واضح بينهما بالساعة الاثني عشرية، تحقق من أن الوقتين مضبوطان صباحًا/مساءً بشكل صحيح — القيم أعلاه بنظام ٢٤ ساعة.`);
             } else {
               schedule.times[idx] = { start: startTime, end: endTime };
               renderCustomSchedules();
