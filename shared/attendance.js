@@ -581,6 +581,25 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
     return { ok: now >= s && now <= cutoff, reason: now >= s && now <= cutoff ? "within_window" : "outside_window" };
   }
 
+  // Window check for an already-resolved lesson meta. Custom/extra-day
+  // schedules carry their own per-lesson times (activeStart/activeEnd) that
+  // can differ from the site-wide bell times in LESSON_TIMES — checking the
+  // meta's own times keeps the submit-time re-validation consistent with the
+  // window the sheet was opened under, instead of wrongly blocking (or
+  // wrongly allowing) whenever the two clocks disagree.
+  function getMetaWindowStatus(meta) {
+    const start = meta?.activeStart;
+    const end = meta?.activeEnd;
+    if (start && end) {
+      const now = getCurrentKuwaitMinutes();
+      const s = parseTimeToMinutes(String(start));
+      const cutoff = parseTimeToMinutes(String(end)) + LESSON_END_GRACE_MINUTES;
+      const ok = now >= s && now <= cutoff;
+      return { ok, reason: ok ? "within_window" : "outside_window" };
+    }
+    return getLessonWindowStatus(meta?.lesson);
+  }
+
   function resolveClassKeyFromScheduleHit(hit) {
     if (hit.classKey) return hit.classKey;
     if (hit.grade && hit.section) return `${hit.grade} / ${hit.section}${hit.track ? ` ${hit.track}` : ""}`;
@@ -1311,7 +1330,7 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
       // that full check here just to confirm the lesson window is still open
       // was adding a very noticeable delay to every single submit — this is a
       // pure client-side time check instead, no network involved.
-      const w = getLessonWindowStatus(currentMeta?.lesson);
+      const w = getMetaWindowStatus(currentMeta);
       if (!w.ok) {
         showBlocked("time_locked");
         return;
@@ -1460,7 +1479,7 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
         // the network when the sheet opened; the only thing that can genuinely
         // change while filling the sheet is the clock — a sync check. (The
         // exists-check below still guards the double-submit race.)
-        const w = getLessonWindowStatus(lessonIndex);
+        const w = getMetaWindowStatus(currentMeta || { lesson: lessonIndex });
         if (!w.ok) {
           closeModal(els.confirmModal);
           showBlocked("time_locked");
