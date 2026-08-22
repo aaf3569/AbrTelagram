@@ -1760,20 +1760,6 @@
       return !t || (!t.start && !t.end) || (t.start === "00:00" && t.end === "00:00");
     }
 
-    // Matches the time inputs' own min/max (06:00-14:30) — the native
-    // HTML5 constraint alone isn't reliably enforced by every browser once
-    // a value has been typed in, so a lesson could still end up saved as
-    // e.g. 23:50 (11:50 PM) instead of the intended 11:50 AM. Rejecting
-    // that outright, with a message that spells out the AM/PM mixup, is far
-    // clearer than letting it silently produce a confusing gap-check error
-    // against a neighboring lesson later.
-    const SCHOOL_DAY_MIN_TIME = "06:00";
-    const SCHOOL_DAY_MAX_TIME = "14:30";
-    function isWithinSchoolDayRange(t) {
-      const m = timeStrToMinutes(t);
-      return m >= timeStrToMinutes(SCHOOL_DAY_MIN_TIME) && m <= timeStrToMinutes(SCHOOL_DAY_MAX_TIME);
-    }
-
     async function saveLessonTime(index, startTime, endTime) {
       if (index < 0 || index >= FIXED_LESSON_COUNT) return false;
 
@@ -1796,11 +1782,6 @@
 
         if (endDate <= startDate) {
           addStatusLine("err", "وقت النهاية يجب أن يكون بعد وقت البداية");
-          return false;
-        }
-
-        if (!isWithinSchoolDayRange(startTime) || !isWithinSchoolDayRange(endTime)) {
-          addStatusLine("err", `الوقت المُدخل (${startTime} - ${endTime}) خارج ساعات الدوام المدرسي المعتادة (${SCHOOL_DAY_MIN_TIME} إلى ${SCHOOL_DAY_MAX_TIME}).\nهذا يعني غالبًا أنك اخترت "م" (مساءً) بدل "ص" (صباحًا) في منتقي الوقت — تحقق من ذلك وأعد المحاولة.`);
           return false;
         }
 
@@ -2184,8 +2165,6 @@
           const idx = currentTimeEditCtx.lessonIndex;
           if (timeStrToMinutes(endTime) <= timeStrToMinutes(startTime)) {
             addStatusLine("err", "وقت النهاية يجب أن يكون بعد وقت البداية");
-          } else if (!isWithinSchoolDayRange(startTime) || !isWithinSchoolDayRange(endTime)) {
-            addStatusLine("err", `الوقت المُدخل (${startTime} - ${endTime}) خارج ساعات الدوام المدرسي المعتادة (${SCHOOL_DAY_MIN_TIME} إلى ${SCHOOL_DAY_MAX_TIME}).\nهذا يعني غالبًا أنك اخترت "م" (مساءً) بدل "ص" (صباحًا) في منتقي الوقت — تحقق من ذلك وأعد المحاولة.`);
           } else {
             const startMin = timeStrToMinutes(startTime);
             const endMin = timeStrToMinutes(endTime);
