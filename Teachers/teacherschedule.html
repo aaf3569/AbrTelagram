@@ -2152,7 +2152,12 @@
       let rows = [];
       try{
         const snap = await getDocs(query(collection(db,'customDaySchedules'), where('dayIndex','==', dayIndex)));
-        rows = snap.docs.map(d => d.data() || {}).filter(x => !x.deletedAt && x.enabled === true);
+        rows = snap.docs.map(d => ({ ...(d.data() || {}), _docId: d.id })).filter(x => !x.deletedAt && x.enabled === true);
+        // TEMP DEBUG — remove once diagnosed.
+        console.log('[fetchCustomScheduleDocsForDayIndex][debug]', JSON.stringify(rows.map(r => ({
+          docId: r._docId, id: r.id, classKey: r.classKey, lessonCount: r.lessonCount,
+          lessons: r.lessons, times: r.times,
+        })), null, 2));
       }catch(e){
         console.error('[fetchCustomScheduleDocsForDayIndex]', e);
       }
@@ -2230,6 +2235,12 @@
       }
 
       mergeCustomScheduleIntoMap(byLesson, uid, customRows);
+
+      // TEMP DEBUG — remove once diagnosed.
+      console.log('[buildTodayMapWithOverrides][debug]', JSON.stringify({
+        uid, dateISO, dayIndex,
+        byLesson: Array.from(byLesson.entries()),
+      }, null, 2));
 
       return byLesson;
     }
