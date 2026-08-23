@@ -160,6 +160,115 @@
       .btn span{ display:none; }
       .btn{ width:44px; padding:0; justify-content:center; }
     }
+
+    /* ===== Teacher management (ported from admins/teachers.html, remapped
+       onto this page's own design tokens) ===== */
+    .section-row{ display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
+    .label{ font-size:.92rem; font-weight:800; color:var(--text); }
+    .stack{ width:100%; display:flex; flex-direction:column; gap:10px; }
+
+    .teacher-item{
+      padding:14px; border:1px solid var(--border); border-radius:14px;
+      background:var(--card-bg); box-shadow:var(--shadow-1);
+      font-weight:900; color:var(--text);
+      display:flex; align-items:center; justify-content:space-between;
+      cursor:pointer; transition:var(--transition);
+    }
+    .teacher-item:hover{ transform:translateY(-2px); box-shadow:var(--shadow-2); border-color:rgba(2,43,66,.3); }
+    .teacher-sub{ font-size:.86rem; color:var(--muted); font-weight:700; }
+    .presence-dot{ width:9px; height:9px; border-radius:50%; background:#c3ccd6; flex-shrink:0; box-shadow:0 0 0 2px var(--card-bg); }
+    .presence-dot.online{ background:#22c55e; }
+    .presence-text{ font-weight:700; }
+    .chev{ width:20px; height:20px; flex-shrink:0; }
+    .chev path{ stroke:var(--muted); stroke-width:2.3; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+
+    /* Slide-over sheet */
+    .sheet{ position:fixed; inset:0; z-index:60; background:var(--page); display:flex; flex-direction:column; transform:translateX(100%); transition:transform .28s cubic-bezier(.22,.7,.25,1); }
+    .sheet.open{ transform:translateX(0); }
+    .sheet-header{ background:var(--card-bg); border-bottom:1px solid var(--border); padding:14px 12px; display:flex; align-items:center; gap:10px; position:sticky; top:0; z-index:10; }
+    .back-btn{ height:40px; padding:0 14px; border-radius:12px; border:1px solid rgba(2,43,66,.2); background:var(--card-bg); color:var(--primary); font-weight:900; cursor:pointer; box-shadow:var(--shadow-1); display:inline-flex; align-items:center; gap:8px; }
+    .sheet-title{ margin:0; font-size:1.05rem; font-weight:900; color:var(--primary); }
+    .sheet-body{ flex:1 1 auto; overflow:auto; padding:16px; width:min(760px,94vw); margin:0 auto; display:flex; flex-direction:column; gap:12px; }
+
+    /* Form primitives */
+    .field{ display:flex; flex-direction:column; gap:8px; width:100%; min-width:0; }
+    .input-wrap{ display:flex; align-items:center; gap:10px; min-height:52px; padding:0 14px; background:var(--card-bg); border:1px solid var(--border); border-radius:var(--radius-sm); box-shadow:var(--shadow-1); overflow:hidden; }
+    .input{ flex:1; height:48px; border:none; outline:none; background:transparent; font-size:16px; color:var(--text); min-width:0; }
+    .input:disabled{ color:var(--text); opacity:1; cursor:default; }
+    .input-wrap.password-field{ padding-inline-end:8px; }
+    .eye-toggle{ width:38px; height:38px; border-radius:10px; border:1px solid rgba(2,43,66,.2); background:var(--card-bg); color:var(--muted); display:inline-flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; font-weight:900; }
+    .eye-toggle:hover{ border-color:rgba(2,43,66,.4); color:var(--primary); }
+    .eye-toggle:disabled{ opacity:.5; cursor:not-allowed; }
+    .eye-toggle.is-revealed{ color:#0f766e; border-color:rgba(15,118,110,.45); }
+    .plain-value{ padding:2px 0 8px; color:var(--text); font-weight:900; min-height:30px; font-size:.95rem; line-height:1.8; overflow-wrap:anywhere; word-break:break-word; }
+    .view-value.empty{ color:#94a3b8; font-weight:700; }
+    .teacher-readonly .field .label{ color:var(--muted); font-weight:700; font-size:.86rem; }
+    .teacher-readonly .classes-editor{ display:none !important; }
+    .teacher-readonly .edit-only{ display:none !important; }
+    .teacher-editing .view-only{ display:none !important; }
+    .classes-list{ display:flex; flex-direction:column; gap:10px; }
+    .class-row{ display:flex; flex-direction:column; gap:8px; border:1px dashed var(--border); border-radius:14px; padding:10px; background:var(--page); }
+    .class-row .top{ display:flex; gap:10px; align-items:center; }
+    .class-row .remove{ height:40px; padding:0 12px; border-radius:10px; border:1px solid rgba(239,68,68,.35); color:var(--danger); background:var(--card-bg); font-weight:800; cursor:pointer; }
+    .inline-add{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    .inline-add .add{ height:44px; padding:0 16px; border-radius:12px; border:1px solid rgba(2,43,66,.3); background:var(--card-bg); color:var(--primary); font-weight:900; cursor:pointer; box-shadow:var(--shadow-1); }
+    .class-chips{ display:flex; flex-wrap:wrap; gap:8px; }
+    .class-chip{ height:32px; display:inline-flex; align-items:center; padding:0 10px; border-radius:999px; background:var(--primary-light); border:1px solid var(--border); color:var(--text); font-size:.82rem; font-weight:800; }
+    .class-empty{ color:var(--muted); font-size:.88rem; }
+    .ok, .err{ padding:12px; border-radius:14px; margin-top:6px; font-size:.9rem; box-shadow:var(--shadow-1); display:none; }
+    .ok{ color:#126a2e; background:#e6f6ea; border:1px solid #c7ebd0; }
+    .err{ color:#a12; background:#fde8e8; border:1px solid #f5c5c5; }
+    .delete-confirm-text{ margin:0; color:var(--text); font-weight:700; line-height:1.8; }
+    .delete-confirm-text strong{ color:var(--danger); }
+
+    /* Profile shell */
+    .profile-shell{ display:flex; flex-direction:column; gap:12px; }
+    .profile-hero{ display:flex; align-items:center; justify-content:space-between; gap:14px; padding:14px; border:1px solid var(--border); border-radius:16px; background:linear-gradient(180deg,var(--card-bg),var(--page)); box-shadow:var(--shadow-1); }
+    .profile-head{ display:flex; align-items:center; gap:12px; min-width:0; }
+    .avatar{ width:56px; height:56px; border-radius:50%; display:grid; place-items:center; background:linear-gradient(180deg,var(--primary-2),var(--primary)); color:#fff; font-weight:900; font-size:1.08rem; box-shadow:0 10px 24px rgba(2,43,66,.28); flex-shrink:0; }
+    .profile-name-wrap{ min-width:0; }
+    .profile-name{ font-weight:900; font-size:1.02rem; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .profile-email{ font-size:.88rem; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .profile-lastseen{ display:flex; align-items:center; gap:6px; }
+    .profile-grid{ display:grid; grid-template-columns:1fr; gap:12px; min-width:0; }
+    .profile-card{ border:1px solid var(--border); border-radius:16px; background:var(--card-bg); box-shadow:var(--shadow-1); padding:14px; min-width:0; }
+    .profile-card-title{ margin:0 0 10px; font-size:.96rem; color:var(--primary); font-weight:900; }
+    .info-grid{ display:grid; grid-template-columns:1fr; gap:10px; }
+    .profile-actions{ display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; }
+    .profile-actions-group{ display:flex; gap:10px; flex-wrap:wrap; }
+    .btn.danger{ background:var(--card-bg); color:var(--danger); border:1px solid rgba(239,68,68,.4); box-shadow:var(--shadow-1); }
+    #saveTeacher[hidden], #cancelTeacherEdit[hidden], #editTeacher[hidden], #deleteTeacher[hidden]{ display:none; }
+    @media (min-width:700px){
+      .profile-grid{ grid-template-columns:1.4fr 1fr; align-items:start; }
+      .info-grid{ grid-template-columns:repeat(2, minmax(0,1fr)); gap:14px 18px; }
+    }
+
+    /* Modals */
+    .modal-overlay{ position:fixed; inset:0; background:rgba(0,0,0,.5); backdrop-filter:blur(5px); display:flex; align-items:center; justify-content:center; z-index:100; opacity:0; visibility:hidden; transition:opacity .3s ease, visibility .3s ease; }
+    .modal-overlay.active{ opacity:1; visibility:visible; }
+    .modal{ background:var(--card-bg); border-radius:16px; box-shadow:0 20px 60px rgba(0,0,0,.3); width:min(90vw,500px); max-height:90vh; overflow-y:auto; transform:scale(.9); opacity:0; transition:transform .3s ease, opacity .3s ease; }
+    .modal.active{ transform:scale(1); opacity:1; }
+    .modal-header{ padding:16px 20px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; }
+    .modal-title{ margin:0; font-size:1.2rem; font-weight:800; color:var(--primary); }
+    .close-modal{ background:none; border:none; font-size:1.5rem; cursor:pointer; color:var(--muted); width:32px; height:32px; display:flex; align-items:center; justify-content:center; border-radius:50%; }
+    .modal-body{ padding:20px; }
+    .modal-footer{ padding:16px 20px; border-top:1px solid var(--border); display:flex; justify-content:flex-end; gap:10px; }
+    #addTeacherModal .modal{ width:min(92vw,560px); }
+    .add-teacher-body{ display:flex; flex-direction:column; gap:12px; }
+    .add-teacher-body .field{ margin:0; }
+
+    /* Success animation */
+    .success-modal{ position:fixed; inset:0; z-index:105; display:none; place-items:center; background:rgba(255,255,255,.55); backdrop-filter:blur(8px); padding:16px; }
+    .success-modal.show{ display:grid; }
+    .success-card{ width:min(340px,92vw); background:var(--card-bg); border:1px solid var(--border); border-radius:18px; box-shadow:0 20px 60px rgba(0,0,0,.25); padding:18px; display:grid; justify-items:center; gap:12px; position:relative; }
+    .success-close{ position:absolute; top:8px; left:8px; width:32px; height:32px; border-radius:999px; border:1px solid var(--border); background:var(--card-bg); color:var(--muted); font-weight:900; cursor:pointer; }
+    .success-check{ width:96px; height:96px; display:grid; place-items:center; }
+    .success-check svg{ width:96px; height:96px; overflow:visible; }
+    .success-check circle{ fill:none; stroke:#16a34a; stroke-width:6; stroke-dasharray:220; stroke-dashoffset:220; animation:ringDraw 1.2s ease-in-out infinite; }
+    .success-check path{ fill:none; stroke:#16a34a; stroke-width:7; stroke-linecap:round; stroke-linejoin:round; stroke-dasharray:70; stroke-dashoffset:70; animation:checkDraw 1.2s ease-in-out infinite; }
+    .success-text{ font-weight:900; color:#166534; font-size:15px; }
+    @keyframes ringDraw{ 0%{stroke-dashoffset:220;opacity:.5} 30%{stroke-dashoffset:0;opacity:1} 70%{stroke-dashoffset:0;opacity:1} 100%{stroke-dashoffset:220;opacity:.5} }
+    @keyframes checkDraw{ 0%{stroke-dashoffset:70;opacity:0} 25%{stroke-dashoffset:70;opacity:0} 45%{stroke-dashoffset:0;opacity:1} 70%{stroke-dashoffset:0;opacity:1} 100%{stroke-dashoffset:70;opacity:0} }
   </style>
 
   <!-- iOS home screen icon -->
@@ -203,22 +312,135 @@
   </header>
 
   <main>
-    <div class="wrap"></div>
+    <div class="wrap">
+      <section class="card">
+        <div class="section-row">
+          <div class="label">معلّمو القسم</div>
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <button id="refreshTeachers" class="btn ghost" type="button"><i class="fas fa-rotate"></i><span>تحديث</span></button>
+            <button id="openAddUser" class="btn solid" type="button"><i class="fas fa-plus"></i><span>إضافة معلم</span></button>
+          </div>
+        </div>
+        <div id="teachersList" class="stack" style="margin-top:12px;"></div>
+      </section>
+    </div>
   </main>
+
+  <!-- TEACHER PROFILE / EDIT SHEET -->
+  <section id="teacherSheet" class="sheet" aria-hidden="true">
+    <div class="sheet-header">
+      <button id="closeTeacher" class="back-btn" aria-label="رجوع"><i class="fas fa-arrow-right"></i><span>رجوع</span></button>
+      <h3 class="sheet-title">ملف المعلّم</h3>
+    </div>
+    <div class="sheet-body">
+      <div class="profile-shell teacher-readonly" id="teacherProfileShell">
+        <section class="profile-hero">
+          <div class="profile-head">
+            <div id="teacherAvatar" class="avatar">--</div>
+            <div class="profile-name-wrap">
+              <div id="profileName" class="profile-name">—</div>
+              <div id="profileEmail" class="profile-email">—</div>
+              <div class="profile-email profile-lastseen"><span id="profileLastSeenDot" class="presence-dot" aria-hidden="true"></span><span id="profileLastSeenText">—</span></div>
+            </div>
+          </div>
+        </section>
+
+        <div class="profile-grid">
+          <section class="profile-card">
+            <h4 class="profile-card-title">البيانات الأساسية</h4>
+            <div class="info-grid">
+              <div class="field"><label class="label" for="edTName">الاسم الكامل</label><div class="plain-value view-only"><span id="vEdTName" class="view-value">—</span></div><div class="input-wrap edit-only"><input id="edTName" class="input" type="text"></div></div>
+              <div class="field"><label class="label">رقم البطاقة</label><div class="plain-value"><span id="vEdTEmail" class="view-value">—</span></div></div>
+              <div class="field"><label class="label" for="edTPhone">رقم الهاتف</label><div class="plain-value view-only"><span id="vEdTPhone" class="view-value">—</span></div><div class="input-wrap edit-only"><input id="edTPhone" class="input" type="tel"></div></div>
+              <div class="field"><label class="label" for="edTTeams">رابط Teams</label><div class="plain-value view-only"><span id="vEdTTeams" class="view-value">—</span></div><div class="input-wrap edit-only"><input id="edTTeams" class="input" type="url"></div></div>
+              <div class="field"><label class="label" for="edTDisplayedPassword">كلمة المرور الظاهرة</label><div class="plain-value view-only"><span id="vEdTDisplayedPassword" class="view-value">—</span></div><div class="input-wrap edit-only password-field"><input id="edTDisplayedPassword" class="input" type="password" autocomplete="off" dir="ltr"><button id="toggleDisplayedPasswordBtn" class="eye-toggle" type="button" aria-label="إظهار كلمة المرور الظاهرة" title="إظهار كلمة المرور الظاهرة"><span aria-hidden="true">👁</span></button></div></div>
+            </div>
+          </section>
+
+          <section class="profile-card">
+            <h4 class="profile-card-title">الفصول</h4>
+            <div id="classesView" class="class-chips"></div>
+            <div id="classesEditorWrap" class="classes-editor" hidden>
+              <div id="edClasses" class="classes-list"></div>
+              <div class="inline-add"><button id="edAddClass" class="add" type="button">+ إضافة</button></div>
+            </div>
+          </section>
+        </div>
+
+        <section class="profile-card">
+          <div class="profile-actions">
+            <div class="profile-actions-group">
+              <button id="editTeacher" class="btn ghost" type="button">تعديل</button>
+              <button id="cancelTeacherEdit" class="btn ghost" type="button" hidden>إلغاء</button>
+              <button id="saveTeacher" class="btn solid" type="button" hidden>حفظ</button>
+            </div>
+            <button id="deleteTeacher" class="btn danger" type="button" hidden>حذف</button>
+          </div>
+          <div id="edOk" class="ok"></div><div id="edErr" class="err"></div>
+        </section>
+      </div>
+    </div>
+  </section>
+
+  <!-- ADD TEACHER MODAL -->
+  <div id="addTeacherModal" class="modal-overlay" aria-hidden="true">
+    <div class="modal">
+      <div class="modal-header"><h3 class="modal-title">إضافة معلم جديد</h3><button class="close-modal" aria-label="إغلاق">×</button></div>
+      <div class="modal-body add-teacher-body">
+        <div class="field"><label class="label" for="teacherName">الاسم الكامل</label><div class="input-wrap"><input id="teacherName" class="input" type="text"></div></div>
+        <div class="field"><label class="label" for="teacherEmail">رقم البطاقة المدنية</label><div class="input-wrap"><input id="teacherEmail" class="input" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="مثال: 298040100633"></div></div>
+        <div class="field"><label class="label" for="teacherPassword">كلمة المرور</label><div class="input-wrap"><input id="teacherPassword" class="input" type="password"></div></div>
+        <div class="field"><label class="label" for="teacherDisplayedPassword">الكلمة الظاهرة</label><div class="input-wrap"><input id="teacherDisplayedPassword" class="input" type="text" dir="ltr" readonly></div></div>
+        <div class="field"><label class="label" for="teacherPhone">رقم الهاتف</label><div class="input-wrap"><input id="teacherPhone" class="input" type="tel"></div></div>
+        <div id="teacherSpecializationField" class="field" hidden><label class="label" for="teacherSpecialization">التخصص داخل القسم</label><div class="input-wrap"><select id="teacherSpecialization" class="input"></select></div></div>
+        <div class="field"><label class="label">الفصول</label><div id="auClasses" class="classes-list"></div><div class="inline-add"><button id="auAddClass" class="add" type="button">+ إضافة</button></div></div>
+      </div>
+      <div class="modal-footer"><button id="cancelAddTeacher" class="btn ghost" type="button">إلغاء</button><button id="createTeacherBtn" class="btn solid" type="button">إنشاء الحساب</button></div>
+    </div>
+  </div>
+
+  <!-- DELETE TEACHER MODAL -->
+  <div id="deleteTeacherModal" class="modal-overlay" aria-hidden="true">
+    <div class="modal">
+      <div class="modal-header"><h3 class="modal-title">حذف ملف المعلّم</h3><button class="close-modal" aria-label="إغلاق">×</button></div>
+      <div class="modal-body">
+        <p class="delete-confirm-text">هل تريد حذف ملف المعلّم <strong id="dtName"></strong> نهائيًا؟ لا يمكن التراجع عن هذا الإجراء.</p>
+        <div id="dtErr" class="err"></div>
+      </div>
+      <div class="modal-footer"><button id="cancelDeleteTeacher" class="btn ghost" type="button">إلغاء</button><button id="confirmDeleteTeacher" class="btn danger" type="button">حذف نهائيًا</button></div>
+    </div>
+  </div>
+
+  <!-- SUCCESS MODAL -->
+  <div id="successModal" class="success-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-label="تمت إضافة المعلّم بنجاح">
+    <div class="success-card">
+      <button id="closeSuccessModal" type="button" class="success-close">×</button>
+      <div class="success-check">
+        <svg viewBox="0 0 100 100" aria-hidden="true">
+          <circle cx="50" cy="50" r="35"></circle>
+          <path d="M32 52 L45 65 L70 40"></path>
+        </svg>
+      </div>
+      <div class="success-text">تمت إضافة المعلّم بنجاح</div>
+    </div>
+  </div>
 
   <script type="module">
     import { firebaseConfig } from "/shared/firebase.js";
     /* ========= Firebase ========= */
     import { initializeApp, getApp, getApps } from "/shared/firebase.js";
     import {
-      getAuth, onAuthStateChanged, setPersistence, browserLocalPersistence
+      getAuth, onAuthStateChanged, setPersistence, browserLocalPersistence,
+      createUserWithEmailAndPassword, signOut, EmailAuthProvider, reauthenticateWithCredential
     } from "/shared/firebase.js";
     import {
       initializeFirestore, persistentSingleTabManager,
-      doc, getDoc
+      collection, query, where, getDocs,
+      doc, getDoc, setDoc, updateDoc, deleteField, serverTimestamp, writeBatch
     } from "/shared/firebase.js";
+    import { watchPresence } from "/shared/presence.js";
 
-    
+
 
     const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
     let db;
@@ -228,6 +450,12 @@
       db = initializeFirestore(app, {});
     }
     const auth = getAuth(app);
+    // Secondary app instance so creating a new teacher's Auth account doesn't
+    // sign the head out of their own session — same pattern admins/teachers.html
+    // uses (there named "AdminHelper"; named differently here only to avoid
+    // any accidental assumption the two are interchangeable).
+    const helperApp = getApps().some(a=>a.name==="DeptHeadHelper") ? getApp("DeptHeadHelper") : initializeApp(firebaseConfig,"DeptHeadHelper");
+    const helperAuth = getAuth(helperApp);
 
     /* ========= Elements ========= */
     const deptLabel = document.getElementById('deptLabel');
@@ -249,6 +477,7 @@
     }
 
     /* ========= Data Loading ========= */
+    let headDept = '';
     async function loadHeadProfileAndCheck(user){
       const snap = await getDoc(doc(db,'teachers', user.uid));
       if(!snap.exists()){
@@ -259,11 +488,596 @@
       if(role !== 'head'){
         throw new Error('not_head');
       }
-      const rawDept = (d.department || d.dept || d.subject || '').toString().trim();
-      const headDept = resolveDepartmentName(rawDept) || '—';
+      // Matches firestore.rules' headDepartment() exactly: department, falling
+      // back to subject — no other fallback, or client/rules would disagree
+      // about which department this head actually manages.
+      const rawDept = (d.department || d.subject || '').toString().trim();
+      headDept = resolveDepartmentName(rawDept) || '—';
       deptLabel.textContent = `قسم ${headDept}`;
       return d;
     }
+
+    /* ========= Elements: teacher management ========= */
+    const teachersList = document.getElementById('teachersList');
+    const openAddUser = document.getElementById('openAddUser');
+    const refreshTeachers = document.getElementById('refreshTeachers');
+
+    const teacherSheet = document.getElementById('teacherSheet');
+    const closeTeacher = document.getElementById('closeTeacher');
+    const teacherProfileShell = document.getElementById('teacherProfileShell');
+    const teacherAvatar = document.getElementById('teacherAvatar');
+    const profileName = document.getElementById('profileName');
+    const profileEmail = document.getElementById('profileEmail');
+    const profileLastSeenDot = document.getElementById('profileLastSeenDot');
+    const profileLastSeenText = document.getElementById('profileLastSeenText');
+    const vEdTName = document.getElementById('vEdTName');
+    const vEdTEmail = document.getElementById('vEdTEmail');
+    const vEdTPhone = document.getElementById('vEdTPhone');
+    const vEdTTeams = document.getElementById('vEdTTeams');
+    const vEdTDisplayedPassword = document.getElementById('vEdTDisplayedPassword');
+    const classesView = document.getElementById('classesView');
+    const classesEditorWrap = document.getElementById('classesEditorWrap');
+    const edTName = document.getElementById('edTName');
+    const edTPhone = document.getElementById('edTPhone');
+    const edTTeams = document.getElementById('edTTeams');
+    const edTDisplayedPassword = document.getElementById('edTDisplayedPassword');
+    const toggleDisplayedPasswordBtn = document.getElementById('toggleDisplayedPasswordBtn');
+    const editTeacherBtn = document.getElementById('editTeacher');
+    const cancelTeacherEditBtn = document.getElementById('cancelTeacherEdit');
+    const saveTeacherBtn = document.getElementById('saveTeacher');
+    const deleteTeacherBtn = document.getElementById('deleteTeacher');
+    const edOk = document.getElementById('edOk');
+    const edErr = document.getElementById('edErr');
+    const edClasses = document.getElementById('edClasses');
+    const edAddClass = document.getElementById('edAddClass');
+
+    const addTeacherModal = document.getElementById('addTeacherModal');
+    const closeAddTeacherModal = document.querySelector('#addTeacherModal .close-modal');
+    const cancelAddTeacher = document.getElementById('cancelAddTeacher');
+    const teacherName = document.getElementById('teacherName');
+    const teacherEmail = document.getElementById('teacherEmail');
+    const teacherPassword = document.getElementById('teacherPassword');
+    const teacherDisplayedPassword = document.getElementById('teacherDisplayedPassword');
+    const teacherPhone = document.getElementById('teacherPhone');
+    const teacherSpecializationField = document.getElementById('teacherSpecializationField');
+    const teacherSpecialization = document.getElementById('teacherSpecialization');
+    const auClasses = document.getElementById('auClasses');
+    const auAddClass = document.getElementById('auAddClass');
+    const createTeacherBtn = document.getElementById('createTeacherBtn');
+
+    const deleteTeacherModal = document.getElementById('deleteTeacherModal');
+    const closeDeleteTeacherModal = document.querySelector('#deleteTeacherModal .close-modal');
+    const cancelDeleteTeacher = document.getElementById('cancelDeleteTeacher');
+    const confirmDeleteTeacher = document.getElementById('confirmDeleteTeacher');
+    const dtName = document.getElementById('dtName');
+    const dtErr = document.getElementById('dtErr');
+
+    const successModal = document.getElementById('successModal');
+    const closeSuccessModal = document.getElementById('closeSuccessModal');
+
+    /* ========= Helpers: teacher management ========= */
+    const emailRx = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const toArabicDigits = (str)=>(str||'').toString().replace(/\d/g,d=>'٠١٢٣٤٥٦٧٨٩'[d]);
+    const MASKED_PASSWORD = '••••••••';
+
+    function escapeHtml(str){
+      return String(str ?? '')
+        .replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;')
+        .replaceAll('"','&quot;').replaceAll("'",'&#039;');
+    }
+
+    const classOptionsRaw=["10 / 1","10 / 2","10 / 3","10 / 4","10 / 5","10 / 6","10 / 7","11 / 1 ع","11 / 2 ع","11 / 3 ع","11 / 4 ع","11 / 5 ع","11 / 1 د","12 / 1 ع","12 / 2 ع","12 / 3 ع","12 / 4 ع","12 / 5 ع","12 / 1 د"];
+    function sortedClassOptions(){
+      const parse=(s)=>{const m=s.match(/^(\d+)\s*\/\s*(\d+)(?:\s*(.*))?$/);if(!m)return {g:999,s:999,suf:""};return {g:+m[1],s:+m[2],suf:(m[3]||"").trim()};};
+      return [...classOptionsRaw].sort((a,b)=>{const A=parse(a),B=parse(b);if(A.g!==B.g)return A.g-B.g;if(A.s!==B.s)return A.s-B.s;return A.suf.localeCompare(B.suf,'ar');});
+    }
+    const classOptions = sortedClassOptions();
+
+    // Reuses this file's own MERGED_DEPARTMENTS instead of porting
+    // admins/teachers.html's separate hardcoded per-department constants.
+    function getMergedSubjectsForDepartment(dept){
+      const group = MERGED_DEPARTMENTS.find(g => g.department === dept);
+      return group ? group.subjects : [];
+    }
+    function getDepartmentSubjectFilters(dept){
+      const subjects = getMergedSubjectsForDepartment(dept);
+      return subjects.length ? [dept, ...subjects] : [dept];
+    }
+
+    function buildTeacherEmailFromCivilId(civilId){
+      const digits=(civilId||'').toString().replace(/\D+/g,'');
+      return digits ? `t${digits}@gmail.com` : '';
+    }
+    function extractCivilIdFromTeacherEmail(email){
+      const normalized=(email||'').toString().trim();
+      if(!normalized) return '';
+      if(/^\d+$/.test(normalized)) return normalized;
+      const match=normalized.match(/^t(\d+)@gmail\.com$/i);
+      return match ? match[1] : '';
+    }
+    function getTeacherCivilId(data){
+      const storedCivilId=(data&&typeof data==='object'&&data.civilId!=null)?String(data.civilId).replace(/\D+/g,''):'';
+      if(storedCivilId) return storedCivilId;
+      const storedEmail=(data&&typeof data==='object')?data.email:'';
+      return extractCivilIdFromTeacherEmail(storedEmail);
+    }
+    function getStoredDisplayedPassword(data){
+      if(!data || typeof data!=='object') return '';
+      const value=data.displayedPassword ?? data.viewedPassword;
+      return value==null ? '' : String(value);
+    }
+    function getInitials(name,email,uid){
+      const source=(name||email||uid||'').trim();
+      if(!source) return '--';
+      const words=source.split(/\s+/).filter(Boolean);
+      if(words.length>=2) return (words[0][0]+words[1][0]).toUpperCase();
+      return source.slice(0,2).toUpperCase();
+    }
+    function setViewValue(el, value){
+      const normalized=(value==null?'':String(value).trim());
+      if(!normalized || normalized==='—'){
+        el.textContent='غير متوفر';
+        el.classList.add('empty');
+        return;
+      }
+      el.textContent=normalized;
+      el.classList.remove('empty');
+    }
+    function setDisplayedPasswordPreview(value){
+      const normalized=String(value ?? '');
+      if(!normalized){
+        vEdTDisplayedPassword.textContent='غير متوفر';
+        vEdTDisplayedPassword.classList.add('empty');
+        return;
+      }
+      vEdTDisplayedPassword.textContent=MASKED_PASSWORD;
+      vEdTDisplayedPassword.classList.remove('empty');
+    }
+    let displayedPasswordRevealed=false;
+    function setDisplayedPasswordVisibility(isVisible){
+      displayedPasswordRevealed=!!isVisible;
+      edTDisplayedPassword.type=displayedPasswordRevealed?'text':'password';
+      toggleDisplayedPasswordBtn.classList.toggle('is-revealed', displayedPasswordRevealed);
+      const actionLabel=displayedPasswordRevealed?'إخفاء كلمة المرور الظاهرة':'إظهار كلمة المرور الظاهرة';
+      toggleDisplayedPasswordBtn.setAttribute('aria-label', actionLabel);
+      toggleDisplayedPasswordBtn.title=actionLabel;
+    }
+    function renderClassesPreview(classes, container=classesView){
+      container.innerHTML='';
+      const list=Array.isArray(classes)?classes.filter(Boolean):[];
+      if(!list.length){
+        const empty=document.createElement('div');
+        empty.className='class-empty';
+        empty.textContent='لا توجد فصول مضافة.';
+        container.appendChild(empty);
+        return;
+      }
+      list.forEach(c=>{
+        const chip=document.createElement('span');
+        chip.className='class-chip';
+        chip.textContent=toArabicDigits(c);
+        container.appendChild(chip);
+      });
+    }
+    function makeClassRow(initialValue=""){
+      const row=document.createElement('div');row.className='class-row';
+      const top=document.createElement('div');top.className='top';
+      const wrap=document.createElement('div');wrap.className='input-wrap';
+      const sel=document.createElement('select');sel.className='input';
+      classOptions.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=toArabicDigits(v);sel.appendChild(o);});
+      const removeBtn=document.createElement('button');removeBtn.type='button';removeBtn.className='remove';removeBtn.textContent='حذف';
+      sel.addEventListener('change',()=>updateProfileSummary());
+      removeBtn.addEventListener('click',()=>{row.remove();updateProfileSummary();});
+      if(initialValue && !classOptions.includes(initialValue)){
+        const customOption=document.createElement('option');
+        customOption.value=initialValue;
+        customOption.textContent=toArabicDigits(initialValue);
+        sel.appendChild(customOption);
+      }
+      if(initialValue){sel.value=initialValue;} else if(classOptions.length){sel.value=classOptions[0];}
+      wrap.appendChild(sel);top.appendChild(wrap);top.appendChild(removeBtn);row.appendChild(top);
+      row.getValue=()=> sel.value;
+      return row;
+    }
+    const getClassesFrom=(c)=>[...new Set(Array.from(c.querySelectorAll('.class-row')).map(r=>r.getValue&&r.getValue()).filter(Boolean))];
+
+    function syncTeacherSpecializationField(){
+      const mergedSubjects=getMergedSubjectsForDepartment(headDept);
+      const showSpecialization=mergedSubjects.length>0;
+      teacherSpecializationField.hidden=!showSpecialization;
+      teacherSpecialization.required=showSpecialization;
+      teacherSpecialization.innerHTML='';
+      if(!showSpecialization) return;
+      mergedSubjects.forEach(value=>{
+        const option=document.createElement('option');
+        option.value=value;
+        option.textContent=value;
+        teacherSpecialization.appendChild(option);
+      });
+    }
+
+    /* ---- sheet / modal chrome ---- */
+    const openSheet=(el)=>{el.classList.add('open');el.setAttribute('aria-hidden','false');};
+    const closeSheetEl=(el)=>{el.classList.remove('open');el.setAttribute('aria-hidden','true');};
+    function focusIfPossible(el){
+      if(!el || typeof el.focus!=='function') return false;
+      try{el.focus(); return true;}catch{return false;}
+    }
+    function moveFocusOutside(container, fallback){
+      const active=document.activeElement;
+      if(active instanceof HTMLElement && container.contains(active)){
+        if(!focusIfPossible(fallback)) active.blur();
+      }
+    }
+    function syncBodyScrollLock(){
+      const anyOverlayOpen=addTeacherModal.classList.contains('active') || deleteTeacherModal.classList.contains('active') || successModal.classList.contains('show');
+      document.body.style.overflow=anyOverlayOpen?'hidden':'';
+    }
+    const openModal=(m)=>{
+      m.setAttribute('aria-hidden','false');
+      m.classList.add('active');
+      setTimeout(()=>m.querySelector('.modal').classList.add('active'),10);
+      syncBodyScrollLock();
+    };
+    const closeModal=(m,{ fallbackFocus=openAddUser }={})=>{
+      moveFocusOutside(m, fallbackFocus);
+      m.querySelector('.modal').classList.remove('active');
+      setTimeout(()=>{
+        m.classList.remove('active');
+        m.setAttribute('aria-hidden','true');
+        syncBodyScrollLock();
+      },300);
+    };
+    let lastFocusedBeforeSuccessModal=null;
+    const openSuccessModal=()=>{
+      lastFocusedBeforeSuccessModal=(document.activeElement instanceof HTMLElement)?document.activeElement:null;
+      successModal.setAttribute('aria-hidden','false');
+      successModal.classList.add('show');
+      syncBodyScrollLock();
+      requestAnimationFrame(()=>focusIfPossible(closeSuccessModal));
+    };
+    const closeSuccessModalFn=()=>{
+      const restoreFocusTo=(lastFocusedBeforeSuccessModal && lastFocusedBeforeSuccessModal.isConnected && !successModal.contains(lastFocusedBeforeSuccessModal))
+        ? lastFocusedBeforeSuccessModal
+        : openAddUser;
+      moveFocusOutside(successModal, restoreFocusTo);
+      successModal.classList.remove('show');
+      successModal.setAttribute('aria-hidden','true');
+      lastFocusedBeforeSuccessModal=null;
+      syncBodyScrollLock();
+    };
+
+    // Re-entering the head's own password before revealing another
+    // teacher's plaintext mirror — same client-side reauth admins/teachers.html
+    // uses before its own password reveal.
+    async function reauthenticateHeadForPasswordReveal(){
+      const user=auth.currentUser;
+      const email=(user?.email||'').trim();
+      if(!user || !email) throw new Error('تعذّر تحديد حسابك الحالي.');
+      const headPassword=prompt('لأمان الحساب، أدخل كلمة مرورك الحالية:');
+      if(headPassword===null) throw new Error('تم الإلغاء');
+      if(!headPassword) throw new Error('أدخل كلمة المرور.');
+      const credential=EmailAuthProvider.credential(email, headPassword);
+      await reauthenticateWithCredential(user, credential);
+    }
+
+    /* ========= State: teacher management ========= */
+    let currentTeacher={uid:null,data:null,displayedPassword:''};
+    let unsubscribeTeacherPresence=null;
+    let teacherEditMode=false;
+    let editSnapshot=null;
+    let teacherListPresenceUnsubs=[];
+    function clearTeacherListPresence(){
+      teacherListPresenceUnsubs.forEach(unsub=>unsub());
+      teacherListPresenceUnsubs=[];
+    }
+
+    /* ========= List ========= */
+    async function loadTeachers(){
+      clearTeacherListPresence();
+      teachersList.innerHTML='';
+      try{
+        const subjectFilters=getDepartmentSubjectFilters(headDept).filter(Boolean);
+        if(!subjectFilters.length) return;
+        const qy = subjectFilters.length===1
+          ? query(collection(db,'teachers'), where('subject','==',subjectFilters[0]))
+          : query(collection(db,'teachers'), where('subject','in',subjectFilters));
+        const snap = await getDocs(qy);
+        const list = snap.docs
+          .map(d=>d.data())
+          .filter(t=>subjectFilters.includes((t.subject||'').toString().trim()) && (t.role||'').toString().toLowerCase()==='user')
+          .sort((a,b)=>(a.name||'').localeCompare(b.name||'','ar'));
+        if(!list.length){
+          const empty=document.createElement('div');empty.className='teacher-item';empty.style.cursor='default';empty.textContent='لا يوجد معلمون بعد.';teachersList.appendChild(empty);
+          return;
+        }
+        list.forEach(t=>{
+          const el=document.createElement('div'); el.className='teacher-item';
+          const teacherCivilId=getTeacherCivilId(t);
+          el.innerHTML = `<div><div style="display:flex;align-items:center;gap:8px;"><span class="presence-dot" aria-hidden="true"></span><span>${escapeHtml(t.name||teacherCivilId||t.email||t.uid)}</span></div><div class="teacher-sub">${escapeHtml(teacherCivilId||t.email||'')}<span class="presence-text"></span></div></div><svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>`;
+          el.addEventListener('click', ()=> openTeacherEditor(t.uid));
+          teachersList.appendChild(el);
+          const presenceDotEl=el.querySelector('.presence-dot');
+          const presenceTextEl=el.querySelector('.presence-text');
+          teacherListPresenceUnsubs.push(watchPresence(db, t.uid, (state)=>{
+            presenceDotEl.classList.toggle('online', state.online);
+            presenceTextEl.textContent = state.label ? ' • '+state.label : '';
+          }));
+        });
+      }catch(e){
+        console.error('[loadTeachers]', e);
+        const err=document.createElement('div');err.className='teacher-item';err.style.cursor='default';err.textContent='تعذّر تحميل القائمة.';teachersList.appendChild(err);
+      }
+    }
+
+    /* ========= Profile / edit ========= */
+    function serializeEditForm(){
+      return JSON.stringify({
+        name:edTName.value.trim(),
+        phone:edTPhone.value.trim(),
+        teams:edTTeams.value.trim(),
+        displayedPassword:edTDisplayedPassword.value,
+        classes:getClassesFrom(edClasses),
+      });
+    }
+    function captureEditSnapshot(){ editSnapshot=serializeEditForm(); }
+    function isEditFormDirty(){ return editSnapshot!==null && serializeEditForm()!==editSnapshot; }
+
+    function updateProfileSummary(){
+      const name=edTName.value.trim() || currentTeacher?.data?.name || currentTeacher?.uid || '—';
+      const civilId=getTeacherCivilId(currentTeacher?.data) || '—';
+      const phone=edTPhone.value.trim() || '—';
+      const teams=edTTeams.value.trim() || '—';
+      const displayedPassword=edTDisplayedPassword.value;
+      profileName.textContent=name;
+      profileEmail.textContent=civilId;
+      teacherAvatar.textContent=getInitials(name,civilId,currentTeacher?.uid);
+      setViewValue(vEdTName,name);
+      setViewValue(vEdTEmail,civilId);
+      setViewValue(vEdTPhone,phone);
+      setViewValue(vEdTTeams,teams);
+      setDisplayedPasswordPreview(displayedPassword);
+      renderClassesPreview(getClassesFrom(edClasses));
+      if(teacherEditMode) saveTeacherBtn.hidden=!isEditFormDirty();
+    }
+    function setTeacherEditMode(isEdit){
+      teacherEditMode=!!isEdit;
+      teacherProfileShell.classList.toggle('teacher-readonly', !teacherEditMode);
+      teacherProfileShell.classList.toggle('teacher-editing', teacherEditMode);
+      [edTName,edTPhone,edTTeams,edTDisplayedPassword].forEach(el=>el.disabled=!teacherEditMode);
+      toggleDisplayedPasswordBtn.disabled=!teacherEditMode;
+      if(!teacherEditMode) setDisplayedPasswordVisibility(false);
+      classesEditorWrap.hidden=!teacherEditMode;
+      editTeacherBtn.hidden=teacherEditMode;
+      deleteTeacherBtn.hidden=!teacherEditMode;
+      cancelTeacherEditBtn.hidden=!teacherEditMode;
+      if(teacherEditMode) captureEditSnapshot(); else editSnapshot=null;
+      saveTeacherBtn.hidden=true;
+      updateProfileSummary();
+    }
+
+    async function openTeacherEditor(uid){
+      edOk.style.display='none'; edErr.style.display='none';
+      try{
+        const [s, privSnap] = await Promise.all([
+          getDoc(doc(db,'teachers',uid)),
+          getDoc(doc(db,'teachers',uid,'private','credentials'))
+        ]);
+        if(!s.exists()){ alert('الملف غير موجود.'); return; }
+        const d = s.data();
+        const privData = privSnap.exists() ? privSnap.data() : null;
+        const storedDisplayedPassword = (privData!=null && privData.displayedPassword!=null) ? String(privData.displayedPassword) : getStoredDisplayedPassword(d);
+        currentTeacher = { uid, data:d, displayedPassword: storedDisplayedPassword };
+        edTName.value = d.name || '';
+        edTPhone.value = d.phone || '';
+        edTTeams.value = d.teams || '';
+        edTDisplayedPassword.value = storedDisplayedPassword;
+        setDisplayedPasswordVisibility(false);
+        edClasses.innerHTML='';
+        const cls = Array.isArray(d.classes) ? d.classes : [];
+        if(!cls.length) edClasses.appendChild(makeClassRow(""));
+        else cls.forEach(v=>edClasses.appendChild(makeClassRow(v)));
+        setTeacherEditMode(false);
+        updateProfileSummary();
+        openSheet(teacherSheet);
+        if(unsubscribeTeacherPresence) unsubscribeTeacherPresence();
+        unsubscribeTeacherPresence = watchPresence(db, uid, (state)=>{
+          profileLastSeenDot.classList.toggle('online', state.online);
+          profileLastSeenText.textContent = state.label;
+        });
+      }catch(e){
+        console.error('[openTeacherEditor]', e);
+        alert('تعذّر فتح صفحة المعلّم.');
+      }
+    }
+    function closeTeacherView(){
+      if(unsubscribeTeacherPresence){ unsubscribeTeacherPresence(); unsubscribeTeacherPresence=null; }
+      closeSheetEl(teacherSheet);
+    }
+    closeTeacher.addEventListener('click', closeTeacherView);
+    editTeacherBtn.addEventListener('click', ()=> setTeacherEditMode(true));
+    cancelTeacherEditBtn.addEventListener('click', ()=>{
+      const d=currentTeacher.data||{};
+      edTName.value=d.name||'';
+      edTPhone.value=d.phone||'';
+      edTTeams.value=d.teams||'';
+      edTDisplayedPassword.value=currentTeacher.displayedPassword||'';
+      setDisplayedPasswordVisibility(false);
+      edClasses.innerHTML='';
+      const cls=Array.isArray(d.classes)?d.classes:[];
+      if(!cls.length) edClasses.appendChild(makeClassRow(""));
+      else cls.forEach(v=>edClasses.appendChild(makeClassRow(v)));
+      setTeacherEditMode(false);
+    });
+    edAddClass.addEventListener('click', ()=>{ edClasses.appendChild(makeClassRow("")); updateProfileSummary(); });
+    [edTName,edTPhone,edTTeams,edTDisplayedPassword].forEach(el=>{
+      el.addEventListener('input', updateProfileSummary);
+    });
+    toggleDisplayedPasswordBtn.addEventListener('click', async ()=>{
+      edErr.style.display='none';
+      if(!teacherEditMode || toggleDisplayedPasswordBtn.disabled) return;
+      if(displayedPasswordRevealed){ setDisplayedPasswordVisibility(false); return; }
+      if(!edTDisplayedPassword.value){
+        edErr.textContent='لا توجد كلمة مرور ظاهرة محفوظة لهذا المعلّم.';
+        edErr.style.display='block';
+        return;
+      }
+      try{
+        await reauthenticateHeadForPasswordReveal();
+        setDisplayedPasswordVisibility(true);
+      }catch(error){
+        setDisplayedPasswordVisibility(false);
+        if(error?.message==='تم الإلغاء') return;
+        if(['auth/wrong-password','auth/invalid-credential','auth/invalid-login-credentials'].includes(error?.code)){
+          edErr.textContent='كلمة المرور غير صحيحة.';
+        }else{
+          edErr.textContent=error?.message||'تعذّر التحقق من كلمة المرور.';
+        }
+        edErr.style.display='block';
+      }
+    });
+    refreshTeachers.addEventListener('click', ()=> loadTeachers());
+
+    saveTeacherBtn.addEventListener('click', async ()=>{
+      edOk.style.display='none'; edErr.style.display='none';
+      try{
+        const { uid } = currentTeacher;
+        if(!uid) throw new Error('لم يتم اختيار معلّم.');
+        const name=edTName.value.trim(), phone=edTPhone.value.trim(), teams=edTTeams.value.trim();
+        const classes=getClassesFrom(edClasses);
+        const displayedPassword=edTDisplayedPassword.value;
+        if(!name) throw new Error('أدخل الاسم.');
+        // Parent doc already exists — no create-time race, Promise.all is safe.
+        await Promise.all([
+          updateDoc(doc(db,'teachers',uid), { name, phone, teams, classes, displayedPassword: deleteField(), viewedPassword: deleteField() }),
+          setDoc(doc(db,'teachers',uid,'private','credentials'), { displayedPassword }, { merge:true })
+        ]);
+        currentTeacher.data = { ...(currentTeacher.data||{}), name, phone, teams, classes };
+        currentTeacher.displayedPassword = displayedPassword;
+        setTeacherEditMode(false);
+        edOk.textContent='تم حفظ التعديلات.'; edOk.style.display='block';
+        setTimeout(()=>{ edOk.style.display='none'; closeTeacherView(); }, 900);
+        await loadTeachers();
+      }catch(e){
+        edErr.textContent=e?.message||'تعذّر الحفظ.';
+        edErr.style.display='block';
+      }
+    });
+
+    /* ========= Delete ========= */
+    deleteTeacherBtn.addEventListener('click', ()=>{
+      if(!currentTeacher.uid) return;
+      dtErr.style.display='none';
+      dtName.textContent=currentTeacher?.data?.name || edTName.value.trim() || '';
+      openModal(deleteTeacherModal);
+    });
+    closeDeleteTeacherModal.addEventListener('click', ()=> closeModal(deleteTeacherModal,{fallbackFocus:deleteTeacherBtn}));
+    cancelDeleteTeacher.addEventListener('click', ()=> closeModal(deleteTeacherModal,{fallbackFocus:deleteTeacherBtn}));
+    deleteTeacherModal.addEventListener('click', (e)=>{ if(e.target===deleteTeacherModal) closeModal(deleteTeacherModal,{fallbackFocus:deleteTeacherBtn}); });
+    confirmDeleteTeacher.addEventListener('click', async ()=>{
+      dtErr.style.display='none'; edOk.style.display='none'; edErr.style.display='none';
+      const { uid } = currentTeacher;
+      if(!uid) return;
+      confirmDeleteTeacher.disabled=true; cancelDeleteTeacher.disabled=true;
+      const originalLabel=confirmDeleteTeacher.textContent;
+      confirmDeleteTeacher.textContent='جارٍ الحذف...';
+      try{
+        // Atomic: deletes the main doc and its private/credentials doc
+        // together — if only the main doc were deleted, the private doc
+        // would be orphaned forever (nothing left that could ever reach it
+        // again, since its own rule is gated on the now-gone parent).
+        const batch = writeBatch(db);
+        batch.delete(doc(db,'teachers',uid,'private','credentials'));
+        batch.delete(doc(db,'teachers',uid));
+        await batch.commit();
+        closeModal(deleteTeacherModal,{fallbackFocus:deleteTeacherBtn});
+        edOk.textContent='تم الحذف.'; edOk.style.display='block';
+        setTimeout(()=>{ edOk.style.display='none'; closeTeacherView(); }, 700);
+        await loadTeachers();
+      }catch(e){
+        dtErr.textContent=e?.message||'تعذّر الحذف.';
+        dtErr.style.display='block';
+      }finally{
+        confirmDeleteTeacher.disabled=false; cancelDeleteTeacher.disabled=false;
+        confirmDeleteTeacher.textContent=originalLabel;
+      }
+    });
+
+    /* ========= Add teacher ========= */
+    function resetTeacherForm(){
+      teacherName.value='';
+      teacherEmail.value='';
+      teacherPassword.value='';
+      teacherDisplayedPassword.value='';
+      teacherPhone.value='';
+      auClasses.innerHTML='';
+      auClasses.appendChild(makeClassRow(""));
+      syncTeacherSpecializationField();
+    }
+    openAddUser.addEventListener('click', ()=>{
+      resetTeacherForm();
+      openModal(addTeacherModal);
+      focusIfPossible(teacherName);
+    });
+    closeAddTeacherModal.addEventListener('click', ()=> closeModal(addTeacherModal,{fallbackFocus:openAddUser}));
+    cancelAddTeacher.addEventListener('click', ()=> closeModal(addTeacherModal,{fallbackFocus:openAddUser}));
+    addTeacherModal.addEventListener('click', (e)=>{ if(e.target===addTeacherModal) closeModal(addTeacherModal,{fallbackFocus:openAddUser}); });
+    auAddClass.addEventListener('click', ()=> auClasses.appendChild(makeClassRow("")));
+    teacherEmail.addEventListener('input', ()=>{ const digits=teacherEmail.value.replace(/\D+/g,''); if(teacherEmail.value!==digits) teacherEmail.value=digits; });
+    teacherPassword.addEventListener('input', ()=>{ teacherDisplayedPassword.value=teacherPassword.value; });
+    closeSuccessModal.addEventListener('click', closeSuccessModalFn);
+    successModal.addEventListener('click', (e)=>{ if(e.target===successModal) closeSuccessModalFn(); });
+
+    createTeacherBtn.addEventListener('click', async ()=>{
+      const name=teacherName.value.trim();
+      const civilId=teacherEmail.value.trim().replace(/\D+/g,'');
+      const email=buildTeacherEmailFromCivilId(civilId);
+      const password=teacherPassword.value;
+      const phone=teacherPhone.value.trim();
+      const displayedPassword=teacherDisplayedPassword.value||password;
+      const classes=getClassesFrom(auClasses);
+      const mergedSubjects=getMergedSubjectsForDepartment(headDept);
+      const subjectToSave = mergedSubjects.length ? (teacherSpecialization.value||'').trim() : headDept;
+      try{
+        if(!name) throw new Error('أدخل الاسم الكامل.');
+        if(!civilId) throw new Error('أدخل رقم البطاقة المدنية بالأرقام فقط.');
+        if(!emailRx.test(email)) throw new Error('تعذّر توليد البريد الإلكتروني من رقم البطاقة المدنية.');
+        if(!password||password.length<6) throw new Error('كلمة المرور ٦ أحرف على الأقل.');
+        if(mergedSubjects.length && !mergedSubjects.includes(subjectToSave)) throw new Error('اختر التخصص.');
+      }catch(e){
+        alert(e?.message||'تعذّر إنشاء الحساب.');
+        return;
+      }
+
+      createTeacherBtn.disabled=true;
+      const originalLabel=createTeacherBtn.textContent;
+      createTeacherBtn.textContent='جارٍ الإنشاء...';
+      try{
+        const cred = await createUserWithEmailAndPassword(helperAuth, email, password);
+        const newUid = cred.user.uid;
+        // Atomic: creating the teacher doc and its private/credentials doc
+        // in one writeBatch means firestore.rules can gate the private write
+        // on the teacher doc "existing after this request" (getAfter()) —
+        // two separate concurrent writes would race against that check.
+        const batch = writeBatch(db);
+        batch.set(doc(db,'teachers',newUid), {
+          uid:newUid, role:'user', name, email, civilId, phone,
+          subject:subjectToSave, department:headDept, classes,
+          createdAt: serverTimestamp()
+        });
+        batch.set(doc(db,'teachers',newUid,'private','credentials'), { displayedPassword });
+        await batch.commit();
+        try{ await signOut(helperAuth); }catch{}
+        closeModal(addTeacherModal);
+        openSuccessModal();
+        await loadTeachers();
+      }catch(e){
+        alert('تعذّر إنشاء الحساب: ' + (e?.message||''));
+      }finally{
+        createTeacherBtn.disabled=false;
+        createTeacherBtn.textContent=originalLabel;
+      }
+    });
 
     /* ========= Init ========= */
     setPersistence(auth, browserLocalPersistence).catch(()=>{});
@@ -281,6 +1095,7 @@
 
       try{
         await loadHeadProfileAndCheck(user);
+        await loadTeachers();
       }catch(e){
         console.error(e);
         deptLabel.textContent = (String(e?.message || e) === 'not_head')

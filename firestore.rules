@@ -313,12 +313,101 @@ service cloud.firestore {
 
     /* ---------- teachers ---------- */
     match /teachers/{uid} {
-      allow get, list: if isTeacherOrAdmin();
-      allow create, update, delete: if isAdmin();
 
-      /* ---- private subcollection: admin-only (stores displayedPassword) ---- */
+      function headHasDepartment() {
+        return isHead() && headDepartment() != "";
+      }
+
+      // ---- create: a head may only create a plain 'user' teacher whose
+      // department AND subject both resolve to the head's own department,
+      // and may never plant supervisor/permission/password fields on the
+      // world-readable main doc. ----
+      function createDeptFieldsMatchHead(d) {
+        return ('department' in d) && (d.department is string)
+          && ('subject' in d) && (d.subject is string)
+          && canonicalDepartment(d.department) == headDepartment()
+          && canonicalDepartment(d.subject) == headDepartment();
+      }
+      function createFieldsValid(d) {
+        return ('uid' in d) && d.uid == uid
+          && ('role' in d) && d.role == 'user'
+          && (!('name' in d)    || d.name is string)
+          && (!('email' in d)   || d.email is string)
+          && (!('civilId' in d) || d.civilId is string)
+          && (!('phone' in d)   || d.phone is string)
+          && (!('classes' in d) || (d.classes is list && d.classes.size() <= 40))
+          && !('isSupervisor' in d)
+          && !('supervisorGrade' in d)
+          && !('permissions' in d)
+          && !('teams' in d)
+          && !d.keys().hasAny(['displayedPassword','viewedPassword']);
+      }
+      function headCreateAllowed() {
+        let d = request.resource.data;
+        return headHasDepartment() && createDeptFieldsMatchHead(d) && createFieldsValid(d);
+      }
+
+      // ---- update / delete: target must already be a plain teacher in the
+      // head's own department. ----
+      function headManagesExisting() {
+        return headHasDepartment()
+          && ('role' in resource.data) && resource.data.role == 'user'
+          && teacherInHeadDepartment(resource.data);
+      }
+      // Allowlist of keys a head-authored update may CHANGE (value-based via
+      // diff().affectedKeys(), not payload-based) — so a head can resend an
+      // unrelated field like role/permissions unchanged without being
+      // blocked, but can never actually alter role, subject, department,
+      // permissions, or supervisor status.
+      function headUpdateKeysAreSafe() {
+        return request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['name','phone','teams','classes','displayedPassword','viewedPassword']);
+      }
+      function headUpdateFieldsValid(d) {
+        return (!('name' in d)    || d.name is string)
+          && (!('phone' in d)     || d.phone is string)
+          && (!('teams' in d)     || d.teams is string)
+          && (!('classes' in d)   || (d.classes is list && d.classes.size() <= 40));
+      }
+
+      allow get, list: if isTeacherOrAdmin();
+
+      allow create: if isAdmin() || headCreateAllowed();
+
+      allow update: if isAdmin() || (
+        headManagesExisting()
+        && headUpdateKeysAreSafe()
+        && headUpdateFieldsValid(request.resource.data)
+      );
+
+      allow delete: if isAdmin() || headManagesExisting();
+
+      /* ---- private subcollection: admin-only, plus a head scoped to their
+         own department (stores displayedPassword). Gated on the TARGET
+         teacher doc, not the private doc's own path, since only the parent
+         carries department/role. getAfter()/existsAfter() (not get()) for
+         read/create/update so a head can create teachers/{uid} and this doc
+         together in one writeBatch without a commit-order race; delete uses
+         get()/exists() (pre-state) so a batched delete of both docs still
+         sees the parent while evaluating. ---- */
       match /private/{docId} {
-        allow read, write: if isAdmin();
+        function targetAfter() {
+          let p = /databases/$(database)/documents/teachers/$(uid);
+          return existsAfter(p) ? getAfter(p).data : null;
+        }
+        function targetNow() {
+          let p = /databases/$(database)/documents/teachers/$(uid);
+          return exists(p) ? get(p).data : null;
+        }
+        function headOwns(t) {
+          return headHasDepartment() && t != null
+            && ('role' in t) && t.role == 'user'
+            && teacherInHeadDepartment(t);
+        }
+        allow read, create, update: if isAdmin()
+          || (docId == 'credentials' && headOwns(targetAfter()));
+        allow delete: if isAdmin()
+          || (docId == 'credentials' && headOwns(targetNow()));
       }
     }
 
