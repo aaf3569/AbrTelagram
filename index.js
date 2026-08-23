@@ -978,6 +978,88 @@ async function requireAdminFromRequest(req, res) {
   }
 }
 
+// Mirrors firestore.rules' canonicalDepartment()/headDepartment()/
+// teacherInHeadDepartment() exactly (same merged-department groups), so a
+// department head's server-side authorization here agrees with what their
+// client-side Firestore writes are already scoped to.
+const MERGED_DEPARTMENTS = [
+  { department: "الفيزياء والكيمياء", subjects: ["الفيزياء", "الكيمياء"] },
+  { department: "الجيولوجيا والأحياء", subjects: ["الجيولوجيا", "الأحياء"] },
+  { department: "علم النفس والفلسفة", subjects: ["علم النفس", "الفلسفة"] },
+  { department: "التاريخ والجغرافيا", subjects: ["التاريخ", "الجغرافيا", "جغرافيا"] },
+];
+function canonicalDepartment(raw) {
+  const value = typeof raw === "string" ? raw : "";
+  for (const group of MERGED_DEPARTMENTS) {
+    if (value === group.department || group.subjects.includes(value)) return group.department;
+  }
+  return value;
+}
+function teacherDepartment(data) {
+  const raw = (data && (data.department || data.subject)) || "";
+  return canonicalDepartment(String(raw).trim());
+}
+
+// For /api/admin/set-teacher-password: an admin may reset any teacher's
+// password; a department head may only reset the password of a plain
+// 'user' teacher in their own department — same scoping as the head-
+// authored Firestore rules on teachers/{uid} (firestore.rules'
+// teacherInHeadDepartment()/headDepartment()). Returns { callerUid,
+// callerName, isAdmin, targetData }, or null after writing an error
+// response (including teacher_not_found, checked here so callers don't
+// need their own separate existence check).
+async function requireAdminOrHeadForTeacherFromRequest(req, res, targetUid) {
+  if (!isFirebaseReady()) {
+    res.status(503).json({ ok: false, error: "firebase_unavailable" });
+    return null;
+  }
+
+  const decoded = await verifyFirebaseUser(req);
+  if (!decoded?.uid) {
+    res.status(401).json({ ok: false, error: "unauthorized" });
+    return null;
+  }
+
+  try {
+    const [callerSnap, targetSnap] = await Promise.all([
+      db.collection("teachers").doc(decoded.uid).get(),
+      db.collection("teachers").doc(targetUid).get(),
+    ]);
+
+    if (!targetSnap.exists) {
+      res.status(404).json({ ok: false, error: "teacher_not_found" });
+      return null;
+    }
+    const targetData = targetSnap.data() || {};
+
+    const callerData = callerSnap.exists ? callerSnap.data() || {} : {};
+    const callerRole = String(callerData.role || "").toLowerCase();
+    const callerName = String(callerData.name || "").trim();
+    const isAdmin = callerRole === "admin" || callerRole === "superadmin" || decoded.admin === true;
+    if (isAdmin) {
+      return { callerUid: decoded.uid, callerName, isAdmin: true, targetData };
+    }
+
+    const targetRole = String(targetData.role || "").toLowerCase();
+    const callerDept = teacherDepartment(callerData);
+    const isOwnDeptUser =
+      callerRole === "head" &&
+      callerDept !== "" &&
+      targetRole === "user" &&
+      teacherDepartment(targetData) === callerDept;
+    if (isOwnDeptUser) {
+      return { callerUid: decoded.uid, callerName, isAdmin: false, targetData };
+    }
+
+    res.status(403).json({ ok: false, error: "forbidden" });
+    return null;
+  } catch (error) {
+    console.error(`[firebase] requireAdminOrHeadForTeacherFromRequest failed userId=${decoded.uid}: ${error.message}`);
+    res.status(500).json({ ok: false, error: "admin_check_failed" });
+    return null;
+  }
+}
+
 // For endpoints that act on a specific teacher account (connect/disconnect):
 // the caller must be that teacher, or an admin. Returns the resolved target
 // uid, or null after writing an error response.
@@ -1790,36 +1872,32 @@ app.post("/api/telegram/run-reminder-sweep", async (req, res) => {
 });
 
 // Firebase's client SDK can only ever change the *signed-in* user's own
-// password — an admin resetting someone else's login has to go through
-// the Admin SDK, which only exists server-side. The caller must already
-// have re-authenticated their own password client-side (see
-// admins/teachers.html) before this is ever hit; this endpoint only
-// re-checks that the caller is a real, currently-valid admin.
+// password — an admin (or, for a teacher in their own department, a
+// department head) resetting someone else's login has to go through the
+// Admin SDK, which only exists server-side. The caller must already have
+// re-authenticated their own password client-side (see admins/teachers.html
+// and depHead/department.html) before this is ever hit; this endpoint only
+// re-checks that the caller is really allowed to touch this specific target.
 app.post("/api/admin/set-teacher-password", async (req, res) => {
-  const adminUser = await requireAdminFromRequest(req, res);
-  if (!adminUser) return;
-
   const targetUid = String(req.body?.uid || "").trim();
-  const newPassword = String(req.body?.newPassword || "");
-
   if (!targetUid) {
     return res.status(400).json({ ok: false, error: "missing_uid" });
   }
+
+  const actor = await requireAdminOrHeadForTeacherFromRequest(req, res, targetUid);
+  if (!actor) return;
+
+  const newPassword = String(req.body?.newPassword || "");
   if (newPassword.length < 6) {
     return res.status(400).json({ ok: false, error: "weak_password" });
   }
 
   try {
-    const targetSnap = await db.collection("teachers").doc(targetUid).get();
-    if (!targetSnap.exists) {
-      return res.status(404).json({ ok: false, error: "teacher_not_found" });
-    }
-
     await admin.auth().updateUser(targetUid, { password: newPassword });
 
-    // Keep the admin-visible "displayed password" (shown via the reveal
-    // toggle on the teacher's profile) in sync — otherwise it would keep
-    // showing a stale value after the real login password changed.
+    // Keep the admin/head-visible "displayed password" (shown via the
+    // reveal toggle on the teacher's profile) in sync — otherwise it would
+    // keep showing a stale value after the real login password changed.
     await db
       .collection("teachers")
       .doc(targetUid)
@@ -1830,15 +1908,16 @@ app.post("/api/admin/set-teacher-password", async (req, res) => {
     try {
       await db.collection("passwordResetLog").add({
         targetUid,
-        performedByUid: adminUser.uid,
-        performedByName: adminUser.name || null,
+        performedByUid: actor.callerUid,
+        performedByName: actor.callerName || null,
+        performedByRole: actor.isAdmin ? "admin" : "head",
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
       });
     } catch (logError) {
       console.error(`[admin] password reset log write failed: ${logError.message}`);
     }
 
-    console.log(`[admin] password reset targetUid=${targetUid} by=${adminUser.uid}`);
+    console.log(`[admin] password reset targetUid=${targetUid} by=${actor.callerUid}`);
     return res.json({ ok: true });
   } catch (error) {
     console.error(

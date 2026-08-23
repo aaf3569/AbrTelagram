@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.gstatic.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; manifest-src 'self'; upgrade-insecure-requests; block-all-mixed-content">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; connect-src 'self' https://abrschool-bot.onrender.com http://127.0.0.1:3000 http://localhost:3000 https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.gstatic.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; manifest-src 'self'; upgrade-insecure-requests; block-all-mixed-content">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -237,7 +237,7 @@
     .profile-actions{ display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; }
     .profile-actions-group{ display:flex; gap:10px; flex-wrap:wrap; }
     .btn.danger{ background:var(--card-bg); color:var(--danger); border:1px solid rgba(239,68,68,.4); box-shadow:var(--shadow-1); }
-    #saveTeacher[hidden], #cancelTeacherEdit[hidden], #editTeacher[hidden], #deleteTeacher[hidden]{ display:none; }
+    #saveTeacher[hidden], #cancelTeacherEdit[hidden], #editTeacher[hidden], #deleteTeacher[hidden], #changeTeacherPassword[hidden]{ display:none; }
     @media (min-width:700px){
       .profile-grid{ grid-template-columns:1.4fr 1fr; align-items:start; }
       .info-grid{ grid-template-columns:repeat(2, minmax(0,1fr)); gap:14px 18px; }
@@ -371,6 +371,7 @@
           <div class="profile-actions">
             <div class="profile-actions-group">
               <button id="editTeacher" class="btn ghost" type="button">تعديل</button>
+              <button id="changeTeacherPassword" class="btn ghost" type="button" hidden>تغيير كلمة المرور</button>
               <button id="cancelTeacherEdit" class="btn ghost" type="button" hidden>إلغاء</button>
               <button id="saveTeacher" class="btn solid" type="button" hidden>حفظ</button>
             </div>
@@ -408,6 +409,24 @@
         <div id="dtErr" class="err"></div>
       </div>
       <div class="modal-footer"><button id="cancelDeleteTeacher" class="btn ghost" type="button">إلغاء</button><button id="confirmDeleteTeacher" class="btn danger" type="button">حذف نهائيًا</button></div>
+    </div>
+  </div>
+
+  <!-- CHANGE TEACHER PASSWORD MODAL -->
+  <div id="changePasswordModal" class="modal-overlay" aria-hidden="true">
+    <div class="modal">
+      <div class="modal-header"><h3 class="modal-title">تغيير كلمة مرور المعلّم: <span id="cpTeacherName"></span></h3><button class="close-modal" aria-label="إغلاق">×</button></div>
+      <div class="modal-body add-teacher-body">
+        <div class="field">
+          <label class="label" for="cpHeadPassword">كلمة مرور حسابك أنت (للتأكيد فقط)</label>
+          <div class="input-wrap"><input id="cpHeadPassword" class="input" type="password" autocomplete="current-password"></div>
+          <div class="field-hint">هذه كلمة مرورك أنت لتأكيد هويتك — وليست كلمة مرور المعلّم.</div>
+        </div>
+        <div class="field"><label class="label" for="cpNewPassword">كلمة المرور الجديدة للمعلّم</label><div class="input-wrap"><input id="cpNewPassword" class="input" type="password" autocomplete="new-password"></div></div>
+        <div class="field"><label class="label" for="cpConfirmPassword">تأكيد كلمة المرور الجديدة</label><div class="input-wrap"><input id="cpConfirmPassword" class="input" type="password" autocomplete="new-password"></div></div>
+        <div id="cpOk" class="ok"></div><div id="cpErr" class="err"></div>
+      </div>
+      <div class="modal-footer"><button id="cancelChangePassword" class="btn ghost" type="button">إلغاء</button><button id="submitChangePassword" class="btn solid" type="button">تغيير كلمة المرور</button></div>
     </div>
   </div>
 
@@ -456,6 +475,21 @@
     // any accidental assumption the two are interchangeable).
     const helperApp = getApps().some(a=>a.name==="DeptHeadHelper") ? getApp("DeptHeadHelper") : initializeApp(firebaseConfig,"DeptHeadHelper");
     const helperAuth = getAuth(helperApp);
+
+    // Same backend used by admins/teachers.html for the one thing that can't
+    // be done client-side: changing a teacher's real login password (the
+    // client Auth SDK can only ever change the signed-in user's own).
+    const TELEGRAM_BACKEND_BASE_URL = (() => {
+      const fromWindow = String(window.__TELEGRAM_BACKEND_BASE_URL || '').trim();
+      if (fromWindow) return fromWindow.replace(/\/+$/, '');
+      const fromStorage = String(localStorage.getItem('telegramBackendBaseUrl') || '').trim();
+      if (fromStorage) return fromStorage.replace(/\/+$/, '');
+      return 'https://abrschool-bot.onrender.com';
+    })();
+    function backendApiUrl(path){
+      const cleanPath = `/${String(path || '').replace(/^\/+/, '')}`;
+      return `${TELEGRAM_BACKEND_BASE_URL}${cleanPath}`;
+    }
 
     /* ========= Elements ========= */
     const deptLabel = document.getElementById('deptLabel');
@@ -523,6 +557,7 @@
     const edTDisplayedPassword = document.getElementById('edTDisplayedPassword');
     const toggleDisplayedPasswordBtn = document.getElementById('toggleDisplayedPasswordBtn');
     const editTeacherBtn = document.getElementById('editTeacher');
+    const changeTeacherPasswordBtn = document.getElementById('changeTeacherPassword');
     const cancelTeacherEditBtn = document.getElementById('cancelTeacherEdit');
     const saveTeacherBtn = document.getElementById('saveTeacher');
     const deleteTeacherBtn = document.getElementById('deleteTeacher');
@@ -554,6 +589,17 @@
 
     const successModal = document.getElementById('successModal');
     const closeSuccessModal = document.getElementById('closeSuccessModal');
+
+    const changePasswordModal = document.getElementById('changePasswordModal');
+    const closeChangePasswordModal = document.querySelector('#changePasswordModal .close-modal');
+    const cancelChangePassword = document.getElementById('cancelChangePassword');
+    const submitChangePassword = document.getElementById('submitChangePassword');
+    const cpHeadPassword = document.getElementById('cpHeadPassword');
+    const cpNewPassword = document.getElementById('cpNewPassword');
+    const cpConfirmPassword = document.getElementById('cpConfirmPassword');
+    const cpOk = document.getElementById('cpOk');
+    const cpErr = document.getElementById('cpErr');
+    const cpTeacherName = document.getElementById('cpTeacherName');
 
     /* ========= Helpers: teacher management ========= */
     const emailRx = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -710,7 +756,7 @@
       }
     }
     function syncBodyScrollLock(){
-      const anyOverlayOpen=addTeacherModal.classList.contains('active') || deleteTeacherModal.classList.contains('active') || successModal.classList.contains('show');
+      const anyOverlayOpen=addTeacherModal.classList.contains('active') || deleteTeacherModal.classList.contains('active') || changePasswordModal.classList.contains('active') || successModal.classList.contains('show');
       document.body.style.overflow=anyOverlayOpen?'hidden':'';
     }
     const openModal=(m)=>{
@@ -849,6 +895,7 @@
       if(!teacherEditMode) setDisplayedPasswordVisibility(false);
       classesEditorWrap.hidden=!teacherEditMode;
       editTeacherBtn.hidden=teacherEditMode;
+      changeTeacherPasswordBtn.hidden=!teacherEditMode;
       deleteTeacherBtn.hidden=!teacherEditMode;
       cancelTeacherEditBtn.hidden=!teacherEditMode;
       if(teacherEditMode) captureEditSnapshot(); else editSnapshot=null;
@@ -1000,6 +1047,95 @@
       }finally{
         confirmDeleteTeacher.disabled=false; cancelDeleteTeacher.disabled=false;
         confirmDeleteTeacher.textContent=originalLabel;
+      }
+    });
+
+    /* ========= Change a teacher's real login password ========= */
+    // Same flow as admins/teachers.html: re-enter your own password
+    // (client-side reauth) to confirm identity, then the backend verifies
+    // the caller is really an admin OR a head managing this exact teacher
+    // (their own department, role 'user') and uses the Firebase Admin SDK
+    // to set the target account's password — the client SDK can only ever
+    // change the signed-in user's own password.
+    function resetChangePasswordForm(){
+      cpHeadPassword.value='';
+      cpNewPassword.value='';
+      cpConfirmPassword.value='';
+      cpOk.style.display='none';
+      cpErr.style.display='none';
+    }
+    changeTeacherPasswordBtn.addEventListener('click', ()=>{
+      if(!currentTeacher.uid) return;
+      resetChangePasswordForm();
+      cpTeacherName.textContent=currentTeacher?.data?.name || edTName.value.trim() || '';
+      openModal(changePasswordModal);
+      setTimeout(()=>focusIfPossible(cpHeadPassword),20);
+    });
+    closeChangePasswordModal.addEventListener('click', ()=> closeModal(changePasswordModal,{fallbackFocus:changeTeacherPasswordBtn}));
+    cancelChangePassword.addEventListener('click', ()=> closeModal(changePasswordModal,{fallbackFocus:changeTeacherPasswordBtn}));
+    changePasswordModal.addEventListener('click', (e)=>{ if(e.target===changePasswordModal) closeModal(changePasswordModal,{fallbackFocus:changeTeacherPasswordBtn}); });
+
+    submitChangePassword.addEventListener('click', async ()=>{
+      cpOk.style.display='none'; cpErr.style.display='none';
+      const { uid } = currentTeacher;
+      if(!uid){ cpErr.textContent='لم يتم اختيار معلّم.'; cpErr.style.display='block'; return; }
+      const headPassword=cpHeadPassword.value;
+      const newPassword=cpNewPassword.value;
+      const confirmPassword=cpConfirmPassword.value;
+      if(!headPassword){ cpErr.textContent='أدخل كلمة مرورك الحالية.'; cpErr.style.display='block'; return; }
+      if(!newPassword||newPassword.length<6){ cpErr.textContent='كلمة المرور الجديدة يجب أن تكون ٦ أحرف على الأقل.'; cpErr.style.display='block'; return; }
+      if(newPassword!==confirmPassword){ cpErr.textContent='كلمتا المرور غير متطابقتين.'; cpErr.style.display='block'; return; }
+
+      submitChangePassword.disabled=true;
+      cancelChangePassword.disabled=true;
+      const originalLabel=submitChangePassword.textContent;
+      submitChangePassword.textContent='جارٍ التحقق...';
+      try{
+        const user=auth.currentUser;
+        const email=(user?.email||'').trim();
+        if(!user||!email) throw new Error('تعذّر تحديد حسابك الحالي.');
+        const credential=EmailAuthProvider.credential(email, headPassword);
+        await reauthenticateWithCredential(user, credential);
+
+        submitChangePassword.textContent='جارٍ تغيير كلمة المرور...';
+        const idToken=await user.getIdToken();
+        const response=await fetch(backendApiUrl('/api/admin/set-teacher-password'),{
+          method:'POST',
+          headers:{'Content-Type':'application/json', Authorization:`Bearer ${idToken}`},
+          body:JSON.stringify({ uid, newPassword })
+        });
+        const body=await response.json().catch(()=>({}));
+        if(!response.ok || !body?.ok){
+          throw new Error(body?.error||`set_password_failed_${response.status}`);
+        }
+        // The backend also updates the displayed-password mirror to match —
+        // keep the open edit form in sync so it doesn't show a stale value.
+        currentTeacher.displayedPassword = newPassword;
+        edTDisplayedPassword.value = newPassword;
+        updateProfileSummary();
+        cpOk.textContent='تم تغيير كلمة المرور بنجاح.';
+        cpOk.style.display='block';
+        setTimeout(()=>closeModal(changePasswordModal,{fallbackFocus:changeTeacherPasswordBtn}),900);
+      }catch(error){
+        const code=String(error?.code||'');
+        if(['auth/wrong-password','auth/invalid-credential','auth/invalid-login-credentials'].includes(code)){
+          cpErr.textContent='كلمة مرورك الحالية غير صحيحة.';
+        }else{
+          const raw=String(error?.message||'').trim().replace(/_\d{3}$/,'');
+          const messageMap={
+            weak_password:'كلمة المرور الجديدة ضعيفة جدًا.',
+            teacher_not_found:'الملف غير موجود.',
+            auth_user_not_found:'تعذّر إيجاد حساب هذا المعلّم في نظام تسجيل الدخول.',
+            unauthorized:'يرجى تسجيل الدخول من جديد.',
+            forbidden:'هذا المعلّم ليس ضمن قسمك.',
+          };
+          cpErr.textContent=messageMap[raw]||'تعذّر تغيير كلمة المرور. حاول مرة أخرى.';
+        }
+        cpErr.style.display='block';
+      }finally{
+        submitChangePassword.disabled=false;
+        cancelChangePassword.disabled=false;
+        submitChangePassword.textContent=originalLabel;
       }
     });
 
