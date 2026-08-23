@@ -488,6 +488,7 @@ main{ flex:1; padding:32px 20px 40px; display:flex }
 .input-wrap:focus-within{ border-color: rgba(3,60,84,.35); box-shadow: 0 16px 32px rgba(3,60,84,.18) }
 .input, select, textarea{ flex:1; height:52px; border:none; outline:none; background:transparent; font-size:16px; color:#0a0a0a; font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
 textarea.input{ height:100px; padding-block:14px; resize:vertical }
+mark.search-hit{ background:rgba(255,196,0,.45); color:inherit; border-radius:4px; padding:0 2px; font-weight:900; }
 
 /* === Inline form container (nice card) === */
 .inline-form{ display:flex; flex-direction:column; gap:16px; padding:18px; margin-top:14px; border:1px solid var(--border); border-radius:16px; background:#fafafa; box-shadow: var(--shadow-1); }
@@ -2558,7 +2559,7 @@ function renderGlobalStudentSearchResults(rawQuery){
     el.className = 'item';
     el.innerHTML = `
       <div>
-        <div>${escapeHtml(st.name || '—')}</div>
+        <div>${highlightMatch(st.name || '—', rawQuery)}</div>
         <div class="sub">${st.class ? ('الفصل: ' + escapeHtml(toArabicDigits(st.class))) : ''}</div>
       </div>
       <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
@@ -2675,6 +2676,47 @@ function normalizeSearchText(value){
 function studentNameMatches(name, normalizedQuery){
   if(!normalizedQuery) return true;
   return normalizeSearchText(name).includes(normalizedQuery);
+}
+
+// Same char-by-char normalization as normalizeSearchText, but keeps a 1:1
+// index map back into the original string — needed because dropping
+// diacritics shifts positions, so a match found in the plain normalized
+// string can't be located back in the original text without one.
+function buildSearchIndexMap(value){
+  const original = String(value || '');
+  let normalized = '';
+  const map = [];
+  for(let i = 0; i < original.length; i++){
+    const raw = original[i];
+    if(/[ً-ٰٟـ]/.test(raw)) continue; // tashkeel + tatweel — dropped
+    let ch = raw;
+    if(/[إأآا]/.test(ch)) ch = 'ا'; // إأآا -> ا
+    else if(/[ىی]/.test(ch)) ch = 'ي'; // ى/ی -> ي
+    else if(ch === 'ة') ch = 'ه'; // ة -> ه
+    else ch = ch.toLowerCase();
+    normalized += ch;
+    map.push(i);
+  }
+  return { normalized, map };
+}
+
+// Wraps whichever part of `name` matches `rawQuery` in <mark>, HTML-escaping
+// the rest — used everywhere a searched-for name is rendered so the match
+// is visible as the admin types. Falls back to the plain escaped name when
+// no position-mappable match is found (e.g. the hit only exists because of
+// a whitespace difference the index map above doesn't track).
+function highlightMatch(name, rawQuery){
+  const text = String(name || '');
+  const q = normalizeSearchText(rawQuery);
+  if(!q) return escapeHtml(text);
+  const { normalized, map } = buildSearchIndexMap(text);
+  const idx = normalized.indexOf(q);
+  if(idx === -1) return escapeHtml(text);
+  const start = map[idx];
+  const end = map[idx + q.length - 1] + 1;
+  return escapeHtml(text.slice(0, start))
+    + '<mark class="search-hit">' + escapeHtml(text.slice(start, end)) + '</mark>'
+    + escapeHtml(text.slice(end));
 }
 
 // NEW: Global variable for filter state
@@ -3037,7 +3079,7 @@ function renderRequestStudentsList(){
     row.innerHTML = `
       <input type="checkbox" class="request-student-checkbox" value="${escapeHtml(student.id)}" ${requestSelectedStudentIds.has(student.id) ? 'checked' : ''}>
       <div class="request-student-main">
-        <div class="request-student-name">${escapeHtml(student.name || '—')}</div>
+        <div class="request-student-name">${highlightMatch(student.name || '—', requestStudentSearchQuery)}</div>
         <div class="request-student-sub">${escapeHtml(civil)}</div>
       </div>
     `;
@@ -3969,7 +4011,7 @@ function renderStudentsList(filteredArr){
 
     el.innerHTML = `
       <div>
-        <div>${specialCaseIcon} ${st.name || '—'} <span class="item-number">${toArabicDigits(studentNumber)}</span></div>
+        <div>${specialCaseIcon} ${highlightMatch(st.name || '—', studentSearchQuery)} <span class="item-number">${toArabicDigits(studentNumber)}</span></div>
         <div class="sub">${st.civilid ? ('الرقم المدني: '+ toArabicDigits(st.civilid)) : ''}</div>
       </div>
       <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
