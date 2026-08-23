@@ -137,7 +137,6 @@
     .perm-empty{color:#7b8ea8;font-size:.88rem}
     .permissions-editor{display:flex;flex-direction:column;gap:12px}
     .permissions-editor .checkbox-wrap{padding:12px 14px;border:1px dashed #d8e8f8;border-radius:14px;background:#f8fbff}
-    .classes-editor[hidden]{display:none}
     /* Primary actions read start-to-end in Arabic (right-to-left), so they
        belong at flex-start, not flex-end — flex-end in an RTL flex context
        is the LEFT edge, which had every button (including تعديل/حفظ)
@@ -145,9 +144,17 @@
        left as the one deliberately-separated destructive action. */
     .profile-actions{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
     .profile-actions-group{display:flex;gap:10px;flex-wrap:wrap}
-    #saveTeacher[hidden], #cancelTeacherEdit[hidden], #editTeacher[hidden], #deleteTeacher[hidden], #changeTeacherPassword[hidden]{display:none}
-    #saveAdmin[hidden], #cancelAdminEdit[hidden], #editAdmin[hidden], #deleteAdminBtn[hidden]{display:none}
-    .pill[hidden]{display:none}
+    /* Lots of elements on this page (.field, .classes-editor, .pill, .btn,
+       ...) set their own display:flex/inline-flex, which — being an author
+       rule — outranks the browser's default [hidden]{display:none} (a
+       UA-stylesheet rule, the lowest-priority origin in the cascade) even
+       though [hidden] "looks" like it should always win. This one rule
+       replaces the growing pile of one-off ID/class-specific [hidden]
+       overrides above (.classes-editor, #saveTeacher/#editTeacher/etc.,
+       #saveAdmin/etc., .pill) that were only patching individual instances
+       of the same underlying issue — #teacherSpecializationField had it
+       too and had never been patched. */
+    [hidden]{display:none !important}
     .teacher-readonly .classes-editor{display:none !important}
     .teacher-readonly .edit-only{display:none !important}
     .teacher-editing .view-only{display:none !important}

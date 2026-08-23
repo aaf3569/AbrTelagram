@@ -237,7 +237,14 @@
     .profile-actions{ display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; }
     .profile-actions-group{ display:flex; gap:10px; flex-wrap:wrap; }
     .btn.danger{ background:var(--card-bg); color:var(--danger); border:1px solid rgba(239,68,68,.4); box-shadow:var(--shadow-1); }
-    #saveTeacher[hidden], #cancelTeacherEdit[hidden], #editTeacher[hidden], #deleteTeacher[hidden], #changeTeacherPassword[hidden]{ display:none; }
+    /* Several elements on this page (.field, .btn, ...) set their own
+       display:flex/inline-flex, which — being an author rule — outranks the
+       browser's default [hidden]{display:none} (a UA-stylesheet rule, the
+       lowest-priority origin in the cascade) even though [hidden] "looks"
+       like it should always win. Restated here with !important so toggling
+       the hidden property always actually hides the element, whichever
+       class it also carries. */
+    [hidden]{ display:none !important; }
     @media (min-width:700px){
       .profile-grid{ grid-template-columns:1.4fr 1fr; align-items:start; }
       .info-grid{ grid-template-columns:repeat(2, minmax(0,1fr)); gap:14px 18px; }
