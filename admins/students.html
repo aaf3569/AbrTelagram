@@ -1340,6 +1340,14 @@ html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%;
           </div>
         </div>
       </div>
+      <div class="section" id="globalStudentSearchShell">
+        <div class="label" style="margin:0 0 8px;">🔍 ابحث عن طالب في كل المدرسة</div>
+        <div class="input-wrap">
+          <input id="globalStudentSearchInput" class="input" type="text" placeholder="اكتب اسم الطالب…" autocomplete="off">
+        </div>
+        <div id="globalStudentSearchResults" class="list" style="margin-top:12px; display:none;"></div>
+      </div>
+
       <div id="gradesMain">
         <div class="group" id="g10">
           <button class="subject grade-hero" type="button"> <span>الصف العاشر</span> </button>
@@ -1402,6 +1410,9 @@ html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%;
         <div class="request-students-head">
           <div class="request-students-title">اختر الطلاب (متعدد)</div>
           <div id="requestStudentsCount" class="request-students-count">0 محدد</div>
+        </div>
+        <div class="input-wrap" style="margin-bottom:12px;">
+          <input id="requestStudentSearchInput" class="input" type="text" placeholder="ابحث عن طالب بالاسم…" autocomplete="off">
         </div>
         <div id="requestStudentsList" class="request-students-list">
           <div class="request-help">اختر الفصل أولاً لعرض الطلاب.</div>
@@ -1688,6 +1699,9 @@ html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%;
             عرض الحالات الخاصة فقط
           </button>
         </div>
+      </div>
+      <div class="input-wrap" style="margin-bottom:14px;">
+        <input id="studentSearchInput" class="input" type="text" placeholder="ابحث عن طالب بالاسم…" autocomplete="off">
       </div>
       <div id="studentsList" class="list"></div>
     </div>
@@ -2125,6 +2139,8 @@ const schoolGrade11Count = document.getElementById('schoolGrade11Count');
 const schoolGrade12Count = document.getElementById('schoolGrade12Count');
 const gradesPieChart = document.getElementById('gradesPieChart');
 const gradesPieEmpty = document.getElementById('gradesPieEmpty');
+const globalStudentSearchInput = document.getElementById('globalStudentSearchInput');
+const globalStudentSearchResults = document.getElementById('globalStudentSearchResults');
 const studentRequestSheet = document.getElementById('studentRequestSheet');
 const closeStudentRequestSheet = document.getElementById('closeStudentRequestSheet');
 const classSheet = document.getElementById('classSheet');
@@ -2142,6 +2158,7 @@ const createStudentBtn = document.getElementById('createStudentBtn');
 const asOk = document.getElementById('asOk');
 const asErr = document.getElementById('asErr');
 const studentsList = document.getElementById('studentsList');
+const studentSearchInput = document.getElementById('studentSearchInput');
 const studentSheet = document.getElementById('studentSheet');
 const closeStudent = document.getElementById('closeStudent');
 const studentTitle = document.getElementById('studentTitle');
@@ -2342,6 +2359,7 @@ const studentRequestPanel = document.getElementById('studentRequestPanel');
 const requestGradeSelect = document.getElementById('requestGradeSelect');
 const requestClassSelect = document.getElementById('requestClassSelect');
 const requestStudentsList = document.getElementById('requestStudentsList');
+const requestStudentSearchInput = document.getElementById('requestStudentSearchInput');
 const requestStudentsCount = document.getElementById('requestStudentsCount');
 const requestLiveInfo = document.getElementById('requestLiveInfo');
 const requestLiveClass = document.getElementById('requestLiveClass');
@@ -2478,13 +2496,20 @@ async function refreshSchoolStats(){
     const snap = await getDocs(collection(db, 'students'));
     const gradeCounts = { '10': 0, '11': 0, '12': 0 };
     let totalStudents = 0;
+    const freshAllStudents = [];
 
     snap.forEach((d)=>{
       const row = d.data() || {};
       totalStudents += 1;
       const grade = getGradeBucket(row.class);
       if(grade) gradeCounts[grade] += 1;
+      freshAllStudents.push({ id: d.id, name: row.name || '', class: row.class || '' });
     });
+
+    // Feeds the school-wide student search box on #stateClasses — reuses
+    // this fetch instead of a separate one.
+    allStudentsCache = freshAllStudents;
+    renderGlobalStudentSearchResults(globalStudentSearchInput?.value || '');
 
     schoolTotalStudents.textContent = toArabicDigits(totalStudents);
     schoolGrade10Count.textContent = toArabicDigits(gradeCounts['10']);
@@ -2503,6 +2528,58 @@ async function refreshSchoolStats(){
     gradesPieEmpty.style.display = 'flex';
   }
 }
+
+const GLOBAL_STUDENT_SEARCH_LIMIT = 30;
+
+function renderGlobalStudentSearchResults(rawQuery){
+  const q = normalizeSearchText(rawQuery);
+  if(!q){
+    globalStudentSearchResults.style.display = 'none';
+    globalStudentSearchResults.innerHTML = '';
+    return;
+  }
+
+  const matches = allStudentsCache.filter(st => studentNameMatches(st.name, q));
+  globalStudentSearchResults.style.display = 'flex';
+  globalStudentSearchResults.innerHTML = '';
+
+  if(!matches.length){
+    const empty = document.createElement('div');
+    empty.className = 'item';
+    empty.style.cursor = 'default';
+    empty.textContent = 'لا يوجد طالب مطابق.';
+    globalStudentSearchResults.appendChild(empty);
+    return;
+  }
+
+  const frag = document.createDocumentFragment();
+  matches.slice(0, GLOBAL_STUDENT_SEARCH_LIMIT).forEach((st)=>{
+    const el = document.createElement('div');
+    el.className = 'item';
+    el.innerHTML = `
+      <div>
+        <div>${escapeHtml(st.name || '—')}</div>
+        <div class="sub">${st.class ? ('الفصل: ' + escapeHtml(toArabicDigits(st.class))) : ''}</div>
+      </div>
+      <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+    `;
+    el.addEventListener('click', ()=> openStudentEditor(st.id));
+    frag.appendChild(el);
+  });
+  if(matches.length > GLOBAL_STUDENT_SEARCH_LIMIT){
+    const more = document.createElement('div');
+    more.className = 'muted';
+    more.style.textAlign = 'center';
+    more.style.padding = '6px';
+    more.textContent = `و ${toArabicDigits(matches.length - GLOBAL_STUDENT_SEARCH_LIMIT)} نتيجة أخرى — دقّق البحث لعرضها.`;
+    frag.appendChild(more);
+  }
+  globalStudentSearchResults.appendChild(frag);
+}
+
+globalStudentSearchInput.addEventListener('input', debounce(()=>{
+  renderGlobalStudentSearchResults(globalStudentSearchInput.value);
+}, 150));
 
 function updateStudentDesktopLayout(){
   const isDesktop = window.matchMedia(DESKTOP_LAYOUT_QUERY).matches;
@@ -2582,8 +2659,32 @@ function debounce(func, wait) {
 }
 window.addEventListener('resize', debounce(updateStudentDesktopLayout, 120));
 
+// Name search: normalizes common Arabic spelling variants (alef forms,
+// alef maksura/ya, ta marbuta/ha, diacritics) so e.g. "احمد"/"أحمد" or
+// "فاطمه"/"فاطمة" both match, instead of a bare substring check.
+function normalizeSearchText(value){
+  return String(value || '')
+    .replace(/[ً-ٰٟـ]/g, '')
+    .replace(/[إأآا]/g, 'ا')
+    .replace(/[ىی]/g, 'ي')
+    .replace(/ة/g, 'ه')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+function studentNameMatches(name, normalizedQuery){
+  if(!normalizedQuery) return true;
+  return normalizeSearchText(name).includes(normalizedQuery);
+}
+
 // NEW: Global variable for filter state
 let showOnlySpecialCases = false;
+let studentSearchQuery = '';
+let requestStudentSearchQuery = '';
+// All students, school-wide (id/name/class only) — kept in sync with
+// refreshSchoolStats() below (which already fetches the whole collection),
+// so the global search box doesn't need its own separate read.
+let allStudentsCache = [];
 
 // NEW: Long press detection
 let pressTimer = null;
@@ -2920,8 +3021,16 @@ function renderRequestStudentsList(){
     requestStudentsList.innerHTML = '<div class="request-help">لا يوجد طلاب في هذا الفصل.</div>';
     return;
   }
+  const q = normalizeSearchText(requestStudentSearchQuery);
+  const visibleStudents = q
+    ? requestStudentsCache.filter(student => studentNameMatches(student.name, q))
+    : requestStudentsCache;
+  if(!visibleStudents.length){
+    requestStudentsList.innerHTML = '<div class="request-help">لا يوجد طالب مطابق.</div>';
+    return;
+  }
   const frag = document.createDocumentFragment();
-  requestStudentsCache.forEach((student)=>{
+  visibleStudents.forEach((student)=>{
     const row = document.createElement('label');
     row.className = 'request-student-item';
     const civil = student.civilid ? `الرقم المدني: ${toArabicDigits(student.civilid)}` : 'بدون رقم مدني';
@@ -2938,6 +3047,11 @@ function renderRequestStudentsList(){
   requestStudentsList.appendChild(frag);
 }
 
+requestStudentSearchInput.addEventListener('input', debounce(()=>{
+  requestStudentSearchQuery = requestStudentSearchInput.value;
+  renderRequestStudentsList();
+}, 150));
+
 async function getRequestAuthHeaders(){
   const user = auth.currentUser;
   if(!user) throw new Error('يرجى تسجيل الدخول أولاً.');
@@ -2953,6 +3067,8 @@ async function loadRequestStudentsForClass(classKey){
   requestSelectedStudentIds = new Set();
   requestLiveContext = null;
   requestPreviewPayload = null;
+  requestStudentSearchQuery = '';
+  requestStudentSearchInput.value = '';
   renderRequestStudentsList();
   renderRequestLiveInfo();
   if(!classKey) return;
@@ -3701,6 +3817,10 @@ function openClass(className){
   closeModal(addStudentModal);
   resetAddStudentForm();
   asOk.style.display='none'; asErr.style.display='none';
+  // A leftover search from a previously-viewed class shouldn't silently
+  // filter this one's roster.
+  studentSearchQuery = '';
+  studentSearchInput.value = '';
   openSheet(classSheet);
   loadStudents(className);
 }
@@ -3792,60 +3912,7 @@ async function loadStudents(className){
     
     // Store students for reordering
     currentClassStudents = arr;
-    
-    // Apply filter if active
-    const filteredArr = showOnlySpecialCases 
-      ? arr.filter(st => st.specialCase === true)
-      : arr;
-    
-    if(filteredArr.length===0){
-      const empty=document.createElement('div');
-      empty.className='item';
-      empty.textContent = showOnlySpecialCases 
-        ? 'لا توجد حالات خاصة.' 
-        : 'لا يوجد طلاب بعد.';
-      studentsList.innerHTML = '';
-      studentsList.appendChild(empty);
-      return;
-    }
-    
-    // Use document fragment for better performance
-    const fragment = document.createDocumentFragment();
-    filteredArr.forEach((st, index)=>{
-      const el=document.createElement('div');
-      el.className='item will-change';
-      el.setAttribute('data-id', st.id);
-      el.setAttribute('data-index', index);
-      
-      // Setup long press detection
-      setupLongPress(el, st.id);
-      
-      // NEW: Add special case icon if needed
-      const specialCaseIcon = st.specialCase 
-        ? `<img src="https://framerusercontent.com/images/1WGQfyxwD42xkLmxrJ71sDcY.png?width=266&height=267" class="special-case-icon" alt="حالة خاصة">`
-        : '';
-      
-      // Use the actual studentNumber from Firestore, not index+1
-      const studentNumber = (typeof st.studentNumber === 'number' && !isNaN(st.studentNumber)) ? st.studentNumber : (index + 1);
-      
-      el.innerHTML = `
-        <div>
-          <div>${specialCaseIcon} ${st.name || '—'} <span class="item-number">${toArabicDigits(studentNumber)}</span></div>
-          <div class="sub">${st.civilid ? ('الرقم المدني: '+ toArabicDigits(st.civilid)) : ''}</div>
-        </div>
-        <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
-      `;
-      el.addEventListener('click', (e) => {
-        // Prevent opening editor if it was a long press
-        if (!isLongPress) {
-          openStudentEditor(st.id);
-        }
-        isLongPress = false;
-      });
-      fragment.appendChild(el);
-    });
-    studentsList.innerHTML = '';
-    studentsList.appendChild(fragment);
+    renderFilteredStudentsFromCache();
   }catch(e){
     console.error('[loadStudents]', e);
     const err=document.createElement('div');
@@ -3856,6 +3923,79 @@ async function loadStudents(className){
   }
 }
 
+// Special-case toggle + name search both filter currentClassStudents
+// client-side — no refetch needed, so both feel instant.
+function getFilteredCurrentClassStudents(){
+  let arr = showOnlySpecialCases
+    ? currentClassStudents.filter(st => st.specialCase === true)
+    : currentClassStudents;
+  const q = normalizeSearchText(studentSearchQuery);
+  if(q){
+    arr = arr.filter(st => studentNameMatches(st.name, q));
+  }
+  return arr;
+}
+
+function renderStudentsList(filteredArr){
+  if(filteredArr.length===0){
+    const empty=document.createElement('div');
+    empty.className='item';
+    empty.textContent = normalizeSearchText(studentSearchQuery)
+      ? 'لا يوجد طالب مطابق.'
+      : (showOnlySpecialCases ? 'لا توجد حالات خاصة.' : 'لا يوجد طلاب بعد.');
+    studentsList.innerHTML = '';
+    studentsList.appendChild(empty);
+    return;
+  }
+
+  // Use document fragment for better performance
+  const fragment = document.createDocumentFragment();
+  filteredArr.forEach((st, index)=>{
+    const el=document.createElement('div');
+    el.className='item will-change';
+    el.setAttribute('data-id', st.id);
+    el.setAttribute('data-index', index);
+
+    // Setup long press detection
+    setupLongPress(el, st.id);
+
+    // NEW: Add special case icon if needed
+    const specialCaseIcon = st.specialCase
+      ? `<img src="https://framerusercontent.com/images/1WGQfyxwD42xkLmxrJ71sDcY.png?width=266&height=267" class="special-case-icon" alt="حالة خاصة">`
+      : '';
+
+    // Use the actual studentNumber from Firestore, not index+1
+    const studentNumber = (typeof st.studentNumber === 'number' && !isNaN(st.studentNumber)) ? st.studentNumber : (index + 1);
+
+    el.innerHTML = `
+      <div>
+        <div>${specialCaseIcon} ${st.name || '—'} <span class="item-number">${toArabicDigits(studentNumber)}</span></div>
+        <div class="sub">${st.civilid ? ('الرقم المدني: '+ toArabicDigits(st.civilid)) : ''}</div>
+      </div>
+      <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+    `;
+    el.addEventListener('click', (e) => {
+      // Prevent opening editor if it was a long press
+      if (!isLongPress) {
+        openStudentEditor(st.id);
+      }
+      isLongPress = false;
+    });
+    fragment.appendChild(el);
+  });
+  studentsList.innerHTML = '';
+  studentsList.appendChild(fragment);
+}
+
+function renderFilteredStudentsFromCache(){
+  renderStudentsList(getFilteredCurrentClassStudents());
+}
+
+studentSearchInput.addEventListener('input', debounce(()=>{
+  studentSearchQuery = studentSearchInput.value;
+  renderFilteredStudentsFromCache();
+}, 150));
+
 // NEW: Toggle filter function
 filterSpecialCases.addEventListener('click', ()=>{
   showOnlySpecialCases = !showOnlySpecialCases;
@@ -3864,8 +4004,8 @@ filterSpecialCases.addEventListener('click', ()=>{
     : 'عرض الحالات الخاصة فقط';
   
   filterSpecialCases.classList.toggle('filter-active', showOnlySpecialCases);
-  
-  if(selectedClass) loadStudents(selectedClass);
+
+  if(selectedClass) renderFilteredStudentsFromCache();
 });
 
 // UPDATED: Add student function with studentNumber assignment
