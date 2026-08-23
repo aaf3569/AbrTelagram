@@ -2533,14 +2533,14 @@ async function refreshSchoolStats(){
 const GLOBAL_STUDENT_SEARCH_LIMIT = 30;
 
 function renderGlobalStudentSearchResults(rawQuery){
-  const q = normalizeSearchText(rawQuery);
-  if(!q){
+  const tokens = getSearchTokens(rawQuery);
+  if(!tokens.length){
     globalStudentSearchResults.style.display = 'none';
     globalStudentSearchResults.innerHTML = '';
     return;
   }
 
-  const matches = allStudentsCache.filter(st => studentNameMatches(st.name, q));
+  const matches = allStudentsCache.filter(st => studentNameMatchesTokens(st.name, tokens));
   globalStudentSearchResults.style.display = 'flex';
   globalStudentSearchResults.innerHTML = '';
 
@@ -2673,9 +2673,19 @@ function normalizeSearchText(value){
     .trim()
     .toLowerCase();
 }
-function studentNameMatches(name, normalizedQuery){
-  if(!normalizedQuery) return true;
-  return normalizeSearchText(name).includes(normalizedQuery);
+// Splits a raw query into normalized word tokens — "احمد الخالدي" becomes
+// ["احمد","الخالدي"], so a name matches as long as every typed word shows
+// up somewhere in it, in any order and with other words (a middle name,
+// etc.) in between. This is what makes "type first and last name" work,
+// instead of requiring the query to be one contiguous substring.
+function getSearchTokens(rawQuery){
+  const normalized = normalizeSearchText(rawQuery);
+  return normalized ? normalized.split(' ').filter(Boolean) : [];
+}
+function studentNameMatchesTokens(name, tokens){
+  if(!tokens.length) return true;
+  const normalizedName = normalizeSearchText(name);
+  return tokens.every(tok => normalizedName.includes(tok));
 }
 
 // Same char-by-char normalization as normalizeSearchText, but keeps a 1:1
@@ -2700,23 +2710,45 @@ function buildSearchIndexMap(value){
   return { normalized, map };
 }
 
-// Wraps whichever part of `name` matches `rawQuery` in <mark>, HTML-escaping
-// the rest — used everywhere a searched-for name is rendered so the match
-// is visible as the admin types. Falls back to the plain escaped name when
-// no position-mappable match is found (e.g. the hit only exists because of
-// a whitespace difference the index map above doesn't track).
+// Wraps whichever part(s) of `name` match `rawQuery` in <mark>, HTML-escaping
+// the rest — used everywhere a searched-for name is rendered so the match is
+// visible as the admin types. A multi-word query ("احمد الخالدي") highlights
+// each word's first hit separately, wherever it falls in the name — they
+// don't need to be adjacent. Falls back to the plain escaped name for any
+// token with no position-mappable match (e.g. a whitespace difference the
+// index map above doesn't track).
 function highlightMatch(name, rawQuery){
   const text = String(name || '');
-  const q = normalizeSearchText(rawQuery);
-  if(!q) return escapeHtml(text);
+  const tokens = getSearchTokens(rawQuery);
+  if(!tokens.length) return escapeHtml(text);
+
   const { normalized, map } = buildSearchIndexMap(text);
-  const idx = normalized.indexOf(q);
-  if(idx === -1) return escapeHtml(text);
-  const start = map[idx];
-  const end = map[idx + q.length - 1] + 1;
-  return escapeHtml(text.slice(0, start))
-    + '<mark class="search-hit">' + escapeHtml(text.slice(start, end)) + '</mark>'
-    + escapeHtml(text.slice(end));
+  const ranges = [];
+  tokens.forEach((tok)=>{
+    const idx = normalized.indexOf(tok);
+    if(idx === -1) return;
+    ranges.push([map[idx], map[idx + tok.length - 1] + 1]);
+  });
+  if(!ranges.length) return escapeHtml(text);
+
+  ranges.sort((a, b)=> a[0] - b[0]);
+  const merged = [ranges[0]];
+  for(let i = 1; i < ranges.length; i++){
+    const [s, e] = ranges[i];
+    const last = merged[merged.length - 1];
+    if(s <= last[1]) last[1] = Math.max(last[1], e);
+    else merged.push([s, e]);
+  }
+
+  let out = '';
+  let cursor = 0;
+  merged.forEach(([s, e])=>{
+    out += escapeHtml(text.slice(cursor, s));
+    out += '<mark class="search-hit">' + escapeHtml(text.slice(s, e)) + '</mark>';
+    cursor = e;
+  });
+  out += escapeHtml(text.slice(cursor));
+  return out;
 }
 
 // NEW: Global variable for filter state
@@ -3063,9 +3095,9 @@ function renderRequestStudentsList(){
     requestStudentsList.innerHTML = '<div class="request-help">لا يوجد طلاب في هذا الفصل.</div>';
     return;
   }
-  const q = normalizeSearchText(requestStudentSearchQuery);
-  const visibleStudents = q
-    ? requestStudentsCache.filter(student => studentNameMatches(student.name, q))
+  const requestSearchTokens = getSearchTokens(requestStudentSearchQuery);
+  const visibleStudents = requestSearchTokens.length
+    ? requestStudentsCache.filter(student => studentNameMatchesTokens(student.name, requestSearchTokens))
     : requestStudentsCache;
   if(!visibleStudents.length){
     requestStudentsList.innerHTML = '<div class="request-help">لا يوجد طالب مطابق.</div>';
@@ -3971,9 +4003,9 @@ function getFilteredCurrentClassStudents(){
   let arr = showOnlySpecialCases
     ? currentClassStudents.filter(st => st.specialCase === true)
     : currentClassStudents;
-  const q = normalizeSearchText(studentSearchQuery);
-  if(q){
-    arr = arr.filter(st => studentNameMatches(st.name, q));
+  const tokens = getSearchTokens(studentSearchQuery);
+  if(tokens.length){
+    arr = arr.filter(st => studentNameMatchesTokens(st.name, tokens));
   }
   return arr;
 }
@@ -3982,7 +4014,7 @@ function renderStudentsList(filteredArr){
   if(filteredArr.length===0){
     const empty=document.createElement('div');
     empty.className='item';
-    empty.textContent = normalizeSearchText(studentSearchQuery)
+    empty.textContent = getSearchTokens(studentSearchQuery).length
       ? 'لا يوجد طالب مطابق.'
       : (showOnlySpecialCases ? 'لا توجد حالات خاصة.' : 'لا يوجد طلاب بعد.');
     studentsList.innerHTML = '';
