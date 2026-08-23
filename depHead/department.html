@@ -188,7 +188,7 @@
     .sheet-header{ background:var(--card-bg); border-bottom:1px solid var(--border); padding:14px 12px; display:flex; align-items:center; gap:10px; position:sticky; top:0; z-index:10; }
     .back-btn{ height:40px; padding:0 14px; border-radius:12px; border:1px solid rgba(2,43,66,.2); background:var(--card-bg); color:var(--primary); font-weight:900; cursor:pointer; box-shadow:var(--shadow-1); display:inline-flex; align-items:center; gap:8px; }
     .sheet-title{ margin:0; font-size:1.05rem; font-weight:900; color:var(--primary); }
-    .sheet-body{ flex:1 1 auto; overflow:auto; padding:16px; width:min(760px,94vw); margin:0 auto; display:flex; flex-direction:column; gap:12px; }
+    .sheet-body{ flex:1 1 auto; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:16px; width:min(760px,94vw); margin:0 auto; display:flex; flex-direction:column; gap:12px; }
 
     /* Form primitives */
     .field{ display:flex; flex-direction:column; gap:8px; width:100%; min-width:0; }
@@ -250,10 +250,22 @@
       .info-grid{ grid-template-columns:repeat(2, minmax(0,1fr)); gap:14px 18px; }
     }
 
-    /* Modals */
-    .modal-overlay{ position:fixed; inset:0; background:rgba(0,0,0,.5); backdrop-filter:blur(5px); display:flex; align-items:center; justify-content:center; z-index:100; opacity:0; visibility:hidden; transition:opacity .3s ease, visibility .3s ease; }
+    /* Modals — the overlay itself scrolls (not a fixed-height modal with its
+       own inner scroll) so a tall form and the iOS keyboard shrinking the
+       visible viewport both just work: flex align-items:center on a
+       *scrollable* container clips content above the fold in older WebKit,
+       so centering is done with auto margins on the modal instead, which
+       degrade gracefully to top-alignment (fully reachable via the
+       overlay's own scroll) once content is taller than the viewport. */
+    .modal-overlay{
+      position:fixed; inset:0; background:rgba(0,0,0,.5); backdrop-filter:blur(5px);
+      display:flex; align-items:flex-start; justify-content:center;
+      overflow-y:auto; -webkit-overflow-scrolling:touch;
+      padding:32px 14px;
+      z-index:100; opacity:0; visibility:hidden; transition:opacity .3s ease, visibility .3s ease;
+    }
     .modal-overlay.active{ opacity:1; visibility:visible; }
-    .modal{ background:var(--card-bg); border-radius:16px; box-shadow:0 20px 60px rgba(0,0,0,.3); width:min(90vw,500px); max-height:90vh; overflow-y:auto; transform:scale(.9); opacity:0; transition:transform .3s ease, opacity .3s ease; }
+    .modal{ background:var(--card-bg); border-radius:16px; box-shadow:0 20px 60px rgba(0,0,0,.3); width:min(90vw,500px); margin:auto 0; transform:scale(.9); opacity:0; transition:transform .3s ease, opacity .3s ease; }
     .modal.active{ transform:scale(1); opacity:1; }
     .modal-header{ padding:16px 20px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; }
     .modal-title{ margin:0; font-size:1.2rem; font-weight:800; color:var(--primary); }
@@ -324,7 +336,6 @@
         <div class="section-row">
           <div class="label">معلّمو القسم</div>
           <div style="display:flex; gap:10px; flex-wrap:wrap;">
-            <button id="refreshTeachers" class="btn ghost" type="button"><i class="fas fa-rotate"></i><span>تحديث</span></button>
             <button id="openAddUser" class="btn solid" type="button"><i class="fas fa-plus"></i><span>إضافة معلم</span></button>
           </div>
         </div>
@@ -541,7 +552,6 @@
     /* ========= Elements: teacher management ========= */
     const teachersList = document.getElementById('teachersList');
     const openAddUser = document.getElementById('openAddUser');
-    const refreshTeachers = document.getElementById('refreshTeachers');
 
     const teacherSheet = document.getElementById('teacherSheet');
     const closeTeacher = document.getElementById('closeTeacher');
@@ -750,8 +760,13 @@
     }
 
     /* ---- sheet / modal chrome ---- */
-    const openSheet=(el)=>{el.classList.add('open');el.setAttribute('aria-hidden','false');};
-    const closeSheetEl=(el)=>{el.classList.remove('open');el.setAttribute('aria-hidden','true');};
+    // .sheet is position:fixed covering the whole viewport, but that alone
+    // doesn't stop the page behind it from also scrolling on iOS Safari —
+    // touch-scroll can still reach the body underneath a fixed overlay
+    // there. Locking body scroll while the sheet (or a modal) is open is
+    // what actually prevents that "page scrolls behind the sheet" feeling.
+    const openSheet=(el)=>{el.classList.add('open');el.setAttribute('aria-hidden','false');syncBodyScrollLock();};
+    const closeSheetEl=(el)=>{el.classList.remove('open');el.setAttribute('aria-hidden','true');syncBodyScrollLock();};
     function focusIfPossible(el){
       if(!el || typeof el.focus!=='function') return false;
       try{el.focus(); return true;}catch{return false;}
@@ -763,7 +778,7 @@
       }
     }
     function syncBodyScrollLock(){
-      const anyOverlayOpen=addTeacherModal.classList.contains('active') || deleteTeacherModal.classList.contains('active') || changePasswordModal.classList.contains('active') || successModal.classList.contains('show');
+      const anyOverlayOpen=teacherSheet.classList.contains('open') || addTeacherModal.classList.contains('active') || deleteTeacherModal.classList.contains('active') || changePasswordModal.classList.contains('active') || successModal.classList.contains('show');
       document.body.style.overflow=anyOverlayOpen?'hidden':'';
     }
     const openModal=(m)=>{
@@ -990,7 +1005,6 @@
         edErr.style.display='block';
       }
     });
-    refreshTeachers.addEventListener('click', ()=> loadTeachers());
 
     saveTeacherBtn.addEventListener('click', async ()=>{
       edOk.style.display='none'; edErr.style.display='none';
