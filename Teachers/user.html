@@ -684,11 +684,19 @@
                     <div class="skel-line skel-name-line"></div>
                 </div>
                 <div class="divider" aria-hidden="true"></div>
+                <!-- #classesButtons is one .btn.class-btn per assigned class —
+                     most teachers have exactly one, so a single placeholder
+                     tracks the common case (it will still just grow/shrink
+                     once the real count is known, like any skeleton). -->
                 <div class="stack wide" style="margin-top:10px;">
                     <div class="btn ghost skel-fill"></div>
-                    <div class="btn ghost skel-fill"></div>
                 </div>
+                <!-- moreBtn, teacherScheduleBtn, logBtn, the Telegram-settings
+                     button (mounted into #telegramSettingsSlot), suggestBtn,
+                     logoutBtn — 6 buttons visible by default (the permission-
+                     gated ones stay hidden for most teachers). -->
                 <div class="stack wide">
+                    <div class="btn ghost skel-fill"></div>
                     <div class="btn ghost skel-fill"></div>
                     <div class="btn ghost skel-fill"></div>
                     <div class="btn ghost skel-fill"></div>
