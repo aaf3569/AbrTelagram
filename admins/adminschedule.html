@@ -1942,6 +1942,49 @@
       grid.appendChild(frag);
       renderHeaders();
       renderRows();
+      renderOverrideBadges();
+    }
+
+    // An enabled custom schedule (see customSchedules below) fully replaces
+    // the main schedule for its class/day — it doesn't just fill empty
+    // slots. customSchedules is fetched scoped to the selected class, but a
+    // card's own الصف/الفصل selector can browse a *different* class without
+    // refetching the page — so this must still filter by classKey rather
+    // than assuming every entry belongs to the currently selected class.
+    function overriddenDayNamesForSelectedClass(){
+      const map = new Map(); // dayIndex (0-4) -> [schedule name, ...]
+      customSchedules.forEach(s=>{
+        if(!s.enabled) return;
+        if(s.classKey !== selectedClassKey) return;
+        if(!Number.isInteger(s.dayIndex) || s.dayIndex < 0 || s.dayIndex > 4) return;
+        if(!map.has(s.dayIndex)) map.set(s.dayIndex, []);
+        map.get(s.dayIndex).push(s.name || 'جدول إضافي');
+      });
+      return map;
+    }
+
+    function renderOverrideBadges(){
+      const dayCols = grid.querySelectorAll('.day-col');
+      if(!dayCols.length) return;
+      const overridden = overriddenDayNamesForSelectedClass();
+      dayCols.forEach((cell, r)=>{
+        const old = cell.querySelector('.custom-override-badge');
+        if(old) old.remove();
+        const names = overridden.get(r);
+        if(!names || !names.length) return;
+        const badge = document.createElement('div');
+        badge.className = 'custom-override-badge';
+        const conflict = names.length > 1;
+        badge.style.cssText = `margin-top:6px; font-size:11px; font-weight:800; padding:3px 7px; border-radius:8px; line-height:1.6; ${
+          conflict
+            ? 'background:rgba(180,35,24,.10); color:var(--danger, #b42318); border:1px solid rgba(180,35,24,.3)'
+            : 'background:rgba(3,60,84,.08); color:var(--primary); border:1px solid rgba(3,60,84,.18)'
+        }`;
+        badge.textContent = conflict
+          ? `⚠️ تعارض جداول مخصصة: ${names.join('، ')}`
+          : `🔁 يُستبدل بجدول: ${names[0]}`;
+        cell.appendChild(badge);
+      });
     }
 
     /* ======= Teachers list (fast) ======= */
@@ -2133,6 +2176,10 @@
             schedule.times[idx] = { start: startTime, end: endTime };
             setDirty(true);
             renderCustomSchedules();
+            // The custom schedule's bell times are one shared property of the
+            // whole day, not a per-class copy — push immediately to every
+            // class's doc instead of waiting for "حفظ كل التغييرات".
+            await propagateSharedScheduleFields(schedule, { times: schedule.times, lessonCount: schedule.lessonCount });
             success = true;
           }
         }
@@ -2156,6 +2203,9 @@
       setDirty(true);
       renderCustomSchedules();
       closeTimeModal();
+      // lessonCount/times are shared across every class — push immediately,
+      // same as a time edit.
+      propagateSharedScheduleFields(schedule, { times: schedule.times, lessonCount: schedule.lessonCount });
     });
 
     function lessonLabel(index){
@@ -2280,6 +2330,64 @@
       return out;
     }
 
+    // The per-card "الصف"/"الفصل" selectors let the admin browse and edit
+    // every class's own copy of this same school-wide custom schedule
+    // (same schedule.id, one customDaySchedules doc per class) without
+    // leaving the card. Switching them must load that class's actual saved
+    // lessons — previously this just relabeled the currently-loaded class's
+    // data as belonging to the new class, which is why it looked like the
+    // schedule "only existed for one class."
+    async function switchCustomScheduleClass(schedule, targetClassKey, gridHost, statusNode, gradeSelEl, classSelEl){
+      if(!targetClassKey || targetClassKey === schedule.classKey) return;
+
+      const prevClassKey = schedule.classKey;
+      if(dirty){
+        const proceed = window.confirm('لديك تغييرات غير محفوظة في هذا الجدول. سيتم تجاهلها عند الانتقال إلى فصل آخر. هل تريد المتابعة؟');
+        if(!proceed){
+          const prevGrade = parseClassKey(prevClassKey).grade;
+          gradeSelEl.value = prevGrade;
+          classSelEl.innerHTML = (CLASSES_BY_GRADE[prevGrade] || []).map(c=>`<option value="${c}">${c}</option>`).join('');
+          classSelEl.value = prevClassKey;
+          return;
+        }
+      }
+
+      if(statusNode) statusNode.innerHTML = `<div class="warn">جاري تحميل بيانات هذا الفصل...</div>`;
+      try{
+        const docId = customDocIdFor(targetClassKey, schedule.id);
+        const snap = await getDoc(doc(db, 'customDaySchedules', docId));
+        schedule.classKey = targetClassKey;
+        if(snap.exists()){
+          const x = snap.data() || {};
+          schedule.docId = docId;
+          schedule.lessonCount = Number(x.lessonCount) || schedule.lessonCount;
+          schedule.values = Array.isArray(x.lessons) ? x.lessons.map(normalizeLesson) : [];
+          schedule.times = Array.isArray(x.times) ? x.times : schedule.times;
+        }else{
+          // Shouldn't normally happen — createSchoolWideCustomSchedule seeds
+          // every class — but handle a missing doc gracefully instead of
+          // showing stale data from the previous class. lessonCount/times
+          // are meant to be shared across every class (the day's own bell
+          // schedule), so keep the current ones instead of resetting them —
+          // only this class's own lesson assignments are actually missing.
+          schedule.docId = '';
+          schedule.values = [];
+        }
+        ensureCustomLessons(schedule);
+        ensureCustomTimes(schedule);
+        renderCustomGrid(schedule, gridHost, statusNode);
+        renderOverrideBadges();
+        if(statusNode) statusNode.innerHTML = '';
+      }catch(e){
+        console.error('[switchCustomScheduleClass]', e);
+        if(statusNode) statusNode.innerHTML = `<div class="err">تعذّر تحميل بيانات هذا الفصل لهذا الجدول.</div>`;
+        const prevGrade = parseClassKey(prevClassKey).grade;
+        gradeSelEl.value = prevGrade;
+        classSelEl.innerHTML = (CLASSES_BY_GRADE[prevGrade] || []).map(c=>`<option value="${c}">${c}</option>`).join('');
+        classSelEl.value = prevClassKey;
+      }
+    }
+
     function ensureCustomLessons(schedule){
       while(schedule.values.length < schedule.lessonCount){
         schedule.values.push(normalizeLesson({}));
@@ -2392,6 +2500,25 @@
       host.appendChild(g);
     }
 
+    // A custom schedule's shared, school-wide properties — day/enabled/name
+    // (its identity) and lessonCount/times (the day's own bell schedule) —
+    // are duplicated across one customDaySchedules doc per class, so every
+    // class stays in sync. Only each class's own `lessons` (subject/teacher
+    // assignments) are genuinely per-class and never propagated here.
+    async function propagateSharedScheduleFields(schedule, fields){
+      try{
+        const siblingsSnap = await getDocs(query(collection(db, 'customDaySchedules'), where('id', '==', schedule.id)));
+        if(siblingsSnap.empty) return;
+        const batch = writeBatch(db);
+        siblingsSnap.forEach((d)=>{
+          batch.set(d.ref, { ...fields, updatedAt: serverTimestamp() }, { merge: true });
+        });
+        await batch.commit();
+      }catch(e){
+        console.error('[propagateSharedScheduleFields]', e);
+      }
+    }
+
     async function saveCustomSchedule(schedule, statusNode){
       const setStatus = (html)=>{ if(statusNode) statusNode.innerHTML = html; };
       setStatus('');
@@ -2443,33 +2570,20 @@
         }, { merge: true });
         schedule.docId = docId;
 
-        // createSchoolWideCustomSchedule() creates one customDaySchedules doc
-        // per class (all disabled by default), but this function only ever
-        // touches the one class currently selected in this card — so
-        // "تفعيل أسبوعي"/day/name changes here would otherwise silently never
-        // reach the other classes' copies of the same schedule, leaving them
-        // permanently disabled even after the admin "enables" it. Propagate
-        // just the shared/identity fields to every sibling doc; each class's
-        // own lessons/times/classKey/grade/section/track are left untouched.
-        try {
-          const siblingsSnap = await getDocs(query(collection(db, 'customDaySchedules'), where('id', '==', schedule.id)));
-          const siblingBatch = writeBatch(db);
-          let siblingWrites = 0;
-          siblingsSnap.forEach((d) => {
-            if (d.id === docId) return;
-            siblingBatch.set(d.ref, {
-              name: payload.name,
-              dayIndex: payload.dayIndex,
-              day: payload.day,
-              enabled: payload.enabled,
-              updatedAt: serverTimestamp(),
-            }, { merge: true });
-            siblingWrites++;
-          });
-          if (siblingWrites > 0) await siblingBatch.commit();
-        } catch (e) {
-          console.error('[saveCustomSchedule] sibling propagation:', e);
-        }
+        // This function only ever touches the one class currently selected
+        // in this card — push the schedule's shared/school-wide fields to
+        // every other class's doc too (each class's own `lessons` is left
+        // untouched). Time/lessonCount edits already propagate the instant
+        // they're made (see propagateSharedScheduleFields call sites above),
+        // this is a catch-all in case a doc was ever missed.
+        await propagateSharedScheduleFields(schedule, {
+          name: payload.name,
+          dayIndex: payload.dayIndex,
+          day: payload.day,
+          enabled: payload.enabled,
+          lessonCount: payload.lessonCount,
+          times: payload.times,
+        });
 
         setStatus(`<div class="ok">تم حفظ الجدول الخاص بنجاح (لجميع الفصول).</div>`);
       }catch(e){
@@ -2514,6 +2628,7 @@
         const idx = customSchedules.findIndex(x => x.id === schedule.id);
         if(idx >= 0) customSchedules.splice(idx, 1);
         cardEl.remove();
+        renderOverrideBadges();
         setStatusHTML(`<div class="ok">تم حذف الجدول من جميع الفصول.</div>`);
       }catch(e){
         console.error('[deleteCustomSchedule]', e);
@@ -2627,12 +2742,14 @@
         schedule.dayIndex = v === '' ? '' : Number(v);
         setDirty(true);
         renderCustomGrid(schedule, gridHost, statusNode);
+        renderOverrideBadges();
       });
 
       enabledCb.checked = schedule.enabled;
       enabledCb.addEventListener('change', ()=>{
         schedule.enabled = !!enabledCb.checked;
         setDirty(true);
+        renderOverrideBadges();
       });
 
       gradeSelLocal.value = gradeValue;
@@ -2641,16 +2758,14 @@
         : ((CLASSES_BY_GRADE[gradeValue] || [])[0] || '');
       schedule.classKey = classSelLocal.value || schedule.classKey;
 
-      gradeSelLocal.addEventListener('change', ()=>{
+      gradeSelLocal.addEventListener('change', async ()=>{
         const g = gradeSelLocal.value;
         classSelLocal.innerHTML = (CLASSES_BY_GRADE[g] || []).map(c=>`<option value="${c}">${c}</option>`).join('');
         classSelLocal.value = (CLASSES_BY_GRADE[g] || [])[0] || '';
-        schedule.classKey = classSelLocal.value;
-        setDirty(true);
+        await switchCustomScheduleClass(schedule, classSelLocal.value, gridHost, statusNode, gradeSelLocal, classSelLocal);
       });
-      classSelLocal.addEventListener('change', ()=>{
-        schedule.classKey = classSelLocal.value;
-        setDirty(true);
+      classSelLocal.addEventListener('change', async ()=>{
+        await switchCustomScheduleClass(schedule, classSelLocal.value, gridHost, statusNode, gradeSelLocal, classSelLocal);
       });
 
       addBtn.addEventListener('click', ()=>{
@@ -2659,6 +2774,8 @@
         ensureCustomTimes(schedule);
         setDirty(true);
         renderCustomGrid(schedule, gridHost, statusNode);
+        // lessonCount/times are shared across every class — push immediately.
+        propagateSharedScheduleFields(schedule, { times: schedule.times, lessonCount: schedule.lessonCount });
       });
       remBtn.addEventListener('click', ()=>{
         if(schedule.lessonCount <= 1) return;
@@ -2667,6 +2784,7 @@
         ensureCustomTimes(schedule);
         setDirty(true);
         renderCustomGrid(schedule, gridHost, statusNode);
+        propagateSharedScheduleFields(schedule, { times: schedule.times, lessonCount: schedule.lessonCount });
       });
 
       deleteBtn.addEventListener('click', ()=> deleteCustomSchedule(schedule, item));
@@ -2678,6 +2796,7 @@
     function renderCustomSchedules(){
       customSchedulesWrap.innerHTML = '';
       customSchedules.forEach(renderCustomScheduleCard);
+      renderOverrideBadges();
     }
 
     async function fetchCustomSchedules(){

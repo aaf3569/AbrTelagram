@@ -12,6 +12,9 @@ import {
   getKuwaitDayIndexSunThu,
   getKuwaitDayIndexSunSat,
 } from "/shared/kuwait-time.js";
+import {
+  getOverriddenClassKeys, mergeCustomIntoLessonMap, classKeyFromRow, normalizeClassKey,
+} from "/shared/schedule-priority.js";
 
 const STYLE_ID = "attendance-sheet-style";
 const ATTENDANCE_SESSIONS_COLLECTION = "attendanceSessions";
@@ -393,6 +396,10 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
   let takenLessonNumbers = new Set();
   let pendingSave = null;
   let currentMeta = null;
+  // lessonIndex -> {activeStart, activeEnd} for the manual "any" mode lesson
+  // picker — carries a custom schedule's own times through to save time,
+  // populated fresh each time openForClass() builds the picker.
+  let manualLessonMeta = new Map();
   let openingInProgress = false; // guards against double-taps on the open buttons
   let savingInProgress = false;  // guards against double-taps on the confirm-save button
   let todayMapCache = { key: "", at: 0, map: null };
@@ -606,17 +613,27 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
     return hit.class || "";
   }
 
-  // Anchored to the lesson's own scheduled time (from settings/lessonTimes,
-  // managed in admins/adminschedule.html) rather than "now" or when the
+  // Anchored to the lesson's own scheduled time rather than "now" or when the
   // session was created — a record stays editable from the lesson's start
   // until LESSON_END_GRACE_MINUTES after it ends, same window as taking it
   // in the first place. Admin callers pass isPrivilegedEdit to mount() and
   // bypass this entirely.
-  function isWithinAttendanceEditWindow(dateISO, lessonIndex) {
+  //
+  // storedCutoffTs (a Firestore Timestamp), when given, is the exact cutoff
+  // already stored on the session at creation (settings/lessonTimes, or a
+  // custom schedule's own per-lesson time — see the save handler) and is
+  // used directly instead of recomputing from the generic site-wide
+  // settings/lessonTimes, which would be wrong for a custom-schedule
+  // session. Falls back to the generic calc for older sessions saved before
+  // this was stored.
+  function isWithinAttendanceEditWindow(dateISO, lessonIndex, storedCutoffTs) {
     if (privilegedEdit) return true;
+    if (dateISO && dateISO !== kuwaitTodayISO()) return false;
+    if (storedCutoffTs && typeof storedCutoffTs.toDate === "function") {
+      return Date.now() <= storedCutoffTs.toDate().getTime();
+    }
     const l = LESSON_TIMES.find(x => x.index === Number(lessonIndex));
     if (!l) return false;
-    if (dateISO && dateISO !== kuwaitTodayISO()) return false;
     const now = getCurrentKuwaitMinutes();
     const s = parseTimeToMinutes(l.start);
     const e = parseTimeToMinutes(l.end);
@@ -647,12 +664,18 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
     const map = new Map();
     try {
       const todayDayIndex = getKuwaitDayIndexSunThu();
-      // The teacher's standing schedule and today's substitution overrides are
-      // independent queries — fetch both at once.
-      const [schedSnap, ovSnap] = await Promise.all([
+      const customDayIndex = getKuwaitDayIndexSunSat();
+      // The teacher's standing schedule, today's substitution overrides, and
+      // today's custom/extra schedules are independent queries — fetch all
+      // three at once.
+      const [schedSnap, ovSnap, customRows] = await Promise.all([
         getDocs(query(collection(db, "schedules"), where("teacherUid", "==", teacherUid))),
         getDocs(query(collection(db, "scheduleOverrides"), where("date", "==", dateISO))),
+        customDayIndex >= 0 ? getCustomSchedulesForToday(customDayIndex) : Promise.resolve([]),
       ]);
+      // A class with an enabled custom schedule for today doesn't run its
+      // main schedule (or any swap/cover override on it) at all today.
+      const overriddenClassKeys = getOverriddenClassKeys(customRows);
       schedSnap.forEach(d => {
         const data = d.data();
         if (!data.lesson) return;
@@ -660,7 +683,9 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
         // Primary: standing weekly schedule, matched by weekday index (recurs forever).
         // Fallback: legacy date-keyed entries from before the schedule was made recurring.
         let applies = (todayDayIndex >= 0 && Number(data.dayIndex) === todayDayIndex) || data.date === dateISO;
-        if (applies && !map.has(key)) {
+        if (!applies) return;
+        if (overriddenClassKeys.has(normalizeClassKey(classKeyFromRow(data)))) return;
+        if (!map.has(key)) {
           map.set(key, { ...data, _source: "normal", _coveredAway: false });
         }
       });
@@ -668,11 +693,15 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
         const ov = d.data();
         const key = String(ov.lesson);
         if (ov.kind === "new" && ov.newTeacherUid === teacherUid) {
+          if (overriddenClassKeys.has(normalizeClassKey(classKeyFromRow(ov)))) return;
           map.set(key, { ...ov, _source: "override_new", _coveredAway: false });
         } else if (ov.kind === "original" && ov.originalTeacherUid === teacherUid) {
           if (map.has(key)) map.set(key, { ...map.get(key), _coveredAway: true });
         }
       });
+      // Enabled custom schedules always win — overwrite whatever's in the
+      // slot above, don't just fill gaps.
+      mergeCustomIntoLessonMap(map, teacherUid, customRows);
       todayMapCache = { key: cacheKey, at: nowMs, map };
     } catch (e) {
       console.error("[attendance] buildTodayMap:", e);
@@ -972,38 +1001,28 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
   }
 
   // Which lessons (1-7) is this teacher actually assigned to teach `classKey`
-  // today, per the schedule (main weekly schedule + any custom/extra schedule)?
-  // Attendance may only ever be taken for a real, scheduled lesson — never an
-  // arbitrary slot nobody was assigned to teach.
+  // today, per the schedule (main weekly schedule, unless overridden by an
+  // enabled custom/extra schedule for today, which wins instead)? Attendance
+  // may only ever be taken for a real, scheduled lesson — never an arbitrary
+  // slot nobody was assigned to teach. Returns a Map<lessonNumber, hit> so
+  // callers can also read the matched slot's own time (activeStart/End) —
+  // still supports .size/.has(lessonNumber) exactly like the Set this used
+  // to return.
   async function getMyScheduledLessonsForClass(teacherUid, classKey, dateISO) {
     const target = normalizeClassKeyForCompare(classKey);
-    const result = new Set();
+    const result = new Map();
     if (!teacherUid || !target) return result;
 
+    // buildTodayMapWithOverrides already merges in today's enabled custom
+    // schedules with priority over the main schedule — no separate fetch
+    // needed here.
     const todayMap = await buildTodayMapWithOverrides(teacherUid, dateISO);
     todayMap.forEach((hit, lessonKey) => {
       if (hit._coveredAway) return;
       if (normalizeClassKeyForCompare(classKeyFromScheduleRow(hit)) === target) {
-        result.add(Number(lessonKey));
+        result.set(Number(lessonKey), hit);
       }
     });
-
-    const dayIndex = getKuwaitDayIndexSunSat();
-    if (dayIndex >= 0) {
-      const rows = await getCustomSchedulesForToday(dayIndex);
-      rows.forEach(row => {
-        const lessons = Array.isArray(row.lessons) ? row.lessons : [];
-        const max = Math.min(7, Number(row.lessonCount) || lessons.length || 7);
-        for (let i = 0; i < max; i++) {
-          const lesson = lessons[i] || {};
-          if ((lesson.teacherUid || "").toString() !== teacherUid) continue;
-          const rowClassKey = classKeyFromScheduleRow(row) || classKeyFromScheduleRow(lesson);
-          if (normalizeClassKeyForCompare(rowClassKey) === target) {
-            result.add(i + 1);
-          }
-        }
-      });
-    }
 
     return result;
   }
@@ -1273,7 +1292,20 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
         showBlocked("not_my_class");
         return false;
       }
-      const available = LESSON_TIMES.filter(l => myLessons.has(l.index) && !takenSet.has(l.index));
+      // A lesson sourced from an active custom schedule carries its own
+      // activeStart/activeEnd (set by buildTodayMapWithOverrides) — show and
+      // store those instead of the generic site-wide bell times.
+      const available = [];
+      manualLessonMeta = new Map();
+      myLessons.forEach((hit, lessonIndex) => {
+        if (takenSet.has(lessonIndex)) return;
+        const lt = LESSON_TIMES.find(l => l.index === lessonIndex);
+        const start = (hit.activeStart || lt?.start || "00:00").toString();
+        const end = (hit.activeEnd || lt?.end || "00:00").toString();
+        available.push({ index: lessonIndex, label: lt?.label || `حصة ${lessonIndex}`, start, end });
+        manualLessonMeta.set(lessonIndex, { activeStart: start, activeEnd: end });
+      });
+      available.sort((a, b) => a.index - b.index);
       if (available.length === 0) {
         showBlocked("no_lessons_left");
         return false;
@@ -1297,7 +1329,7 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
       const createdAt = data.createdAt || null;
       const sessionDate = data.date || kuwaitTodayISO();
       const lessonIndex = Number(data.lesson) || 0;
-      if (!isWithinAttendanceEditWindow(sessionDate, lessonIndex)) {
+      if (!isWithinAttendanceEditWindow(sessionDate, lessonIndex, data.sessionCutoffTs)) {
         showError("تعذّر التعديل", "انتهت مهلة تعديل هذه الحصة.");
         return false;
       }
@@ -1306,6 +1338,7 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
       currentMeta = {
         ok: true, mode: "edit", date: sessionDate,
         classKey, lesson: lessonIndex, sessionId, createdAt,
+        sessionCutoffTs: data.sessionCutoffTs || null,
       };
       buildFixedLessonOption(lessonIndex, lessonLabel);
       // The student list and the saved statuses load together
@@ -1320,7 +1353,7 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
   // Submit handlers
   els.submitBtn.addEventListener("click", async () => {
     if (currentMeta?.mode === "edit") {
-      if (!isWithinAttendanceEditWindow(currentMeta.date, currentMeta.lesson)) {
+      if (!isWithinAttendanceEditWindow(currentMeta.date, currentMeta.lesson, currentMeta.sessionCutoffTs)) {
         showError("تعذّر الحفظ", "انتهت مهلة تعديل هذه الحصة.");
         return;
       }
@@ -1378,6 +1411,7 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
       classKey: currentMeta.classKey,
       mode: currentMeta.mode,
       sessionId: currentMeta.sessionId,
+      sessionCutoffTs: currentMeta.sessionCutoffTs || null,
     };
     openModal(els.confirmModal);
     setTimeout(() => els.confirmSave.focus(), 0);
@@ -1402,7 +1436,7 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
         return;
       }
       const uid = auth.currentUser.uid;
-      const { present, late, absent, dateKW, lessonIndex, lessonLabel, classKey, mode, sessionId } = pendingSave;
+      const { present, late, absent, dateKW, lessonIndex, lessonLabel, classKey, mode, sessionId, sessionCutoffTs: storedCutoffTs } = pendingSave;
       const nameByUid = {};
       attStudentList.forEach(s => { if (s.uid) nameByUid[s.uid] = s.name; });
       const all = [
@@ -1412,7 +1446,7 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
       ];
 
       if (mode === "edit") {
-        if (!isWithinAttendanceEditWindow(dateKW, lessonIndex)) {
+        if (!isWithinAttendanceEditWindow(dateKW, lessonIndex, storedCutoffTs)) {
           closeModal(els.confirmModal);
           showError("تعذّر الحفظ", "انتهت مهلة تعديل هذه الحصة.");
           pendingSave = null;
@@ -1505,6 +1539,9 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
           showBlocked("not_my_class");
           return;
         }
+        // Re-fetched hit may carry a custom schedule's own activeStart/End —
+        // falls back to the picker-time snapshot from openForClass() if not.
+        activeMeta = myLessons.get(lessonIndex) || manualLessonMeta.get(lessonIndex) || {};
         if (existing.exists()) {
           closeModal(els.confirmModal);
           showError("تعذّر الحفظ", "تم تسجيل غياب هذه الحصّة مسبقًا.");
@@ -1683,7 +1720,7 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
     open: openWithMeta,
     openForClass,
     openForEdit,
-    canEditSession(sessionData) { return isWithinAttendanceEditWindow(sessionData?.date, sessionData?.lesson); },
+    canEditSession(sessionData) { return isWithinAttendanceEditWindow(sessionData?.date, sessionData?.lesson, sessionData?.sessionCutoffTs); },
     // Deliberately NOT checkAllowed()/getMyActiveLessonMetaForNow() — those
     // also fail on "already_taken", which is exactly the normal case for a
     // host wanting to gate a "my attendance log" button on "what class is my

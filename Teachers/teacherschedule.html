@@ -1073,8 +1073,11 @@
       addDoc, serverTimestamp, updateDoc, runTransaction,
       limit, orderBy, onSnapshot
     } from "/shared/firebase.js";
+    import {
+      getOverriddenClassKeys, mergeCustomIntoLessonMap, classKeyFromRow, normalizeClassKey
+    } from "/shared/schedule-priority.js";
 
-    
+
 
     const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
     let db;
@@ -1292,7 +1295,7 @@
       refreshRenderedLessonMeta(classWeekGrid);
 
       if (currentView === 'today' && activeTodayISO && activeTodayByLesson instanceof Map) {
-        renderTodayTable(activeTodayISO, activeTodayByLesson);
+        renderTodayTable(activeTodayISO, activeTodayByLesson, activeDayCustomTimes);
       } else {
         updateCurrentLessonHighlight();
       }
@@ -1357,6 +1360,7 @@
     let activeTodayISO = null; // what is rendered in day view
     let activeTodayByLesson = new Map(); // current day map for click
     let activeTodayMeta = new Map(); // lesson -> meta for swap/cover
+    let activeDayCustomTimes = null; // today's enabled custom schedule's own per-lesson times, if any
 
     let unsubPendingRequests = null;
 
@@ -1883,13 +1887,25 @@
       }
     }
 
+    // A custom schedule enabled for the day sets the bell times for the
+    // *whole day*, not just the lesson slots this teacher happens to teach —
+    // so a lesson the teacher has no class in still uses the custom
+    // schedule's own time for that slot, not the generic site-wide one.
+    function resolveDisplayLessonTimes(hit, dayCustomTimes, lessonNumber){
+      if(hit && hit.activeStart && hit.activeEnd) return { start: hit.activeStart, end: hit.activeEnd };
+      const t = dayCustomTimes && dayCustomTimes[lessonNumber - 1];
+      if(t && t.start && t.end) return { start: t.start, end: t.end };
+      return null;
+    }
+
     /* ========= Renders ========= */
-    function renderTodayTable(dayISO, entriesByLesson){
+    function renderTodayTable(dayISO, entriesByLesson, dayCustomTimes){
       containerMain.innerHTML = '';
 
       activeTodayISO = dayISO;
       activeTodayByLesson = entriesByLesson;
       activeTodayMeta = new Map();
+      activeDayCustomTimes = dayCustomTimes ?? null;
 
       const todayISO = kuwaitTodayISO();
       const activeLesson = (dayISO === todayISO) ? getActiveLessonIndex() : null;
@@ -1913,7 +1929,7 @@
 
       for(let i=1;i<=FIXED_LESSON_COUNT;i++){
         const hit = entriesByLesson.get(String(i));
-        const customTimes = hit && hit.activeStart && hit.activeEnd ? { start: hit.activeStart, end: hit.activeEnd } : null;
+        const customTimes = resolveDisplayLessonTimes(hit, dayCustomTimes, i);
 
         const cLesson = document.createElement('div');
         cLesson.className='cell';
@@ -1988,7 +2004,7 @@
 
       for(let i=1;i<=FIXED_LESSON_COUNT;i++){
         const hit = entriesByLesson.get(String(i));
-        const customTimes = hit && hit.activeStart && hit.activeEnd ? { start: hit.activeStart, end: hit.activeEnd } : null;
+        const customTimes = resolveDisplayLessonTimes(hit, dayCustomTimes, i);
 
         const compactLesson = document.createElement('div');
         compactLesson.className = 'compact-cell lesson-cell';
@@ -2146,9 +2162,15 @@
       return getDocs(q1);
     }
 
+    const CUSTOM_DAY_DOCS_CACHE_MS = 20000;
+
     async function fetchCustomScheduleDocsForDayIndex(dayIndex){
       const cacheKey = `day:${dayIndex}`;
-      if(cache.customDayDocs.has(cacheKey)) return cache.customDayDocs.get(cacheKey);
+      const cached = cache.customDayDocs.get(cacheKey);
+      // Short TTL, not indefinite — without it, a custom schedule enabled or
+      // edited in adminschedule.html while this page is already open would
+      // never show up here until a hard reload.
+      if(cached && (Date.now() - cached.at) < CUSTOM_DAY_DOCS_CACHE_MS) return cached.rows;
       let rows = [];
       try{
         const snap = await getDocs(query(collection(db,'customDaySchedules'), where('dayIndex','==', dayIndex)));
@@ -2156,36 +2178,19 @@
       }catch(e){
         console.error('[fetchCustomScheduleDocsForDayIndex]', e);
       }
-      cache.customDayDocs.set(cacheKey, rows);
+      cache.customDayDocs.set(cacheKey, { at: Date.now(), rows });
       return rows;
     }
 
-    function mergeCustomScheduleIntoMap(byLesson, uid, customRows){
-      customRows.forEach(row=>{
-        const lessonsArr = Array.isArray(row.lessons) ? row.lessons : [];
-        const timesArr = Array.isArray(row.times) ? row.times : [];
-        const max = Math.min(FIXED_LESSON_COUNT, Number(row.lessonCount) || lessonsArr.length || FIXED_LESSON_COUNT);
-        for(let i=0;i<max;i++){
-          const lessonRow = lessonsArr[i] || {};
-          if((lessonRow.teacherUid || '').toString() !== uid) continue;
-          const key = String(i + 1);
-          if(byLesson.has(key)) continue;
-          let classKey = (row.classKey || lessonRow.classKey || '').toString().trim();
-          if(!classKey && row.grade && row.section){
-            classKey = `${row.grade} / ${row.section}${row.track ? ` ${row.track}` : ''}`;
-          }
-          if(!classKey) continue;
-          // Custom/extra-day schedules carry their own per-lesson bell times
-          // (set in admins/adminschedule.html), independent of the site-wide
-          // settings/lessonTimes used by the normal Sun-Thu grid.
-          const t = timesArr[i];
-          byLesson.set(key, {
-            ...lessonRow, classKey, lesson: key, _source: 'custom',
-            activeStart: t?.start || '',
-            activeEnd: t?.end || ''
-          });
-        }
-      });
+    // The day's own bell schedule when an enabled custom schedule covers it
+    // — independent of which lessons *this* teacher happens to have. Every
+    // class's copy of the same custom schedule shares identical times (see
+    // propagateSharedScheduleFields in adminschedule.html), so any enabled
+    // row for the day represents the whole day's period times.
+    async function getCustomDayTimes(dayIndex){
+      const rows = await fetchCustomScheduleDocsForDayIndex(dayIndex);
+      const row = rows.find(r => Array.isArray(r.times) && r.times.length);
+      return row ? row.times : null;
     }
 
     async function buildTodayMapWithOverrides(uid, dateISO){
@@ -2202,8 +2207,15 @@
         loadOverridesForTeacherInDates(uid, [dateISO]),
         fetchCustomScheduleDocsForDayIndex(dayIndex)
       ]);
+
+      // A class with an enabled custom schedule for this weekday doesn't run
+      // its main schedule (or any swap/cover override on it) at all today —
+      // the custom schedule fully replaces it below.
+      const overriddenClassKeys = getOverriddenClassKeys(customRows);
+
       snap.forEach(d=>{
         const x=d.data();
+        if(isClassOverriddenForToday(x, overriddenClassKeys)) return;
         byLesson.set(String(x.lesson), x);
       });
 
@@ -2213,6 +2225,7 @@
       for(let i=1;i<=FIXED_LESSON_COUNT;i++){
         const o = dayMap.get(i);
         if(!o) continue;
+        if(isClassOverriddenForToday(o, overriddenClassKeys)) continue;
 
         if(o._kind === 'new'){
           byLesson.set(String(i), {
@@ -2229,9 +2242,14 @@
         }
       }
 
-      mergeCustomScheduleIntoMap(byLesson, uid, customRows);
+      mergeCustomIntoLessonMap(byLesson, uid, customRows, { fixedLessonCount: FIXED_LESSON_COUNT });
 
       return byLesson;
+    }
+
+    function isClassOverriddenForToday(row, overriddenClassKeys){
+      const ck = classKeyFromRow(row);
+      return !!ck && overriddenClassKeys.has(normalizeClassKey(ck));
     }
 
     function buildClassKeyFromScheduleData(data){
@@ -2295,9 +2313,15 @@
 
       const today = kuwaitTodayISO();
       let byLesson = new Map();
+      let dayCustomTimes = null;
 
       try{
-        byLesson = await buildTodayMapWithOverrides(uid, today);
+        const [map, customTimes] = await Promise.all([
+          buildTodayMapWithOverrides(uid, today),
+          getCustomDayTimes(dayIndexForISO(today)),
+        ]);
+        byLesson = map;
+        dayCustomTimes = customTimes;
         if (byLesson.size === 0) showStatus('لا توجد حصص مدرجة لهذا اليوم.', false);
       }catch(e){
         console.error(e);
@@ -2306,7 +2330,7 @@
         setLoading(btnToday, false);
       }
 
-      renderTodayTable(today, byLesson);
+      renderTodayTable(today, byLesson, dayCustomTimes);
       updateCurrentLessonHighlight();
     }
 
@@ -2333,40 +2357,48 @@
         map.set(iso, new Map());
       }
 
-      const [snap] = await Promise.all([
+      const [snap, , customRowsByDay] = await Promise.all([
         fetchWeekDocsForTeacher(uid),
-        loadOverridesForTeacherInDates(uid, weekDates)
+        loadOverridesForTeacherInDates(uid, weekDates),
+        Promise.all(weekDates.map((iso, dayIdx) => fetchCustomScheduleDocsForDayIndex(dayIdx)))
       ]);
+
+      // A class with an enabled custom schedule for a given weekday doesn't
+      // run its main schedule (or any swap/cover override on it) that day —
+      // computed per weekday since each day can have different overrides.
+      const overriddenClassKeysByDay = weekDates.map((iso, dayIdx) => getOverriddenClassKeys(customRowsByDay[dayIdx]));
+
       snap.forEach(d => {
         const x = d.data();
         // Standing schedule entries recur by weekday — resolve to *this* week's
         // actual date for the matching weekday, not the (possibly stale) date
         // the entry happens to have last been saved with.
-        const iso = weekDates[Number(x.dayIndex)];
+        const dayIdx = Number(x.dayIndex);
+        const iso = weekDates[dayIdx];
         if (iso === undefined) return;
+        if (isClassOverriddenForToday(x, overriddenClassKeysByDay[dayIdx] || new Set())) return;
         if (!map.has(iso)) map.set(iso, new Map());
         const classText = x.classKey || `${x.grade} / ${x.section}${x.track ? ' '+x.track : ''}`;
         map.get(iso).set(Number(x.lesson), classText);
       });
 
       const mapByDate = cache.overridesByTeacher.get(uid) || new Map();
-      for (const iso of weekDates) {
+      weekDates.forEach((iso, dayIdx) => {
         const dayOv = mapByDate.get(iso);
-        if (!dayOv) continue;
+        if (!dayOv) return;
+        const overriddenClassKeys = overriddenClassKeysByDay[dayIdx];
         for (let i = 1; i <= FIXED_LESSON_COUNT; i++) {
           const o = dayOv.get(i);
           if (!o) continue;
+          if (isClassOverriddenForToday(o, overriddenClassKeys)) continue;
           if (o._kind === 'new') {
             map.get(iso).set(i, (o.classKey || 'بديل'));
           } else if (o._kind === 'original') {
             map.get(iso).set(i, '—');
           }
         }
-      }
+      });
 
-      const customRowsByDay = await Promise.all(
-        weekDates.map((iso, dayIdx) => fetchCustomScheduleDocsForDayIndex(dayIdx))
-      );
       weekDates.forEach((iso, dayIdx) => {
         const dayMap = map.get(iso);
         const customRows = customRowsByDay[dayIdx];
@@ -2376,14 +2408,10 @@
           for(let i=0;i<max;i++){
             const lessonRow = lessonsArr[i] || {};
             if((lessonRow.teacherUid || '').toString() !== uid) continue;
-            const lessonNum = i + 1;
-            if(dayMap.has(lessonNum)) continue;
-            let classKey = (row.classKey || lessonRow.classKey || '').toString().trim();
-            if(!classKey && row.grade && row.section){
-              classKey = `${row.grade} / ${row.section}${row.track ? ` ${row.track}` : ''}`;
-            }
+            const classKey = classKeyFromRow(row) || classKeyFromRow(lessonRow);
             if(!classKey) continue;
-            dayMap.set(lessonNum, classKey);
+            // Custom always wins for this slot — overwrite, don't gap-fill.
+            dayMap.set(i + 1, classKey);
           }
         });
       });

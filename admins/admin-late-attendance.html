@@ -721,6 +721,7 @@
     } from "/shared/firebase.js";
     import { showActionPopup } from "/shared/action-popup.js";
     import { mountAttendanceSheet } from "/shared/attendance.js";
+    import { getOverriddenClassKeys, classKeyFromRow, normalizeClassKey } from "/shared/schedule-priority.js";
 
 
 
@@ -972,6 +973,23 @@
         const scheduleMap = new Map();
         if (dayIndex < 0) return scheduleMap;
         try {
+            // Custom/extra schedules (e.g. exam days, or Fri/Sat schedules) aren't in
+            // the main 'schedules' collection below — fetched first so an enabled
+            // one's classes can be excluded from the main schedule, not just
+            // gap-filled: an enabled custom schedule fully replaces the main
+            // schedule for its class/day, it doesn't just fill empty slots.
+            const customSnap = await getDocs(query(
+                collection(db, 'customDaySchedules'),
+                where('dayIndex', '==', dayIndex)
+            ));
+            const customRows = [];
+            customSnap.forEach(ds => {
+                const row = ds.data() || {};
+                if (row.deletedAt || row.enabled !== true) return;
+                customRows.push(row);
+            });
+            const overriddenClassKeys = getOverriddenClassKeys(customRows);
+
             if (dayIndex <= 4) {
                 const snap = await getDocs(query(
                     collection(db, 'schedules'),
@@ -982,37 +1000,23 @@
                     const data = ds.data() || {};
                     const lesson = Number(data.lesson);
                     if (!(lesson >= 1 && lesson <= 7)) return;
-                    let classKey = (data.classKey || '').toString().trim();
-                    if (!classKey && data.grade && data.section) {
-                        classKey = `${data.grade} / ${data.section}${data.track ? ` ${data.track}` : ''}`;
-                    }
+                    const classKey = classKeyFromRow(data);
                     if (!classKey) return;
+                    if (overriddenClassKeys.has(normalizeClassKey(classKey))) return;
                     scheduleMap.set(String(lesson), { classKey });
                 });
             }
 
-            // Custom/extra schedules (e.g. exam days, or Fri/Sat schedules) aren't in
-            // the main 'schedules' collection above, so check those separately.
-            const customSnap = await getDocs(query(
-                collection(db, 'customDaySchedules'),
-                where('dayIndex', '==', dayIndex)
-            ));
-            customSnap.forEach(ds => {
-                const row = ds.data() || {};
-                if (row.deletedAt || row.enabled !== true) return;
+            customRows.forEach(row => {
                 const lessonsArr = Array.isArray(row.lessons) ? row.lessons : [];
                 const max = Math.min(7, Number(row.lessonCount) || lessonsArr.length || 7);
                 for (let i = 0; i < max; i++) {
                     const lessonRow = lessonsArr[i] || {};
                     if ((lessonRow.teacherUid || '').toString() !== teacherUid) continue;
-                    const lessonKey = String(i + 1);
-                    if (scheduleMap.has(lessonKey)) continue;
-                    let classKey = (row.classKey || lessonRow.classKey || '').toString().trim();
-                    if (!classKey && row.grade && row.section) {
-                        classKey = `${row.grade} / ${row.section}${row.track ? ` ${row.track}` : ''}`;
-                    }
+                    const classKey = classKeyFromRow(row) || classKeyFromRow(lessonRow);
                     if (!classKey) continue;
-                    scheduleMap.set(lessonKey, { classKey });
+                    // Enabled custom schedule wins — overwrite, don't gap-fill.
+                    scheduleMap.set(String(i + 1), { classKey });
                 }
             });
         } catch (e) {
