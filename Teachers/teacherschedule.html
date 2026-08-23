@@ -4519,22 +4519,31 @@
     }
 
     /* ========= Current Lesson Highlight Update ========= */
+    // Re-evaluated on a timer (see startCurrentLessonTimer) independently of
+    // the render loop in renderTodayTable — must use the exact same
+    // per-lesson time resolution (isLessonCurrentNow/resolveDisplayLessonTimes)
+    // that render used, or it periodically stomps a correct custom-schedule
+    // highlight with one computed from the generic site-wide bell schedule.
     function updateCurrentLessonHighlight() {
       const todayISO = kuwaitTodayISO();
-      
+
       if (currentView === 'today' && activeTodayISO === todayISO) {
         const activeLesson = getActiveLessonIndex();
-        
+
         containerMain.querySelectorAll('.cell.current-lesson').forEach(el => el.classList.remove('current-lesson'));
         containerMain.querySelectorAll('.compact-row.current-lesson').forEach(el => el.classList.remove('current-lesson'));
 
-        if (activeLesson !== null) {
-          const mainLessonCell = containerMain.querySelector(`.table .cell[data-row-role="lesson"][data-lesson-index="${activeLesson}"]`);
-          const mainClassCell = containerMain.querySelector(`.table .cell[data-row-role="class"][data-lesson-index="${activeLesson}"]`);
+        for (let i = 1; i <= FIXED_LESSON_COUNT; i++) {
+          const hit = activeTodayByLesson.get(String(i));
+          const customTimes = resolveDisplayLessonTimes(hit, activeDayCustomTimes, i);
+          if (!isLessonCurrentNow(activeTodayISO, todayISO, i, activeLesson, customTimes)) continue;
+
+          const mainLessonCell = containerMain.querySelector(`.table .cell[data-row-role="lesson"][data-lesson-index="${i}"]`);
+          const mainClassCell = containerMain.querySelector(`.table .cell[data-row-role="class"][data-lesson-index="${i}"]`);
           if (mainLessonCell) mainLessonCell.classList.add('current-lesson');
           if (mainClassCell) mainClassCell.classList.add('current-lesson');
 
-          const compactRow = containerMain.querySelector(`.compact-table .compact-row[data-lesson-index="${activeLesson}"]`);
+          const compactRow = containerMain.querySelector(`.compact-table .compact-row[data-lesson-index="${i}"]`);
           if (compactRow) compactRow.classList.add('current-lesson');
         }
       }
