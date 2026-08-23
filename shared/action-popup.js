@@ -41,7 +41,9 @@ function ensurePopupStyles() {
 
     #${POPUP_HOST_ID} .abr-popup-dialog {
       position: relative;
-      width: min(460px, calc(100vw - 28px));
+      width: fit-content;
+      min-width: 300px;
+      max-width: min(400px, calc(100vw - 28px));
       border-radius: 20px;
       border: 1px solid #d9e7f5;
       background: linear-gradient(180deg, #ffffff 0%, #f7fbff 100%);
