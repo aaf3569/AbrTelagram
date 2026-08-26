@@ -512,6 +512,106 @@
         .filter-btn.active { background:var(--primary); color:#fff; border-color:var(--primary); }
         .filter-btn:hover { transform:translateY(-2px); box-shadow:0 8px 20px rgba(3,60,84,.15); }
 
+        /* Elements that only exist for the desktop dashboard layout below —
+           hidden here so phones/tablets render exactly as before; the
+           min-width:1024px block further down is the only place that turns
+           them on. */
+        .site-logo,
+        .dash-welcome,
+        .dash-section-title,
+        .dash-sub { display:none; }
+
+        /* ============================================================
+           Desktop dashboard — monitor-sized screens only. Everything
+           below is scoped to min-width:1024px; phones/tablets under that
+           width are completely unaffected by this block.
+           ============================================================ */
+        @media (min-width: 1024px){
+            body{
+                background:
+                    radial-gradient(1100px 520px at 100% -10%, rgba(3,60,84,.06), transparent 60%),
+                    radial-gradient(900px 480px at -6% 12%, rgba(6,83,114,.05), transparent 55%),
+                    var(--page);
+            }
+
+            .site-header{ padding:20px 40px; gap:14px; }
+            .site-logo{ display:block; width:38px; height:38px; object-fit:contain; filter:drop-shadow(0 4px 10px rgba(3,60,84,.25)); }
+            .site-title{ font-size:1.4rem; }
+
+            main{ padding:48px 40px 72px; align-items:flex-start; }
+            .column{ width:min(1160px, 94vw); gap:32px; }
+            /* .column has align-items:center (for centering the mobile
+               phone-width cards), so #stateDashboard — the only .state with
+               no explicit width — shrink-wraps to its content and centers
+               instead of filling the column. Force it to stretch only
+               here; every child below it already uses width:100% relative
+               to it, so this alone unlocks the whole desktop grid. */
+            #stateDashboard{ width:100%; }
+
+            /* Profile hero card */
+            .center{
+                flex-direction:row; align-items:center; justify-content:flex-start;
+                text-align:right; gap:20px; margin-top:0;
+                background:#fff; border:1px solid var(--border); border-radius:20px;
+                box-shadow:var(--shadow-1); padding:22px 28px;
+            }
+            .avatar{ width:76px; height:76px; border-width:2px; flex-shrink:0; }
+            .avatar svg{ width:38px; height:38px; }
+            .dash-hero-text{ display:flex; flex-direction:column; gap:4px; }
+            .name{ font-size:1.35rem; margin-top:0; }
+            .dash-welcome{ display:block; color:var(--muted); font-weight:700; font-size:.92rem; }
+
+            .divider{ display:none; }
+
+            .dash-section-title{
+                display:flex; align-items:center; gap:10px; width:100%;
+                font-size:1.05rem; font-weight:900; color:var(--primary);
+                margin:4px 2px 0;
+            }
+            .dash-section-title::before{
+                content:''; width:8px; height:8px; border-radius:999px; flex-shrink:0;
+                background:linear-gradient(145deg,var(--primary),var(--primary-light));
+            }
+
+            /* Action grid — a fixed 3-column grid (not auto-fit/1fr) so
+               every row's tiles are the same size regardless of how many
+               items land in that row; a short trailing row (e.g. only 2
+               classes) just leaves an empty track instead of stretching
+               its tiles to fill the whole row, which read as lopsided. */
+            .stack.wide{
+                width:100%; display:grid;
+                grid-template-columns:repeat(3, 1fr);
+                gap:18px; margin-top:14px; align-items:stretch;
+            }
+            .stack.wide .btn{
+                width:100%; min-height:128px; border-radius:20px; padding:20px;
+                flex-direction:column; align-items:center; justify-content:center;
+                text-align:center; gap:8px; font-size:1.05rem;
+            }
+            .stack.wide .btn:hover{ transform:translateY(-4px); box-shadow:0 18px 40px rgba(3,60,84,.18); }
+            .stack.wide .btn .icon{
+                order:-1; width:42px; height:42px; border-radius:13px;
+                background:rgba(3,60,84,.08); display:grid; place-items:center;
+            }
+            .stack.wide .btn.class-btn .icon{ background:rgba(255,255,255,.18); }
+            .stack.wide .btn .icon svg{ width:20px; height:20px; }
+            .dash-sub{ display:block; font-size:.82rem; font-weight:700; opacity:.75; white-space:normal; line-height:1.5; }
+
+            .stack.wide .btn.class-btn{ font-size:1.2rem; }
+
+            /* Telegram-settings + logout now just join the same uniform
+               grid as every other action tile — same size, same style,
+               centered plain text since they have no icon. */
+
+            /* Sheets: give the full-screen panels room to breathe on wide screens */
+            .sheet-header{ padding:22px 36px; gap:14px; }
+            .back-btn{ height:46px; padding:0 20px; font-size:.95rem; }
+            .sheet-title{ font-size:1.25rem; }
+
+            .modal .card{ width:min(50vw, 620px); padding:28px; }
+            .schedule-modal .card{ width:min(40vw, 460px); }
+        }
+
         /* Responsive */
         @media (max-width:768px){
             .sheet-header{padding:16px}
@@ -557,6 +657,7 @@
 </head>
 <body>
     <header class="site-header">
+        <img class="site-logo" src="/images/schoollogo.png" alt="" aria-hidden="true">
         <h1 class="site-title">ثانوية أحمد البشر الرومي</h1>
     </header>
     <main>
@@ -597,47 +698,58 @@
             <section id="stateDashboard" class="state" aria-label="لوحة تحكم قائد القسم">
                 <div class="center">
                     <div id="profileAvatar" class="avatar"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.2"></circle><path d="M5 19c0-3.3 3.1-5.5 7-5.5s7 2.2 7 5.5"></path></svg></div>
-                    <div id="displayName" class="name">—</div>
+                    <div class="dash-hero-text">
+                        <div id="displayName" class="name">—</div>
+                        <div class="dash-welcome">مرحبًا بك في لوحة تحكم قائد القسم</div>
+                    </div>
                 </div>
                 <div class="divider" aria-hidden="true"></div>
                 <!-- Classes -->
+                <div class="dash-section-title">فصولي</div>
                 <div id="classesButtons" class="stack wide" style="margin-top:10px;"></div>
+                <div class="dash-section-title">الإجراءات السريعة</div>
                 <div class="stack wide">
                     <button id="teacherScheduleBtn" class="btn ghost" type="button">
                         <span>جدول المعلم</span>
                         <span class="icon" aria-hidden="true">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M8 15h2M14 15h2M8 18h2M14 18h2"/></svg>
                         </span>
+                        <span class="dash-sub">عرض جدولك الأسبوعي</span>
                     </button>
                     <button id="moreBtn" class="btn ghost" type="button">
                         <span>أُخرى</span>
                         <span class="icon" aria-hidden="true">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
                         </span>
+                        <span class="dash-sub">تصفح الفصول حسب الصف</span>
                     </button>
                     <button id="deptBtn" class="btn ghost" type="button">
                         <span>قسمي</span>
                         <span class="icon" aria-hidden="true">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16M12 4v16"/></svg>
                         </span>
+                        <span class="dash-sub">إدارة معلمي القسم</span>
                     </button>
                     <button id="adminScheduleEditBtn" class="btn ghost" type="button" hidden>
                         <span>تعديل جدول الإدارة</span>
                         <span class="icon" aria-hidden="true">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16M12 4v16"/></svg>
                         </span>
+                        <span class="dash-sub">تعديل الجدول الأسبوعي العام</span>
                     </button>
                     <button id="morningLateBtn" class="btn ghost" type="button" hidden>
                         <span>تسجيل تأخير الصباح</span>
                         <span class="icon" aria-hidden="true">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16M12 4v16"/></svg>
                         </span>
+                        <span class="dash-sub">تسجيل تأخر الطلاب صباحًا</span>
                     </button>
                     <button id="logBtn" class="btn ghost" type="button">
                         <span>سجل الغيابات</span>
                         <span class="icon" aria-hidden="true">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
                         </span>
+                        <span class="dash-sub">مراجعة تقارير الغياب السابقة</span>
                     </button>
                     <div id="telegramSettingsSlot"></div>
                     <button id="suggestBtn" class="btn ghost" type="button">
@@ -645,6 +757,7 @@
                         <span class="icon" aria-hidden="true">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                         </span>
+                        <span class="dash-sub">إرسال اقتراح أو بلاغ للإدارة</span>
                     </button>
                     <button id="logoutBtn" class="btn ghost" type="button">تسجيل الخروج</button>
                 </div>
