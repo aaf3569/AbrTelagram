@@ -599,9 +599,18 @@
 
             .stack.wide .btn.class-btn{ font-size:1.2rem; }
 
-            /* Telegram-settings + logout now just join the same uniform
-               grid as every other action tile — same size, same style,
-               centered plain text since they have no icon. */
+            /* Telegram-settings + logout — pushed to the bottom of the grid
+               as their own compact, de-emphasized full-width rows,
+               regardless of where they sit in the DOM among the regular
+               action tiles. */
+            #telegramSettingsBtn,
+            #logoutBtn{
+                grid-column: 1 / -1; min-height:auto;
+                flex-direction:row; align-items:center; justify-content:center;
+                padding:16px 24px; border-radius:16px; font-size:.98rem;
+            }
+            #telegramSettingsBtn{ order:100; margin-top:10px; }
+            #logoutBtn{ order:101; }
 
             /* Sheets: give the full-screen panels room to breathe on wide screens */
             .sheet-header{ padding:22px 36px; gap:14px; }
