@@ -131,6 +131,24 @@ const STYLES = `
   @keyframes attBlockedCardIn{from{transform:translateY(8px) scale(.98);opacity:.7}to{transform:translateY(0) scale(1);opacity:1}}
   @keyframes attBlockedRingDraw{0%{stroke-dashoffset:220;opacity:.5}30%{stroke-dashoffset:0;opacity:1}70%{stroke-dashoffset:0;opacity:1}100%{stroke-dashoffset:220;opacity:.5}}
   @keyframes attBlockedXDraw{0%{stroke-dashoffset:56;opacity:0}25%{stroke-dashoffset:56;opacity:0}45%{stroke-dashoffset:0;opacity:1}70%{stroke-dashoffset:0;opacity:1}100%{stroke-dashoffset:56;opacity:0}}
+  /* Module-owned critical error alert — reserved for genuine save
+     failures (network/server errors), never for routine validation.
+     Pulsing red frame around the whole viewport plus a loud modal, so a
+     real failure can't be mistaken for an ordinary message. */
+  #attCriticalBorder{position:fixed;inset:0;z-index:1150;pointer-events:none;opacity:0;visibility:hidden;transition:opacity .18s ease,visibility .18s ease;box-shadow:inset 0 0 0 8px #dc2626,inset 0 0 70px 12px rgba(220,38,38,.65)}
+  #attCriticalBorder.open{opacity:1;visibility:visible;animation:attCriticalPulse 1.4s ease-in-out infinite}
+  #attCriticalErrorModal .overlay{background:rgba(127,29,29,.35);backdrop-filter:blur(4px)}
+  #attCriticalErrorModal .critical-error-card{position:relative;z-index:1;width:min(380px,92vw);background:linear-gradient(180deg,#ffffff 0%,#fff5f5 100%);border:2px solid #dc2626;border-radius:20px;box-shadow:0 24px 70px rgba(185,28,28,.35);padding:26px 22px;display:grid;justify-items:center;gap:14px;text-align:center}
+  #attCriticalErrorModal.open .critical-error-card{animation:attBlockedCardIn .2s ease}
+  #attCriticalErrorModal .critical-error-icon{width:72px;height:72px;display:grid;place-items:center}
+  #attCriticalErrorModal .critical-error-icon svg{width:72px;height:72px;overflow:visible}
+  #attCriticalErrorModal .critical-error-icon circle{fill:none;stroke:#dc2626;stroke-width:6}
+  #attCriticalErrorModal .critical-error-icon line{stroke:#dc2626;stroke-width:8;stroke-linecap:round}
+  #attCriticalErrorModal .critical-error-icon .dot{fill:#dc2626;stroke:none}
+  #attCriticalErrorModal .critical-error-title{margin:0;color:#dc2626;font-weight:900;font-size:2rem;letter-spacing:.5px}
+  #attCriticalErrorModal .critical-error-msg{margin:0;color:#7f1d1d;font-weight:800;font-size:1rem;line-height:1.8}
+  #attCriticalErrorModal .critical-error-close{width:100%;min-height:52px;margin-top:4px}
+  @keyframes attCriticalPulse{0%,100%{opacity:.65}50%{opacity:1}}
   @media(max-width:640px){
     #attendanceSheet .att-row{width:100%}
     #attendanceSheet .lesson-controls{gap:10px}
@@ -206,6 +224,22 @@ const SHEET_HTML = `
       <div class="row">
         <button id="attErrorOk" class="btn primary" type="button">حسناً</button>
       </div>
+    </div>
+  </div>
+  <div id="attCriticalBorder" aria-hidden="true"></div>
+  <div id="attCriticalErrorModal" class="modal" aria-hidden="true">
+    <div class="overlay"></div>
+    <div class="critical-error-card" role="alertdialog" aria-modal="true" aria-labelledby="attCriticalErrorTitle">
+      <div class="critical-error-icon" aria-hidden="true">
+        <svg viewBox="0 0 100 100">
+          <circle cx="50" cy="50" r="42"></circle>
+          <line x1="50" y1="30" x2="50" y2="58"></line>
+          <circle class="dot" cx="50" cy="72" r="4.5"></circle>
+        </svg>
+      </div>
+      <h3 id="attCriticalErrorTitle" class="critical-error-title">خطأ</h3>
+      <p class="critical-error-msg">يرجى إبلاغ إدارة المدرسة بهذا الأمر في أقرب وقت ممكن.</p>
+      <button id="attCriticalErrorClose" class="btn primary critical-error-close" type="button">إغلاق</button>
     </div>
   </div>
   <div id="attBlockedModal" class="modal blocked-modal" aria-hidden="true">
@@ -370,6 +404,9 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
     errorTitle: document.getElementById("attErrorTitle"),
     errorBody: document.getElementById("attErrorBody"),
     errorOk: document.getElementById("attErrorOk"),
+    criticalBorder: document.getElementById("attCriticalBorder"),
+    criticalErrorModal: document.getElementById("attCriticalErrorModal"),
+    criticalErrorClose: document.getElementById("attCriticalErrorClose"),
     blockedModal: document.getElementById("attBlockedModal"),
     blockedTitle: document.getElementById("attBlockedTitle"),
     blockedBody: document.getElementById("attBlockedBody"),
@@ -418,6 +455,7 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
       els.sheet,
       els.confirmModal,
       els.errorModal,
+      els.criticalErrorModal,
       els.blockedModal,
       els.successModal,
       els.lessonDetailModal,
@@ -463,6 +501,15 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
     els.errorTitle.textContent = title || "خطأ";
     els.errorBody.textContent = body || "حدث خطأ غير متوقع.";
     openModal(els.errorModal);
+  }
+
+  // Reserved for genuine save failures (network/server errors) — never for
+  // routine validation messages, which keep using showError() above. Fixed
+  // title/body per spec: an unmissable red frame around the whole screen
+  // plus a loud modal telling the user to notify the school administration.
+  function showCriticalError() {
+    els.criticalBorder?.classList.add("open");
+    openModal(els.criticalErrorModal);
   }
 
   function showBlocked(reason) {
@@ -1622,7 +1669,7 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
     } catch (e) {
       console.error("[attendance] save:", e);
       closeModal(els.confirmModal);
-      showError("تعذّر الحفظ", "حدث خطأ أثناء حفظ البيانات.");
+      showCriticalError();
     } finally {
       pendingSave = null;
       savingInProgress = false;
@@ -1696,6 +1743,10 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
 
   els.closeBtn.addEventListener("click", () => closeSheet(els.sheet));
   els.errorOk.addEventListener("click", () => closeModal(els.errorModal));
+  els.criticalErrorClose.addEventListener("click", () => {
+    els.criticalBorder?.classList.remove("open");
+    closeModal(els.criticalErrorModal);
+  });
   els.blockedClose.addEventListener("click", () => closeModal(els.blockedModal));
   els.blockedOk.addEventListener("click", () => closeModal(els.blockedModal));
   els.successOk.addEventListener("click", () => closeModal(els.successModal));
