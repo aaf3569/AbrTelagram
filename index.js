@@ -795,6 +795,36 @@ async function resolveTeacherTelegramTarget(teacherUid, teacherNameHint = "") {
   };
 }
 
+// Best-effort — a grade with no supervisor yet (or one not connected to
+// Telegram) shouldn't fail the request; the class teacher is still the
+// primary, required recipient. Never throws.
+async function resolveGradeSupervisorTargets(grade) {
+  const normalizedGrade = String(grade || "").trim();
+  if (!isFirebaseReady() || !normalizedGrade) return [];
+  try {
+    const snap = await db
+      .collection("teachers")
+      .where("isSupervisor", "==", true)
+      .where("supervisorGrade", "==", normalizedGrade)
+      .get();
+    const targets = [];
+    snap.forEach((docSnap) => {
+      const data = docSnap.data() || {};
+      const chatId = String(data.telegramChatId || "").trim();
+      if (!chatId) return;
+      targets.push({
+        teacherUid: docSnap.id,
+        teacherName: String(data.name || "").trim(),
+        chatId,
+      });
+    });
+    return targets;
+  } catch (error) {
+    console.error(`[telegram] resolveGradeSupervisorTargets failed grade=${normalizedGrade}: ${error.message}`);
+    return [];
+  }
+}
+
 async function resolveClassLiveContext({ classKey, now, lessonTimes }) {
   const normalizedClassKey = normalizeClassKey(classKey);
   const classParts = parseClassKeyParts(normalizedClassKey);
@@ -1730,6 +1760,24 @@ app.post("/api/telegram/request-students", async (req, res) => {
 
     await sendTelegramMessage(chatId, message);
 
+    // Also notify the grade's supervisor(s), if any exist and are
+    // connected — best-effort, never blocks/fails the request itself
+    // (the class teacher above is the only required recipient).
+    const classParts = parseClassKeyParts(classKey);
+    const supervisorTargets = await resolveGradeSupervisorTargets(classParts?.grade);
+    const supervisorResults = await Promise.allSettled(
+      supervisorTargets.map((target) => sendTelegramMessage(target.chatId, message))
+    );
+    const notifiedSupervisors = supervisorTargets.filter((_, i) => supervisorResults[i].status === "fulfilled");
+    supervisorResults.forEach((result, i) => {
+      if (result.status === "rejected") {
+        const target = supervisorTargets[i];
+        console.error(
+          `[telegram] request-students supervisor send failed teacherUid=${target.teacherUid} classKey=${classKey}: ${result.reason?.message || result.reason}`
+        );
+      }
+    });
+
     if (isFirebaseReady()) {
       try {
         await db.collection("telegramStudentRequests").add({
@@ -1745,6 +1793,7 @@ app.post("/api/telegram/request-students", async (req, res) => {
           teacherName: context.teacher?.teacherName || null,
           teacherChatId: chatId,
           lesson: context.lesson || null,
+          supervisorsNotified: notifiedSupervisors.map((t) => ({ teacherUid: t.teacherUid, teacherName: t.teacherName || null })),
           createdAt: admin.firestore.FieldValue.serverTimestamp(),
         });
       } catch (error) {
@@ -1758,6 +1807,7 @@ app.post("/api/telegram/request-students", async (req, res) => {
       teacherUid,
       teacherName: context.teacher?.teacherName || null,
       lesson: context.lesson || null,
+      supervisorsNotified: notifiedSupervisors.length,
       sentAt: new Date().toISOString(),
     });
   } catch (error) {

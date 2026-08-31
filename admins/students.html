@@ -3451,7 +3451,12 @@ async function sendStudentRequestNow(){
       throw new Error(body?.error || `request_send_failed_${response.status}`);
     }
     closeStudentRequestConfirmDialog();
-    setRequestSuccess('تم إرسال طلب الطالب عبر التلغرام بنجاح.');
+    const supervisorsNotified = Number(body?.supervisorsNotified) || 0;
+    setRequestSuccess(
+      supervisorsNotified > 0
+        ? `تم إرسال طلب الطالب إلى المعلم و${toArabicDigits(supervisorsNotified)} من مشرفي الصف عبر التلغرام بنجاح.`
+        : 'تم إرسال طلب الطالب عبر التلغرام بنجاح.'
+    );
   }catch(error){
     console.error('[requestStudents] send failed:', error);
     const raw = String(error?.message || '').trim();
