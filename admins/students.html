@@ -3665,7 +3665,8 @@ addTrack.addEventListener('change', populateAddSectionOptions);
 rmClassBtn.addEventListener('click', async ()=>{
   rmOk.style.display='none'; rmErr.style.display='none';
   const classKey = rmClass.value;
-  if(!classKey) return;
+  if(!classKey){ rmErr.textContent='اختر الفصل.'; rmErr.style.display='block'; return; }
+  rmClassBtn.disabled = true;
   try{
     const n = await countStudentsInClass(classKey);
     if(n > 0) throw new Error('لا يمكن حذف هذا الفصل من القائمة لوجود طلاب مسجلين فيه.');
@@ -3678,6 +3679,8 @@ rmClassBtn.addEventListener('click', async ()=>{
     console.error('[rmClass]', e);
     rmErr.textContent = e?.message || 'تعذّر حذف الفصل.';
     rmErr.style.display = 'block';
+  }finally{
+    rmClassBtn.disabled = false;
   }
 });
 
@@ -3689,10 +3692,15 @@ addClassBtn.addEventListener('click', async ()=>{
   const section = addSection.value;
   if(!section) return;
   const classKey = buildClassKey(grade, section, track);
+  addClassBtn.disabled = true;
   try{
     if(classList.includes(classKey)) throw new Error('هذا الفصل موجود بالفعل.');
     await writeClassListChange(classKey, 'add');
     applyClassList([...classList, classKey]);
+    // Re-populates addSection and re-derives addClassBtn.disabled itself
+    // (disabled again if that grade/track is now fully exhausted) — don't
+    // also force it back to enabled below, or a fully-used grade/track
+    // would incorrectly re-enable the button right after this succeeds.
     refreshClassSettingsSheetSelects();
     addOk.textContent = `تمت إضافة الفصل ${toArabicDigits(classKey)}.`;
     addOk.style.display = 'block';
@@ -3700,6 +3708,7 @@ addClassBtn.addEventListener('click', async ()=>{
     console.error('[addClass]', e);
     addErr.textContent = e?.message || 'تعذّر إضافة الفصل.';
     addErr.style.display = 'block';
+    addClassBtn.disabled = false;
   }
 });
 
