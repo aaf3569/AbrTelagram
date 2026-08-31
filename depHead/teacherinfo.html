@@ -733,7 +733,10 @@
       // Try to normalize common variants:
       // "10/1" -> "10 / 1"
       // "10 / 1ع" -> "10 / 1 ع"
-      const m = s.match(/^(\d{2})\s*\/\s*(\d)(?:\s*([عد]))?$/);
+      // Section is \d{1,2} (not just \d) — the add-class UI can create
+      // classes up to number 10, and a single-digit-only capture would
+      // leave those un-normalized (falling through to the raw string below).
+      const m = s.match(/^(\d{2})\s*\/\s*(\d{1,2})(?:\s*([عد]))?$/);
       if(m){
         const g = m[1];
         const sec = m[2];
@@ -741,7 +744,7 @@
         return `${g} / ${sec}${tr}`.trim();
       }
       // If already "10 / 1 ع" keep it
-      const m2 = s.match(/^(\d{2})\s*\/\s*(\d)\s*([عد])$/);
+      const m2 = s.match(/^(\d{2})\s*\/\s*(\d{1,2})\s*([عد])$/);
       if(m2){
         return `${m2[1]} / ${m2[2]} ${m2[3]}`.trim();
       }
@@ -749,9 +752,9 @@
     }
 
     function parseGradeSectionTrack(classKey){
-      // From rules: "10|11|12 / 1..7 (ع|د optional)"
+      // From rules: "10|11|12 / 1..10 (ع|د optional)"
       const s = (classKey || "").toString().trim();
-      const m = s.match(/^(10|11|12)\s*\/\s*(1|2|3|4|5|6|7)(?:\s*(ع|د))?$/);
+      const m = s.match(/^(10|11|12)\s*\/\s*(10|1|2|3|4|5|6|7|8|9)(?:\s*(ع|د))?$/);
       if(!m) return { grade:"", section:"", track:"" };
       return { grade: m[1], section: m[2], track: m[3] || "" };
     }

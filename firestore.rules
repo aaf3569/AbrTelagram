@@ -113,9 +113,13 @@ service cloud.firestore {
 
     /* ---------- Validators ---------- */
 
+    // Section numbers 1-10: the add-class UI (admins/students.html) can
+    // create classes up to number 10 per grade/track, so this must accept
+    // the full range or every write (attendance/schedules/sessions/...)
+    // for a class an admin just added past 7 would be silently rejected.
     function isValidClass(c) {
       return c is string
-        && c.matches('^(10|11|12)\\s*/\\s*(1|2|3|4|5|6|7)(\\s*(ع|د))?$');
+        && c.matches('^(10|11|12)\\s*/\\s*(10|1|2|3|4|5|6|7|8|9)(\\s*(ع|د))?$');
     }
 
     function isValidClassKey(c) {
