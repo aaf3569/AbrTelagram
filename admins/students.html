@@ -381,12 +381,14 @@ main{ flex:1; padding:32px 20px 40px; display:flex }
   box-shadow:var(--shadow-1);
   padding:18px;
   margin-bottom:18px;
+  overflow:hidden;
 }
 .school-overview-head{
   display:flex;
   align-items:flex-start;
   justify-content:space-between;
   gap:12px;
+  min-width:0;
   margin-bottom:14px;
 }
 .school-overview-title{
@@ -416,11 +418,13 @@ main{ flex:1; padding:32px 20px 40px; display:flex }
   display:grid;
   grid-template-columns:minmax(260px, 1fr) minmax(260px, 1fr);
   gap:14px;
+  min-width:0;
 }
 .school-kpis{
   display:grid;
   grid-template-columns:repeat(2, minmax(0, 1fr));
   gap:10px;
+  min-width:0;
 }
 .school-kpi{
   background:#fff;
@@ -429,6 +433,7 @@ main{ flex:1; padding:32px 20px 40px; display:flex }
   padding:12px 14px;
   box-shadow:0 8px 20px rgba(3,60,84,.08);
   min-height:82px;
+  min-width:0;
   display:flex;
   flex-direction:column;
   justify-content:center;
@@ -446,6 +451,7 @@ main{ flex:1; padding:32px 20px 40px; display:flex }
   font-size:.84rem;
   color:#527091;
   font-weight:800;
+  overflow-wrap:break-word;
 }
 .school-kpi-value{
   margin-top:4px;
@@ -453,6 +459,7 @@ main{ flex:1; padding:32px 20px 40px; display:flex }
   font-size:1.36rem;
   font-weight:900;
   color:#0f2743;
+  overflow-wrap:break-word;
 }
 .school-chart-card{
   position:relative;
@@ -462,6 +469,7 @@ main{ flex:1; padding:32px 20px 40px; display:flex }
   box-shadow:0 8px 20px rgba(3,60,84,.08);
   padding:12px;
   min-height:242px;
+  min-width:0;
 }
 .school-chart-wrap{
   position:relative;
@@ -1203,6 +1211,7 @@ html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%;
     top:96px;
     margin-bottom:0;
     align-self:start;
+    min-width:0;
   }
   #schoolStatsPanel .school-overview-body{
     grid-template-columns:1fr;
