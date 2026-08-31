@@ -3077,8 +3077,17 @@ onAuthStateChanged(auth, async (user)=>{
     if((data?.role||'').toString().toLowerCase()!=='admin'){ show(sDenied); return; }
     show(sClasses);
     applyClassList(await fetchClassList(db));
-    await refreshSchoolStats();
-    await applyStudentRoute();
+    // Run in parallel, not sequentially — refreshSchoolStats() fetches the
+    // ENTIRE students collection just for the stats panel, and a deep link
+    // straight into a student profile (?class=...#/students/{id}) doesn't
+    // need that to finish first. Running applyStudentRoute() after it made
+    // the page sit in the classes-list chrome (wrong back button, wrong
+    // title, classes list visible) for however long that whole-collection
+    // read took, before finally switching to the profile's own chrome.
+    await Promise.all([
+      applyStudentRoute(),
+      refreshSchoolStats(),
+    ]);
   }catch(e){ console.error(e); show(sDenied); }
 });
 
