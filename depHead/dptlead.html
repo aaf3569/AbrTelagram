@@ -964,6 +964,7 @@
         import { initializeApp, getApp, getApps } from "/shared/firebase.js";
         import { getAuth, onAuthStateChanged, signOut } from "/shared/firebase.js";
         import { startPresenceHeartbeat } from "/shared/presence.js";
+        import { fetchClassList } from "/shared/class-registry.js";
         import {
             initializeFirestore,
             persistentSingleTabManager,
@@ -1008,12 +1009,10 @@
             getUserName: () => currentUserData?.name || ''
         });
 
-        /* ========= Static Class Options ========= */
-        const CLASS_OPTIONS_RAW = [
-            "10 / 1","10 / 2","10 / 3","10 / 4","10 / 5","10 / 6","10 / 7",
-            "11 / 1 ع","11 / 2 ع","11 / 3 ع","11 / 4 ع","11 / 5 ع","11 / 1 د",
-            "12 / 1 ع","12 / 2 ع","12 / 3 ع","12 / 4 ع","12 / 5 ع","12 / 1 د"
-        ];
+        /* ========= Class Options ========= */
+        // Fetched from settings/classes (see /shared/class-registry.js)
+        // right before renderMoreLists() is first called, inside
+        // onAuthStateChanged below.
 
         /* ========= Kuwait Timezone and Lesson Times ========= */
         const TZ = 'Asia/Kuwait';
@@ -2227,7 +2226,7 @@
 
                 // Load teacher's assigned classes
                 renderClassButtons(data?.classes || []);
-                renderMoreLists(CLASS_OPTIONS_RAW);
+                renderMoreLists(await fetchClassList(db));
 
                 setTimeout(() => {
                     document.querySelectorAll('.lazy-load').forEach(el => el.classList.add('loaded'));

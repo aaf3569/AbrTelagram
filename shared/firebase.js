@@ -15,6 +15,8 @@ import {
 import {
   Timestamp,
   addDoc as _addDoc,
+  arrayRemove,
+  arrayUnion,
   collection,
   collectionGroup,
   deleteDoc as _deleteDoc,
@@ -626,6 +628,8 @@ export {
   EmailAuthProvider,
   Timestamp,
   addDoc,
+  arrayRemove,
+  arrayUnion,
   browserLocalPersistence,
   browserSessionPersistence,
   collection,

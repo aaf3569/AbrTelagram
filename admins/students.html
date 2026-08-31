@@ -1546,6 +1546,71 @@ html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%;
       <div id="delErr" class="err"></div>
     </div>
 
+    <!-- Remove a class from the site-wide options (not a data wipe — blocked while it still has students) -->
+    <div class="section">
+      <div class="label" style="margin-bottom:2px;">حذف فصل من القائمة</div>
+      <div class="muted" style="font-size:.86rem;">يوقف ظهور الفصل كخيار في كل صفحات الموقع. لا يحذف أي بيانات، ولا يعمل إن كان في الفصل طلاب مسجلون حاليًا.</div>
+
+      <div class="row">
+        <div class="field">
+          <div class="label">الصف</div>
+          <div class="input-wrap"><select id="rmGrade" class="input">
+            <option value="10">الصف العاشر</option>
+            <option value="11">الصف الحادي عشر</option>
+            <option value="12">الصف الثاني عشر</option>
+          </select></div>
+        </div>
+        <div class="field">
+          <div class="label">الفصل</div>
+          <div class="input-wrap"><select id="rmClass" class="input"></select></div>
+        </div>
+      </div>
+
+      <div id="rmCountInfo" class="muted" style="font-size:.86rem;"></div>
+      <div style="display:flex; justify-content:flex-end;">
+        <button id="rmClassBtn" class="btn danger" type="button">حذف من القائمة</button>
+      </div>
+      <div id="rmOk" class="ok"></div>
+      <div id="rmErr" class="err"></div>
+    </div>
+
+    <!-- Add a new class to the site-wide options -->
+    <div class="section">
+      <div class="label" style="margin-bottom:2px;">إضافة فصل جديد</div>
+      <div class="muted" style="font-size:.86rem;">اختر الصف (والبرنامج للصف الحادي عشر والثاني عشر)، ثم اختر رقم الفصل من القائمة — تظهر فيها الأرقام غير المستخدمة فقط.</div>
+
+      <div class="row">
+        <div class="field">
+          <div class="label">الصف</div>
+          <div class="input-wrap"><select id="addGrade" class="input">
+            <option value="10">الصف العاشر</option>
+            <option value="11">الصف الحادي عشر</option>
+            <option value="12">الصف الثاني عشر</option>
+          </select></div>
+        </div>
+        <div class="field" id="addTrackField">
+          <div class="label">البرنامج</div>
+          <div class="input-wrap"><select id="addTrack" class="input">
+            <option value="ع">عام (ع)</option>
+            <option value="د">دولي (د)</option>
+          </select></div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <div class="label">رقم الفصل</div>
+          <div class="input-wrap"><select id="addSection" class="input"></select></div>
+        </div>
+      </div>
+
+      <div style="display:flex; justify-content:flex-end;">
+        <button id="addClassBtn" class="btn primary" type="button">إضافة</button>
+      </div>
+      <div id="addOk" class="ok"></div>
+      <div id="addErr" class="err"></div>
+    </div>
+
     <!-- One-time sync of historical attendance into student profiles -->
     <div class="section">
       <div class="label" style="margin-bottom:2px;">مزامنة سجلات الحضور القديمة</div>
@@ -2077,10 +2142,11 @@ html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%;
 /* ========= Firebase ========= */
 import { initializeApp, getApp, getApps } from "/shared/firebase.js";
 import { getAuth, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from "/shared/firebase.js";
-import { initializeFirestore, persistentSingleTabManager, collection, collectionGroup, getDocs, query, where, orderBy, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp, writeBatch } from "/shared/firebase.js";
+import { initializeFirestore, persistentSingleTabManager, collection, collectionGroup, getDocs, query, where, orderBy, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp, writeBatch, arrayUnion, arrayRemove } from "/shared/firebase.js";
 import { mountAttendanceSheet } from "/shared/attendance.js";
 import { fetchStudentAttendanceData, makeAttTile, makeMorningLateTile } from "/shared/attendance-tiles.js";
 import { renderWarningState } from "/shared/warning-system.js";
+import { DEFAULT_CLASS_LIST, fetchClassList, groupByGrade, availableNumbersToAdd, buildClassKey } from "/shared/class-registry.js";
 
 
 
@@ -2302,6 +2368,21 @@ const delErr = document.getElementById('delErr');
 const deleteAllStudentsBtn = document.getElementById('deleteAllStudentsBtn');
 const delAllOk = document.getElementById('delAllOk');
 const delAllErr = document.getElementById('delAllErr');
+
+const rmGrade = document.getElementById('rmGrade');
+const rmClass = document.getElementById('rmClass');
+const rmCountInfo = document.getElementById('rmCountInfo');
+const rmClassBtn = document.getElementById('rmClassBtn');
+const rmOk = document.getElementById('rmOk');
+const rmErr = document.getElementById('rmErr');
+
+const addGrade = document.getElementById('addGrade');
+const addTrackField = document.getElementById('addTrackField');
+const addTrack = document.getElementById('addTrack');
+const addSection = document.getElementById('addSection');
+const addClassBtn = document.getElementById('addClassBtn');
+const addOk = document.getElementById('addOk');
+const addErr = document.getElementById('addErr');
 
 const attSyncBtn = document.getElementById('attSyncBtn');
 const attSyncInfo = document.getElementById('attSyncInfo');
@@ -2986,26 +3067,20 @@ onAuthStateChanged(auth, async (user)=>{
     const data = snap.exists()? snap.data(): {};
     if((data?.role||'').toString().toLowerCase()!=='admin'){ show(sDenied); return; }
     show(sClasses);
+    applyClassList(await fetchClassList(db));
     await refreshSchoolStats();
     await applyStudentRoute();
   }catch(e){ console.error(e); show(sDenied); }
 });
 
 /* ========= Class options (grouped) ========= */
-const CLASS_OPTIONS_RAW = [
-  "10 / 1","10 / 2","10 / 3","10 / 4","10 / 5","10 / 6","10 / 7",
-  "11 / 1 ع","11 / 2 ع","11 / 3 ع","11 / 4 ع","11 / 5 ع","11 / 1 د",
-  "12 / 1 ع","12 / 2 ع","12 / 3 ع","12 / 4 ع","12 / 5 ع","12 / 1 د"
-];
-
-function sorted(list){
-  const parse = (s)=>{ const m = s.match(/^(\d+)\s*\/\s*(\d+)(?:\s*(.*))?$/); return m? {g:+m[1], s:+m[2], suf:(m[3]||'').trim()} : {g:999,s:999,suf:""} };
-  return [...list].sort((A,B)=>{ const a=parse(A), b=parse(B); if(a.g!==b.g) return a.g-b.g; if(a.s!==b.s) return a.s-b.s; return a.suf.localeCompare(b.suf,'ar'); });
-}
-
-const GROUP_10 = sorted(CLASS_OPTIONS_RAW.filter(x=>/^10\b/.test(x)));
-const GROUP_11 = sorted(CLASS_OPTIONS_RAW.filter(x=>/^11\b/.test(x)));
-const GROUP_12 = sorted(CLASS_OPTIONS_RAW.filter(x=>/^12\b/.test(x)));
+// The list of classes that exist school-wide now lives in settings/classes
+// (see /shared/class-registry.js) instead of a hardcoded array — these
+// start empty/default and get populated by applyClassList() once
+// fetchClassList() resolves inside onAuthStateChanged below, then again
+// after every add/remove in the "إدارة الفصول المتاحة" section.
+let classList = DEFAULT_CLASS_LIST;
+let GROUP_10 = [], GROUP_11 = [], GROUP_12 = [];
 
 function makeClassButton(val){
   const btn = document.createElement('button');
@@ -3021,21 +3096,34 @@ function renderGroups(){
   GROUP_10.forEach(v => list10.appendChild(makeClassButton(v)));
   GROUP_11.forEach(v => list11.appendChild(makeClassButton(v)));
   GROUP_12.forEach(v => list12.appendChild(makeClassButton(v)));
-  // accordion toggles
-  document.querySelectorAll('.group > .subject').forEach(head=>{
-    head.addEventListener('click', (e)=>{ const g = e.currentTarget.parentElement; g.classList.toggle('open'); });
-  });
 }
-renderGroups();
+// Accordion toggles: wired once against the static .group/.subject
+// elements (not recreated by renderGroups), since renderGroups() now runs
+// more than once per page load (once at init, again after any class-list
+// edit) and re-attaching per call would stack duplicate listeners.
+document.querySelectorAll('.group > .subject').forEach(head=>{
+  head.addEventListener('click', (e)=>{ const g = e.currentTarget.parentElement; g.classList.toggle('open'); });
+});
+
+// Recomputes every structure derived from the class list (grouped buttons,
+// the grade-scoped selects used across this page) and re-renders them.
+// Called once at init and again after every add/remove.
+function applyClassList(list){
+  classList = list;
+  const grouped = groupByGrade(list);
+  GROUP_10 = grouped['10']; GROUP_11 = grouped['11']; GROUP_12 = grouped['12'];
+  GRADE_CLASSES = { '10': GROUP_10, '11': GROUP_11, '12': GROUP_12 };
+  REQUEST_CLASSES_BY_GRADE = { '10': GROUP_10, '11': GROUP_11, '12': GROUP_12 };
+  renderGroups();
+  populateStudentClassSelect();
+}
+
 updateStudentDesktopLayout();
 syncStudentProfileChrome();
 
 /* ========= Student Request (admins) ========= */
-const REQUEST_CLASSES_BY_GRADE = Object.freeze({
-  '10': GROUP_10,
-  '11': GROUP_11,
-  '12': GROUP_12
-});
+// Populated by applyClassList() above.
+let REQUEST_CLASSES_BY_GRADE = {};
 
 function escapeHtml(value){
   return String(value || '')
@@ -3441,7 +3529,8 @@ function initStudentRequestForm(){
 initStudentRequestForm();
 
 /* ========= Class Settings (move class / delete class / delete all) ========= */
-const GRADE_CLASSES = { '10': GROUP_10, '11': GROUP_11, '12': GROUP_12 };
+// Populated by applyClassList() above.
+let GRADE_CLASSES = { '10': GROUP_10, '11': GROUP_11, '12': GROUP_12 };
 const STUDENT_SUBCOLLECTIONS = ['attendance','commitments','enrollments','reports','notes'];
 const DELETE_ALL_PHRASE = 'delete all students';
 
@@ -3461,7 +3550,6 @@ function populateStudentClassSelect(){
     </optgroup>
   `).join('');
 }
-populateStudentClassSelect();
 
 async function countStudentsInClass(classKey){
   if(!classKey) return 0;
@@ -3481,15 +3569,74 @@ async function updateDeleteCountInfo(){
   delCountInfo.textContent = `عدد الطلاب في هذا الفصل: ${toArabicDigits(n)}`;
 }
 
+// Writes an add/remove to settings/classes. Lazy-seeds the doc with the
+// current effective list first if it doesn't exist yet, so the very first
+// edit an admin ever makes both creates and mutates the registry in one go
+// — no separate migration step required.
+async function writeClassListChange(classKey, mode){
+  const ref = doc(db, 'settings', 'classes');
+  const snap = await getDoc(ref);
+  const meta = { updatedAt: serverTimestamp(), updatedBy: auth.currentUser?.uid || null };
+  if(!snap.exists()){
+    await setDoc(ref, { classes: classList, ...meta });
+  }
+  await updateDoc(ref, { classes: mode === 'add' ? arrayUnion(classKey) : arrayRemove(classKey), ...meta });
+}
+
+async function updateRemoveCountInfo(){
+  rmCountInfo.textContent = 'جارٍ التحقق...';
+  const n = await countStudentsInClass(rmClass.value);
+  rmCountInfo.textContent = `عدد الطلاب في هذا الفصل: ${toArabicDigits(n)}`;
+}
+
+function syncAddTrackVisibility(){
+  const isG10 = addGrade.value === '10';
+  addTrackField.style.display = isG10 ? 'none' : '';
+  addTrack.disabled = isG10;
+}
+
+function populateAddSectionOptions(){
+  const grade = addGrade.value;
+  const track = grade === '10' ? '' : addTrack.value;
+  const numbers = availableNumbersToAdd(classList, grade, track);
+  addSection.innerHTML = numbers.map(n => `<option value="${n}">${toArabicDigits(n)}</option>`).join('');
+  addClassBtn.disabled = numbers.length === 0;
+  addErr.style.display = 'none';
+  if(numbers.length === 0){
+    addErr.textContent = 'تم استخدام جميع أرقام الفصول المتاحة لهذا الصف/البرنامج.';
+    addErr.style.display = 'block';
+  }
+}
+
+// Re-populates every class-settings-sheet select after an add/remove so the
+// change is reflected immediately without closing/reopening the sheet.
+function refreshClassSettingsSheetSelects(){
+  populateClassSelect(mvFromClass, mvFromGrade.value);
+  populateClassSelect(mvToClass, mvToGrade.value);
+  populateClassSelect(delClass, delGrade.value);
+  populateClassSelect(rmClass, rmGrade.value);
+  updateMoveCountInfo();
+  updateDeleteCountInfo();
+  updateRemoveCountInfo();
+  syncAddTrackVisibility();
+  populateAddSectionOptions();
+}
+
 function openClassSettingsSheet(){
   populateClassSelect(mvFromClass, mvFromGrade.value);
   populateClassSelect(mvToClass, mvToGrade.value);
   populateClassSelect(delClass, delGrade.value);
+  populateClassSelect(rmClass, rmGrade.value);
   mvOk.style.display='none'; mvErr.style.display='none';
   delOk.style.display='none'; delErr.style.display='none';
   delAllOk.style.display='none'; delAllErr.style.display='none';
+  rmOk.style.display='none'; rmErr.style.display='none';
+  addOk.style.display='none';
   updateMoveCountInfo();
   updateDeleteCountInfo();
+  updateRemoveCountInfo();
+  syncAddTrackVisibility();
+  populateAddSectionOptions();
   openSheet(classSettingsSheet);
 }
 openClassSettingsBtn.addEventListener('click', openClassSettingsSheet);
@@ -3500,6 +3647,52 @@ mvToGrade.addEventListener('change', ()=> populateClassSelect(mvToClass, mvToGra
 mvFromClass.addEventListener('change', updateMoveCountInfo);
 delGrade.addEventListener('change', ()=>{ populateClassSelect(delClass, delGrade.value); updateDeleteCountInfo(); });
 delClass.addEventListener('change', updateDeleteCountInfo);
+rmGrade.addEventListener('change', ()=>{ populateClassSelect(rmClass, rmGrade.value); updateRemoveCountInfo(); });
+rmClass.addEventListener('change', updateRemoveCountInfo);
+addGrade.addEventListener('change', ()=>{ syncAddTrackVisibility(); populateAddSectionOptions(); });
+addTrack.addEventListener('change', populateAddSectionOptions);
+
+// ---- Remove a class from the options list ----
+rmClassBtn.addEventListener('click', async ()=>{
+  rmOk.style.display='none'; rmErr.style.display='none';
+  const classKey = rmClass.value;
+  if(!classKey) return;
+  try{
+    const n = await countStudentsInClass(classKey);
+    if(n > 0) throw new Error('لا يمكن حذف هذا الفصل من القائمة لوجود طلاب مسجلين فيه.');
+    await writeClassListChange(classKey, 'remove');
+    applyClassList(classList.filter(c => c !== classKey));
+    refreshClassSettingsSheetSelects();
+    rmOk.textContent = 'تم حذف الفصل من القائمة.';
+    rmOk.style.display = 'block';
+  }catch(e){
+    console.error('[rmClass]', e);
+    rmErr.textContent = e?.message || 'تعذّر حذف الفصل.';
+    rmErr.style.display = 'block';
+  }
+});
+
+// ---- Add a new class to the options list ----
+addClassBtn.addEventListener('click', async ()=>{
+  addOk.style.display='none'; addErr.style.display='none';
+  const grade = addGrade.value;
+  const track = grade === '10' ? '' : addTrack.value;
+  const section = addSection.value;
+  if(!section) return;
+  const classKey = buildClassKey(grade, section, track);
+  try{
+    if(classList.includes(classKey)) throw new Error('هذا الفصل موجود بالفعل.');
+    await writeClassListChange(classKey, 'add');
+    applyClassList([...classList, classKey]);
+    refreshClassSettingsSheetSelects();
+    addOk.textContent = `تمت إضافة الفصل ${toArabicDigits(classKey)}.`;
+    addOk.style.display = 'block';
+  }catch(e){
+    console.error('[addClass]', e);
+    addErr.textContent = e?.message || 'تعذّر إضافة الفصل.';
+    addErr.style.display = 'block';
+  }
+});
 
 // ---- Move class ----
 mvSubmitBtn.addEventListener('click', async ()=>{

@@ -1231,6 +1231,7 @@
     /* ========= Firebase ========= */
     import { initializeApp, getApp, getApps } from "/shared/firebase.js";
     import { getAuth, onAuthStateChanged, setPersistence, browserLocalPersistence } from "/shared/firebase.js";
+    import { fetchClassList, groupByGrade } from "/shared/class-registry.js";
     import {
       initializeFirestore,
       persistentSingleTabManager,
@@ -1267,12 +1268,11 @@
     const MAX_LESSON_COUNT = 12;
 
     const GRADES = ["10","11","12"];
-    const CLASSES_BY_GRADE = {
-      "10": ["10 / 1","10 / 2","10 / 3","10 / 4","10 / 5","10 / 6","10 / 7"],
-      "11": ["11 / 1 ع","11 / 2 ع","11 / 3 ع","11 / 4 ع","11 / 5 ع","11 / 1 د"],
-      "12": ["12 / 1 ع","12 / 2 ع","12 / 3 ع","12 / 4 ع","12 / 5 ع","12 / 1 د"],
-    };
-    const ALL_CLASS_KEYS = GRADES.flatMap(g => CLASSES_BY_GRADE[g] || []);
+    // Populated from settings/classes inside onAuthStateChanged below,
+    // right before the first renderSelectors() call — every other consumer
+    // here only runs later, from a user interaction.
+    let CLASSES_BY_GRADE = { "10": [], "11": [], "12": [] };
+    let ALL_CLASS_KEYS = [];
 
     // Default lesson times (fallback if Firestore document doesn't exist)
     const DEFAULT_LESSON_TIMES = [
@@ -3473,6 +3473,9 @@
             </div>`;
           return;
         }
+
+        CLASSES_BY_GRADE = groupByGrade(await fetchClassList(db));
+        ALL_CLASS_KEYS = GRADES.flatMap(g => CLASSES_BY_GRADE[g] || []);
 
         const lastSelected = loadLastSelectedClass();
         selectedGrade = lastSelected?.grade || '10';

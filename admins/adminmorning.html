@@ -650,6 +650,7 @@
       initializeFirestore, persistentSingleTabManager, collection, getDocs, query, where,
       doc, getDoc
     } from "/shared/firebase.js";
+    import { fetchClassList, sortClassList } from "/shared/class-registry.js";
 
 
 
@@ -711,27 +712,11 @@
       return `${y}-${m}-${da}`;
     }
 
-    // Classes
-    const CLASS_OPTIONS_RAW = [
-      "10 / 1", "10 / 2", "10 / 3", "10 / 4", "10 / 5", "10 / 6", "10 / 7",
-      "11 / 1 ع", "11 / 2 ع", "11 / 3 ع", "11 / 4 ع", "11 / 5 ع", "11 / 1 د",
-      "12 / 1 ع", "12 / 2 ع", "12 / 3 ع", "12 / 4 ع", "12 / 5 ع", "12 / 1 د"
-    ];
-
-    function sorted(list) {
-      const parse = (s) => {
-        const m = s.match(/^(\d+)\s*\/\s*(\d+)(?:\s*(.*))?$/);
-        return m ? { g: +m[1], s: +m[2], suf: (m[3] || '').trim() } : { g: 999, s: 999, suf: "" };
-      };
-      return [...list].sort((A, B) => {
-        const a = parse(A), b = parse(B);
-        if (a.g !== b.g) return a.g - b.g;
-        if (a.s !== b.s) return a.s - b.s;
-        return a.suf.localeCompare(b.suf, 'ar');
-      });
-    }
-
-    const ALL_CLASSES = sorted(CLASS_OPTIONS_RAW);
+    // Classes — populated from settings/classes right before the first
+    // loadMorningLatesForDate() call inside onAuthStateChanged below (which
+    // is the only caller of initGrid(), the only consumer of ALL_CLASSES),
+    // so nothing races the empty initial value.
+    let ALL_CLASSES = [];
 
     /*
       Firestore structure used by this page (you can match your own, but keep fields):
@@ -1042,6 +1027,7 @@
         }
 
         show(sOk);
+        ALL_CLASSES = sortClassList(await fetchClassList(db));
         selectedDate = new Date();
         await loadMorningLatesForDate(selectedDate);
       } catch (e) {

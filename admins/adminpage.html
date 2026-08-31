@@ -1279,6 +1279,7 @@
     import { mountFeedbackSheet } from "/shared/feedback.js";
     import { startPresenceHeartbeat } from "/shared/presence.js";
     import { mountAttendanceSheet } from "/shared/attendance.js";
+    import { fetchClassList, sortClassList } from "/shared/class-registry.js";
 
     
 
@@ -2032,25 +2033,11 @@
 
     /* ========= Classes options (للـمعلمين فقط) ========= */
     const CLASS_CUSTOM_VALUE = "__custom__";
-    const classOptionsRaw = [
-      "10 / 1","10 / 2","10 / 3","10 / 4","10 / 5","10 / 6","10 / 7",
-      "11 / 1 ع","11 / 2 ع","11 / 3 ع","11 / 4 ع","11 / 5 ع","11 / 1 د",
-      "12 / 1 ع","12 / 2 ع","12 / 3 ع","12 / 4 ع","12 / 5 ع","12 / 1 د"
-    ];
-    function sortedClassOptions() {
-      const parse = (s)=>{
-        const m = s.match(/^(\d+)\s*\/\s*(\d+)(?:\s*(.*))?$/);
-        if(!m) return {g:999, s:999, suf:""};
-        return { g: parseInt(m[1],10), s: parseInt(m[2],10), suf: (m[3]||"").trim() };
-      };
-      return [...classOptionsRaw].sort((a,b)=>{
-        const A=parse(a), B=parse(b);
-        if(A.g!==B.g) return A.g-B.g;
-        if(A.s!==B.s) return A.s-B.s;
-        return A.suf.localeCompare(B.suf,'ar');
-      });
-    }
-    const classOptions = sortedClassOptions();
+    // Fetched from settings/classes inside onAuthStateChanged below, before
+    // show(sAdmin) — makeClassRow() (the only consumer) is only ever
+    // invoked later from a user-opened add/edit teacher form. The "custom"
+    // free-text escape hatch above is unrelated and untouched.
+    let classOptions = [];
 
     function makeClassRow(initialValue=""){
       const row = document.createElement('div');
@@ -2174,6 +2161,7 @@
         adminName.textContent = data?.name || (user.email ? user.email.split('@')[0] : 'مشرف');
         avatarUserUid = user.uid;
         loadStoredAvatar(user.uid);
+        classOptions = sortClassList(await fetchClassList(db));
         renderMyClasses(data?.classes);
         show(sAdmin);
         initNotificationPopup(db, { uid: user.uid, name: data?.name || '' });

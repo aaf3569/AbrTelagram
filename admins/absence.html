@@ -510,6 +510,7 @@
       doc, getDoc
     } from "/shared/firebase.js";
     import { kuwaitTodayISO } from "/shared/kuwait-time.js";
+    import { fetchClassList, groupByGrade, sortClassList } from "/shared/class-registry.js";
 
     const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
     let db;
@@ -662,28 +663,11 @@
       }
     }
 
-    // Classes
-    const CLASS_OPTIONS_RAW = [
-      "10 / 1", "10 / 2", "10 / 3", "10 / 4", "10 / 5", "10 / 6", "10 / 7",
-      "11 / 1 ع", "11 / 2 ع", "11 / 3 ع", "11 / 4 ع", "11 / 5 ع", "11 / 1 د",
-      "12 / 1 ع", "12 / 2 ع", "12 / 3 ع", "12 / 4 ع", "12 / 5 ع", "12 / 1 د"
-    ];
-    function sortClasses(list) {
-      const parse = (s) => {
-        const m = s.match(/^(\d+)\s*\/\s*(\d+)(?:\s*(.*))?$/);
-        return m ? { g: +m[1], s: +m[2], suf: (m[3] || '').trim() } : { g: 999, s: 999, suf: "" };
-      };
-      return [...list].sort((A, B) => {
-        const a = parse(A), b = parse(B);
-        if (a.g !== b.g) return a.g - b.g;
-        if (a.s !== b.s) return a.s - b.s;
-        return a.suf.localeCompare(b.suf, 'ar');
-      });
-    }
-    const GROUP_10 = sortClasses(CLASS_OPTIONS_RAW.filter(x => /^10\b/.test(x)));
-    const GROUP_11 = sortClasses(CLASS_OPTIONS_RAW.filter(x => /^11\b/.test(x)));
-    const GROUP_12 = sortClasses(CLASS_OPTIONS_RAW.filter(x => /^12\b/.test(x)));
-    const ALL_CLASSES_SORTED = sortClasses(CLASS_OPTIONS_RAW);
+    // Classes — populated from settings/classes inside onAuthStateChanged
+    // below, before show(sHome)/loadHomeStats(); every consumer here
+    // (groupForGrade, classesForScope) only ever runs from a later user
+    // interaction, so nothing races these empty initial values.
+    let GROUP_10 = [], GROUP_11 = [], GROUP_12 = [], ALL_CLASSES_SORTED = [];
     function groupForGrade(g) {
       return g === 10 ? GROUP_10 : g === 11 ? GROUP_11 : GROUP_12;
     }
@@ -842,6 +826,10 @@
           show(sDenied);
           return;
         }
+        const list = await fetchClassList(db);
+        const grouped = groupByGrade(list);
+        GROUP_10 = grouped['10']; GROUP_11 = grouped['11']; GROUP_12 = grouped['12'];
+        ALL_CLASSES_SORTED = sortClassList(list);
         show(sHome);
         loadHomeStats();
       } catch (e) {

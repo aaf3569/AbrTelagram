@@ -1104,6 +1104,11 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    match /settings/classes {
+      allow read: if isTeacherSupervisorOrAdmin();
+      allow write: if isAdmin();
+    }
+
     /* ---------- attendanceSessions ---------- */
     match /attendanceSessions/{sessionId} {
 

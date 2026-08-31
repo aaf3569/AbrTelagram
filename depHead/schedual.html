@@ -832,6 +832,7 @@
       addDoc, serverTimestamp, updateDoc, runTransaction,
       limit, orderBy, onSnapshot, writeBatch
     } from "/shared/firebase.js";
+    import { fetchClassList, sortClassList } from "/shared/class-registry.js";
 
     
 
@@ -870,11 +871,9 @@
       second: "الفرصة الثانية"
     };
 
-    const CLASS_OPTIONS = [
-      "10 / 1","10 / 2","10 / 3","10 / 4","10 / 5","10 / 6","10 / 7",
-      "11 / 1 ع","11 / 2 ع","11 / 3 ع","11 / 4 ع","11 / 5 ع","11 / 1 د",
-      "12 / 1 ع","12 / 2 ع","12 / 3 ع","12 / 4 ع","12 / 5 ع","12 / 1 د"
-    ];
+    // Fetched from settings/classes inside onAuthStateChanged below, before
+    // initClassPicker() (the only consumer) is first called.
+    let CLASS_OPTIONS = [];
 
     // Schedule entries recur weekly (identified by weekday, not calendar date),
     // so lookups match by dayIndex (0=Sun..4=Thu) rather than an exact date.
@@ -3077,6 +3076,7 @@
           
           await setupBreaksListener();
           initWeek();
+          CLASS_OPTIONS = sortClassList(await fetchClassList(db));
           initClassPicker();
           
           setFilterActive(btnToday);

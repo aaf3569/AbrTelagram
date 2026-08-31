@@ -725,6 +725,7 @@
     import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signOut, EmailAuthProvider, reauthenticateWithCredential } from "/shared/firebase.js";
     import { initializeFirestore, persistentSingleTabManager, collection, getDocs, query, where, doc, getDoc, setDoc, updateDoc, deleteDoc, deleteField, serverTimestamp } from "/shared/firebase.js";
     import { startPresenceHeartbeat, watchPresence } from "/shared/presence.js";
+    import { fetchClassList, sortClassList } from "/shared/class-registry.js";
 
 
     const app=getApps().length?getApp():initializeApp(firebaseConfig);
@@ -981,9 +982,10 @@
 
     const subjectsKW=["اللغة العربية","اللغة الإنجليزية","الرياضيات","التربية الإسلامية",HIST_GEO_DEPARTMENT,PSY_PHIL_DEPARTMENT,PHYSICS_CHEM_DEPARTMENT,GEO_BIO_DEPARTMENT,"الحاسوب","التربية البدنية","التربية الفنية"];
 
-    const classOptionsRaw=["10 / 1","10 / 2","10 / 3","10 / 4","10 / 5","10 / 6","10 / 7","11 / 1 ع","11 / 2 ع","11 / 3 ع","11 / 4 ع","11 / 5 ع","11 / 1 د","12 / 1 ع","12 / 2 ع","12 / 3 ع","12 / 4 ع","12 / 5 ع","12 / 1 د"];
-    function sortedClassOptions(){const parse=(s)=>{const m=s.match(/^(\d+)\s*\/\s*(\d+)(?:\s*(.*))?$/);if(!m)return {g:999,s:999,suf:""};return {g:+m[1],s:+m[2],suf:(m[3]||"").trim()};};return [...classOptionsRaw].sort((a,b)=>{const A=parse(a),B=parse(b);if(A.g!==B.g)return A.g-B.g;if(A.s!==B.s)return A.s-B.s;return A.suf.localeCompare(B.suf,'ar');});}
-    const classOptions=sortedClassOptions();
+    // Fetched from settings/classes inside onAuthStateChanged below, before
+    // show(sTeachers) — makeClassRow() (the only consumer) is only ever
+    // invoked later from a user-opened add/edit teacher form.
+    let classOptions=[];
 
     function getMergedSubjectsForDepartment(subject){
       if(subject===PHYSICS_CHEM_DEPARTMENT) return PHYSICS_CHEM_SUBJECTS;
@@ -2042,6 +2044,7 @@
         if((data?.role||'').toString().toLowerCase()!=='admin'){isCurrentUserAdmin=false;show(sDenied);return;}
         isCurrentUserAdmin=true;
         startPresenceHeartbeat(db, user.uid);
+        classOptions = sortClassList(await fetchClassList(db));
         renderSubjects();
         show(sTeachers);
         await applyTeacherRoute();

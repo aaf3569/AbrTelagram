@@ -474,6 +474,7 @@
     import { firebaseConfig } from "/shared/firebase.js";
     import { initializeApp, getApp, getApps } from "/shared/firebase.js";
     import { getAuth, onAuthStateChanged } from "/shared/firebase.js";
+    import { fetchClassList } from "/shared/class-registry.js";
     import {
       initializeFirestore,
       persistentSingleTabManager,
@@ -490,11 +491,11 @@
 
     const TZ = "Asia/Kuwait";
 
-    const CLASS_OPTIONS_RAW = [
-      "10 / 1","10 / 2","10 / 3","10 / 4","10 / 5","10 / 6","10 / 7",
-      "11 / 1 ع","11 / 2 ع","11 / 3 ع","11 / 4 ع","11 / 5 ع","11 / 1 د",
-      "12 / 1 ع","12 / 2 ع","12 / 3 ع","12 / 4 ع","12 / 5 ع","12 / 1 د"
-    ];
+    // Fetched from settings/classes inside onAuthStateChanged below, right
+    // before setState(sApp) — getSectionsForGrade() (the only consumer)
+    // only ever runs from the grade-select's change handler, which the
+    // user can't reach until sApp is shown.
+    let CLASS_OPTIONS_RAW = [];
 
     const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
     let db;
@@ -680,6 +681,7 @@
           return;
         }
 
+        CLASS_OPTIONS_RAW = await fetchClassList(db);
         setState(sApp);
       }catch(e){
         console.error(e);
