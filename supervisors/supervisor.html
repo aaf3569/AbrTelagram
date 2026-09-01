@@ -1617,6 +1617,11 @@
             return new Intl.DateTimeFormat('en-US', { weekday: 'long', timeZone: 'Asia/Kuwait' }).format(new Date());
         }
 
+        function overrideCreatedMs(ov){
+            const t = ov?.createdAt;
+            return (t && typeof t.toMillis === 'function') ? t.toMillis() : 0;
+        }
+
         async function getScheduledLessonsForClass(classKey){
             if(!auth.currentUser || !classKey) return new Set();
 
@@ -1656,19 +1661,45 @@
             // schedule above — a teacher swapped INTO this slot needs it
             // added even though their own weekly schedule never had it; one
             // swapped OUT needs it removed even though their standing
-            // schedule still lists it.
+            // schedule still lists it. Two separate targeted queries —
+            // scheduleOverrides docs carry no "kind" field (confirmed
+            // against both places that create them), so matching on
+            // newTeacherUid/originalTeacherUid directly is the only
+            // reliable way to tell which side of a swap a doc represents.
             try{
-                const ovSnap = await getDocs(query(collection(db, 'scheduleOverrides'), where('date', '==', dateKW)));
-                ovSnap.forEach(ds => {
+                const [ovNewSnap, ovOriginalSnap] = await Promise.all([
+                    getDocs(query(collection(db, 'scheduleOverrides'), where('date', '==', dateKW), where('newTeacherUid', '==', teacherUid))),
+                    getDocs(query(collection(db, 'scheduleOverrides'), where('date', '==', dateKW), where('originalTeacherUid', '==', teacherUid))),
+                ]);
+                // A lesson can end up with BOTH an incoming and an outgoing
+                // override for this class — e.g. a swap later reversed by a
+                // second swapRequest, whose acceptance creates another pair
+                // of override docs rather than canceling the first pair.
+                // Whichever side is more recently created wins; the older
+                // one is ignored entirely for that lesson.
+                const candidates = new Map(); // lesson -> { role, ms }
+                const consider = (lesson, role, ov) => {
+                    const ms = overrideCreatedMs(ov);
+                    const existing = candidates.get(lesson);
+                    if (!existing || ms >= existing.ms) candidates.set(lesson, { role, ms });
+                };
+                ovNewSnap.forEach(ds => {
                     const ov = ds.data() || {};
                     const lesson = Number(ov.lesson);
                     if(!Number.isFinite(lesson)) return;
                     if(!classMatchesScheduleRow(ov, normalizedClass)) return;
-                    if(ov.kind === 'new' && ov.newTeacherUid === teacherUid){
-                        lessonSet.add(lesson);
-                    }else if(ov.kind === 'original' && ov.originalTeacherUid === teacherUid){
-                        lessonSet.delete(lesson);
-                    }
+                    consider(lesson, 'new', ov);
+                });
+                ovOriginalSnap.forEach(ds => {
+                    const ov = ds.data() || {};
+                    const lesson = Number(ov.lesson);
+                    if(!Number.isFinite(lesson)) return;
+                    if(!classMatchesScheduleRow(ov, normalizedClass)) return;
+                    consider(lesson, 'original', ov);
+                });
+                candidates.forEach(({ role }, lesson) => {
+                    if (role === 'new') lessonSet.add(lesson);
+                    else lessonSet.delete(lesson);
                 });
             }catch(error){
                 console.error('Error loading schedule overrides:', error);
@@ -1735,13 +1766,42 @@
             // elsewhere) — a teacher swapped INTO a slot needs it added even
             // though their own standing schedule never had it; one swapped
             // OUT needs it removed even though their schedule still lists it.
+            // Two separate targeted queries — scheduleOverrides docs carry
+            // no "kind" field (confirmed against both places that create
+            // them), so matching on newTeacherUid/originalTeacherUid
+            // directly is the only reliable way to tell which side of a
+            // swap a doc represents.
             try{
-                const ovSnap = await getDocs(query(collection(db, 'scheduleOverrides'), where('date', '==', dateKW)));
-                ovSnap.forEach(ds => {
+                const [ovNewSnap, ovOriginalSnap] = await Promise.all([
+                    getDocs(query(collection(db, 'scheduleOverrides'), where('date', '==', dateKW), where('newTeacherUid', '==', teacherUid))),
+                    getDocs(query(collection(db, 'scheduleOverrides'), where('date', '==', dateKW), where('originalTeacherUid', '==', teacherUid))),
+                ]);
+                // A lesson can end up with BOTH an incoming and an outgoing
+                // override — e.g. a swap later reversed by a second
+                // swapRequest, whose acceptance creates another pair of
+                // override docs rather than canceling the first pair.
+                // Whichever side is more recently created wins; the older
+                // one is ignored entirely for that lesson.
+                const candidates = new Map(); // lesson -> { role, ov, ms }
+                const consider = (lesson, role, ov) => {
+                    const ms = overrideCreatedMs(ov);
+                    const existing = candidates.get(lesson);
+                    if (!existing || ms >= existing.ms) candidates.set(lesson, { role, ov, ms });
+                };
+                ovNewSnap.forEach(ds => {
                     const ov = ds.data() || {};
                     const lesson = Number(ov.lesson);
                     if(!Number.isFinite(lesson)) return;
-                    if(ov.kind === 'new' && ov.newTeacherUid === teacherUid){
+                    consider(lesson, 'new', ov);
+                });
+                ovOriginalSnap.forEach(ds => {
+                    const ov = ds.data() || {};
+                    const lesson = Number(ov.lesson);
+                    if(!Number.isFinite(lesson)) return;
+                    consider(lesson, 'original', ov);
+                });
+                candidates.forEach(({ role, ov }, lesson) => {
+                    if (role === 'new') {
                         const classKey = extractClassKeyFromScheduleRow(ov);
                         if(!classKey) return;
                         const interval = intervalByIndex.get(lesson);
@@ -1754,7 +1814,7 @@
                             startMin: interval.start,
                             endMin: interval.end
                         });
-                    }else if(ov.kind === 'original' && ov.originalTeacherUid === teacherUid){
+                    } else {
                         for (const [key, value] of bySlot){
                             if (value.lesson === lesson) bySlot.delete(key);
                         }

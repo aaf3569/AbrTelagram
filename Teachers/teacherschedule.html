@@ -1787,25 +1787,33 @@
           where('date','in', targetDates)
         );
         const [sNew, sOld] = await Promise.all([getDocs(qNew), getDocs(qOld)]);
-        sNew.forEach(d=>{
+
+        // A lesson can end up with BOTH an incoming and an outgoing
+        // override for this teacher on the same date — e.g. a swap later
+        // reversed by a second swapRequest, whose acceptance creates
+        // another pair of override docs rather than canceling the first
+        // pair (nothing currently reconciles that at write time). Track
+        // the most-recently-created candidate per (date, lesson)
+        // regardless of which side it's on, so the later swap always
+        // supersedes the earlier one instead of both showing up.
+        const msOf = (x) => (x?.createdAt && typeof x.createdAt.toMillis === 'function') ? x.createdAt.toMillis() : 0;
+        const bestMsByDateLesson = new Map(); // `${iso}|${lesson}` -> ms
+        const considerCandidate = (d, kind) => {
           const x = d.data();
           if(!x || !x.date) return;
           const iso = x.date;
+          const lesson = Number(x.lesson);
+          const key = `${iso}|${lesson}`;
+          const ms = msOf(x);
+          const bestMs = bestMsByDateLesson.get(key);
+          if(bestMs !== undefined && ms < bestMs) return;
+          bestMsByDateLesson.set(key, ms);
           if(!mapByDate.has(iso)) mapByDate.set(iso, new Map());
-          mapByDate.get(iso).set(Number(x.lesson), { ...x, _id: d.id, _kind: 'new' });
-        });
+          mapByDate.get(iso).set(lesson, { ...x, _id: d.id, _kind: kind });
+        };
 
-        sOld.forEach(d=>{
-          const x = d.data();
-          if(!x || !x.date) return;
-          const iso = x.date;
-          if(!mapByDate.has(iso)) mapByDate.set(iso, new Map());
-
-          const existing = mapByDate.get(iso).get(Number(x.lesson));
-          if(!existing){
-            mapByDate.get(iso).set(Number(x.lesson), { ...x, _id: d.id, _kind: 'original' });
-          }
-        });
+        sNew.forEach(d => considerCandidate(d, 'new'));
+        sOld.forEach(d => considerCandidate(d, 'original'));
 
       }catch(e){
         console.error(e);

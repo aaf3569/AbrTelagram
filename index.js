@@ -517,38 +517,49 @@ async function loadLessonTimes() {
 }
 
 async function loadOverridesForDate(dateISO) {
-  const addedByTeacher = new Map();
-  const removedByTeacher = new Map();
+  // For each (teacherUid, lesson), keep whichever override doc is more
+  // recently created — this teacher gaining the lesson, or losing it —
+  // keyed by `${uid}|${lesson}`. scheduleOverrides docs carry no "kind"
+  // field (confirmed against both places that create them:
+  // Teachers/teacherschedule.html's reqAccept and depHead/schedual.html's
+  // createOverridesInTransaction), so a doc's newTeacherUid/
+  // originalTeacherUid are read directly instead. Resolving by recency
+  // (rather than "removed always wins" or "added always wins") is what
+  // makes a swap that's later reversed by a second swapRequest — whose
+  // acceptance creates another pair of override docs rather than
+  // canceling the first pair — settle on the correct final lesson instead
+  // of reminding a teacher about both the old and new one.
+  const resolved = new Map(); // `${uid}|${lesson}` -> { added, classKey, ms }
 
   if (!isFirebaseReady()) {
     console.warn("[firebase] loadOverridesForDate skipped: Firebase unavailable");
-    return { addedByTeacher, removedByTeacher };
+    return resolved;
   }
 
   try {
     const snap = await db.collection("scheduleOverrides").where("date", "==", dateISO).get();
+    const msOf = (x) => (x?.createdAt && typeof x.createdAt.toDate === "function") ? x.createdAt.toDate().getTime() : 0;
+    const consider = (uid, lesson, added, classKey, ms) => {
+      const key = `${uid}|${lesson}`;
+      const existing = resolved.get(key);
+      if (!existing || ms >= existing.ms) {
+        resolved.set(key, { added, classKey, ms });
+      }
+    };
     snap.forEach((docSnap) => {
       const x = docSnap.data() || {};
       const lesson = Number(x.lesson);
       if (!Number.isFinite(lesson) || lesson < 1 || lesson > 7) return;
       const classKey = buildClassKeyFromRow(x);
-
-      if (x.kind === "new" && x.newTeacherUid) {
-        const uid = String(x.newTeacherUid);
-        if (!addedByTeacher.has(uid)) addedByTeacher.set(uid, []);
-        addedByTeacher.get(uid).push({ lesson, classKey });
-      }
-      if (x.kind === "original" && x.originalTeacherUid) {
-        const uid = String(x.originalTeacherUid);
-        if (!removedByTeacher.has(uid)) removedByTeacher.set(uid, new Set());
-        removedByTeacher.get(uid).add(lesson);
-      }
+      const ms = msOf(x);
+      if (x.newTeacherUid) consider(String(x.newTeacherUid), lesson, true, classKey, ms);
+      if (x.originalTeacherUid) consider(String(x.originalTeacherUid), lesson, false, classKey, ms);
     });
   } catch (error) {
     console.error(`[firebase] loadOverridesForDate failed date=${dateISO}: ${error.message}`);
   }
 
-  return { addedByTeacher, removedByTeacher };
+  return resolved;
 }
 
 async function loadCustomLessonsByTeacher(dayIndex, lessonTimes) {
@@ -673,25 +684,30 @@ async function buildTeacherLessonsForToday({
     }
   }
 
-  const removed = overrides.removedByTeacher.get(teacherUid) || new Set();
-  if (removed.size > 0) {
-    for (const [key, item] of byKey.entries()) {
-      if (removed.has(item.lesson)) byKey.delete(key);
+  // `overrides` (from loadOverridesForDate) is pre-resolved per
+  // (teacherUid, lesson) to whichever override doc is more recent, so a
+  // single pass here is enough — no separate "remove everything, then add
+  // everything" ordering that would let a stale removal or addition win
+  // just because it was processed later.
+  for (const lessonIndex of lessonTimeByIndex.keys()) {
+    const decision = overrides.get(`${teacherUid}|${lessonIndex}`);
+    if (!decision) continue;
+    if (decision.added) {
+      if (!decision.classKey) continue;
+      const fallback = lessonTimeByIndex.get(lessonIndex) || { startMin: 0, endMin: 0 };
+      const key = `${lessonIndex}|${normalizeClassKey(decision.classKey)}`;
+      byKey.set(key, {
+        lesson: lessonIndex,
+        classKey: decision.classKey,
+        startMin: fallback.startMin,
+        endMin: fallback.endMin,
+        source: "override",
+      });
+    } else {
+      for (const [key, item] of byKey.entries()) {
+        if (item.lesson === lessonIndex) byKey.delete(key);
+      }
     }
-  }
-
-  const added = overrides.addedByTeacher.get(teacherUid) || [];
-  for (const item of added) {
-    if (!item.classKey) continue;
-    const fallback = lessonTimeByIndex.get(item.lesson) || { startMin: 0, endMin: 0 };
-    const key = `${item.lesson}|${normalizeClassKey(item.classKey)}`;
-    byKey.set(key, {
-      lesson: item.lesson,
-      classKey: item.classKey,
-      startMin: fallback.startMin,
-      endMin: fallback.endMin,
-      source: "override",
-    });
   }
 
   const customItems = customLessonsByTeacher.get(teacherUid) || [];

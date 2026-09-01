@@ -1254,36 +1254,52 @@
                     getDocs(newOverrideQuery),
                     getDocs(originalOverrideQuery)
                 ]);
-                
-                // Process new overrides (lessons added to me)
-                newOverrideSnap.forEach(doc => {
-                    const data = doc.data();
-                    const lessonKey = data.lesson.toString();
-                    
-                    // Flexible field name resolution for overrides
-                    let classKey = data.classKey || data.class || data.className;
-                    if (!classKey && data.grade && data.section) {
-                        classKey = `${data.grade} / ${data.section}`;
-                        if (data.track) {
-                            classKey += ` ${data.track}`;
-                        }
-                    }
-                    
-                    scheduleMap.set(lessonKey, {
-                        ...data,
-                        classKey,
-                        isOverride: true,
-                        isNew: true
-                    });
-                });
-                
-                // Process original overrides (lessons removed from me)
-                originalOverrideSnap.forEach(doc => {
-                    const data = doc.data();
-                    const lessonKey = data.lesson.toString();
 
-                    // Remove lesson from schedule (covered away)
-                    scheduleMap.delete(lessonKey);
+                // A lesson can end up with BOTH an incoming and an outgoing
+                // override for this teacher — e.g. a swap later reversed by
+                // a second swapRequest, whose acceptance creates another
+                // pair of override docs rather than canceling the first
+                // pair (nothing currently reconciles that at write time).
+                // Whichever side is more recently created wins; the older
+                // one is ignored entirely for that lesson — otherwise a
+                // stale "original" (lost this lesson) could still delete a
+                // lesson the teacher correctly regained via a later swap
+                // back.
+                const msOf = (x) => (x?.createdAt && typeof x.createdAt.toMillis === 'function') ? x.createdAt.toMillis() : 0;
+                const overrideCandidates = new Map(); // lessonKey -> { kind, data, ms }
+                const considerOverride = (docSnap, kind) => {
+                    const data = docSnap.data();
+                    if (data.lesson == null) return;
+                    const lessonKey = data.lesson.toString();
+                    const ms = msOf(data);
+                    const existing = overrideCandidates.get(lessonKey);
+                    if (!existing || ms >= existing.ms) {
+                        overrideCandidates.set(lessonKey, { kind, data, ms });
+                    }
+                };
+                newOverrideSnap.forEach(d => considerOverride(d, 'new'));
+                originalOverrideSnap.forEach(d => considerOverride(d, 'original'));
+
+                overrideCandidates.forEach(({ kind, data }, lessonKey) => {
+                    if (kind === 'new') {
+                        // Flexible field name resolution for overrides
+                        let classKey = data.classKey || data.class || data.className;
+                        if (!classKey && data.grade && data.section) {
+                            classKey = `${data.grade} / ${data.section}`;
+                            if (data.track) {
+                                classKey += ` ${data.track}`;
+                            }
+                        }
+                        scheduleMap.set(lessonKey, {
+                            ...data,
+                            classKey,
+                            isOverride: true,
+                            isNew: true
+                        });
+                    } else {
+                        // Remove lesson from schedule (covered away)
+                        scheduleMap.delete(lessonKey);
+                    }
                 });
 
                 // Custom/extra schedules (e.g. exam days, or Fri/Sat schedules) aren't in

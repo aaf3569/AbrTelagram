@@ -702,6 +702,34 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
 
   const TODAY_MAP_CACHE_MS = 45000;
 
+  function overrideCreatedMs(ov) {
+    const t = ov?.createdAt;
+    return (t && typeof t.toMillis === "function") ? t.toMillis() : 0;
+  }
+
+  // Merges "I'm the incoming teacher" and "I'm the outgoing teacher" query
+  // results for a lesson into `map`, resolving a lesson touched by BOTH
+  // (a swap later reversed by a second swapRequest — see the call site's
+  // comment) by keeping only whichever side has the later createdAt.
+  function applyOverrideCandidates(map, newSnap, originalSnap, overriddenClassKeys) {
+    const candidates = new Map(); // lessonKey -> { role: "new"|"original", ov, ms }
+    const consider = (key, role, ov) => {
+      const ms = overrideCreatedMs(ov);
+      const existing = candidates.get(key);
+      if (!existing || ms >= existing.ms) candidates.set(key, { role, ov, ms });
+    };
+    newSnap.forEach(d => { const ov = d.data(); consider(String(ov.lesson), "new", ov); });
+    originalSnap.forEach(d => { const ov = d.data(); consider(String(ov.lesson), "original", ov); });
+    candidates.forEach(({ role, ov }, key) => {
+      if (role === "new") {
+        if (overriddenClassKeys?.has(normalizeClassKey(classKeyFromRow(ov)))) return;
+        map.set(key, { ...ov, _source: "override_new", _coveredAway: false });
+      } else if (map.has(key)) {
+        map.set(key, { ...map.get(key), _coveredAway: true });
+      }
+    });
+  }
+
   async function buildTodayMapWithOverrides(teacherUid, dateISO) {
     const cacheKey = `${teacherUid}|${dateISO}`;
     const nowMs = Date.now();
@@ -712,12 +740,18 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
     try {
       const todayDayIndex = getKuwaitDayIndexSunThu();
       const customDayIndex = getKuwaitDayIndexSunSat();
-      // The teacher's standing schedule, today's substitution overrides, and
-      // today's custom/extra schedules are independent queries — fetch all
-      // three at once.
-      const [schedSnap, ovSnap, customRows] = await Promise.all([
+      // The teacher's standing schedule, today's incoming/outgoing swap
+      // overrides, and today's custom/extra schedules are independent
+      // queries — fetch them all at once. scheduleOverrides docs carry no
+      // "kind" field (confirmed against both places that create them:
+      // Teachers/teacherschedule.html's reqAccept and depHead/schedual.html's
+      // createOverridesInTransaction) — two separate targeted queries on
+      // newTeacherUid/originalTeacherUid directly is the only reliable way
+      // to tell which side of a swap a doc represents for this teacher.
+      const [schedSnap, ovNewSnap, ovOriginalSnap, customRows] = await Promise.all([
         getDocs(query(collection(db, "schedules"), where("teacherUid", "==", teacherUid))),
-        getDocs(query(collection(db, "scheduleOverrides"), where("date", "==", dateISO))),
+        getDocs(query(collection(db, "scheduleOverrides"), where("date", "==", dateISO), where("newTeacherUid", "==", teacherUid))),
+        getDocs(query(collection(db, "scheduleOverrides"), where("date", "==", dateISO), where("originalTeacherUid", "==", teacherUid))),
         customDayIndex >= 0 ? getCustomSchedulesForToday(customDayIndex) : Promise.resolve([]),
       ]);
       // A class with an enabled custom schedule for today doesn't run its
@@ -736,16 +770,15 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
           map.set(key, { ...data, _source: "normal", _coveredAway: false });
         }
       });
-      ovSnap.forEach(d => {
-        const ov = d.data();
-        const key = String(ov.lesson);
-        if (ov.kind === "new" && ov.newTeacherUid === teacherUid) {
-          if (overriddenClassKeys.has(normalizeClassKey(classKeyFromRow(ov)))) return;
-          map.set(key, { ...ov, _source: "override_new", _coveredAway: false });
-        } else if (ov.kind === "original" && ov.originalTeacherUid === teacherUid) {
-          if (map.has(key)) map.set(key, { ...map.get(key), _coveredAway: true });
-        }
-      });
+      // A lesson can end up with BOTH an incoming and an outgoing override
+      // for this teacher — e.g. a swap that's later reversed by a second
+      // swapRequest, whose acceptance creates another pair of override
+      // docs rather than canceling the first pair (nothing currently
+      // reconciles that at write time). Whichever side is more recently
+      // created wins; the older one is ignored entirely for that lesson —
+      // otherwise the earlier, now-superseded side could still mark a
+      // lesson away (or add one) that the later swap already undid.
+      applyOverrideCandidates(map, ovNewSnap, ovOriginalSnap, overriddenClassKeys);
       // Enabled custom schedules always win — overwrite whatever's in the
       // slot above, don't just fill gaps.
       mergeCustomIntoLessonMap(map, teacherUid, customRows);

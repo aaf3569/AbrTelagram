@@ -1808,6 +1808,38 @@
             return { ok, reason: ok ? 'within_window' : 'outside_window', nowMin, startMin, endMin, cutoffMin };
         }
 
+        function overrideCreatedMs(ov) {
+            const t = ov?.createdAt;
+            return (t && typeof t.toMillis === 'function') ? t.toMillis() : 0;
+        }
+
+        // Merges "I'm the incoming teacher" and "I'm the outgoing teacher"
+        // query results for a lesson into `map`, resolving a lesson touched
+        // by BOTH (a swap later reversed by a second swapRequest, whose
+        // acceptance creates another pair of override docs rather than
+        // canceling the first pair — nothing currently reconciles that at
+        // write time) by keeping only whichever side has the later
+        // createdAt — otherwise the earlier, now-superseded side could
+        // still mark a lesson away (or add one) that the later swap
+        // already undid.
+        function applyOverrideCandidates(map, newSnap, originalSnap) {
+            const candidates = new Map(); // lessonKey -> { role, ov, ms }
+            const consider = (key, role, ov) => {
+                const ms = overrideCreatedMs(ov);
+                const existing = candidates.get(key);
+                if (!existing || ms >= existing.ms) candidates.set(key, { role, ov, ms });
+            };
+            newSnap.forEach(d => { const ov = d.data(); consider(String(ov.lesson), 'new', ov); });
+            originalSnap.forEach(d => { const ov = d.data(); consider(String(ov.lesson), 'original', ov); });
+            candidates.forEach(({ role, ov }, key) => {
+                if (role === 'new') {
+                    map.set(key, { ...ov, _source: 'override_new', _coveredAway: false });
+                } else if (map.has(key)) {
+                    map.set(key, { ...map.get(key), _coveredAway: true });
+                }
+            });
+        }
+
         // FIXED HELPER: Build today's schedule map with overrides - NOW SUPPORTS WEEKLY SCHEDULES
         async function buildTodayMapWithOverrides(teacherUid, dateISO) {
             const map = new Map();
@@ -1860,37 +1892,27 @@
                     }
                 });
                 
-                // 2. Get overrides for today
-                const overridesQuery = query(
-                    collection(db, 'scheduleOverrides'),
-                    where('date', '==', dateISO)
-                );
-                const overridesSnapshot = await getDocs(overridesQuery);
-                
-                overridesSnapshot.forEach(docSnap => {
-                    const override = docSnap.data();
-                    const lessonKey = String(override.lesson);
-                    
-                    // If override kind is "new" and newTeacherUid == current teacher
-                    if (override.kind === "new" && override.newTeacherUid === teacherUid) {
-                        map.set(lessonKey, {
-                            ...override,
-                            _source: 'override_new',
-                            _coveredAway: false
-                        });
-                    }
-                    // If override kind is "original" and originalTeacherUid == current teacher
-                    else if (override.kind === "original" && override.originalTeacherUid === teacherUid) {
-                        // This lesson becomes covered away - mark as covered
-                        if (map.has(lessonKey)) {
-                            const existing = map.get(lessonKey);
-                            map.set(lessonKey, {
-                                ...existing,
-                                _coveredAway: true
-                            });
-                        }
-                    }
-                });
+                // 2. Get today's incoming/outgoing swap overrides. Two
+                // separate targeted queries — scheduleOverrides docs carry
+                // no "kind" field (confirmed against both places that
+                // create them), so matching on newTeacherUid/
+                // originalTeacherUid directly is the only reliable way to
+                // tell which side of a swap a doc represents for this
+                // teacher.
+                const [newOverridesSnapshot, originalOverridesSnapshot] = await Promise.all([
+                    getDocs(query(
+                        collection(db, 'scheduleOverrides'),
+                        where('date', '==', dateISO),
+                        where('newTeacherUid', '==', teacherUid)
+                    )),
+                    getDocs(query(
+                        collection(db, 'scheduleOverrides'),
+                        where('date', '==', dateISO),
+                        where('originalTeacherUid', '==', teacherUid)
+                    )),
+                ]);
+
+                applyOverrideCandidates(map, newOverridesSnapshot, originalOverridesSnapshot);
                 
             } catch (error) {
                 console.error('Error building today map with overrides:', error);
