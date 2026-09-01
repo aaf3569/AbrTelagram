@@ -306,15 +306,15 @@
        own .modal-overlay/.modal already mean something different (the
        absence/suggestion popups above), so a bare .modal rule would break
        those instead of just adding new styling. */
-    #attConfirmModal, #attErrorModal, #attBlockedModal, #attSuccessModal, #attLessonDetailModal{
+    #attConfirmModal, #attErrorModal, #attBlockedModal, #attSuccessModal, #attLessonDetailModal, #attCriticalErrorModal{
       position: fixed; inset: 0; z-index: 1100; display: none;
       background: transparent; width: auto; max-height: none; overflow: visible;
       border-radius: 0; box-shadow: none; transform: none; opacity: 1; transition: none;
     }
-    #attConfirmModal.open, #attErrorModal.open, #attBlockedModal.open, #attSuccessModal.open, #attLessonDetailModal.open{
+    #attConfirmModal.open, #attErrorModal.open, #attBlockedModal.open, #attSuccessModal.open, #attLessonDetailModal.open, #attCriticalErrorModal.open{
       display: grid; place-items: center;
     }
-    #attConfirmModal .overlay, #attErrorModal .overlay, #attBlockedModal .overlay, #attSuccessModal .overlay, #attLessonDetailModal .overlay{
+    #attConfirmModal .overlay, #attErrorModal .overlay, #attBlockedModal .overlay, #attSuccessModal .overlay, #attLessonDetailModal .overlay, #attCriticalErrorModal .overlay{
       position: absolute; inset: 0; background: rgba(15,23,42,.35); backdrop-filter: blur(4px);
     }
     #attConfirmModal .card, #attErrorModal .card, #attBlockedModal .card, #attSuccessModal .card, #attLessonDetailModal .card{
