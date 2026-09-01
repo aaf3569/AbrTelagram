@@ -1652,6 +1652,28 @@
                 console.error('Error loading schedule-linked lessons:', error);
             }
 
+            // Today's lesson swaps/covers take priority over the standing
+            // schedule above — a teacher swapped INTO this slot needs it
+            // added even though their own weekly schedule never had it; one
+            // swapped OUT needs it removed even though their standing
+            // schedule still lists it.
+            try{
+                const ovSnap = await getDocs(query(collection(db, 'scheduleOverrides'), where('date', '==', dateKW)));
+                ovSnap.forEach(ds => {
+                    const ov = ds.data() || {};
+                    const lesson = Number(ov.lesson);
+                    if(!Number.isFinite(lesson)) return;
+                    if(!classMatchesScheduleRow(ov, normalizedClass)) return;
+                    if(ov.kind === 'new' && ov.newTeacherUid === teacherUid){
+                        lessonSet.add(lesson);
+                    }else if(ov.kind === 'original' && ov.originalTeacherUid === teacherUid){
+                        lessonSet.delete(lesson);
+                    }
+                });
+            }catch(error){
+                console.error('Error loading schedule overrides:', error);
+            }
+
             scheduleLessonCache = {
                 key: cacheKey,
                 lessons: Array.from(lessonSet),
@@ -1706,6 +1728,40 @@
                 });
             }catch(error){
                 console.error('Error loading profile next lessons:', error);
+            }
+
+            // Today's lesson swaps/covers, applied before the custom-schedule
+            // pass below (which still wins over everything, same as
+            // elsewhere) — a teacher swapped INTO a slot needs it added even
+            // though their own standing schedule never had it; one swapped
+            // OUT needs it removed even though their schedule still lists it.
+            try{
+                const ovSnap = await getDocs(query(collection(db, 'scheduleOverrides'), where('date', '==', dateKW)));
+                ovSnap.forEach(ds => {
+                    const ov = ds.data() || {};
+                    const lesson = Number(ov.lesson);
+                    if(!Number.isFinite(lesson)) return;
+                    if(ov.kind === 'new' && ov.newTeacherUid === teacherUid){
+                        const classKey = extractClassKeyFromScheduleRow(ov);
+                        if(!classKey) return;
+                        const interval = intervalByIndex.get(lesson);
+                        if(!interval) return;
+                        const slotKey = `${lesson}|${normalizeClassKey(classKey)}`;
+                        bySlot.set(slotKey, {
+                            lesson,
+                            classKey,
+                            label: interval.label || `الحصة ${toArabicDigits(lesson)}`,
+                            startMin: interval.start,
+                            endMin: interval.end
+                        });
+                    }else if(ov.kind === 'original' && ov.originalTeacherUid === teacherUid){
+                        for (const [key, value] of bySlot){
+                            if (value.lesson === lesson) bySlot.delete(key);
+                        }
+                    }
+                });
+            }catch(error){
+                console.error('Error loading schedule overrides for profile lessons:', error);
             }
 
             // Custom/extra schedules (e.g. exam days, or Fri/Sat schedules) aren't in
@@ -1782,7 +1838,11 @@
                 buttons.forEach(btn => btn.classList.remove('current-lesson'));
                 if (!auth.currentUser) return;
                 const intervals = getDailyLessonIntervals();
-                const activeInterval = getCurrentLessonInterval(intervals);
+                // Same grace-period priority as checkAttendanceAllowedForCurrentClass:
+                // a lesson that just ended stays highlighted through its own
+                // grace window instead of going dark the instant the next
+                // lesson's time slot begins.
+                const activeInterval = getGracePeriodLessonInterval(intervals) || getCurrentLessonInterval(intervals);
                 if (!activeInterval) return;
                 const lessons = await getTeacherLessonsForProfileToday(auth.currentUser.uid);
                 const hit = lessons.find(l => l.lesson === activeInterval.index);
@@ -2277,6 +2337,15 @@
             const nowMin = nowMinutesInTZ(TZ);
             return (intervals || []).find(iv => nowMin >= iv.start && nowMin < iv.end) || null;
         }
+        // A lesson that just ended is still inside its own grace window —
+        // matches shared/attendance.js's LESSON_END_GRACE_MINUTES (4 min),
+        // so a teacher (including one swapped into this slot) still gets the
+        // same window to take attendance after the bell as everywhere else.
+        const LESSON_END_GRACE_MINUTES = 4;
+        function getGracePeriodLessonInterval(intervals){
+            const nowMin = nowMinutesInTZ(TZ);
+            return (intervals || []).find(iv => nowMin > iv.end && nowMin <= iv.end + LESSON_END_GRACE_MINUTES) || null;
+        }
         function showAttendanceBlockedPopup(reason){
             let message = '';
             switch (reason) {
@@ -2305,12 +2374,22 @@
             if (!currentClass) return { allowed:false, reason:'no_class' };
 
             const intervals = getDailyLessonIntervals();
-            const activeLesson = getCurrentLessonInterval(intervals);
-            if (!activeLesson) return { allowed:false, reason:'outside_lessons' };
 
             try {
                 const scheduledLessons = await getScheduledLessonsForClass(currentClass);
                 currentClassScheduledLessons = scheduledLessons;
+
+                // A lesson that just ended is still inside its grace window —
+                // checked first so it isn't silently shadowed the instant the
+                // next lesson's time slot begins, before that lesson's own
+                // grace period has closed.
+                const graceLesson = getGracePeriodLessonInterval(intervals);
+                if (graceLesson && scheduledLessons.has(graceLesson.index)) {
+                    return { allowed:true, lessonIndex:graceLesson.index, lesson:graceLesson };
+                }
+
+                const activeLesson = getCurrentLessonInterval(intervals);
+                if (!activeLesson) return { allowed:false, reason:'outside_lessons' };
                 if (!scheduledLessons.has(activeLesson.index)) {
                     return { allowed:false, reason:'not_my_lesson' };
                 }

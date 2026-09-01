@@ -1742,6 +1742,23 @@
             return null;
         }
 
+        // A lesson that just ended is still inside its own grace window —
+        // matches shared/attendance.js's LESSON_END_GRACE_MINUTES (4 min).
+        // Without this, the class-button highlight (and this page's local
+        // getMyActiveLessonMetaForNow()) went dark the instant a lesson's
+        // time slot ended, including for a teacher swapped into that slot.
+        const LESSON_END_GRACE_MINUTES = 4;
+        function getGracePeriodLessonIndex() {
+            const nowMin = getCurrentKuwaitMinutes();
+            for (const lesson of LESSON_TIMES) {
+                const endMin = parseTimeToMinutes(lesson.end);
+                if (nowMin > endMin && nowMin <= endMin + LESSON_END_GRACE_MINUTES) {
+                    return lesson.index;
+                }
+            }
+            return null;
+        }
+
         // NEW HELPER: Get weekday name in English for Kuwait timezone
         function getKuwaitWeekday() {
             const now = new Date();
@@ -1984,16 +2001,50 @@
             if (customHit?.ok) {
                 return customHit;
             }
-            
-            // 2. Active lesson index
+
+            // 2. Active lesson index (and the just-ended grace-period lesson,
+            // if any — checked first below, same priority as
+            // shared/attendance.js, so this doesn't go dark the instant the
+            // next lesson's time slot begins).
+            const G = getGracePeriodLessonIndex();
             const L = getActiveLessonIndex();
+
+            // 3. Build today map with overrides (now includes weekly schedules)
+            const map = (G !== null || L !== null) ? await buildTodayMapWithOverrides(user.uid, todayISO) : new Map();
+
+            if (G !== null) {
+                const graceHit = map.get(String(G));
+                if (graceHit && graceHit._coveredAway !== true) {
+                    const graceLesson = LESSON_TIMES.find(l => l.index === G);
+                    let graceClassKey = '';
+                    if (graceHit.classKey) {
+                        graceClassKey = graceHit.classKey;
+                    } else if (graceHit.grade && graceHit.section) {
+                        graceClassKey = `${graceHit.grade} / ${graceHit.section}`;
+                        if (graceHit.track) graceClassKey += ` ${graceHit.track}`;
+                    } else {
+                        graceClassKey = graceHit.class || '';
+                    }
+                    if (graceClassKey) {
+                        return {
+                            ok: true,
+                            lesson: G,
+                            date: todayISO,
+                            classKey: graceClassKey,
+                            subject: graceHit.subject || '',
+                            activeStart: graceLesson?.start || '00:00',
+                            activeEnd: graceLesson?.end || '00:00',
+                            teacherUid: user.uid,
+                            scheduleData: graceHit
+                        };
+                    }
+                }
+            }
+
             if (L === null) {
                 return { ok: false, reason: "outside_lessons" };
             }
-            
-            // 3. Build today map with overrides (now includes weekly schedules)
-            const map = await buildTodayMapWithOverrides(user.uid, todayISO);
-            
+
             // 4. Check if teacher has this lesson
             const hit = map.get(String(L));
             if (!hit || hit._coveredAway === true) {
