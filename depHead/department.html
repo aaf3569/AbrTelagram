@@ -407,7 +407,7 @@
       <div class="modal-header"><h3 class="modal-title">إضافة معلم جديد</h3><button class="close-modal" aria-label="إغلاق">×</button></div>
       <div class="modal-body add-teacher-body">
         <div class="field"><label class="label" for="teacherName">الاسم الكامل</label><div class="input-wrap"><input id="teacherName" class="input" type="text"></div></div>
-        <div class="field"><label class="label" for="teacherEmail">رقم البطاقة المدنية</label><div class="input-wrap"><input id="teacherEmail" class="input" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="مثال: 298040100633"></div></div>
+        <div class="field"><label class="label" for="teacherEmail">رقم المستخدم</label><div class="input-wrap"><input id="teacherEmail" class="input" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="مثال: 298040100633"></div></div>
         <div class="field"><label class="label" for="teacherPassword">كلمة المرور</label><div class="input-wrap"><input id="teacherPassword" class="input" type="password"></div></div>
         <div class="field"><label class="label" for="teacherDisplayedPassword">الكلمة الظاهرة</label><div class="input-wrap"><input id="teacherDisplayedPassword" class="input" type="text" dir="ltr" readonly></div></div>
         <div class="field"><label class="label" for="teacherPhone">رقم الهاتف</label><div class="input-wrap"><input id="teacherPhone" class="input" type="tel"></div></div>
@@ -1196,8 +1196,8 @@
       const subjectToSave = mergedSubjects.length ? (teacherSpecialization.value||'').trim() : headDept;
       try{
         if(!name) throw new Error('أدخل الاسم الكامل.');
-        if(!civilId) throw new Error('أدخل رقم البطاقة المدنية بالأرقام فقط.');
-        if(!emailRx.test(email)) throw new Error('تعذّر توليد البريد الإلكتروني من رقم البطاقة المدنية.');
+        if(!civilId) throw new Error('أدخل رقم المستخدم بالأرقام فقط.');
+        if(!emailRx.test(email)) throw new Error('تعذّر توليد البريد الإلكتروني من رقم المستخدم.');
         if(!password||password.length<6) throw new Error('كلمة المرور ٦ أحرف على الأقل.');
         if(mergedSubjects.length && !mergedSubjects.includes(subjectToSave)) throw new Error('اختر التخصص.');
       }catch(e){

@@ -936,8 +936,8 @@ textarea.input{ height:100px; padding-block:14px; resize:vertical }
           <div class="input-wrap"><input id="stName" class="input" type="text" placeholder="الاسم الكامل" autocomplete="name"></div>
         </div>
         <div class="field">
-          <div class="label">الرقم المدني</div>
-          <div class="input-wrap"><input id="stCivil" class="input" type="text" inputmode="numeric" placeholder="الرقم المدني"></div>
+          <div class="label">رقم المستخدم</div>
+          <div class="input-wrap"><input id="stCivil" class="input" type="text" inputmode="numeric" placeholder="رقم المستخدم"></div>
         </div>
       </div>
       
@@ -1030,8 +1030,8 @@ textarea.input{ height:100px; padding-block:14px; resize:vertical }
           <div class="input-wrap"><input id="edSName" class="input" type="text" placeholder="الاسم"></div>
         </div>
         <div class="field">
-          <div class="label">الرقم المدني</div>
-          <div class="input-wrap"><input id="edSCivil" class="input" type="text" inputmode="numeric" placeholder="الرقم المدني"></div>
+          <div class="label">رقم المستخدم</div>
+          <div class="input-wrap"><input id="edSCivil" class="input" type="text" inputmode="numeric" placeholder="رقم المستخدم"></div>
         </div>
       </div>
       
@@ -1685,7 +1685,7 @@ async function loadStudents(className){
       el.innerHTML = `
         <div>
           <div>${specialCaseIcon} ${st.name || '—'} <span class="item-number">${toArabicDigits(studentNumber)}</span></div>
-          <div class="sub">${st.civilid ? ('الرقم المدني: '+ toArabicDigits(st.civilid)) : ''}</div>
+          <div class="sub">${st.civilid ? ('رقم المستخدم: '+ toArabicDigits(st.civilid)) : ''}</div>
         </div>
         <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
       `;

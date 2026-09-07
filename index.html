@@ -613,7 +613,7 @@
 
       <div class="card-body">
         <div class="form-group">
-          <label for="loginEmail" class="form-label">رقم البطاقة المدنية</label>
+          <label for="loginEmail" class="form-label">رقم المستخدم</label>
           <div class="input-container">
             <div class="input-icon">
               <i class="fas fa-id-card"></i>
@@ -821,12 +821,12 @@
       const civilId = emailEl.value.trim();
       const pass = passEl.value;
 
-      if (!civilId) return 'يرجى إدخال رقم البطاقة المدنية';
+      if (!civilId) return 'يرجى إدخال رقم المستخدم';
       if (!pass) return 'يرجى إدخال كلمة المرور';
 
       // Ensure digits only
       const digitsOnly = civilId.replace(/\D+/g, '');
-      if (!digitsOnly) return 'يرجى إدخال رقم البطاقة المدنية بشكل صحيح';
+      if (!digitsOnly) return 'يرجى إدخال رقم المستخدم بشكل صحيح';
       if (digitsOnly.length !== civilId.length) return 'يرجى إدخال أرقام فقط';
 
       return null;
@@ -941,7 +941,7 @@
         'auth/missing-password'
       ]);
 
-      if (invalidCodes.has(code)) return 'رقم البطاقة المدنية أو كلمة المرور غير صحيحة.';
+      if (invalidCodes.has(code)) return 'رقم المستخدم أو كلمة المرور غير صحيحة.';
       if (code === 'auth/too-many-requests') return 'تم تجاوز عدد المحاولات المسموح. حاول مرة أخرى بعد قليل.';
       if (code === 'app/unauthorized-profile') return 'هذا الحساب لا يملك صلاحية الوصول للمنصة.';
       if (code === 'auth/network-request-failed') return 'لا يوجد اتصال جيد بالإنترنت. يرجى المحاولة مرة أخرى.';

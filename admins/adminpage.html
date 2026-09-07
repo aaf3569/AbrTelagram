@@ -1018,7 +1018,7 @@
           <div class="input-wrap"><input id="teacherName" class="input" type="text" placeholder="الاسم الكامل" autocomplete="name"></div>
         </div>
         <div class="field">
-          <label class="label" for="teacherEmail">رقم البطاقة المدنية</label>
+          <label class="label" for="teacherEmail">رقم المستخدم</label>
           <div class="input-wrap"><input id="teacherEmail" class="input" type="text" placeholder="مثال: 298040100633" autocomplete="off" inputmode="numeric" pattern="[0-9]*"></div>
           <div class="muted" style="font-size:.82rem; margin-top:-4px;">سيتم الحفظ تلقائياً بصيغة: t[الرقم]@gmail.com</div>
         </div>
@@ -1108,7 +1108,7 @@
             <div class="input-wrap"><input id="adName" class="input" type="text" placeholder="الاسم الكامل" autocomplete="name"></div>
           </div>
           <div class="field">
-            <label class="label" for="adEmail">رقم البطاقة المدنية</label>
+            <label class="label" for="adEmail">رقم المستخدم</label>
             <div class="input-wrap"><input id="adEmail" class="input" type="text" placeholder="مثال: 298040100633" autocomplete="off" inputmode="numeric" pattern="[0-9]*"></div>
             <div class="muted" style="font-size:.82rem; margin-top:-4px;">سيتم الحفظ تلقائياً بصيغة: t[الرقم]@gmail.com</div>
           </div>
@@ -2884,8 +2884,8 @@
         const classes = getClassesFrom(auClasses);
 
         if(!name) throw new Error('أدخل الاسم الكامل.');
-        if(!civilId) throw new Error('أدخل رقم البطاقة المدنية بالأرقام فقط.');
-        if(!emailRx.test(email)) throw new Error('تعذّر توليد البريد الإلكتروني من رقم البطاقة المدنية.');
+        if(!civilId) throw new Error('أدخل رقم المستخدم بالأرقام فقط.');
+        if(!emailRx.test(email)) throw new Error('تعذّر توليد البريد الإلكتروني من رقم المستخدم.');
         if(!password || password.length<6) throw new Error('كلمة المرور ٦ أحرف على الأقل.');
 
         // Create user in Firebase Auth
@@ -3128,8 +3128,8 @@
         const pass  = adPassword.value;
 
         if(!name) throw new Error('أدخل الاسم.');
-        if(!civilId) throw new Error('أدخل رقم البطاقة المدنية بالأرقام فقط.');
-        if(!emailRx.test(email)) throw new Error('تعذّر توليد البريد الإلكتروني من رقم البطاقة المدنية.');
+        if(!civilId) throw new Error('أدخل رقم المستخدم بالأرقام فقط.');
+        if(!emailRx.test(email)) throw new Error('تعذّر توليد البريد الإلكتروني من رقم المستخدم.');
         if(!pass || pass.length<6) throw new Error('كلمة المرور ٦ أحرف على الأقل.');
 
         const cred = await createUserWithEmailAndPassword(helperAuth, email, pass);

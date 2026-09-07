@@ -585,7 +585,7 @@
             <h4 class="profile-card-title">البيانات الأساسية</h4>
             <div class="info-grid">
               <div class="field"><label class="label" for="edAName">الاسم الكامل</label><div class="plain-value view-only"><span id="vEdAName" class="view-value">—</span></div><div class="input-wrap edit-only"><input id="edAName" class="input" type="text"></div></div>
-              <div class="field"><label class="label" for="edAEmail">الرقم المدني</label><div class="plain-value view-only"><span id="vEdAEmail" class="view-value">—</span></div><div class="input-wrap edit-only"><input id="edAEmail" class="input" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="مثال: 298040100633"></div></div>
+              <div class="field"><label class="label" for="edAEmail">رقم المستخدم</label><div class="plain-value view-only"><span id="vEdAEmail" class="view-value">—</span></div><div class="input-wrap edit-only"><input id="edAEmail" class="input" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="مثال: 298040100633"></div></div>
               <div class="field"><label class="label" for="edAPhone">رقم الهاتف</label><div class="plain-value view-only"><span id="vEdAPhone" class="view-value">—</span></div><div class="input-wrap edit-only"><input id="edAPhone" class="input" type="tel"></div></div>
               <div class="field"><label class="label" for="edASubject">المادة (عند التدريس)</label><div class="plain-value view-only"><span id="vEdASubject" class="view-value">—</span></div><div class="input-wrap edit-only"><input id="edASubject" class="input" type="text" placeholder="اختياري"></div></div>
             </div>
@@ -633,7 +633,7 @@
       <div class="modal-header"><h3 class="modal-title">إضافة مشرف جديد</h3><button class="close-modal" aria-label="إغلاق">×</button></div>
       <div class="modal-body add-teacher-body">
         <div class="field"><label class="label" for="adName">الاسم الكامل</label><div class="input-wrap"><input id="adName" class="input" type="text"></div></div>
-        <div class="field"><label class="label" for="adEmail">رقم البطاقة المدنية</label><div class="input-wrap"><input id="adEmail" class="input" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="مثال: 298040100633"></div></div>
+        <div class="field"><label class="label" for="adEmail">رقم المستخدم</label><div class="input-wrap"><input id="adEmail" class="input" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="مثال: 298040100633"></div></div>
         <div class="field"><label class="label" for="adPhone">رقم الهاتف</label><div class="input-wrap"><input id="adPhone" class="input" type="tel"></div></div>
         <div class="field"><label class="label" for="adPassword">كلمة المرور</label><div class="input-wrap"><input id="adPassword" class="input" type="password"></div></div>
         <div class="field add-teacher-full"><label class="label">الفصول (اختياري، عند التدريس)</label><div id="adClasses" class="classes-list"></div><div class="inline-add"><button id="adAddClass" class="add" type="button">+ إضافة</button></div></div>
@@ -648,7 +648,7 @@
       <div class="modal-header"><h3 class="modal-title">إضافة معلم جديد</h3><button class="close-modal" aria-label="إغلاق">×</button></div>
       <div class="modal-body add-teacher-body">
         <div class="field"><label class="label" for="teacherName">الاسم الكامل</label><div class="input-wrap"><input id="teacherName" class="input" type="text"></div></div>
-        <div class="field"><label class="label" for="teacherEmail">رقم البطاقة المدنية</label><div class="input-wrap"><input id="teacherEmail" class="input" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="مثال: 298040100633"></div></div>
+        <div class="field"><label class="label" for="teacherEmail">رقم المستخدم</label><div class="input-wrap"><input id="teacherEmail" class="input" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="مثال: 298040100633"></div></div>
         <div class="field"><label class="label" for="teacherPassword">كلمة المرور</label><div class="input-wrap"><input id="teacherPassword" class="input" type="password"></div></div>
         <div class="field"><label class="label" for="teacherDisplayedPassword">الكلمة الظاهرة</label><div class="input-wrap"><input id="teacherDisplayedPassword" class="input" type="text" dir="ltr" readonly></div></div>
         <div class="field"><label class="label" for="teacherPhone">رقم الهاتف</label><div class="input-wrap"><input id="teacherPhone" class="input" type="tel"></div></div>
@@ -767,7 +767,7 @@
       });
       const body=await response.json().catch(()=>({}));
       if(!response.ok || !body?.ok){
-        if(body?.error==='email_already_exists') throw new Error('هذا الرقم المدني مستخدم بالفعل في حساب آخر.');
+        if(body?.error==='email_already_exists') throw new Error('هذا رقم المستخدم مستخدم بالفعل في حساب آخر.');
         throw new Error(body?.error||`set_email_failed_${response.status}`);
       }
     }
@@ -1612,8 +1612,8 @@
         const classes=getClassesFrom(edAClasses);
         const email=buildTeacherEmailFromCivilId(civilId);
         if(!name) throw new Error('أدخل الاسم.');
-        if(!civilId) throw new Error('أدخل الرقم المدني بالأرقام فقط.');
-        if(!emailRx.test(email)) throw new Error('تعذّر توليد الحساب من الرقم المدني.');
+        if(!civilId) throw new Error('أدخل رقم المستخدم بالأرقام فقط.');
+        if(!emailRx.test(email)) throw new Error('تعذّر توليد الحساب من رقم المستخدم.');
         await syncAuthEmailIfChanged(uid, currentAdmin?.data?.email, email);
         await updateDoc(doc(db,'teachers',uid),{name,email,civilId,phone,subject,classes});
         currentAdmin.data={...(currentAdmin.data||{}),name,email,civilId,phone,subject,classes};
@@ -1683,8 +1683,8 @@
         const classes=getClassesFrom(adClasses);
         const pass=adPassword.value;
         if(!name) throw new Error('أدخل الاسم.');
-        if(!civilId) throw new Error('أدخل رقم البطاقة المدنية بالأرقام فقط.');
-        if(!emailRx.test(email)) throw new Error('تعذّر توليد البريد الإلكتروني من رقم البطاقة المدنية.');
+        if(!civilId) throw new Error('أدخل رقم المستخدم بالأرقام فقط.');
+        if(!emailRx.test(email)) throw new Error('تعذّر توليد البريد الإلكتروني من رقم المستخدم.');
         if(!pass||pass.length<6) throw new Error('كلمة المرور ٦ أحرف على الأقل.');
         const cred=await createUserWithEmailAndPassword(helperAuth,email,pass);
         const newUid=cred.user.uid;
@@ -2075,8 +2075,8 @@
         const subjectToSave=isMergedDepartment(selectedSubject) ? selectedSpecialization : selectedSubject;
         const departmentToSave=mapTeacherSubjectToDepartment(subjectToSave) || selectedSubject;
         if(!name) throw new Error('أدخل الاسم الكامل.');
-        if(!civilId) throw new Error('أدخل رقم البطاقة المدنية بالأرقام فقط.');
-        if(!emailRx.test(email)) throw new Error('تعذّر توليد البريد الإلكتروني من رقم البطاقة المدنية.');
+        if(!civilId) throw new Error('أدخل رقم المستخدم بالأرقام فقط.');
+        if(!emailRx.test(email)) throw new Error('تعذّر توليد البريد الإلكتروني من رقم المستخدم.');
         if(!password||password.length<6) throw new Error('كلمة المرور ٦ أحرف على الأقل.');
         if(!subjectToSave) throw new Error('اختر القسم أولاً.');
         if(isSupervisor && !supervisorGrade) throw new Error('اختر صف الإشراف للمشرف.');

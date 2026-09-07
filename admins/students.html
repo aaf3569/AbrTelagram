@@ -3213,7 +3213,7 @@ function renderRequestStudentsList(){
   visibleStudents.forEach((student)=>{
     const row = document.createElement('label');
     row.className = 'request-student-item';
-    const civil = student.civilid ? `الرقم المدني: ${toArabicDigits(student.civilid)}` : 'بدون رقم مدني';
+    const civil = student.civilid ? `رقم المستخدم: ${toArabicDigits(student.civilid)}` : 'بدون رقم مستخدم';
     row.innerHTML = `
       <input type="checkbox" class="request-student-checkbox" value="${escapeHtml(student.id)}" ${requestSelectedStudentIds.has(student.id) ? 'checked' : ''}>
       <div class="request-student-main">
@@ -4269,7 +4269,7 @@ function renderStudentsList(filteredArr){
     el.innerHTML = `
       <div>
         <div>${specialCaseIcon} ${highlightMatch(st.name || '—', studentSearchQuery)} <span class="item-number">${toArabicDigits(studentNumber)}</span></div>
-        <div class="sub">${st.civilid ? ('الرقم المدني: '+ toArabicDigits(st.civilid)) : ''}</div>
+        <div class="sub">${st.civilid ? ('رقم المستخدم: '+ toArabicDigits(st.civilid)) : ''}</div>
       </div>
       <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
     `;
@@ -4396,7 +4396,7 @@ function openReorderInterface() {
       <div class="reorder-item-content">
         <div class="reorder-item-name">${student.name || '—'}</div>
         <div class="reorder-item-details">
-          ${student.civilid ? `الرقم المدني: ${toArabicDigits(student.civilid)}` : ''}
+          ${student.civilid ? `رقم المستخدم: ${toArabicDigits(student.civilid)}` : ''}
           ${student.specialCase ? '<span style="color: var(--yellow);">(حالة خاصة)</span>' : ''}
         </div>
       </div>
