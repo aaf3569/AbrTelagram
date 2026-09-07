@@ -723,7 +723,7 @@
     import { firebaseConfig } from "/shared/firebase.js";
     import { initializeApp, getApp, getApps } from "/shared/firebase.js";
     import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signOut, EmailAuthProvider, reauthenticateWithCredential } from "/shared/firebase.js";
-    import { initializeFirestore, persistentSingleTabManager, collection, getDocs, query, where, doc, getDoc, setDoc, updateDoc, deleteDoc, deleteField, serverTimestamp } from "/shared/firebase.js";
+    import { initializeFirestore, persistentSingleTabManager, collection, getDocs, query, where, doc, getDoc, setDoc, updateDoc, deleteField, serverTimestamp } from "/shared/firebase.js";
     import { startPresenceHeartbeat, watchPresence } from "/shared/presence.js";
     import { fetchClassList, sortClassList } from "/shared/class-registry.js";
 
@@ -749,6 +749,43 @@
     function backendApiUrl(path){
       const cleanPath = `/${String(path || '').replace(/^\/+/, '')}`;
       return `${TELEGRAM_BACKEND_BASE_URL}${cleanPath}`;
+    }
+
+    // Firestore's email/civilId fields are just profile data — changing
+    // them here used to leave the account's real Firebase Auth login
+    // stuck on the old ID forever. Called before the Firestore update so a
+    // rejected Auth change (e.g. that email already belongs to another
+    // account) aborts before the two can drift out of sync.
+    async function syncAuthEmailIfChanged(uid, previousEmail, newEmail){
+      if(!newEmail || newEmail===previousEmail) return;
+      const idToken=await auth.currentUser.getIdToken();
+      const response=await fetch(backendApiUrl('/api/admin/set-teacher-email'),{
+        method:'POST',
+        headers:{'Content-Type':'application/json', Authorization:`Bearer ${idToken}`},
+        body:JSON.stringify({ uid, newEmail })
+      });
+      const body=await response.json().catch(()=>({}));
+      if(!response.ok || !body?.ok){
+        if(body?.error==='email_already_exists') throw new Error('هذا الرقم المدني مستخدم بالفعل في حساب آخر.');
+        throw new Error(body?.error||`set_email_failed_${response.status}`);
+      }
+    }
+
+    // Deleting only the Firestore doc left the Firebase Auth account behind
+    // forever — invisible in this app but still occupying its email, so
+    // recreating the same person's account later failed with
+    // auth/email-already-exists. The backend deletes both in one call.
+    async function deleteTeacherAccountRemote(uid){
+      const idToken=await auth.currentUser.getIdToken();
+      const response=await fetch(backendApiUrl('/api/admin/delete-teacher-account'),{
+        method:'POST',
+        headers:{'Content-Type':'application/json', Authorization:`Bearer ${idToken}`},
+        body:JSON.stringify({ uid })
+      });
+      const body=await response.json().catch(()=>({}));
+      if(!response.ok || !body?.ok){
+        throw new Error(body?.error||`delete_failed_${response.status}`);
+      }
     }
 
     const sLoading=document.getElementById('stateLoading');
@@ -1555,6 +1592,7 @@
         if(!name) throw new Error('أدخل الاسم.');
         if(!civilId) throw new Error('أدخل الرقم المدني بالأرقام فقط.');
         if(!emailRx.test(email)) throw new Error('تعذّر توليد الحساب من الرقم المدني.');
+        await syncAuthEmailIfChanged(uid, currentAdmin?.data?.email, email);
         await updateDoc(doc(db,'teachers',uid),{name,email,civilId,phone,subject,classes});
         currentAdmin.data={...(currentAdmin.data||{}),name,email,civilId,phone,subject,classes};
         adminTitle.textContent=name||civilId||uid;
@@ -1585,7 +1623,7 @@
       const originalLabel=confirmDeleteAdmin.textContent;
       confirmDeleteAdmin.textContent='جارٍ الحذف...';
       try{
-        await deleteDoc(doc(db,'teachers',uid));
+        await deleteTeacherAccountRemote(uid);
         closeModal(deleteAdminModal,{fallbackFocus:deleteAdminBtn});
         edAOk.textContent='تم الحذف.';edAOk.style.display='block';
         setTimeout(()=>{edAOk.style.display='none';closeAdminView();},700);
@@ -1865,6 +1903,7 @@
         if(!emailRx.test(email)) throw new Error('تعذّر توليد البريد الإلكتروني من رقم البطاقة.');
         if(isSupervisor && !supervisorGrade) throw new Error('اختر صف الإشراف للمشرف.');
         if(role==='head') await ensureSingleHeadForDepartment(teacherDepartment,{ excludeUid: uid });
+        await syncAuthEmailIfChanged(uid, currentTeacher?.data?.email, email);
         await Promise.all([
           updateDoc(doc(db,'teachers',uid),{name,email,civilId,phone,teams,role,isSupervisor,supervisorGrade:isSupervisor?supervisorGrade:null,classes,permissions,displayedPassword:deleteField(),viewedPassword:deleteField()}),
           setDoc(doc(db,'teachers',uid,'private','credentials'),{displayedPassword},{merge:true})
@@ -1898,7 +1937,7 @@
       const originalLabel=confirmDeleteTeacher.textContent;
       confirmDeleteTeacher.textContent='جارٍ الحذف...';
       try{
-        await deleteDoc(doc(db,'teachers',uid));
+        await deleteTeacherAccountRemote(uid);
         closeModal(deleteTeacherModal,{fallbackFocus:deleteTeacherBtn});
         edOk.textContent='تم الحذف.';edOk.style.display='block';setTimeout(()=>{edOk.style.display='none';closeTeacherView();},700);
         if(selectedSubject) await loadTeachers(selectedSubject);

@@ -2000,6 +2000,89 @@ app.post("/api/admin/set-teacher-password", async (req, res) => {
   }
 });
 
+// Firestore's teachers/{uid}.email/civilId fields are just profile data —
+// the actual login identity lives in Firebase Auth, which only the Admin
+// SDK can change for an account that isn't the signed-in user. Without
+// this, editing a teacher's رقم البطاقة (civil ID) in admins/teachers.html
+// updated the Firestore record but left the account logging in with its
+// old ID forever. Admin-only: dept heads can't edit civil IDs at all
+// (depHead/department.html never sends email/civilId in its own update).
+app.post("/api/admin/set-teacher-email", async (req, res) => {
+  const targetUid = String(req.body?.uid || "").trim();
+  if (!targetUid) {
+    return res.status(400).json({ ok: false, error: "missing_uid" });
+  }
+
+  const adminUser = await requireAdminFromRequest(req, res);
+  if (!adminUser) return;
+
+  const newEmail = String(req.body?.newEmail || "").trim().toLowerCase();
+  if (!newEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
+    return res.status(400).json({ ok: false, error: "invalid_email" });
+  }
+
+  try {
+    await admin.auth().updateUser(targetUid, { email: newEmail });
+    console.log(`[admin] email updated targetUid=${targetUid} by=${adminUser.uid}`);
+    return res.json({ ok: true });
+  } catch (error) {
+    console.error(`[admin] set-teacher-email failed targetUid=${targetUid}: ${error.message}`);
+    const code = String(error?.code || "");
+    if (code === "auth/user-not-found") {
+      return res.status(404).json({ ok: false, error: "auth_user_not_found" });
+    }
+    if (code === "auth/email-already-exists") {
+      return res.status(409).json({ ok: false, error: "email_already_exists" });
+    }
+    if (code === "auth/invalid-email") {
+      return res.status(400).json({ ok: false, error: "invalid_email" });
+    }
+    return res.status(500).json({ ok: false, error: "set_email_failed" });
+  }
+});
+
+// Deleting only the Firestore doc (the old behavior) left the Firebase Auth
+// account behind forever — invisible anywhere in this app, but still
+// occupying its email, so recreating that same person's account later
+// failed with auth/email-already-exists. This deletes both in one call so
+// the two can't drift out of sync again.
+app.post("/api/admin/delete-teacher-account", async (req, res) => {
+  const targetUid = String(req.body?.uid || "").trim();
+  if (!targetUid) {
+    return res.status(400).json({ ok: false, error: "missing_uid" });
+  }
+
+  const adminUser = await requireAdminFromRequest(req, res);
+  if (!adminUser) return;
+
+  try {
+    try {
+      await admin.auth().deleteUser(targetUid);
+    } catch (authError) {
+      if (String(authError?.code || "") !== "auth/user-not-found") throw authError;
+    }
+
+    await db.recursiveDelete(db.collection("teachers").doc(targetUid));
+
+    try {
+      await db.collection("accountDeletionLog").add({
+        targetUid,
+        performedByUid: adminUser.uid,
+        performedByName: adminUser.name || null,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    } catch (logError) {
+      console.error(`[admin] deletion log write failed: ${logError.message}`);
+    }
+
+    console.log(`[admin] account deleted targetUid=${targetUid} by=${adminUser.uid}`);
+    return res.json({ ok: true });
+  } catch (error) {
+    console.error(`[admin] delete-teacher-account failed targetUid=${targetUid}: ${error.message}`);
+    return res.status(500).json({ ok: false, error: "delete_failed" });
+  }
+});
+
 app.get("/api/telegram/connect-link", async (req, res) => {
   const userId = await requireSelfOrAdminFromRequest(req, res, req.query.userId);
   if (!userId) return;
