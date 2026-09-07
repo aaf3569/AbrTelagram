@@ -499,6 +499,7 @@
               <div class="field"><label class="label" for="edTTeams">رابط Teams</label><div class="plain-value view-only"><span id="vEdTTeams" class="view-value">—</span></div><div class="input-wrap edit-only"><input id="edTTeams" class="input" type="url"></div></div>
               <div class="field"><label class="label" for="edTDisplayedPassword">كلمة المرور الظاهرة</label><div class="plain-value view-only"><span id="vEdTDisplayedPassword" class="view-value">—</span></div><div class="input-wrap edit-only password-field"><input id="edTDisplayedPassword" class="input" type="password" autocomplete="off" dir="ltr"><button id="toggleDisplayedPasswordBtn" class="eye-toggle" type="button" aria-label="إظهار كلمة المرور الظاهرة" title="إظهار كلمة المرور الظاهرة"><span aria-hidden="true">👁</span></button></div></div>
               <div class="field"><label class="label" for="edTRole">الدور</label><div class="plain-value view-only"><span id="vEdTRole" class="view-value">—</span></div><div class="input-wrap edit-only"><select id="edTRole" class="input"><option value="user">مدرس</option><option value="head">رئيس القسم</option></select></div></div>
+              <div class="field" id="edTSpecializationField" hidden><label class="label" for="edTSpecialization">التخصص داخل القسم</label><div class="plain-value view-only"><span id="vEdTSpecialization" class="view-value">—</span></div><div class="input-wrap edit-only"><select id="edTSpecialization" class="input"></select></div></div>
             </div>
           </section>
 
@@ -817,6 +818,7 @@
     const vEdTTeams=document.getElementById('vEdTTeams');
     const vEdTDisplayedPassword=document.getElementById('vEdTDisplayedPassword');
     const vEdTRole=document.getElementById('vEdTRole');
+    const vEdTSpecialization=document.getElementById('vEdTSpecialization');
     const permissionsView=document.getElementById('permissionsView');
     const classesView=document.getElementById('classesView');
     const classesEditorWrap=document.getElementById('classesEditorWrap');
@@ -827,6 +829,8 @@
     const edTDisplayedPassword=document.getElementById('edTDisplayedPassword');
     const toggleDisplayedPasswordBtn=document.getElementById('toggleDisplayedPasswordBtn');
     const edTRole=document.getElementById('edTRole');
+    const edTSpecializationField=document.getElementById('edTSpecializationField');
+    const edTSpecialization=document.getElementById('edTSpecialization');
     const edTIsSupervisor=document.getElementById('edTIsSupervisor');
     const edTIsSupervisorLabel=document.getElementById('edTIsSupervisorLabel');
     const edTAllowEditSchedule=document.getElementById('edTAllowEditSchedule');
@@ -1017,7 +1021,7 @@
       syncBodyScrollLock();
     };
 
-    const subjectsKW=["اللغة العربية","اللغة الإنجليزية","الرياضيات","التربية الإسلامية",HIST_GEO_DEPARTMENT,PSY_PHIL_DEPARTMENT,PHYSICS_CHEM_DEPARTMENT,GEO_BIO_DEPARTMENT,"الحاسوب","التربية البدنية","التربية الفنية"];
+    const subjectsKW=["اللغة العربية","اللغة الإنجليزية","الرياضيات","التربية الإسلامية",HIST_GEO_DEPARTMENT,PSY_PHIL_DEPARTMENT,PHYSICS_CHEM_DEPARTMENT,GEO_BIO_DEPARTMENT,"الحاسوب","التربية البدنية","التربية الفنية","الدراسات العملية","التربية الموسيقية","اللغة الفرنسية","المكتبات","التجاري"];
 
     // Fetched from settings/classes inside onAuthStateChanged below, before
     // show(sTeachers) — makeClassRow() (the only consumer) is only ever
@@ -1073,14 +1077,30 @@
         throw new Error(`يوجد رئيس قسم حالي لهذا القسم المدمج: ${name}`);
       }
     }
-    function setTeacherSpecializationOptions(options){
-      teacherSpecialization.innerHTML='';
+    function fillSelectOptions(selectEl, options){
+      selectEl.innerHTML='';
       options.forEach(value=>{
         const option=document.createElement('option');
         option.value=value;
         option.textContent=value;
-        teacherSpecialization.appendChild(option);
+        selectEl.appendChild(option);
       });
+    }
+    function setTeacherSpecializationOptions(options){
+      fillSelectOptions(teacherSpecialization, options);
+    }
+    // Only the 4 merged departments (تاريخ/جغرافيا, نفس/فلسفة, فيزياء/كيمياء,
+    // جيولوجيا/أحياء) have a specific-subject distinction worth surfacing —
+    // every other department already equals its one subject 1:1, so the
+    // field stays hidden for those instead of showing a single-option
+    // no-op select.
+    function syncEditSpecializationField(department, currentSubject){
+      const mergedSubjects=getMergedSubjectsForDepartment(department);
+      const show=mergedSubjects.length>0;
+      edTSpecializationField.hidden=!show;
+      if(!show) return;
+      fillSelectOptions(edTSpecialization, mergedSubjects);
+      edTSpecialization.value=mergedSubjects.includes(currentSubject) ? currentSubject : mergedSubjects[0];
     }
     function syncAddTeacherSpecializationField(){
       const mergedSubjects=getMergedSubjectsForDepartment(selectedSubject);
@@ -1364,6 +1384,7 @@
         teams:edTTeams.value.trim(),
         displayedPassword:edTDisplayedPassword.value,
         role:edTRole.value,
+        specialization:edTSpecializationField.hidden?'':edTSpecialization.value,
         isSupervisor:edTIsSupervisor.checked,
         supervisorGrade:edTIsSupervisor.checked?normalizeSupervisorGrade(editSupervisorGrade):'',
         allowEditSchedule:edTAllowEditSchedule.checked,
@@ -1400,6 +1421,7 @@
       setViewValue(vEdTTeams,teams);
       setDisplayedPasswordPreview(displayedPassword);
       setViewValue(vEdTRole,role==='head'?'رئيس القسم':'مدرس');
+      setViewValue(vEdTSpecialization, edTSpecializationField.hidden ? '—' : (edTSpecialization.value||'—'));
       renderPermissionsPreview({ isSupervisor, supervisorGrade, allowEditSchedule, allowMorningLate, allowSupervisorStudents });
       renderClassesPreview(getClassesFrom(edClasses));
       updateSupervisorCheckboxLabels();
@@ -1409,7 +1431,7 @@
       teacherEditMode=!!isEdit;
       teacherProfileShell.classList.toggle('teacher-readonly', !teacherEditMode);
       teacherProfileShell.classList.toggle('teacher-editing', teacherEditMode);
-      [edTName,edTEmail,edTPhone,edTTeams,edTDisplayedPassword,edTRole,edTIsSupervisor,edTAllowEditSchedule,edTAllowMorningLate,edTAllowSupervisorStudents].forEach(el=>el.disabled=!teacherEditMode);
+      [edTName,edTEmail,edTPhone,edTTeams,edTDisplayedPassword,edTRole,edTSpecialization,edTIsSupervisor,edTAllowEditSchedule,edTAllowMorningLate,edTAllowSupervisorStudents].forEach(el=>el.disabled=!teacherEditMode);
       toggleDisplayedPasswordBtn.disabled=!teacherEditMode;
       if(!teacherEditMode) setDisplayedPasswordVisibility(false);
       classesEditorWrap.hidden=!teacherEditMode;
@@ -1702,6 +1724,7 @@
       edTDisplayedPassword.value=getStoredDisplayedPassword(d);
       setDisplayedPasswordVisibility(false);
       edTRole.value=d.role||'user';
+      syncEditSpecializationField(mapTeacherSubjectToDepartment(d.subject)||selectedSubject, (d.subject||'').toString().trim());
       edTIsSupervisor.checked=!!d.isSupervisor;
       editSupervisorGrade=edTIsSupervisor.checked ? normalizeSupervisorGrade(d.supervisorGrade) : '';
       edTAllowEditSchedule.checked=!!normalizePermissions(d).allowEditSchedule;
@@ -1740,7 +1763,7 @@
       }
     });
     edAddClass.addEventListener('click',()=>{edClasses.appendChild(makeClassRow(""));updateProfileSummary();});
-    [edTName,edTEmail,edTPhone,edTTeams,edTDisplayedPassword,edTRole,edTAllowEditSchedule,edTAllowMorningLate,edTAllowSupervisorStudents].forEach(el=>{
+    [edTName,edTEmail,edTPhone,edTTeams,edTDisplayedPassword,edTRole,edTSpecialization,edTAllowEditSchedule,edTAllowMorningLate,edTAllowSupervisorStudents].forEach(el=>{
       const ev=el.tagName==='SELECT'||el.type==='checkbox'?'change':'input';
       el.addEventListener(ev, updateProfileSummary);
     });
@@ -1860,6 +1883,7 @@
         const storedDisplayedPassword=(privData!=null&&privData.displayedPassword!=null)?String(privData.displayedPassword):getStoredDisplayedPassword(d);
         currentTeacher={uid,data:d,displayedPassword:storedDisplayedPassword};
         selectedSubject = mapTeacherSubjectToDepartment(d.subject) || selectedSubject;
+        syncEditSpecializationField(selectedSubject, (d.subject||'').toString().trim());
         edTName.value=d.name||'';
         edTEmail.value=getTeacherCivilId(d);
         edTPhone.value=d.phone||'';
@@ -1896,6 +1920,10 @@
         const role=edTRole.value, isSupervisor=edTIsSupervisor.checked, classes=getClassesFrom(edClasses);
         const supervisorGrade=isSupervisor ? normalizeSupervisorGrade(editSupervisorGrade) : '';
         const teacherDepartment=mapTeacherSubjectToDepartment((currentTeacher?.data?.subject || '').toString().trim()) || mapTeacherSubjectToDepartment(selectedSubject) || selectedSubject;
+        // Only merged departments (تاريخ/جغرافيا وغيرها) expose the
+        // specialization select — everywhere else the teacher's subject
+        // stays whatever it already was, since there's nothing to pick.
+        const subjectToSave=!edTSpecializationField.hidden ? edTSpecialization.value : (currentTeacher?.data?.subject || '');
         const prevPermissions=(currentTeacher?.data?.permissions&&typeof currentTeacher.data.permissions==='object')?currentTeacher.data.permissions:{};
         const permissions={...prevPermissions,allowEditSchedule:!!edTAllowEditSchedule.checked,allowMorningLate:!!edTAllowMorningLate.checked,allowSupervisorStudents:!!edTAllowSupervisorStudents.checked};
         if(!name) throw new Error('أدخل الاسم.');
@@ -1905,10 +1933,10 @@
         if(role==='head') await ensureSingleHeadForDepartment(teacherDepartment,{ excludeUid: uid });
         await syncAuthEmailIfChanged(uid, currentTeacher?.data?.email, email);
         await Promise.all([
-          updateDoc(doc(db,'teachers',uid),{name,email,civilId,phone,teams,role,isSupervisor,supervisorGrade:isSupervisor?supervisorGrade:null,classes,permissions,displayedPassword:deleteField(),viewedPassword:deleteField()}),
+          updateDoc(doc(db,'teachers',uid),{name,email,civilId,phone,teams,role,subject:subjectToSave,isSupervisor,supervisorGrade:isSupervisor?supervisorGrade:null,classes,permissions,displayedPassword:deleteField(),viewedPassword:deleteField()}),
           setDoc(doc(db,'teachers',uid,'private','credentials'),{displayedPassword},{merge:true})
         ]);
-        currentTeacher.data={...(currentTeacher.data||{}),name,email,civilId,phone,teams,role,isSupervisor,supervisorGrade:isSupervisor?supervisorGrade:null,classes,permissions};
+        currentTeacher.data={...(currentTeacher.data||{}),name,email,civilId,phone,teams,role,subject:subjectToSave,isSupervisor,supervisorGrade:isSupervisor?supervisorGrade:null,classes,permissions};
         currentTeacher.displayedPassword=displayedPassword;
         setTeacherEditMode(false);
         edOk.textContent='تم حفظ التعديلات.';edOk.style.display='block';setTimeout(()=>{edOk.style.display='none';closeTeacherView();},900);
