@@ -1444,6 +1444,7 @@
       classWeek: new Map(),   // classKey -> Map(iso -> Map(lesson->text))
       overridesByTeacher: new Map(), // uid -> Map(date->Map(lesson->overrideObj))
       teacherNameByUid: new Map(),
+      teacherExistsByUid: new Map(),
       teacherPhoneByUid: new Map(),
       teacherList: null, // [{uid,name}]
       weekKey: "",
@@ -1713,11 +1714,27 @@
       if(cache.teacherNameByUid.has(uid)) return cache.teacherNameByUid.get(uid);
       try{
         const snap = await getDoc(doc(db,'teachers',uid));
-        const name = snap.exists() ? displayTeacherNameFromDoc(snap.data()) : uid;
+        // A schedule/override entry can outlive the teacher it points to
+        // (their account was deleted after the entry was created) — show a
+        // clear label instead of leaking the raw Firestore uid into the UI.
+        const name = snap.exists() ? displayTeacherNameFromDoc(snap.data()) : 'معلّم محذوف';
         cache.teacherNameByUid.set(uid, name);
         return name;
       }catch{
         return uid;
+      }
+    }
+
+    async function teacherExists(uid){
+      if(!uid) return false;
+      if(cache.teacherExistsByUid.has(uid)) return cache.teacherExistsByUid.get(uid);
+      try{
+        const snap = await getDoc(doc(db,'teachers',uid));
+        const exists = snap.exists();
+        cache.teacherExistsByUid.set(uid, exists);
+        return exists;
+      }catch{
+        return true; // fail open — a transient read error shouldn't hide a real lesson
       }
     }
 
@@ -2867,6 +2884,25 @@
         }
       }catch(e){
         console.warn('Overrides for class view not loaded (index may be needed).', e);
+      }
+
+      // Drop any cell (base schedule or override) whose teacher account no
+      // longer exists — a lesson pointing at a deleted teacher isn't a real
+      // lesson to show here, it's just an orphaned leftover.
+      const uidsToCheck = new Set();
+      for (const dayMap of map.values()) {
+        for (const cellData of dayMap.values()) {
+          if (cellData.teacherUid) uidsToCheck.add(cellData.teacherUid);
+        }
+      }
+      await Promise.all([...uidsToCheck].map(uid => teacherExists(uid)));
+      for (const dayMap of map.values()) {
+        for (const lesson of [...dayMap.keys()]) {
+          const cellData = dayMap.get(lesson);
+          if (cellData.teacherUid && cache.teacherExistsByUid.get(cellData.teacherUid) === false) {
+            dayMap.delete(lesson);
+          }
+        }
       }
 
       cache.classWeek.set(classKey, map);
