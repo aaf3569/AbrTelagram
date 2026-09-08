@@ -765,6 +765,10 @@
       background: rgba(248, 250, 252, 0.65);
       flex-shrink: 0;
     }
+    /* This author rule's display:flex otherwise beats the browser's own
+       [hidden]{display:none} default, so a hidden footer would still show
+       as an empty bordered bar without this. */
+    .modal-footer[hidden] { display: none; }
 
     .info-grid {
       display: grid;
@@ -787,57 +791,6 @@
       font-size: 11px; flex-shrink: 0;
     }
     .info-v { color: var(--text); font-weight: 900; font-size: 14px; }
-
-    /* Teacher call card (تفاصيل الحصة) */
-    .teacher-call-card {
-      display: flex; align-items: center; gap: 12px;
-      padding: 12px 14px;
-      border-radius: 16px;
-      background: linear-gradient(135deg, rgba(16, 185, 129, 0.10), rgba(16, 185, 129, 0.03));
-      border: 1px solid rgba(16, 185, 129, 0.28);
-      text-decoration: none;
-      color: var(--text);
-      transition: var(--transition);
-      cursor: pointer;
-    }
-    .teacher-call-card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 12px 26px rgba(16, 185, 129, 0.2);
-      border-color: rgba(16, 185, 129, 0.45);
-    }
-    .teacher-call-card:active { transform: translateY(0) scale(0.99); }
-    .tcc-icon {
-      width: 42px; height: 42px; border-radius: 12px; flex-shrink: 0;
-      background: linear-gradient(135deg, #10b981, #059669);
-      color: #fff; font-size: 1.05rem;
-      display: grid; place-items: center;
-      box-shadow: 0 6px 14px rgba(16, 185, 129, 0.35);
-      animation: ringPulse 2.4s ease-in-out infinite;
-    }
-    @keyframes ringPulse {
-      0%, 100% { box-shadow: 0 6px 14px rgba(16, 185, 129, 0.35); }
-      50% { box-shadow: 0 6px 18px rgba(16, 185, 129, 0.5), 0 0 0 6px rgba(16, 185, 129, 0.10); }
-    }
-    .tcc-text { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
-    .tcc-label { font-size: 11px; font-weight: 800; color: var(--muted); }
-    .tcc-number { font-size: 15px; font-weight: 900; color: var(--text); direction: ltr; unicode-bidi: embed; text-align: right; }
-    .tcc-cta {
-      display: flex; align-items: center; gap: 6px; flex-shrink: 0;
-      font-size: 12.5px; font-weight: 900; color: #059669;
-      background: rgba(16, 185, 129, 0.14);
-      padding: 8px 12px; border-radius: 999px;
-    }
-    .teacher-call-card.is-disabled {
-      background: rgba(100, 116, 139, 0.06);
-      border-color: var(--border);
-      cursor: default;
-    }
-    .teacher-call-card.is-disabled:hover { transform: none; box-shadow: none; border-color: var(--border); }
-    .teacher-call-card.is-disabled .tcc-icon { background: var(--muted); animation: none; box-shadow: none; }
-    .teacher-call-card.is-disabled .tcc-number { color: var(--muted); font-weight: 700; }
-    @media (prefers-reduced-motion: reduce) {
-      .tcc-icon { animation: none; }
-    }
 
     .split {
       display: grid;
@@ -1725,6 +1678,10 @@
       modalTitleText.textContent = title || '';
       modalBody.innerHTML = bodyHtml || '';
       modalFooter.innerHTML = footerHtml || '';
+      // Popups with nothing but an "إغلاق" button (which just duplicated the
+      // × already in the header) skip the footer entirely instead of
+      // leaving an empty bordered bar at the bottom.
+      modalFooter.hidden = !footerHtml;
       modalEl.classList.add('open');
       modalEl.setAttribute('aria-hidden','false');
       document.body.classList.add('modal-open');
@@ -1764,50 +1721,6 @@
       }
     }
 
-    async function getTeacherPhone(uid){
-      if(!uid) return '';
-      if(cache.teacherPhoneByUid.has(uid)) return cache.teacherPhoneByUid.get(uid);
-      try{
-        const snap = await getDoc(doc(db,'teachers',uid));
-        const phone = snap.exists() ? (snap.data()?.phone || '').toString().trim() : '';
-        cache.teacherPhoneByUid.set(uid, phone);
-        return phone;
-      }catch{
-        return '';
-      }
-    }
-
-    // tel: only tolerates digits and a leading '+' — strip whatever
-    // formatting (spaces, dashes) the phone was saved with in admins/teachers.html.
-    function telHrefFor(phone){
-      const cleaned = (phone || '').toString().trim().replace(/[^\d+]/g, '');
-      return cleaned;
-    }
-
-    function teacherCallCardHtml(phone){
-      const telHref = telHrefFor(phone);
-      if(!telHref){
-        return `
-          <div class="teacher-call-card is-disabled">
-            <span class="tcc-icon"><i class="fas fa-phone-slash"></i></span>
-            <span class="tcc-text">
-              <span class="tcc-label">رقم المعلم</span>
-              <span class="tcc-number">غير مسجل</span>
-            </span>
-          </div>
-        `;
-      }
-      return `
-        <a href="tel:${telHref}" class="teacher-call-card">
-          <span class="tcc-icon"><i class="fas fa-phone-volume"></i></span>
-          <span class="tcc-text">
-            <span class="tcc-label">رقم المعلم</span>
-            <span class="tcc-number">${escapeHtml(phone)}</span>
-          </span>
-          <span class="tcc-cta"><i class="fas fa-phone"></i> اتصال</span>
-        </a>
-      `;
-    }
 
     async function loadTeachersList(){
       if(cache.teacherList) return cache.teacherList;
@@ -2929,6 +2842,12 @@
           const x = d.data();
           const iso = x.date;
           if (!iso || !map.has(iso)) continue;
+          // An override only means something on top of a lesson that's
+          // actually scheduled — without this check, a stale override left
+          // behind after the base schedule was wiped (or one that never
+          // matched a real slot) rendered as a phantom "بديل" cell with no
+          // real lesson behind it.
+          if (!map.get(iso).has(Number(x.lesson))) continue;
 
           let tName = nameCache.get(x.newTeacherUid);
           if (!tName) {
@@ -3364,10 +3283,7 @@
           const cellData = row.get(Number(lesson));
           if (!cellData) return;
 
-          const [teacherName, teacherPhone] = await Promise.all([
-            cellData.teacherName ? Promise.resolve(cellData.teacherName) : getTeacherName(cellData.teacherUid),
-            getTeacherPhone(cellData.teacherUid)
-          ]);
+          const teacherName = cellData.teacherName || await getTeacherName(cellData.teacherUid);
           const dayName = dayNameByISO(date);
           const timeLabel = lessonTimeLabel(Number(lesson));
 
@@ -3382,8 +3298,6 @@
                 <div class="info-v">${escapeHtml(teacherName)}</div>
               </div>
             </div>
-
-            ${teacherCallCardHtml(teacherPhone)}
 
             <div class="info-grid">
               <div class="info-box">
@@ -3403,8 +3317,7 @@
 
           openModal({
             title: 'تفاصيل الحصة',
-            bodyHtml: body,
-            footerHtml: `<button class="filter-btn btn-ghost" onclick="closeModal()"><i class="fas fa-times"></i> إغلاق</button>`
+            bodyHtml: body
           });
         });
       });
