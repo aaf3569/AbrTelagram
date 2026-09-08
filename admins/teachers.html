@@ -44,6 +44,17 @@
     body{background:var(--page);color:var(--text);font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;display:flex;flex-direction:column;min-height:100vh}
     .site-header{position:sticky;top:0;z-index:10;background:rgba(255,255,255,.68);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);color:var(--primary);padding:16px 20px;display:flex;align-items:center;justify-content:center;border-bottom:1px solid rgba(3,60,84,.08);box-shadow:0 2px 10px rgba(3,60,84,.06)}
     .site-title{margin:0;font-weight:900;letter-spacing:.2px;font-size:clamp(1.1rem,2.4vw,1.5rem)}
+    .header-admin-back{
+      display:inline-flex;align-items:center;justify-content:center;
+      position:absolute;top:50%;right:20px;transform:translateY(-50%);
+      width:36px;height:36px;border-radius:10px;
+      border:1px solid rgba(3,60,84,.18);background:#fff;color:var(--primary);
+      box-shadow:var(--shadow-1);text-decoration:none;
+      transition:background .15s ease,border-color .15s ease,transform .15s ease;
+    }
+    .header-admin-back:hover{background:#eef6fb;border-color:rgba(3,60,84,.4);transform:translateY(calc(-50% - 1px))}
+    .header-admin-back svg{width:18px;height:18px;stroke:currentColor;stroke-width:2.6;fill:none;stroke-linecap:round;stroke-linejoin:round}
+    @media (max-width:700px){.header-admin-back{right:12px}}
     main{flex:1;padding:24px 14px 32px;display:flex}
     .column{width:min(820px,96vw);margin:0 auto;display:flex;flex-direction:column;gap:16px}
     .panel{width:100%;background:#fff;border:1px solid var(--border);border-radius:16px;padding:16px 14px;box-shadow:var(--shadow-1)}
@@ -53,8 +64,6 @@
     @keyframes spin{to{transform:rotate(360deg)}}
     .error{color:#a11;background:#fde8e8;border:1px solid #f5c5c5;padding:12px;border-radius:14px}
     .muted{color:var(--muted)}
-    .floating-back{position:fixed;right:20px;top:90px;z-index:24;height:46px;padding:0 16px;border-radius:14px;border:1px solid rgba(3,60,84,.24);background:#fff;color:#033C54;font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;font-weight:900;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;box-shadow:0 14px 34px rgba(3,60,84,.2);transition:.16s ease}
-    .floating-back:hover{transform:translateY(-2px);box-shadow:0 18px 40px rgba(3,60,84,.26);border-color:rgba(3,60,84,.45)}
     .btn{font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;height:52px;border:none;border-radius:14px;cursor:pointer;font-weight:900;font-size:.98rem;padding:0 16px;transition:.14s ease}
     .btn:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
     .btn.primary{background:linear-gradient(180deg,#065372,#033C54);color:#fff;box-shadow:0 12px 28px rgba(3,60,84,.26)}
@@ -89,7 +98,6 @@
     .sheet-body{flex:1 1 auto;overflow:auto;padding:16px;width:min(820px,94vw);margin:0 auto;display:flex;flex-direction:column;gap:12px}
     .sheet.small .sheet-body{width:min(620px,94vw)}
     body.teacher-route-active main, body.teacher-route-active #subjectSheet{display:none !important}
-    body.teacher-route-active .floating-back{display:none}
     body.teacher-route-active #teacherSheet{position:static;inset:auto;transform:none !important;display:flex;min-height:calc(100vh - 80px)}
     .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
     .field{display:flex;flex-direction:column;gap:8px;width:100%;min-width:0}
@@ -165,7 +173,6 @@
        tablets by default. The min-width:980px block below is the only
        place that ever turns them on. */
     .sidebar-desktop-head{display:none}
-    .sidebar-desktop-foot{display:none}
     #desktopWelcome{display:none}
     .back-btn-icon{display:none}
     @media (min-width:980px){
@@ -201,7 +208,7 @@
     .success-text{font-weight:900;color:#166534;font-size:15px}
     @keyframes ringDraw{0%{stroke-dashoffset:220;opacity:.5}30%{stroke-dashoffset:0;opacity:1}70%{stroke-dashoffset:0;opacity:1}100%{stroke-dashoffset:220;opacity:.5}}
     @keyframes checkDraw{0%{stroke-dashoffset:70;opacity:0}25%{stroke-dashoffset:70;opacity:0}45%{stroke-dashoffset:0;opacity:1}70%{stroke-dashoffset:0;opacity:1}100%{stroke-dashoffset:70;opacity:0}}
-    @media (max-width:700px){.floating-back,.teacher-profile-back{right:12px;top:76px;height:42px;padding:0 12px}}
+    @media (max-width:700px){.teacher-profile-back{right:12px;top:76px;height:42px;padding:0 12px}}
     @media (max-width:640px){.add-teacher-body{gap:10px}}
 
     /* ================================================================
@@ -222,9 +229,8 @@
         min-height:100vh;
         overflow:hidden;
       }
-      body:has(#stateTeachers.active){grid-template-columns:296px 1fr}
+      body:has(#stateTeachers.active){grid-template-columns:320px 1fr}
       .site-header{grid-column:1 / -1}
-      .floating-back{display:none}
 
       main{
         grid-row:2;
@@ -245,39 +251,72 @@
         display:none;
         flex-direction:column;
         height:100%;
-        padding:22px 18px 28px;
+        padding:22px 16px 28px;
         overflow-y:auto;
       }
       #stateTeachers.active{display:flex}
 
       .sidebar-desktop-head{display:flex;flex-direction:column;margin-bottom:14px}
-      .sidebar-desktop-foot{
-        display:flex;flex-direction:column;margin-top:auto;padding-top:18px;
-        border-top:1px solid var(--border);
-      }
-      .sidebar-back-link{
-        display:inline-flex;align-items:center;gap:7px;width:fit-content;
-        height:38px;padding:0 14px;border-radius:11px;
-        border:1px solid rgba(3,60,84,.22);background:#fff;
-        color:var(--primary);font-weight:900;font-size:.88rem;
-        text-decoration:none;box-shadow:var(--shadow-1);
-        transition:background .15s ease,border-color .15s ease,transform .15s ease;
-      }
-      .sidebar-back-link:hover{background:#eef6fb;border-color:rgba(3,60,84,.4);transform:translateY(-1px)}
-      .sidebar-back-link svg{width:15px;height:15px;stroke:currentColor;stroke-width:2.6;fill:none;stroke-linecap:round;stroke-linejoin:round;transform:scaleX(-1);flex-shrink:0}
       .sidebar-heading{font-size:.76rem;font-weight:900;letter-spacing:.03em;color:#9aabc2;padding-inline-start:2px}
+
+      .teacher-search-wrap{position:relative;margin-bottom:14px}
+      .teacher-search-box{
+        display:flex;align-items:center;gap:8px;
+        height:42px;padding:0 12px;border-radius:12px;
+        border:1px solid var(--border);background:#fff;
+        box-shadow:var(--shadow-1);
+        transition:border-color .15s ease,box-shadow .15s ease;
+      }
+      .teacher-search-box:focus-within{border-color:rgba(3,60,84,.4);box-shadow:0 0 0 3px rgba(3,60,84,.08)}
+      .teacher-search-icon{width:16px;height:16px;flex-shrink:0;stroke:#9aabc2;stroke-width:2.2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+      .teacher-search-input{
+        flex:1;min-width:0;height:100%;border:none;outline:none;background:transparent;
+        font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+        font-size:.88rem;font-weight:700;color:#33475b;
+      }
+      .teacher-search-input::placeholder{color:#9aabc2;font-weight:600}
+      .teacher-search-clear{
+        flex-shrink:0;width:20px;height:20px;border-radius:999px;border:none;
+        background:#eef2f6;color:#64748b;font-size:.9rem;line-height:1;cursor:pointer;
+        display:flex;align-items:center;justify-content:center;padding:0;
+      }
+      .teacher-search-clear:hover{background:#e2e8f0}
+      .teacher-search-results{
+        position:absolute;top:calc(100% + 6px);inset-inline:0;z-index:30;
+        max-height:360px;overflow-y:auto;
+        background:#fff;border:1px solid var(--border);border-radius:14px;
+        box-shadow:0 18px 40px rgba(3,60,84,.16);padding:6px;
+        display:flex;flex-direction:column;gap:2px;
+      }
+      .teacher-search-item{
+        display:flex;flex-direction:column;gap:2px;
+        padding:9px 10px;border-radius:10px;cursor:pointer;text-align:right;
+        background:transparent;border:none;font-family:inherit;width:100%;
+      }
+      .teacher-search-item:hover,.teacher-search-item.active{background:#f3f8fd}
+      .teacher-search-item-name{font-size:.9rem;font-weight:800;color:#0f2743}
+      .teacher-search-item-name mark{background:rgba(3,60,84,.16);color:var(--primary);border-radius:3px;padding:0 1px}
+      .teacher-search-item-sub{font-size:.76rem;font-weight:700;color:#9aabc2}
+      .teacher-search-empty{padding:14px 10px;text-align:center;color:#9aabc2;font-size:.86rem;font-weight:700}
 
       #stateTeachers #openAdminsTop,
       #subjectsList .subject{
         width:100%;background:transparent;border:1px solid transparent;border-radius:12px;
-        box-shadow:none;padding:0 14px;height:46px;color:#33475b;font-size:.94rem;
+        box-shadow:none;padding:0 12px;height:46px;color:#33475b;
         transition:background .14s ease,border-color .14s ease,color .14s ease;
       }
+      #stateTeachers #openAdminsTop span,
+      #subjectsList .subject span{
+        font-size:.92rem;flex:1;min-width:0;
+        white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+      }
+      #stateTeachers .chev,
+      #subjectsList .chev{width:17px;height:17px}
       #stateTeachers #openAdminsTop:hover,
       #subjectsList .subject:hover{background:#f3f8fd;border-color:#e2edf8;transform:none;box-shadow:none}
       #subjectsList .subject:hover .chev path{transform:none}
-      #subjectsList{gap:2px;margin-top:2px}
-      #stateTeachers #openAdminsTop{margin-bottom:14px;border-color:var(--border);background:#fafcff}
+      #subjectsList{gap:6px;margin-top:6px}
+      #stateTeachers #openAdminsTop{margin-bottom:14px}
       #stateTeachers #openAdminsTop.subject-selected,
       #subjectsList .subject.subject-selected{
         background:linear-gradient(90deg, rgba(3,60,84,.09), rgba(3,60,84,.02));
@@ -402,8 +441,10 @@
 <body>
   <header class="site-header">
     <h1 class="site-title">ثانوية أحمد البشر الرومي</h1>
+    <a href="/admins/adminpage.html" class="header-admin-back" aria-label="لوحة الإدارة" title="لوحة الإدارة">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+    </a>
   </header>
-  <a class="floating-back" href="/admins/adminpage.html" aria-label="رجوع">رجوع</a>
 
   <main>
     <div class="column">
@@ -421,6 +462,14 @@
 
       <section id="stateTeachers" class="state" aria-label="اختر المادة">
         <div class="sidebar-desktop-head">
+          <div class="teacher-search-wrap">
+            <div class="teacher-search-box">
+              <svg class="teacher-search-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+              <input id="teacherSearchInput" class="teacher-search-input" type="text" placeholder="ابحث عن معلم بالاسم..." autocomplete="off" aria-label="بحث عن معلم" role="combobox" aria-expanded="false" aria-autocomplete="list" aria-controls="teacherSearchResults">
+              <button id="teacherSearchClear" class="teacher-search-clear" type="button" aria-label="مسح البحث" hidden>&times;</button>
+            </div>
+            <div id="teacherSearchResults" class="teacher-search-results" role="listbox" hidden></div>
+          </div>
           <div class="sidebar-heading">الأقسام الدراسية</div>
         </div>
         <button id="openAdminsTop" class="subject subject-card subject-admin-entry" type="button" aria-label="الإدارة">
@@ -428,12 +477,6 @@
           <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
         </button>
         <div id="subjectsList" class="stack"></div>
-        <div class="sidebar-desktop-foot">
-          <a href="/admins/adminpage.html" class="sidebar-back-link">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
-            <span>لوحة الإدارة</span>
-          </a>
-        </div>
       </section>
     </div>
   </main>
@@ -795,6 +838,9 @@
     const sTeachers=document.getElementById('stateTeachers');
     const openAdminsTop=document.getElementById('openAdminsTop');
     const subjectsList=document.getElementById('subjectsList');
+    const teacherSearchInput=document.getElementById('teacherSearchInput');
+    const teacherSearchClear=document.getElementById('teacherSearchClear');
+    const teacherSearchResults=document.getElementById('teacherSearchResults');
     const subjectSheet=document.getElementById('subjectSheet');
     const closeSubject=document.getElementById('closeSubject');
     const subjectTitle=document.getElementById('subjectTitle');
@@ -1152,6 +1198,147 @@
       });
     }
 
+    // ==== Sidebar teacher search (desktop shell only — the search box
+    // lives inside .sidebar-desktop-head, which stays display:none on
+    // phones same as the rest of that block). Loaded once into memory
+    // instead of querying Firestore per keystroke: the whole teachers
+    // collection is small, and admins already have full read access to it
+    // for every other feature on this page. ====
+    let allTeachersCache=[];
+    async function loadAllTeachersCache(){
+      try{
+        const snap=await getDocs(collection(db,'teachers'));
+        allTeachersCache=snap.docs.map(d=>({ uid:d.id, ...d.data() }));
+      }catch(e){ console.error('[teacher-search] cache load failed:', e?.message||e); allTeachersCache=[]; }
+    }
+    function escapeHtml(str){
+      return (str||'').toString().replace(/[&<>"]/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
+    }
+    // أ/إ/آ→ا، ة→ه، ى→ي — each swap is one Arabic letter for another, so
+    // match indices found on the normalized string line up character-for-
+    // character with the original string for highlighting.
+    function normalizeArabic(str){
+      return (str||'').toString().replace(/[أإآ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي');
+    }
+    function highlightRanges(text, query){
+      const normText=normalizeArabic(text).toLowerCase();
+      const tokens=normalizeArabic(query).toLowerCase().split(/\s+/).filter(Boolean);
+      let ranges=[];
+      tokens.forEach(tok=>{
+        let from=0;
+        for(;;){
+          const idx=normText.indexOf(tok, from);
+          if(idx===-1) break;
+          ranges.push([idx, idx+tok.length]);
+          from=idx+tok.length;
+        }
+      });
+      if(!ranges.length) return escapeHtml(text);
+      ranges.sort((a,b)=>a[0]-b[0]);
+      const merged=[ranges[0]];
+      ranges.slice(1).forEach(([s,e])=>{
+        const last=merged[merged.length-1];
+        if(s<=last[1]) last[1]=Math.max(last[1],e); else merged.push([s,e]);
+      });
+      let out='', cursor=0;
+      merged.forEach(([s,e])=>{
+        out+=escapeHtml(text.slice(cursor,s))+'<mark>'+escapeHtml(text.slice(s,e))+'</mark>';
+        cursor=e;
+      });
+      out+=escapeHtml(text.slice(cursor));
+      return out;
+    }
+    // "Advanced" here means order-independent, first/last-name-agnostic
+    // matching: every typed word just has to appear somewhere in the
+    // name, so "أحمد الرومي" and "الرومي أحمد" both find the same person.
+    function teacherMatchesQuery(teacher, tokens){
+      const name=normalizeArabic(teacher.name||'').toLowerCase();
+      const civilId=getTeacherCivilId(teacher)||'';
+      return tokens.every(tok=> name.includes(tok) || (civilId && civilId.includes(tok)));
+    }
+    let searchActiveIndex=-1;
+    let searchResultsData=[];
+    function closeTeacherSearchResults(){
+      teacherSearchResults.hidden=true;
+      teacherSearchResults.innerHTML='';
+      teacherSearchInput.setAttribute('aria-expanded','false');
+      searchActiveIndex=-1;
+      searchResultsData=[];
+    }
+    function updateSearchActiveItem(){
+      Array.from(teacherSearchResults.querySelectorAll('.teacher-search-item')).forEach((el,i)=>{
+        el.classList.toggle('active', i===searchActiveIndex);
+      });
+    }
+    function renderTeacherSearchResults(query){
+      const tokens=normalizeArabic(query).trim().toLowerCase().split(/\s+/).filter(Boolean);
+      if(!tokens.length){ closeTeacherSearchResults(); return; }
+      const matches=allTeachersCache.filter(t=>teacherMatchesQuery(t,tokens)).slice(0,8);
+      searchResultsData=matches;
+      searchActiveIndex=-1;
+      teacherSearchInput.setAttribute('aria-expanded', matches.length?'true':'false');
+      if(!matches.length){
+        teacherSearchResults.innerHTML='<div class="teacher-search-empty">لا يوجد معلمون مطابقون</div>';
+        teacherSearchResults.hidden=false;
+        return;
+      }
+      teacherSearchResults.innerHTML=matches.map((t,i)=>{
+        const name=t.name||getTeacherCivilId(t)||t.uid;
+        const roleKey=(t.role||'').toString().toLowerCase();
+        const roleLabel=roleKey==='admin'?'مشرف':(roleKey==='head'?'رئيس القسم':'مدرس');
+        const subLabel=[t.subject||'', roleLabel].filter(Boolean).join(' · ');
+        return `<button type="button" class="teacher-search-item" data-idx="${i}" role="option">
+          <span class="teacher-search-item-name">${highlightRanges(name, query)}</span>
+          <span class="teacher-search-item-sub">${escapeHtml(subLabel)}</span>
+        </button>`;
+      }).join('');
+      teacherSearchResults.hidden=false;
+    }
+    function selectTeacherSearchResult(idx){
+      const t=searchResultsData[idx];
+      if(!t) return;
+      closeTeacherSearchResults();
+      teacherSearchInput.blur();
+      if((t.role||'').toString().toLowerCase()==='admin') openAdminEditor(t.uid);
+      else openTeacherEditor(t.uid);
+    }
+    teacherSearchInput.addEventListener('input',()=>{
+      teacherSearchClear.hidden=!teacherSearchInput.value;
+      renderTeacherSearchResults(teacherSearchInput.value);
+    });
+    teacherSearchClear.addEventListener('click',()=>{
+      teacherSearchInput.value='';
+      teacherSearchClear.hidden=true;
+      closeTeacherSearchResults();
+      teacherSearchInput.focus();
+    });
+    teacherSearchResults.addEventListener('click',(e)=>{
+      const item=e.target.closest('.teacher-search-item');
+      if(!item) return;
+      selectTeacherSearchResult(parseInt(item.dataset.idx,10));
+    });
+    teacherSearchInput.addEventListener('keydown',(e)=>{
+      if(teacherSearchResults.hidden) return;
+      if(e.key==='ArrowDown'){
+        e.preventDefault();
+        searchActiveIndex=Math.min(searchActiveIndex+1, searchResultsData.length-1);
+        updateSearchActiveItem();
+      }else if(e.key==='ArrowUp'){
+        e.preventDefault();
+        searchActiveIndex=Math.max(searchActiveIndex-1, 0);
+        updateSearchActiveItem();
+      }else if(e.key==='Enter'){
+        e.preventDefault();
+        selectTeacherSearchResult(searchActiveIndex>=0?searchActiveIndex:0);
+      }else if(e.key==='Escape'){
+        e.stopPropagation();
+        closeTeacherSearchResults();
+      }
+    });
+    document.addEventListener('click',(e)=>{
+      if(!teacherSearchResults.hidden && !e.target.closest('.teacher-search-wrap')) closeTeacherSearchResults();
+    });
+
     let selectedSubject=null;
     let currentTeacher={uid:null,data:null};
     let unsubscribeTeacherPresence=null;
@@ -1449,6 +1636,12 @@
       subjectTitle.textContent=label;
       subjectNameStrong.textContent=label;
       syncAddTeacherSpecializationField();
+      // On the desktop shell every sheet shares the same content-pane grid
+      // cell instead of being a full-screen overlay, so leaving another
+      // sheet's .open class in place (e.g. coming from "الإدارة") left two
+      // sheets rendered at once — the new one didn't visibly appear until
+      // some later interaction happened to close the stale one.
+      [teacherSheet,adminsSheet,adminSheet].forEach(s=>closeSheet(s));
       openSheet(subjectSheet);
       loadTeachers(label);
       // Desktop sidebar only — highlights which subject is currently open.
@@ -1465,6 +1658,9 @@
     function openAdminsPanel(){
       Array.from(subjectsList.children).forEach(b=>b.classList.remove('subject-selected'));
       openAdminsTop.classList.add('subject-selected');
+      // Same reasoning as openSubject() above — must not leave another
+      // sheet's .open class in place on the desktop shell.
+      [subjectSheet,teacherSheet,adminSheet].forEach(s=>closeSheet(s));
       openSheet(adminsSheet);
       loadAdmins();
     }
@@ -1476,6 +1672,11 @@
     function closeAdminView(){
       if(unsubscribeAdminPresence){ unsubscribeAdminPresence(); unsubscribeAdminPresence=null; }
       closeSheet(adminSheet);
+      // openAdminEditor() now closes adminsSheet on the way in (so it can't
+      // stack on top of it — see openSubject()'s comment), so it has to be
+      // explicitly reopened here rather than relying on it having been left
+      // open underneath the whole time.
+      openSheet(adminsSheet);
     }
     closeAdmin.addEventListener('click', closeAdminView);
 
@@ -1578,6 +1779,7 @@
         const cls=Array.isArray(d.classes)?d.classes:[];
         cls.forEach(v=>edAClasses.appendChild(makeClassRow(v, updateAdminProfileSummary)));
         setAdminEditMode(false);
+        [subjectSheet,teacherSheet,adminsSheet].forEach(s=>closeSheet(s));
         openSheet(adminSheet);
         if(unsubscribeAdminPresence) unsubscribeAdminPresence();
         unsubscribeAdminPresence=watchPresence(db, uid, (state)=>{
@@ -1622,6 +1824,7 @@
         edAOk.textContent='تم حفظ التعديلات.';edAOk.style.display='block';
         setTimeout(()=>{edAOk.style.display='none';},900);
         await loadAdmins();
+        loadAllTeachersCache();
       }catch(e){edAErr.textContent=e?.message||'تعذّر الحفظ.';edAErr.style.display='block';}
     });
     deleteAdminBtn.addEventListener('click',()=>{
@@ -1650,6 +1853,7 @@
         edAOk.textContent='تم الحذف.';edAOk.style.display='block';
         setTimeout(()=>{edAOk.style.display='none';closeAdminView();},700);
         await loadAdmins();
+        loadAllTeachersCache();
       }catch(e){
         daErr.textContent=e?.message||'تعذّر الحذف.';
         daErr.style.display='block';
@@ -1693,6 +1897,7 @@
         closeModal(addAdminModal,{fallbackFocus:openAddAdmin});
         openSuccessModal();
         await loadAdmins();
+        loadAllTeachersCache();
       }catch(e){adErr.textContent=e?.message||'تعذّر إنشاء الحساب.';adErr.style.display='block';}
     });
     function closeTeacherView(){
@@ -1899,6 +2104,7 @@
         edClasses.innerHTML='';const cls=Array.isArray(d.classes)?d.classes:[];if(!cls.length)edClasses.appendChild(makeClassRow(""));else cls.forEach(v=>edClasses.appendChild(makeClassRow(v)));
         setTeacherEditMode(false);
         updateProfileSummary();
+        [subjectSheet,adminsSheet,adminSheet].forEach(s=>closeSheet(s));
         openSheet(teacherSheet);
         if(syncRoute){ setTeacherRoute(uid); }
         syncTeacherRouteMode();
@@ -1941,6 +2147,7 @@
         setTeacherEditMode(false);
         edOk.textContent='تم حفظ التعديلات.';edOk.style.display='block';setTimeout(()=>{edOk.style.display='none';closeTeacherView();},900);
         if(selectedSubject) await loadTeachers(selectedSubject);
+        loadAllTeachersCache();
       }catch(e){edErr.textContent=e?.message||'تعذّر الحفظ.';edErr.style.display='block';}
     });
 
@@ -1969,6 +2176,7 @@
         closeModal(deleteTeacherModal,{fallbackFocus:deleteTeacherBtn});
         edOk.textContent='تم الحذف.';edOk.style.display='block';setTimeout(()=>{edOk.style.display='none';closeTeacherView();},700);
         if(selectedSubject) await loadTeachers(selectedSubject);
+        loadAllTeachersCache();
       }catch(e){
         dtErr.textContent=e?.message||'تعذّر الحذف.';
         dtErr.style.display='block';
@@ -2090,6 +2298,7 @@
         try{await signOut(helperAuth);}catch{}
         closeModal(addTeacherModal);openSuccessModal();
         await loadTeachers(selectedSubject);
+        loadAllTeachersCache();
       }catch(e){alert('تعذّر إنشاء الحساب: ' + (e?.message||''));}
     });
 
@@ -2113,6 +2322,7 @@
         startPresenceHeartbeat(db, user.uid);
         classOptions = sortClassList(await fetchClassList(db));
         renderSubjects();
+        loadAllTeachersCache();
         show(sTeachers);
         await applyTeacherRoute();
       }catch{isCurrentUserAdmin=false;show(sDenied);}
