@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; manifest-src 'self'; upgrade-insecure-requests; block-all-mixed-content">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; connect-src 'self' https://abrschool-bot.onrender.com https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; manifest-src 'self'; upgrade-insecure-requests; block-all-mixed-content">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -522,20 +522,84 @@
        which beats the browser's [hidden]{display:none} UA rule regardless of
        specificity — so without this, the button would show for everyone. */
     #btnRequests[hidden]{ display:none; }
+
+    /* Current/past tabs at the top of طلبات القسم */
+    .requests-tabs {
+      display: flex;
+      gap: 6px;
+      padding: 4px;
+      background: var(--border-light);
+      border-radius: 14px;
+      margin-bottom: 16px;
+    }
+    .requests-tab {
+      flex: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      min-height: 44px;
+      border: none;
+      border-radius: 11px;
+      background: transparent;
+      color: var(--muted);
+      font-family: inherit;
+      font-weight: 800;
+      font-size: 0.88rem;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    .requests-tab.active {
+      background: var(--card-bg);
+      color: var(--primary);
+      box-shadow: var(--shadow-1);
+    }
+    .requests-tab .tab-count {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 20px;
+      height: 20px;
+      padding: 0 6px;
+      border-radius: 999px;
+      background: var(--border);
+      color: var(--text);
+      font-size: 0.74rem;
+      font-weight: 900;
+    }
+    .requests-tab.active .tab-count {
+      background: var(--primary-light);
+      color: var(--primary);
+    }
+    @media (max-width: 480px) {
+      .requests-tab span:not(.tab-count) { display: none; }
+      .requests-tab i { font-size: 1.05rem; }
+      .requests-tab .tab-count { display: inline-flex; }
+    }
+
+    /* Spacing between request cards — previously none, which is most of
+       why this sheet felt cramped on phone. */
+    #requestsContainer {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
     .request-card {
       border: 1px solid var(--border);
       border-radius: var(--radius-sm);
-      padding: 16px;
+      padding: 18px;
       background: var(--card-bg);
       box-shadow: var(--shadow-1);
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 14px;
     }
     .request-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border-light);
     }
     .request-type {
       padding: 4px 12px;
@@ -545,17 +609,22 @@
     }
     .type-cover { background: rgba(59, 130, 246, 0.12); color: #1d4ed8; }
     .type-swap { background: rgba(168, 85, 247, 0.12); color: #7c3aed; }
-    .request-body { display: grid; gap: 8px; }
+    .request-body { display: flex; flex-direction: column; }
     .request-row {
       display: flex;
       align-items: center;
       gap: 8px;
       font-weight: 700;
+      padding: 9px 0;
+      border-bottom: 1px solid var(--border-light);
     }
+    .request-row:last-child { border-bottom: none; padding-bottom: 0; }
+    .request-row:first-child { padding-top: 0; }
     .request-label {
       color: var(--muted);
       font-size: 0.85rem;
       min-width: 70px;
+      flex-shrink: 0;
     }
     .request-value {
       color: var(--text);
@@ -572,12 +641,20 @@
     .status-denied { background: rgba(239, 68, 68, 0.12); color: #991b1b; }
     .request-footer {
       display: flex;
-      gap: 8px;
-      margin-top: 4px;
+      gap: 10px;
+      margin-top: 2px;
     }
     @media (max-width: 768px) {
       .request-footer { flex-wrap: wrap; }
       .request-footer .filter-btn { flex: 1; min-width: 120px; }
+    }
+    /* Stack label above value instead of cramming them onto one line once
+       the value text (teacher names + subjects, notes...) gets long. */
+    @media (max-width: 480px) {
+      .request-card { padding: 14px; gap: 12px; }
+      .request-row { flex-direction: column; align-items: flex-start; gap: 3px; }
+      .request-label { min-width: 0; font-size: 0.78rem; }
+      .request-value { font-size: 0.92rem; }
     }
 
     /* Modal - IMPROVED FOR MOBILE */
@@ -1030,6 +1107,18 @@
       <h3 class="sheet-title">طلبات القسم</h3>
     </div>
     <div class="sheet-body">
+      <div class="requests-tabs" role="tablist">
+        <button type="button" class="requests-tab active" id="tabCurrentRequests" role="tab" aria-selected="true">
+          <i class="fas fa-clock"></i>
+          <span>الطلبات الحالية</span>
+          <span class="tab-count" id="countCurrentRequests" hidden>0</span>
+        </button>
+        <button type="button" class="requests-tab" id="tabPastRequests" role="tab" aria-selected="false">
+          <i class="fas fa-clock-rotate-left"></i>
+          <span>الطلبات السابقة</span>
+          <span class="tab-count" id="countPastRequests" hidden>0</span>
+        </button>
+      </div>
       <div id="requestsContainer"></div>
     </div>
   </section>
@@ -1090,6 +1179,35 @@
       db = initializeFirestore(app, {});
     }
     const auth = getAuth(app);
+
+    /* ========= Telegram backend (طلبات القسم notifications) ========= */
+    const TELEGRAM_BACKEND_BASE_URL = (() => {
+      const fromWindow = String(window.__TELEGRAM_BACKEND_BASE_URL || '').trim();
+      if (fromWindow) return fromWindow.replace(/\/+$/, '');
+      const fromStorage = String(localStorage.getItem('telegramBackendBaseUrl') || '').trim();
+      if (fromStorage) return fromStorage.replace(/\/+$/, '');
+      return 'https://abrschool-bot.onrender.com';
+    })();
+    function backendApiUrl(path){
+      const cleanPath = `/${String(path || '').replace(/^\/+/, '')}`;
+      return `${TELEGRAM_BACKEND_BASE_URL}${cleanPath}`;
+    }
+    // Best-effort — a swap request already saved successfully in Firestore
+    // regardless of whether this notification goes through, so failures
+    // here are swallowed rather than surfaced as a request-creation error.
+    async function notifySwapRequest(requestId){
+      if(!requestId || !auth.currentUser) return;
+      try{
+        const idToken = await auth.currentUser.getIdToken();
+        await fetch(backendApiUrl('/api/telegram/notify-swap-request'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+          body: JSON.stringify({ requestId }),
+        });
+      }catch(e){
+        console.warn('[telegram] notify-swap-request failed:', e?.message || e);
+      }
+    }
 
     /* ========= Constants ========= */
     const DAYS_AR = ["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس"]; // Sun→Thu
@@ -1333,6 +1451,10 @@
     const requestsSheet = document.getElementById('requestsSheet');
     const closeRequests = document.getElementById('closeRequests');
     const requestsContainer = document.getElementById('requestsContainer');
+    const tabCurrentRequests = document.getElementById('tabCurrentRequests');
+    const tabPastRequests = document.getElementById('tabPastRequests');
+    const countCurrentRequests = document.getElementById('countCurrentRequests');
+    const countPastRequests = document.getElementById('countPastRequests');
 
     const moreSheet   = document.getElementById('moreSheet');
     const closeMore   = document.getElementById('closeMore');
@@ -3862,7 +3984,7 @@
           const msg = safeText(reqMessage.value).trim();
           const fromName = myName || (await getTeacherName(currentUser.uid));
 
-          await addDoc(collection(db,'swapRequests'), {
+          const newRequestRef = await addDoc(collection(db,'swapRequests'), {
             date: sourceSlot.date,
             lesson: sourceSlot.lesson,
             fromDate: sourceSlot.date,
@@ -3904,6 +4026,7 @@
           });
 
           toast({ title: 'تم', text: 'تم إرسال الطلب.', icon: 'fa-check-circle' });
+          notifySwapRequest(newRequestRef.id);
           closeModal();
         }catch(e){
           console.error(e);
@@ -3921,11 +4044,19 @@
     let headUid = '';
     let unsubRequestsFrom = null;
     let unsubRequestsTo = null;
+    let requestsMap = new Map();
+    let requestsTab = 'current'; // 'current' = still pending on someone | 'past' = accepted/denied
+    const PAST_REQUEST_STATUSES = new Set(['accepted', 'denied']);
 
     function openRequestsSheet(){
       requestsSheet.classList.add('open');
       requestsSheet.setAttribute('aria-hidden','false');
       document.body.style.overflow = 'hidden';
+      requestsTab = 'current';
+      tabCurrentRequests.classList.add('active');
+      tabCurrentRequests.setAttribute('aria-selected','true');
+      tabPastRequests.classList.remove('active');
+      tabPastRequests.setAttribute('aria-selected','false');
       loadRequests();
     }
 
@@ -3935,6 +4066,54 @@
       document.body.style.overflow = '';
       if(unsubRequestsFrom) unsubRequestsFrom();
       if(unsubRequestsTo) unsubRequestsTo();
+    }
+
+    function setRequestsTab(tab){
+      requestsTab = tab;
+      tabCurrentRequests.classList.toggle('active', tab === 'current');
+      tabCurrentRequests.setAttribute('aria-selected', tab === 'current' ? 'true' : 'false');
+      tabPastRequests.classList.toggle('active', tab === 'past');
+      tabPastRequests.setAttribute('aria-selected', tab === 'past' ? 'true' : 'false');
+      renderAllRequests();
+    }
+    tabCurrentRequests.addEventListener('click', () => setRequestsTab('current'));
+    tabPastRequests.addEventListener('click', () => setRequestsTab('past'));
+
+    function renderAllRequests(){
+      const all = Array.from(requestsMap.values()).sort((a, b) => {
+        const aTime = a.request.createdAt?.toMillis() || 0;
+        const bTime = b.request.createdAt?.toMillis() || 0;
+        return bTime - aTime;
+      });
+
+      const currentCount = all.filter(({request}) => !PAST_REQUEST_STATUSES.has(request.status)).length;
+      const pastCount = all.length - currentCount;
+      countCurrentRequests.hidden = currentCount === 0;
+      countCurrentRequests.textContent = String(currentCount);
+      countPastRequests.hidden = pastCount === 0;
+      countPastRequests.textContent = String(pastCount);
+
+      const visible = all.filter(({request}) =>
+        requestsTab === 'past' ? PAST_REQUEST_STATUSES.has(request.status) : !PAST_REQUEST_STATUSES.has(request.status)
+      );
+
+      requestsContainer.innerHTML = '';
+      if(visible.length === 0){
+        requestsContainer.innerHTML = `<div style="text-align:center; padding:40px; color:var(--muted); font-weight:700;">${requestsTab === 'past' ? 'لا توجد طلبات سابقة.' : 'لا توجد طلبات حالياً.'}</div>`;
+        return;
+      }
+
+      visible.forEach(({id, request}) => {
+        const card = renderRequestCard(id, request);
+        requestsContainer.appendChild(card);
+      });
+
+      requestsContainer.querySelectorAll('.btn-approve').forEach(btn => {
+        btn.addEventListener('click', () => handleRequestApprove(btn.dataset.id));
+      });
+      requestsContainer.querySelectorAll('.btn-deny').forEach(btn => {
+        btn.addEventListener('click', () => handleRequestDeny(btn.dataset.id));
+      });
     }
 
     function renderRequestCard(requestDocId, request){
@@ -4068,34 +4247,7 @@
         orderBy('createdAt','desc')
       );
 
-      let requestsMap = new Map();
-
-      function renderAllRequests() {
-        requestsContainer.innerHTML = '';
-
-        if(requestsMap.size === 0){
-          requestsContainer.innerHTML = '<div style="text-align:center; padding:40px; color:var(--muted); font-weight:700;">لا توجد طلبات حالياً.</div>';
-          return;
-        }
-
-        const allRequests = Array.from(requestsMap.values()).sort((a, b) => {
-          const aTime = a.request.createdAt?.toMillis() || 0;
-          const bTime = b.request.createdAt?.toMillis() || 0;
-          return bTime - aTime;
-        });
-
-        allRequests.forEach(({id, request}) => {
-          const card = renderRequestCard(id, request);
-          requestsContainer.appendChild(card);
-        });
-
-        requestsContainer.querySelectorAll('.btn-approve').forEach(btn => {
-          btn.addEventListener('click', () => handleRequestApprove(btn.dataset.id));
-        });
-        requestsContainer.querySelectorAll('.btn-deny').forEach(btn => {
-          btn.addEventListener('click', () => handleRequestDeny(btn.dataset.id));
-        });
-      }
+      requestsMap = new Map();
 
       unsubRequestsFrom = onSnapshot(qFrom, (snap) => {
         snap.docChanges().forEach(change => {
@@ -4169,6 +4321,9 @@
         });
 
         toast({ title: 'تم القبول', text: 'تمت الموافقة على الطلب بنجاح.', icon: 'fa-circle-check' });
+        // A no-op on the backend unless this approval just handed the
+        // request to the OTHER department's head (status → pending_head_to).
+        notifySwapRequest(requestId);
 
         if(currentView === 'today' && activeTodayISO === kuwaitTodayISO()){
           loadTodayForTeacher(currentUser.uid);

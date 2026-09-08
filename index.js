@@ -1970,6 +1970,79 @@ app.post("/api/telegram/run-reminder-sweep", async (req, res) => {
   }
 });
 
+// Notifies whichever department head currently needs to act on a swap/cover
+// request (طلبات القسم). Deliberately only takes a requestId — the message
+// content is always built server-side from the request's own current
+// Firestore state rather than trusting client-supplied text, and which head
+// to notify is re-derived from the *current* status rather than passed in,
+// so this same call is safe to fire after both request creation
+// (status: pending_head_from) and a first-head approval that hands it to
+// the other department (status: pending_head_to) — any other status is a
+// silent no-op, which also makes double-calls harmless.
+app.post("/api/telegram/notify-swap-request", async (req, res) => {
+  const decoded = await verifyFirebaseUser(req);
+  if (!decoded?.uid) {
+    return res.status(401).json({ ok: false, error: "unauthorized" });
+  }
+  if (!isFirebaseReady()) {
+    return res.status(503).json({ ok: false, error: "firebase_unavailable" });
+  }
+
+  const requestId = String(req.body?.requestId || "").trim();
+  if (!requestId) {
+    return res.status(400).json({ ok: false, error: "missing_request_id" });
+  }
+
+  try {
+    const reqSnap = await db.collection("swapRequests").doc(requestId).get();
+    if (!reqSnap.exists) {
+      return res.status(404).json({ ok: false, error: "request_not_found" });
+    }
+    const data = reqSnap.data() || {};
+
+    let targetHeadUid = null;
+    if (data.status === "pending_head_from") targetHeadUid = data.fromHeadUid;
+    else if (data.status === "pending_head_to") targetHeadUid = data.toHeadUid;
+
+    if (!targetHeadUid) {
+      return res.json({ ok: true, notified: false, reason: "no_action_needed" });
+    }
+
+    const headSnap = await db.collection("teachers").doc(String(targetHeadUid)).get();
+    const headData = headSnap.exists ? headSnap.data() || {} : {};
+    const chatId = String(headData.telegramChatId || "").trim();
+    if (!chatId) {
+      return res.json({ ok: true, notified: false, reason: "head_not_connected" });
+    }
+
+    const typeLabel = data.type === "cover" ? "تغطية" : "تبديل";
+    const lessonNum = Number(data.fromLesson || data.lesson) || 0;
+    const lessonInfo = DEFAULT_LESSON_TIMES.find((l) => l.index === lessonNum);
+    const lessonLabel = lessonInfo ? lessonInfo.label : (lessonNum ? `الحصة ${lessonNum}` : "");
+    const stageNote = data.status === "pending_head_to"
+      ? "\n(وافق عليه رئيس القسم الآخر بالفعل)"
+      : "";
+
+    const text = [
+      `📋 طلب ${typeLabel} جديد بانتظار موافقتك`,
+      "",
+      `المعلّم: ${data.fromTeacherName || "—"}`,
+      `التاريخ: ${data.fromDate || data.date || "—"}`,
+      lessonLabel ? `الحصة: ${lessonLabel}` : null,
+      `الفصل: ${data.fromClassKey || "—"}`,
+      data.message ? `ملاحظة: ${data.message}` : null,
+      stageNote || null,
+    ].filter(Boolean).join("\n");
+
+    await sendTelegramMessage(chatId, text);
+    console.log(`[telegram] swap-request notify sent requestId=${requestId} headUid=${targetHeadUid}`);
+    return res.json({ ok: true, notified: true });
+  } catch (error) {
+    console.error(`[telegram] notify-swap-request failed requestId=${requestId}: ${error.message}`);
+    return res.status(500).json({ ok: false, error: "notify_failed" });
+  }
+});
+
 // Firebase's client SDK can only ever change the *signed-in* user's own
 // password — an admin (or, for a teacher in their own department, a
 // department head) resetting someone else's login has to go through the
