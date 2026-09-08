@@ -689,7 +689,6 @@
     import {
       getAuth,
       browserLocalPersistence,
-      browserSessionPersistence,
       setPersistence,
       signInWithEmailAndPassword,
       onAuthStateChanged,
@@ -708,6 +707,14 @@
     const app  = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db   = getFirestore(app);
+    // Signed-in sessions always persist across browser restarts now (not
+    // just when "تذكرني" is checked) — teachers stay logged in until they
+    // explicitly log out, which is what actually ends the session
+    // (signOut() clears it regardless of persistence mode). "تذكرني" below
+    // is now purely about pre-filling رقم المستخدم on the next visit.
+    setPersistence(auth, browserLocalPersistence).catch((e) => {
+      console.error("setPersistence failed:", e);
+    });
 
     // ===== UI refs
     const emailEl = document.getElementById('loginEmail'); // now holds civil id number
@@ -1012,7 +1019,6 @@
       try {
         loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري تسجيل الدخول';
         loginBtn.disabled = true;
-        await setPersistence(auth, remember ? browserLocalPersistence : browserSessionPersistence);
 
         const cred = await signInWithEmailAndPassword(auth, email, password);
 
