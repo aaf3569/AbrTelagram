@@ -521,9 +521,9 @@
 <body>
   <header class="site-header" id="siteHeader">
     <div class="header-inner">
-      <button class="icon-btn" id="refreshBtn" title="تحديث" aria-label="تحديث">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+      <button class="icon-btn" id="backBtn" title="رجوع" aria-label="رجوع">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 6l6 6-6 6"/>
         </svg>
       </button>
 
@@ -631,7 +631,7 @@
     const sDenied  = document.getElementById('stateDenied');
     const sOk      = document.getElementById('stateOk');
 
-    const refreshBtn = document.getElementById('refreshBtn');
+    const backBtn = document.getElementById('backBtn');
     const gridBody = document.getElementById('gridBody');
 
     const dateBtn = document.getElementById('dateBtn');
@@ -1155,16 +1155,8 @@
       }
     });
 
-    refreshBtn.addEventListener('click', async () => {
-      try{
-        refreshBtn.disabled = true;
-        closePopover();
-        await loadGridForDate(selectedDate);
-      } catch (e) {
-        console.error(e);
-      } finally {
-        refreshBtn.disabled = false;
-      }
+    backBtn.addEventListener('click', () => {
+      window.location.href = 'dptlead.html';
     });
 
     document.addEventListener('click', (e) => {
