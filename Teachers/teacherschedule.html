@@ -2828,6 +2828,11 @@
       const snap = await fetchWeekDocsForClass(grade, section, track);
       snap.forEach(d => {
         const x = d.data();
+        // A schedules doc with no teacher assigned isn't a real lesson —
+        // just an empty/cleared-out slot document. Without this check every
+        // such doc still rendered as a highlighted, clickable cell whose
+        // تفاصيل الحصة popup had nothing real to show.
+        if (!x.teacherUid) return;
         const teacher = x.teacherName || x.teacherUid || '';
         const subj = x.subject || '—';
         // Standing schedule entries recur by weekday — resolve to *this* week's
