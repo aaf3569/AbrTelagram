@@ -33,6 +33,36 @@
   color: #c62828;
   border: 1px solid rgba(244, 67, 54, 0.3);
 }
+.warning-level-4 {
+  background: rgba(123, 17, 19, 0.15);
+  color: #7b1113;
+  border: 1px solid rgba(123, 17, 19, 0.35);
+}
+
+/* غياب بعذر ladder — its own purple scale (matches --excused, already used
+   for the "غياب بعذر" tile badge in shared/attendance-tiles.css) so it
+   reads as a distinct, less severe track rather than reusing the
+   plain-absence red escalation. */
+.warning-excused-level-0 {
+  background: var(--greenBg);
+  color: var(--green);
+  border: 1px solid rgba(26, 127, 55, 0.25);
+}
+.warning-excused-level-1 {
+  background: rgba(147, 51, 234, 0.12);
+  color: #7c3aed;
+  border: 1px solid rgba(147, 51, 234, 0.28);
+}
+.warning-excused-level-2 {
+  background: rgba(147, 51, 234, 0.18);
+  color: #6d28d9;
+  border: 1px solid rgba(147, 51, 234, 0.35);
+}
+.warning-excused-level-3 {
+  background: rgba(107, 33, 168, 0.2);
+  color: #5b21b6;
+  border: 1px solid rgba(107, 33, 168, 0.4);
+}
 
 .warning-count-row {
   display: flex;
@@ -45,6 +75,9 @@
   font-weight: 900;
   color: var(--red);
   line-height: 1;
+}
+.warning-count-value.excused {
+  color: #7c3aed;
 }
 .warning-count-label {
   font-size: 0.88rem;
@@ -68,6 +101,10 @@
 .warning-progress-fill.level-1 { background: #d9a300; }
 .warning-progress-fill.level-2 { background: #e07b00; }
 .warning-progress-fill.level-3 { background: #d32f2f; }
+.warning-progress-fill.level-4 { background: #7b1113; }
+.warning-progress-fill.excused-level-1 { background: #9333ea; }
+.warning-progress-fill.excused-level-2 { background: #7c3aed; }
+.warning-progress-fill.excused-level-3 { background: #6d28d9; }
 
 .warning-scale {
   display: flex;

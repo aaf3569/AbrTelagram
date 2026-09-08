@@ -1152,7 +1152,8 @@ html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%;
     align-content:start;
   }
   #studentSheet.student-desktop-layout #overviewBlock,
-  #studentSheet.student-desktop-layout #warningBlock{
+  #studentSheet.student-desktop-layout #warningBlock,
+  #studentSheet.student-desktop-layout #warningBlockExcused{
     grid-column:1 / -1;
   }
   #studentSheet.student-desktop-layout #profileTabsSection{
@@ -1851,9 +1852,27 @@ html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%;
           <div id="warningProgressFill" class="warning-progress-fill"></div>
         </div>
         <div class="warning-scale">
-          <span>0</span><span>5</span><span>10</span><span>15+</span>
+          <span>0</span><span>5</span><span>8</span><span>11</span><span>15+</span>
         </div>
         <div id="warningNextHint" class="warning-next-hint">لا توجد غيابات بدون عذر بعد.</div>
+      </div>
+
+      <div id="warningBlockExcused" class="analytics-card">
+        <div class="analytics-head">
+          <h4 class="analytics-title">نظام التحذيرات (غياب بعذر)</h4>
+          <span id="warningLevelBadgeExcused" class="warning-level-badge warning-excused-level-0">لا يوجد</span>
+        </div>
+        <div class="warning-count-row">
+          <span id="warningExcusedCount" class="warning-count-value excused">0</span>
+          <span class="warning-count-label">غياب بعذر</span>
+        </div>
+        <div class="warning-progress-track">
+          <div id="warningProgressFillExcused" class="warning-progress-fill"></div>
+        </div>
+        <div class="warning-scale">
+          <span>0</span><span>15</span><span>20</span><span>25+</span>
+        </div>
+        <div id="warningNextHintExcused" class="warning-next-hint">لا توجد غيابات بعذر بعد.</div>
       </div>
 
       <div id="absencesBlock" class="analytics-card">
@@ -2154,7 +2173,7 @@ import { getAuth, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCrede
 import { initializeFirestore, persistentSingleTabManager, collection, collectionGroup, getDocs, query, where, orderBy, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp, writeBatch, arrayUnion, arrayRemove } from "/shared/firebase.js";
 import { mountAttendanceSheet } from "/shared/attendance.js";
 import { fetchStudentAttendanceData, makeAttTile, makeMorningLateTile } from "/shared/attendance-tiles.js";
-import { renderWarningState } from "/shared/warning-system.js";
+import { renderWarningState, renderExcusedWarningState } from "/shared/warning-system.js";
 import { DEFAULT_CLASS_LIST, fetchClassList, groupByGrade, availableNumbersToAdd, buildClassKey } from "/shared/class-registry.js";
 
 
@@ -2425,6 +2444,10 @@ const warningAbsenceCount = document.getElementById('warningAbsenceCount');
 const warningLevelBadge = document.getElementById('warningLevelBadge');
 const warningProgressFill = document.getElementById('warningProgressFill');
 const warningNextHint = document.getElementById('warningNextHint');
+const warningExcusedCount = document.getElementById('warningExcusedCount');
+const warningLevelBadgeExcused = document.getElementById('warningLevelBadgeExcused');
+const warningProgressFillExcused = document.getElementById('warningProgressFillExcused');
+const warningNextHintExcused = document.getElementById('warningNextHintExcused');
 
 // NEW: Excused absence references
 const excusedAttBtn = document.getElementById('excusedAttBtn');
@@ -2680,7 +2703,12 @@ function updateStudentDesktopLayout(){
 function syncStudentProfileChrome(){
   const profileOpen = studentSheet.classList.contains('open') || !!getRouteStudentId();
   document.body.classList.toggle('student-profile-open', profileOpen);
-  siteTitle.textContent = (profileOpen && currentStudent.data?.name) ? currentStudent.data.name : SITE_TITLE_DEFAULT;
+  if(profileOpen && currentStudent.data?.name){
+    const classLabel = currentStudent.data?.class ? toArabicDigits(currentStudent.data.class) : '';
+    siteTitle.textContent = classLabel ? `${classLabel} | ${currentStudent.data.name}` : currentStudent.data.name;
+  }else{
+    siteTitle.textContent = SITE_TITLE_DEFAULT;
+  }
 }
 
 function getRouteStudentId(){
@@ -4677,6 +4705,7 @@ saveStudent.addEventListener('click', async ()=>{
 
     studentHeaderName.textContent = name;
     studentHeaderClass.textContent = newClass ? `الفصل: ${toArabicDigits(newClass)}` : '—';
+    syncStudentProfileChrome();
     edOk.textContent = classChanged ? `تم حفظ التعديلات ونقل الطالب إلى ${toArabicDigits(newClass)}.` : 'تم حفظ التعديلات.';
     edOk.style.display='block';
     setTimeout(()=>{ edOk.style.display='none'; }, 1400);
@@ -4724,9 +4753,15 @@ async function loadStudentAttendance(studentId){
   warningProgressFill.style.width = '0%';
   warningProgressFill.className = 'warning-progress-fill';
   warningNextHint.textContent = '—';
+  warningExcusedCount.textContent = '0';
+  warningLevelBadgeExcused.textContent = 'لا يوجد';
+  warningLevelBadgeExcused.className = 'warning-level-badge warning-excused-level-0';
+  warningProgressFillExcused.style.width = '0%';
+  warningProgressFillExcused.className = 'warning-progress-fill';
+  warningNextHintExcused.textContent = '—';
 
   try{
-    const { rows, allAbsences, combinedLates, present, late, absent } = await fetchStudentAttendanceData(db, studentId);
+    const { rows, allAbsences, combinedLates, present, late, absent, excused } = await fetchStudentAttendanceData(db, studentId);
     currentStudentAttendance = rows;
 
     totPresent.textContent = toArabicDigits(present);
@@ -4740,6 +4775,13 @@ async function loadStudentAttendance(studentId){
       badgeEl: warningLevelBadge,
       progressFillEl: warningProgressFill,
       hintEl: warningNextHint,
+    });
+
+    renderExcusedWarningState(excused, {
+      countEl: warningExcusedCount,
+      badgeEl: warningLevelBadgeExcused,
+      progressFillEl: warningProgressFillExcused,
+      hintEl: warningNextHintExcused,
     });
 
     const absencesFragment = document.createDocumentFragment();

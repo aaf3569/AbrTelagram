@@ -39,7 +39,9 @@ export async function fetchStudentAttendanceData(db, studentId) {
   const late = rows.filter((r) => r.status === "late").length + morningLateRows.length;
   const allAbsences = rows.filter((r) => r.status === "absent");
   const absencesWithoutReason = rows.filter((r) => r.status === "absent" && r.hasReason !== true);
+  const absencesWithReason = rows.filter((r) => r.status === "absent" && r.hasReason === true);
   const absent = absencesWithoutReason.length;
+  const excused = absencesWithReason.length;
 
   const combinedLates = [
     ...rows.filter((r) => r.status === "late"),
@@ -49,7 +51,7 @@ export async function fetchStudentAttendanceData(db, studentId) {
     return a.date < b.date ? 1 : -1;
   });
 
-  return { rows, morningLateRows, present, late, absent, allAbsences, combinedLates };
+  return { rows, morningLateRows, present, late, absent, excused, allAbsences, combinedLates };
 }
 
 export function makeAttTile(r, onClick) {

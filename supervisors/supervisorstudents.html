@@ -1074,9 +1074,27 @@ textarea.input{ height:100px; padding-block:14px; resize:vertical }
           <div id="warningProgressFill" class="warning-progress-fill"></div>
         </div>
         <div class="warning-scale">
-          <span>0</span><span>5</span><span>10</span><span>15+</span>
+          <span>0</span><span>5</span><span>8</span><span>11</span><span>15+</span>
         </div>
         <div id="warningNextHint" class="warning-next-hint">لا توجد غيابات بدون عذر بعد.</div>
+      </div>
+
+      <div class="analytics-card">
+        <div class="analytics-head">
+          <h4 class="analytics-title">نظام التحذيرات (غياب بعذر)</h4>
+          <span id="warningLevelBadgeExcused" class="warning-level-badge warning-excused-level-0">لا يوجد</span>
+        </div>
+        <div class="warning-count-row">
+          <span id="warningExcusedCount" class="warning-count-value excused">0</span>
+          <span class="warning-count-label">غياب بعذر</span>
+        </div>
+        <div class="warning-progress-track">
+          <div id="warningProgressFillExcused" class="warning-progress-fill"></div>
+        </div>
+        <div class="warning-scale">
+          <span>0</span><span>15</span><span>20</span><span>25+</span>
+        </div>
+        <div id="warningNextHintExcused" class="warning-next-hint">لا توجد غيابات بعذر بعد.</div>
       </div>
 
       <div class="analytics-card">
@@ -1259,7 +1277,7 @@ import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/
 import { initializeFirestore, persistentSingleTabManager, collection, getDocs, query, where, orderBy, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 import { getTeacherProfile, hasGuardAccess } from "/shared/auth-guard.js";
 import { fetchStudentAttendanceData, makeAttTile, makeMorningLateTile } from "/shared/attendance-tiles.js";
-import { renderWarningState } from "/shared/warning-system.js";
+import { renderWarningState, renderExcusedWarningState } from "/shared/warning-system.js";
 import { fetchClassList, groupByGrade } from "/shared/class-registry.js";
 
 const firebaseConfig = {
@@ -1430,6 +1448,10 @@ const warningAbsenceCount = document.getElementById('warningAbsenceCount');
 const warningLevelBadge = document.getElementById('warningLevelBadge');
 const warningProgressFill = document.getElementById('warningProgressFill');
 const warningNextHint = document.getElementById('warningNextHint');
+const warningExcusedCount = document.getElementById('warningExcusedCount');
+const warningLevelBadgeExcused = document.getElementById('warningLevelBadgeExcused');
+const warningProgressFillExcused = document.getElementById('warningProgressFillExcused');
+const warningNextHintExcused = document.getElementById('warningNextHintExcused');
 const quickFormBackdrop = document.getElementById('quickFormBackdrop');
 
 /* ========= Global variables ========= */
@@ -1888,8 +1910,14 @@ async function loadStudentAttendance(studentId){
   warningProgressFill.style.width = '0%';
   warningProgressFill.className = 'warning-progress-fill';
   warningNextHint.textContent = '—';
+  warningExcusedCount.textContent = '0';
+  warningLevelBadgeExcused.textContent = 'لا يوجد';
+  warningLevelBadgeExcused.className = 'warning-level-badge warning-excused-level-0';
+  warningProgressFillExcused.style.width = '0%';
+  warningProgressFillExcused.className = 'warning-progress-fill';
+  warningNextHintExcused.textContent = '—';
   try{
-    const { rows, allAbsences, combinedLates, present, late, absent } = await fetchStudentAttendanceData(db, studentId);
+    const { rows, allAbsences, combinedLates, present, late, absent, excused } = await fetchStudentAttendanceData(db, studentId);
     currentStudentAttendance = rows;
 
     totPresent.textContent = toArabicDigits(present);
@@ -1903,6 +1931,13 @@ async function loadStudentAttendance(studentId){
       badgeEl: warningLevelBadge,
       progressFillEl: warningProgressFill,
       hintEl: warningNextHint,
+    });
+
+    renderExcusedWarningState(excused, {
+      countEl: warningExcusedCount,
+      badgeEl: warningLevelBadgeExcused,
+      progressFillEl: warningProgressFillExcused,
+      hintEl: warningNextHintExcused,
     });
 
     const absencesFragment = document.createDocumentFragment();
