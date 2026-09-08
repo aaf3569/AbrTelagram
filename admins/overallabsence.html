@@ -762,6 +762,7 @@
       border-bottom:1px solid var(--border);
       padding:10px 10px;
       text-align:center;
+      vertical-align:middle;
       background:#fff;
     }
 
@@ -782,6 +783,9 @@
 
     .cell-btn{
       width:56px; height:38px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
       border-radius:12px;
       border:1px solid rgba(239,68,68,.25);
       background: var(--redBg);
@@ -808,7 +812,7 @@
       box-shadow: 0 10px 20px rgba(245,158,11,.12);
       transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease, filter .12s ease;
       position: relative;
-      display: flex;
+      display: inline-flex;
       align-items: center;
       justify-content: center;
       font-size: 1.2rem;
@@ -1099,6 +1103,88 @@
         height: calc(100svh - var(--headerH) - 10px);
       }
     }
+
+    /* ===== Base chrome for shared/attendance.js — used only for the
+       "تعديل" button inside the cell-details popover, which opens the
+       shared attendance-edit sheet (attendance.openForEdit) with
+       isPrivilegedEdit so an admin can edit any past session regardless
+       of the normal lesson-time edit window. This page had no .sheet/
+       .btn conventions of its own before this, so they're added fresh;
+       the modal rules are scoped to attendance.js's specific #att* IDs
+       only, since a bare .modal class already exists here for this
+       page's own unrelated popups (#lessonModal, #confirmModal,
+       #downloadModal — a totally different .modal-backdrop+.modal-card
+       system) and must not collide with it. ===== */
+    html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%; inset: 0; overscroll-behavior: none; }
+
+    /* This page's own :root uses a brighter, more saturated palette for its
+       grid/table UI (--green:#10b981, --yellow:#f59e0b, --red:#ef4444, no
+       --primary-light/--transition at all) — fine for the table, but
+       shared/attendance.js's own styling assumes the muted palette every
+       other page defining these same variable names uses (Teachers/
+       user.html, admins/students.html, ...). Redefining them scoped to just
+       the attendance sheet + its modals matches the sheet's look everywhere
+       else without touching this page's own table colors at all. */
+    #attendanceSheet, #attConfirmModal, #attErrorModal, #attBlockedModal, #attSuccessModal, #attLessonDetailModal, #attCriticalErrorModal {
+      --primary-light: #065372;
+      --primary-extra-light: #eef5fb;
+      --green: #1a7f37;
+      --yellow: #a06d00;
+      --red: #b42318;
+      --greenBg: rgba(26,127,55,.08);
+      --yellowBg: rgba(160,109,0,.10);
+      --redBg: rgba(180,35,24,.10);
+      --chip: #eef5fb;
+      --transition: transform .12s ease, box-shadow .12s ease, background-color .12s ease, border-color .12s ease, color .12s ease, opacity .12s ease;
+    }
+
+    .btn{
+      font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      height:52px; border:none; border-radius:14px; cursor:pointer; font-weight:800; font-size:1rem;
+      transition: transform .14s ease, box-shadow .14s ease; display:inline-flex; align-items:center; justify-content:center; padding:0 20px;
+    }
+    .btn:active{ transform:translateY(0) scale(.995) }
+    .btn:focus-visible{ outline:3px solid var(--focus); outline-offset:2px }
+    .btn:disabled{ opacity:.5; cursor:not-allowed; box-shadow:none !important; transform:none !important; }
+    .btn.primary{ background: linear-gradient(180deg, var(--primary-2), var(--primary)); color:#fff; box-shadow: 0 12px 28px rgba(3,60,84,.26) }
+    .btn.primary:hover{ transform:translateY(-2px); box-shadow: 0 16px 36px rgba(3,60,84,.34) }
+    .btn.cancel{ background:#fff; color:var(--primary); border:1px solid rgba(3,60,84,.25) }
+    .btn.cancel:hover{ transform:translateY(-2px) }
+
+    .sheet{ position:fixed; inset:0; z-index:1050; background:var(--page); display:flex; flex-direction:column; transform: translateX(100%); transition: transform .3s cubic-bezier(.22,.7,.25,1); }
+    .sheet.open{ transform: translateX(0) }
+    .sheet-header{
+      background:#fff; border-bottom:1px solid var(--border); padding:18px 16px; display:flex; align-items:center; gap:12px;
+      position:sticky; top:0; z-index:10; box-shadow: 0 2px 10px rgba(0,0,0,.03);
+    }
+    .back-btn{
+      height:44px; padding:0 16px; border-radius:12px; border:1px solid rgba(3,60,84,.25); background:#fff; color:var(--primary); font-weight:800; cursor:pointer;
+      box-shadow: var(--shadow-1); transition: transform .14s ease; display:inline-flex; align-items:center; justify-content:center; text-decoration:none;
+    }
+    .sheet-title{ margin:0; font-size:1.1rem; font-weight:900; color:var(--primary) }
+    .sheet-body{ flex:1 1 auto; overflow:auto; padding:24px; width:min(880px,94vw); margin:0 auto; display:flex; flex-direction:column; gap:16px }
+
+    #attConfirmModal, #attErrorModal, #attBlockedModal, #attSuccessModal, #attLessonDetailModal, #attCriticalErrorModal {
+      position: fixed; inset: 0; z-index: 1100; display: none;
+      background: none; width: auto; max-width: none; max-height: none;
+      box-shadow: none; transform: none; transition: none; overflow: visible;
+    }
+    #attConfirmModal.open, #attErrorModal.open, #attBlockedModal.open, #attSuccessModal.open, #attLessonDetailModal.open, #attCriticalErrorModal.open {
+      display: grid; place-items: center;
+    }
+    #attConfirmModal .overlay, #attErrorModal .overlay, #attBlockedModal .overlay, #attSuccessModal .overlay, #attLessonDetailModal .overlay, #attCriticalErrorModal .overlay {
+      position: absolute; inset: 0; background: rgba(15,23,42,.35); backdrop-filter: blur(4px);
+    }
+    #attConfirmModal .card, #attErrorModal .card, #attLessonDetailModal .card {
+      position: relative; z-index: 1; width: min(560px,92vw); background: #fff;
+      border: 1px solid var(--border); border-radius: 20px;
+      box-shadow: 0 24px 60px rgba(3,60,84,.28); padding: 20px;
+    }
+    #attErrorModal .card.error { border-color: rgba(239,68,68,.25); box-shadow: 0 24px 60px rgba(239,68,68,.20); }
+    #attErrorModal .card.error h3 { color: var(--red); }
+    #attConfirmModal h3, #attErrorModal h3, #attLessonDetailModal h3 { margin: 0 0 8px; font-size: 1.15rem; color: var(--primary); font-weight: 900; }
+    #attConfirmModal p, #attErrorModal p, #attLessonDetailModal p { margin: 0 0 12px; color: var(--muted); font-weight: 800; }
+    #attConfirmModal .row, #attErrorModal .row, #attLessonDetailModal .row { display: flex; gap: 10px; justify-content: flex-start; margin-top: 16px; flex-wrap: wrap; }
   </style>
 
   <!-- iOS home screen icon -->
@@ -1347,6 +1433,7 @@
     } from "/shared/firebase.js";
     import { kuwaitTodayISO, getCurrentKuwaitMinutes } from "/shared/kuwait-time.js";
     import { fetchClassList, sortClassList } from "/shared/class-registry.js";
+    import { mountAttendanceSheet } from "/shared/attendance.js";
 
 
 
@@ -1358,6 +1445,11 @@
       db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true, useFetchStreams: false });
     }
     const auth = getAuth(app);
+    // isPrivilegedEdit: true — this page is admin-only (see the role check
+    // in onAuthStateChanged below), so the "تعديل" button in the cell
+    // popover can edit any past session regardless of the normal
+    // lesson-time-anchored edit window teachers themselves are held to.
+    const attendance = mountAttendanceSheet({ db, auth, isPrivilegedEdit: true });
 
     const sLoading = document.getElementById('stateLoading');
     const sNotLog  = document.getElementById('stateNotLogged');
@@ -1833,7 +1925,12 @@
             missed: false,
             expectedTeacherUids: new Set(),
             expectedTeacherNames: new Set(),
-            expectedSubject: ""
+            expectedSubject: "",
+            // Only set for the current attendanceSessions/attendanceRecords
+            // schema (see the "New attendanceSessions" load below) — stays
+            // null for legacy-only records, which have no real session doc
+            // to edit through shared/attendance.js.
+            sessionId: null
           };
         }
       }
@@ -2300,6 +2397,25 @@
           const uniq = [...new Set(tnames.filter(Boolean))];
           teacherWrap.textContent = uniq.length ? uniq.join('، ') : 'غير محدد';
         }
+
+        // Editing goes through the same shared attendance-edit sheet as
+        // سجلات الغياب (attendance.openForEdit) — mounted with
+        // isPrivilegedEdit above, so it ignores the normal lesson-time
+        // edit window and stays open whenever an admin needs it. Only
+        // shown when there's a real attendanceSessions doc to edit —
+        // legacy-only records (cell.sessionId still null) have none.
+        if (cell.sessionId) {
+          const editBtn = document.createElement('button');
+          editBtn.className = 'modal-btn primary';
+          editBtn.type = 'button';
+          editBtn.innerHTML = '<i class="fas fa-pen"></i> تعديل';
+          editBtn.addEventListener('click', () => {
+            const sessionId = cell.sessionId;
+            closeModal();
+            attendance.openForEdit(sessionId);
+          });
+          modalFooter.appendChild(editBtn);
+        }
       }
 
       openModal();
@@ -2552,6 +2668,7 @@
           const cell = markAttendanceTaken(className, lessonIndex);
           if (!cell) return;
           if (teacherUid) cell.teacherUids.add(teacherUid);
+          cell.sessionId = session.id;
 
           let recordsSnap;
           try {
