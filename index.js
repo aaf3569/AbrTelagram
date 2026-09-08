@@ -23,6 +23,7 @@
 
 const crypto = require("crypto");
 const express = require("express");
+const rateLimit = require("express-rate-limit");
 const admin = require("firebase-admin");
 
 const PORT = Number(process.env.PORT || 3000);
@@ -54,6 +55,13 @@ const DEFAULT_LESSON_TIMES = [
 ];
 
 const app = express();
+// Render sits in front of this app as a reverse proxy — without this,
+// every request's req.ip resolves to Render's proxy hop instead of the
+// real client, which would make IP-based rate limiting either useless
+// (everyone sharing one bucket) or outright wrong (isLoopbackRequest
+// below also depends on req.ip reflecting the real caller).
+app.set("trust proxy", 1);
+
 // Browser calls are only ever made from the deployed site (plus Netlify's
 // per-deploy preview URLs). Non-browser requests (Telegram webhook, curl,
 // uptime pings) send no Origin header and are unaffected by CORS.
@@ -83,6 +91,31 @@ app.use((error, req, res, next) => {
     return res.status(413).json({ ok: false, error: "payload_too_large" });
   }
   return next(error);
+});
+
+// General safety net over every /api/ route — generous enough that no
+// real user of this app (a single school's admins/teachers) ever brushes
+// against it, just enough to blunt a flood of requests from one source.
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { ok: false, error: "rate_limited" },
+});
+app.use("/api/", apiLimiter);
+
+// Tighter limit layered on top of apiLimiter for the handful of routes
+// that mutate an account (password/email/deletion) or fan out a message
+// to many people (broadcast, request-students) — these deserve real
+// friction against a compromised/leaked admin token being hammered, not
+// just the broad flood protection above.
+const sensitiveLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { ok: false, error: "rate_limited" },
 });
 
 const firebaseState = initFirebaseAdmin();
@@ -1704,7 +1737,7 @@ app.get("/api/telegram/class-live-info", async (req, res) => {
   }
 });
 
-app.post("/api/telegram/request-students", async (req, res) => {
+app.post("/api/telegram/request-students", sensitiveLimiter, async (req, res) => {
   const adminUser = await requireAdminFromRequest(req, res);
   if (!adminUser) return;
 
@@ -1842,7 +1875,7 @@ app.post("/api/telegram/request-students", async (req, res) => {
   }
 });
 
-app.post("/api/telegram/broadcast", async (req, res) => {
+app.post("/api/telegram/broadcast", sensitiveLimiter, async (req, res) => {
   const adminUser = await requireAdminFromRequest(req, res);
   if (!adminUser) return;
 
@@ -1944,7 +1977,7 @@ app.post("/api/telegram/run-reminder-sweep", async (req, res) => {
 // re-authenticated their own password client-side (see admins/teachers.html
 // and depHead/department.html) before this is ever hit; this endpoint only
 // re-checks that the caller is really allowed to touch this specific target.
-app.post("/api/admin/set-teacher-password", async (req, res) => {
+app.post("/api/admin/set-teacher-password", sensitiveLimiter, async (req, res) => {
   const targetUid = String(req.body?.uid || "").trim();
   if (!targetUid) {
     return res.status(400).json({ ok: false, error: "missing_uid" });
@@ -2007,7 +2040,7 @@ app.post("/api/admin/set-teacher-password", async (req, res) => {
 // updated the Firestore record but left the account logging in with its
 // old ID forever. Admin-only: dept heads can't edit civil IDs at all
 // (depHead/department.html never sends email/civilId in its own update).
-app.post("/api/admin/set-teacher-email", async (req, res) => {
+app.post("/api/admin/set-teacher-email", sensitiveLimiter, async (req, res) => {
   const targetUid = String(req.body?.uid || "").trim();
   if (!targetUid) {
     return res.status(400).json({ ok: false, error: "missing_uid" });
@@ -2046,7 +2079,7 @@ app.post("/api/admin/set-teacher-email", async (req, res) => {
 // occupying its email, so recreating that same person's account later
 // failed with auth/email-already-exists. This deletes both in one call so
 // the two can't drift out of sync again.
-app.post("/api/admin/delete-teacher-account", async (req, res) => {
+app.post("/api/admin/delete-teacher-account", sensitiveLimiter, async (req, res) => {
   const targetUid = String(req.body?.uid || "").trim();
   if (!targetUid) {
     return res.status(400).json({ ok: false, error: "missing_uid" });
