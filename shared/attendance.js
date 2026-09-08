@@ -30,8 +30,6 @@ const STYLES = `
   #attendanceSheet .att-list{display:flex;flex-direction:column;gap:16px}
   #attendanceSheet .att-card{padding:16px;border:1px solid var(--border);border-radius:16px;background:#fff;box-shadow:var(--shadow-1);display:flex;flex-direction:column;gap:12px;transition:var(--transition)}
   #attendanceSheet .att-card:hover{box-shadow:0 10px 25px rgba(3,60,84,.12)}
-  #attendanceSheet .att-card.special-case{background-color:var(--special-case-bg,#fff8e1);border:2px solid var(--special-case-border,#ffd54f);box-shadow:0 8px 22px rgba(255,213,79,.25)}
-  #attendanceSheet .att-card.special-case.tint-late,#attendanceSheet .att-card.special-case.tint-absent{background-color:rgba(255,248,225,.9);border:2px solid var(--special-case-border,#ffd54f)}
   #attendanceSheet .att-card.tint-late{background:rgba(160,109,0,.10);border-color:rgba(160,109,0,.25)}
   #attendanceSheet .att-card.tint-absent{background:rgba(180,35,24,.10);border-color:rgba(180,35,24,.25)}
   #attendanceSheet .att-name{font-weight:900;color:var(--text);line-height:1.4;word-break:break-word;display:flex;align-items:center;justify-content:space-between;gap:10px}
@@ -47,7 +45,9 @@ const STYLES = `
   #attendanceSheet .att-lesson-dot.future{background:rgba(148,163,184,.10);color:#94a3b8;border-color:rgba(148,163,184,.25);opacity:.65;cursor:default}
   #attendanceSheet .att-lesson-dot.future:hover{transform:none}
   #attendanceSheet .special-case-icon{width:18px;height:18px;margin-inline-start:8px;flex-shrink:0}
-  #attendanceSheet .sheet-header .sheet-title{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);flex:none;text-align:center;max-width:calc(100% - 220px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #attendanceSheet .sheet-header .sheet-title{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);flex:none;text-align:center;max-width:calc(100% - 110px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #attendanceSheet .sheet-header .att-back-btn{width:38px;height:38px;padding:0;border-radius:10px;flex-shrink:0;gap:0;display:inline-flex;align-items:center;justify-content:center;line-height:0}
+  #attendanceSheet .sheet-header .att-back-btn svg{width:16px;height:16px;flex-shrink:0;display:block;margin:0}
   #attendanceSheet .lesson-picker{width:100%}
   #attendanceSheet .att-row{display:flex;gap:12px;flex-wrap:wrap}
   #attendanceSheet .seg{display:flex;align-items:center;border:1px solid var(--border);border-radius:14px;overflow:hidden;background:#fff;box-shadow:var(--shadow-1)}
@@ -169,9 +169,8 @@ const STYLES = `
 const SHEET_HTML = `
   <section id="attendanceSheet" class="sheet" aria-hidden="true">
     <div class="sheet-header">
-      <button id="attCloseBtn" class="back-btn" type="button" aria-label="رجوع">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-        رجوع
+      <button id="attCloseBtn" class="back-btn att-back-btn" type="button" aria-label="رجوع">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
       </button>
       <h3 id="attSheetTitle" class="sheet-title">تسجيل الغياب</h3>
     </div>
@@ -1218,7 +1217,11 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
     list.forEach(s => {
       const card = document.createElement("div");
       card.className = "att-card";
-      if (s.specialCase) card.classList.add("special-case");
+      // Deliberately not tinting the card itself for special-case students
+      // here (unlike other pages) — the amber background looked too close
+      // to the .tint-late color and made it hard to tell "marked late" from
+      // "flagged special case" at a glance while taking attendance. The
+      // small icon badge below is enough of an indicator on its own.
 
       const name = document.createElement("div");
       name.className = "att-name";
