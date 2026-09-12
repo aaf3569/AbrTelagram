@@ -129,6 +129,13 @@
         .divider{width:100%;height:2px;background:linear-gradient(to right,transparent,rgba(3,60,84,.22) 15%,rgba(3,60,84,.22) 85%,transparent);margin:20px 0 32px;border-radius:1px}
         .stack{width:100%;display:flex;flex-direction:column;gap:18px;margin-top:16px;align-items:center}
         .stack.wide .btn{width:100%}
+        /* إعدادات المستخدم is set apart from the run of actions around it
+           with room on both sides, matching depHead/dptlead.html and
+           admins/adminpage.html. This is an id, so it takes over from the
+           10px that .account-actions-start puts on the top alone. The
+           stack is a flex column, so the margin adds to the 18px gap
+           rather than collapsing into it. */
+        #telegramSettingsBtn{ margin-top:16px; margin-bottom:16px; }
         .btn{font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;width:100%;min-height:68px;border:none;border-radius:18px;cursor:pointer;font-weight:800;font-size:1.1rem;letter-spacing:.2px;padding:18px 24px;transition:var(--transition);user-select:none;display:flex;align-items:center;justify-content:center;gap:12px;position:relative;overflow:hidden}
         .btn::after{content:'';position:absolute;inset:0;background:rgba(255,255,255,.1);opacity:0;transition:var(--transition)}
         .btn:hover::after{opacity:1}
