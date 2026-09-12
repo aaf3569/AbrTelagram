@@ -3,9 +3,9 @@
 
   function getHubPath(pathname) {
     const p = (pathname || "").toLowerCase();
-    if (p.startsWith("/teachers/")) return "/Teachers/user.html";
+    if (p.startsWith("/teachers/")) return "/teachers/user.html";
     if (p.startsWith("/supervisors/")) return "/supervisors/supervisor.html";
-    if (p.startsWith("/dephead/")) return "/depHead/dptlead.html";
+    if (p.startsWith("/dephead/")) return "/dephead/dptlead.html";
     if (p.startsWith("/admins/")) return "/admins/adminpage.html";
     return null;
   }

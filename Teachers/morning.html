@@ -554,9 +554,9 @@
     function hubUrlForUser(data) {
       const role = String(data?.role || "").toLowerCase();
       if (role === "admin") return "/admins/adminpage.html";
-      if (role === "head") return "/depHead/dptlead.html";
+      if (role === "head") return "/dephead/dptlead.html";
       if (isTruthyFlag(data?.isSupervisor)) return "/supervisors/supervisor.html";
-      return "/Teachers/user.html";
+      return "/teachers/user.html";
     }
     backBtn.addEventListener("click", () => {
       window.location.href = hubUrlForUser(currentUserData);

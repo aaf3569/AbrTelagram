@@ -3668,8 +3668,8 @@
         /* ========= Teacher Schedule Redirect ========= */
         if (teacherScheduleBtn) {
             teacherScheduleBtn.addEventListener('click', ()=> {
-                try { sessionStorage.setItem('teacherScheduleReturnTo', '/Teachers/user.html'); } catch {}
-                location.href = '/Teachers/teacherschedule.html';
+                try { sessionStorage.setItem('teacherScheduleReturnTo', '/teachers/user.html'); } catch {}
+                location.href = '/teachers/teacherschedule.html';
             });
         }
         if (adminScheduleEditBtn) {
@@ -3679,7 +3679,7 @@
         }
         if (morningLateBtn) {
             morningLateBtn.addEventListener('click', ()=> {
-                location.href = '/Teachers/morning.html';
+                location.href = '/teachers/morning.html';
             });
         }
         if (supervisorStudentsBtn) {

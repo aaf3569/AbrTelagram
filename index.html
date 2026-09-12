@@ -744,9 +744,9 @@
       const role = normalizeRole(profile?.role);
       const isSupervisor = isTruthyFlag(profile?.isSupervisor);
       if (role === 'admin') return './admins/adminpage.html';
-      if (role === 'head') return './depHead/dptlead.html';
+      if (role === 'head') return './dephead/dptlead.html';
       if (role === 'user' && isSupervisor) return './supervisors/supervisor.html';
-      if (role === 'user') return './Teachers/user.html';
+      if (role === 'user') return './teachers/user.html';
       return null;
     }
 

@@ -496,7 +496,7 @@
           لوحة خاصة للإدارة فقط
         </span>
         <!-- Link back to teacher schedule page (adjust filename if needed) -->
-        <a id="teacherScheduleBtn" href="/Teachers/teacherschedule.html" class="link-btn">
+        <a id="teacherScheduleBtn" href="/teachers/teacherschedule.html" class="link-btn">
           <i class="fas fa-calendar-alt"></i>
           <span>جدول المعلّم</span>
         </a>
@@ -1719,7 +1719,7 @@
     if (teacherScheduleBtn) {
         teacherScheduleBtn.addEventListener('click', ()=> {
             try { sessionStorage.setItem('teacherScheduleReturnTo', '/admins/admin-late-attendance.html'); } catch {}
-            location.href = '/Teachers/teacherschedule.html';
+            location.href = '/teachers/teacherschedule.html';
         });
     }
 </script>
