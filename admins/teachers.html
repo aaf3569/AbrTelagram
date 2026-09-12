@@ -9,6 +9,13 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+<!-- perf: start the module graph downloading immediately -->
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js" crossorigin>
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js" crossorigin>
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js" crossorigin>
+<link rel="modulepreload" href="/shared/class-registry.js">
+<link rel="modulepreload" href="/shared/firebase.js">
+<link rel="modulepreload" href="/shared/presence.js">
   <title>إدارة المعلّمين - ثانوية أحمد البشر الرومي</title>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
 
@@ -769,7 +776,7 @@
     import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signOut, EmailAuthProvider, reauthenticateWithCredential } from "/shared/firebase.js";
     import { initializeFirestore, persistentSingleTabManager, collection, getDocs, query, where, doc, getDoc, setDoc, updateDoc, deleteField, serverTimestamp } from "/shared/firebase.js";
     import { startPresenceHeartbeat, watchPresence } from "/shared/presence.js";
-    import { fetchClassList, sortClassList } from "/shared/class-registry.js";
+    import { fetchClassList, sortClassList, primeClassList } from "/shared/class-registry.js";
 
 
     const app=getApps().length?getApp():initializeApp(firebaseConfig);
@@ -779,6 +786,12 @@
     } catch (e) {
       db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true, useFetchStreams: false });
     }
+    // Kick the settings/classes read off now rather than after the role
+    // check returns — the two are independent, and awaiting them one
+    // after the other cost this page an extra Firestore round trip on
+    // every single load. fetchClassList() below picks up this result.
+    primeClassList(db);
+
     const auth=getAuth(app);
     const helperApp=getApps().some(a=>a.name==="AdminHelper")?getApp("AdminHelper"):initializeApp(firebaseConfig,"AdminHelper");
     const helperAuth=getAuth(helperApp);
@@ -2350,6 +2363,7 @@
   </script>
 
   <script src="/shared/hub-title-link.js" defer></script>
+<script src="/shared/prefetch-nav.js" defer></script>
 <script src="/name-glow.js" defer></script>
 </body>
 </html>

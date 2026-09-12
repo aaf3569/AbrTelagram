@@ -8,6 +8,15 @@
 <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- perf: start the module graph downloading immediately -->
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js" crossorigin>
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js" crossorigin>
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js" crossorigin>
+<link rel="modulepreload" href="/shared/attendance.js">
+<link rel="modulepreload" href="/shared/attendance-tiles.js">
+<link rel="modulepreload" href="/shared/class-registry.js">
+<link rel="modulepreload" href="/shared/firebase.js">
+<link rel="modulepreload" href="/shared/warning-system.js">
 <link rel="preconnect" href="https://www.gstatic.com" crossorigin><title>الفصول - ثانوية أحمد البشر الرومي</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
 <script defer src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -2174,7 +2183,7 @@ import { initializeFirestore, persistentSingleTabManager, collection, collection
 import { mountAttendanceSheet } from "/shared/attendance.js";
 import { fetchStudentAttendanceData, makeAttTile, makeMorningLateTile } from "/shared/attendance-tiles.js";
 import { renderWarningState, renderExcusedWarningState } from "/shared/warning-system.js";
-import { DEFAULT_CLASS_LIST, fetchClassList, groupByGrade, availableNumbersToAdd, buildClassKey } from "/shared/class-registry.js";
+import { DEFAULT_CLASS_LIST, fetchClassList, groupByGrade, availableNumbersToAdd, buildClassKey, primeClassList } from "/shared/class-registry.js";
 
 
 
@@ -2185,6 +2194,12 @@ try {
 } catch (e) {
   db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true, useFetchStreams: false });
 }
+// Kick the settings/classes read off now rather than after the role
+// check returns — the two are independent, and awaiting them one
+// after the other cost this page an extra Firestore round trip on
+// every single load. fetchClassList() below picks up this result.
+primeClassList(db);
+
 const auth = getAuth(app);
 
 // Modern (attendanceSessions) records are always edited through the shared
@@ -5258,6 +5273,7 @@ noteSave.addEventListener('click', async ()=>{
 </script>
 
   <script src="/shared/hub-title-link.js" defer></script>
+<script src="/shared/prefetch-nav.js" defer></script>
 <script src="/name-glow.js" defer></script>
 </body>
 </html>

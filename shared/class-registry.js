@@ -13,7 +13,7 @@ export const DEFAULT_CLASS_LIST = [
   "12 / 1 ع", "12 / 2 ع", "12 / 3 ع", "12 / 4 ع", "12 / 5 ع", "12 / 1 د",
 ];
 
-export async function fetchClassList(db) {
+async function readClassList(db) {
   try {
     const snap = await getDoc(doc(db, "settings", "classes"));
     const list = snap.exists() ? snap.data()?.classes : null;
@@ -24,6 +24,40 @@ export async function fetchClassList(db) {
     console.error("[class-registry] fetchClassList:", e);
   }
   return DEFAULT_CLASS_LIST;
+}
+
+// A single in-flight read, handed to whoever awaits fetchClassList() next.
+let primed = null;
+
+// Starts the settings/classes read straight away, without waiting for the
+// caller to be ready for the answer.
+//
+// Every page boots by doing two reads that have nothing to do with each
+// other: the signed-in user's role document, and this class list. They were
+// awaited one after the other, so the page paid two full Firestore round
+// trips back to back before it could show anything. Calling this as soon as
+// `db` exists overlaps them — by the time the role check returns, the class
+// list is usually already sitting here — which takes a whole round trip off
+// the load of nearly every page.
+//
+// Safe to call more than once, and safe to never await: readClassList()
+// handles its own errors and falls back to DEFAULT_CLASS_LIST, so this can
+// never produce an unhandled rejection.
+export function primeClassList(db) {
+  if (!primed) primed = { db, promise: readClassList(db) };
+  return primed.promise;
+}
+
+export async function fetchClassList(db) {
+  // Deliberately one-shot. The primed read is consumed by the first caller
+  // and then forgotten, so any later fetch — after an admin adds or removes
+  // a class, say — still goes to Firestore and sees the change.
+  if (primed && primed.db === db) {
+    const { promise } = primed;
+    primed = null;
+    return promise;
+  }
+  return readClassList(db);
 }
 
 export function parseClassKey(s) {

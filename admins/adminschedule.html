@@ -9,6 +9,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+<!-- perf: start the module graph downloading immediately -->
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js" crossorigin>
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js" crossorigin>
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js" crossorigin>
+<link rel="modulepreload" href="/shared/class-registry.js">
+<link rel="modulepreload" href="/shared/firebase.js">
   <title>إدارة الجدول الأسبوعي - ثانوية أحمد البشر الرومي</title>
 
   <!-- Noto Kufi Arabic -->
@@ -1231,7 +1237,7 @@
     /* ========= Firebase ========= */
     import { initializeApp, getApp, getApps } from "/shared/firebase.js";
     import { getAuth, onAuthStateChanged, setPersistence, browserLocalPersistence } from "/shared/firebase.js";
-    import { fetchClassList, groupByGrade } from "/shared/class-registry.js";
+    import { fetchClassList, groupByGrade, primeClassList } from "/shared/class-registry.js";
     import {
       initializeFirestore,
       persistentSingleTabManager,
@@ -1250,6 +1256,12 @@
     } catch (e) {
       db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true, useFetchStreams: false });
     }
+    // Kick the settings/classes read off now rather than after the role
+    // check returns — the two are independent, and awaiting them one
+    // after the other cost this page an extra Firestore round trip on
+    // every single load. fetchClassList() below picks up this result.
+    primeClassList(db);
+
     const auth = getAuth(app);
 
     /* ========= Constants ========= */
@@ -3267,10 +3279,18 @@
 
       // Standing conflicts — is this teacher already assigned elsewhere at the
       // same weekday/lesson slot, regardless of which week that was entered in.
+      //
+      // The five day queries don't depend on each other, so they go out
+      // together rather than one after another: five sequential round trips
+      // to Firestore became one wait. Each day writes keys prefixed with its
+      // own date, so the map that comes out is identical either way.
+      const daySnaps = await Promise.all(
+        [0,1,2,3,4].map(r => getDocs(query(collection(db,'schedules'), where('dayIndex','==', r))))
+      );
+
       for(let r=0; r<5; r++){
         const iso = weekDates[r];
-        const qDay = query(collection(db,'schedules'), where('dayIndex','==', r));
-        const snap = await getDocs(qDay);
+        const snap = daySnaps[r];
         snap.forEach(d=>{
           const x = d.data() || {};
           const li = Number((x.lesson || '').toString());
@@ -3532,6 +3552,7 @@
   </div>
 
   <script src="/shared/hub-title-link.js" defer></script>
+<script src="/shared/prefetch-nav.js" defer></script>
 <script src="/name-glow.js" defer></script>
 </body>
 </html>

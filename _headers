@@ -10,3 +10,33 @@
 # Images change rarely; let browsers keep them for a week.
 /images/*
   Cache-Control: public, max-age=604800
+
+# Shared JS/CSS. Netlify's default is "public, max-age=0, must-revalidate",
+# which makes the browser send a conditional request for every one of these
+# on every single navigation. The heavy pages pull in ten to thirteen of
+# them, so that was ten-plus extra round trips before the page could start
+# doing anything — a large part of why moving between pages felt slow on
+# mobile.
+#
+# max-age=300 makes them free for five minutes, which covers a whole session
+# of clicking around and is where essentially all of the benefit is.
+#
+# The window is deliberately short, and deliberately has no
+# stale-while-revalidate. These filenames are not content-hashed, and the
+# HTML that imports them is always fresh (see the note at the bottom), so a
+# long window would let a browser pair new HTML with an old shared module.
+# That only actually breaks if a deploy changes a module's exports, but five
+# minutes keeps that window small enough not to worry about. If these ever
+# get content-hashed filenames, this can safely become a year + immutable.
+/shared/*
+  Cache-Control: public, max-age=300
+
+/name-glow.js
+  Cache-Control: public, max-age=300
+
+/manifest.webmanifest
+  Cache-Control: public, max-age=86400
+
+# HTML deliberately stays on the default (max-age=0, must-revalidate) so a
+# deploy is always live immediately. The documents are Brotli-compressed and
+# small enough over the wire that the conditional request is cheap.

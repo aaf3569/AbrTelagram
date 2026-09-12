@@ -116,7 +116,20 @@
   }
 
   function scanForName(root) {
-    if (!root) return;
+    if (!root || !root.isConnected) return;
+
+    // Cheap native pre-check before the walker. Building textContent is one
+    // C++ string concatenation; the TreeWalker below runs a JS callback for
+    // every text node in the subtree. In the overwhelmingly common case (the
+    // name is nowhere in this subtree) this returns here and the walker,
+    // which is the expensive part, never runs at all.
+    const text = root.nodeType === Node.TEXT_NODE ? root.nodeValue : root.textContent;
+    if (!text || !text.includes(TARGET_NAME)) return;
+
+    if (root.nodeType === Node.TEXT_NODE) {
+      wrapNameInTextNode(root);
+      return;
+    }
 
     const walker = document.createTreeWalker(
       root,
@@ -126,8 +139,8 @@
           const parent = node.parentElement;
           if (!parent) return NodeFilter.FILTER_REJECT;
           if (parent.classList.contains(GLOW_CLASS)) return NodeFilter.FILTER_REJECT;
-          if (parent.closest("script, style, noscript, textarea")) return NodeFilter.FILTER_REJECT;
           if (!node.nodeValue || !node.nodeValue.includes(TARGET_NAME)) return NodeFilter.FILTER_SKIP;
+          if (parent.closest("script, style, noscript, textarea")) return NodeFilter.FILTER_REJECT;
           if (findNextExactNameIndex(node.nodeValue, 0) === -1) return NodeFilter.FILTER_SKIP;
           return NodeFilter.FILTER_ACCEPT;
         },
@@ -139,24 +152,82 @@
     targets.forEach(wrapNameInTextNode);
   }
 
+  // --- Deferred, batched scanning -----------------------------------------
+  //
+  // Previously the observer scanned synchronously inside its own callback,
+  // so every appendChild during a list render paid for a full subtree walk
+  // before the browser could get back to painting. Rendering a class of
+  // students meant hundreds of walks queued ahead of the next frame, which
+  // is what made opening a section feel like it hung.
+  //
+  // Now a mutation only records which root needs looking at; the actual
+  // scanning happens later, in idle time, off the render path. The end
+  // result on screen is identical.
+
+  // Past this many queued roots it is cheaper to forget the individual nodes
+  // and do a single pass over the whole body than to keep tracking them.
+  const MAX_PENDING_ROOTS = 64;
+
+  const pending = new Set();
+  let scheduled = false;
+
+  const scheduleIdle =
+    typeof window.requestIdleCallback === "function"
+      ? (fn) => window.requestIdleCallback(fn, { timeout: 500 })
+      : (fn) => setTimeout(() => fn(null), 100);
+
+  function flush(deadline) {
+    scheduled = false;
+    let budget = MAX_PENDING_ROOTS;
+
+    for (const root of pending) {
+      pending.delete(root);
+      scanForName(root);
+      budget -= 1;
+      const outOfTime =
+        budget <= 0 ||
+        (deadline && typeof deadline.timeRemaining === "function" && deadline.timeRemaining() <= 1);
+      if (outOfTime && pending.size) {
+        schedule();
+        return;
+      }
+    }
+  }
+
+  function schedule() {
+    if (scheduled) return;
+    scheduled = true;
+    scheduleIdle(flush);
+  }
+
+  function queue(node) {
+    if (!node) return;
+    if (pending.has(document.body)) return;
+    // A big list render fires one mutation per row. Once enough have piled
+    // up, collapse the batch into one body scan — tracking them all
+    // individually would cost more than simply re-walking once.
+    if (pending.size >= MAX_PENDING_ROOTS) {
+      pending.clear();
+      pending.add(document.body);
+      schedule();
+      return;
+    }
+    pending.add(node);
+    schedule();
+  }
+
   function observeChanges() {
     if (!document.body) return;
 
     const observer = new MutationObserver((mutations) => {
       for (const mutation of mutations) {
         if (mutation.type === "characterData") {
-          wrapNameInTextNode(mutation.target);
+          queue(mutation.target);
           continue;
         }
-
         for (const addedNode of mutation.addedNodes) {
-          if (addedNode.nodeType === Node.TEXT_NODE) {
-            wrapNameInTextNode(addedNode);
-            continue;
-          }
-
-          if (addedNode.nodeType === Node.ELEMENT_NODE) {
-            scanForName(addedNode);
+          if (addedNode.nodeType === Node.TEXT_NODE || addedNode.nodeType === Node.ELEMENT_NODE) {
+            queue(addedNode);
           }
         }
       }

@@ -3,6 +3,18 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
+<!-- perf: start the module graph downloading immediately -->
+<link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js" crossorigin>
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js" crossorigin>
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js" crossorigin>
+<link rel="modulepreload" href="/shared/attendance-tiles.js">
+<link rel="modulepreload" href="/shared/auth-guard.js">
+<link rel="modulepreload" href="/shared/class-registry.js">
+<link rel="modulepreload" href="/shared/firebase.js">
+<link rel="modulepreload" href="/shared/warning-system.js">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.gstatic.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; manifest-src 'self'; upgrade-insecure-requests; block-all-mixed-content">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()">
@@ -1278,7 +1290,7 @@ import { initializeFirestore, persistentSingleTabManager, collection, getDocs, q
 import { getTeacherProfile, hasGuardAccess } from "/shared/auth-guard.js";
 import { fetchStudentAttendanceData, makeAttTile, makeMorningLateTile } from "/shared/attendance-tiles.js";
 import { renderWarningState, renderExcusedWarningState } from "/shared/warning-system.js";
-import { fetchClassList, groupByGrade } from "/shared/class-registry.js";
+import { fetchClassList, groupByGrade, primeClassList } from "/shared/class-registry.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDxT9rEUi2KpCEgU52DrTE8bv-RogxhxBE",
@@ -1297,6 +1309,12 @@ try {
 } catch (e) {
   db = initializeFirestore(app, { experimentalForceLongPolling: true, useFetchStreams: false });
 }
+// Kick the settings/classes read off now rather than after the role
+// check returns — the two are independent, and awaiting them one
+// after the other cost this page an extra Firestore round trip on
+// every single load. fetchClassList() below picks up this result.
+primeClassList(db);
+
 const auth = getAuth(app);
 
 /* ========= UI refs ========= */
@@ -1498,6 +1516,25 @@ const fmtDate = (d)=> new Intl.DateTimeFormat('ar-KW', { dateStyle:'medium', tim
 const fmtDT = (d)=> new Intl.DateTimeFormat('ar-KW', { dateStyle:'medium', timeStyle:'short', timeZone:'Asia/Kuwait' }).format(d);
 function tsToDate(v){ if(!v) return null; if(v.toDate) return v.toDate(); if(v.seconds) return new Date(v.seconds*1000); return null; }
 const slugifyClass = (s)=> (s||'').replace(/\s+/g,'').replace(/\//g,'-');
+
+// Runs `worker` over `items` with at most `limit` requests in flight at
+// once, and returns the results in input order. Firestore reads are
+// latency-bound, not CPU-bound, so awaiting them one at a time makes a page
+// wait for the sum of every round trip instead of roughly the slowest one.
+// Errors propagate, so a caller's try/catch behaves the same as it did when
+// the reads were sequential.
+async function mapWithLimit(items, worker, limit = 12){
+  const results = new Array(items.length);
+  let next = 0;
+  const runners = new Array(Math.min(limit, items.length)).fill(0).map(async () => {
+    while (next < items.length) {
+      const i = next++;
+      results[i] = await worker(items[i], i);
+    }
+  });
+  await Promise.all(runners);
+  return results;
+}
 
 // Performance optimization: Debounce function
 function debounce(func, wait) {
@@ -2101,9 +2138,24 @@ async function loadClassStatistics(className, fromDate = null, toDate = null) {
       attendanceByStudent: {}
     };
     
-    // Get attendance data for all students
-    for(const student of students) {
-      const attendanceSnap = await getDocs(collection(db,'students', student.id, 'attendance'));
+    // Get attendance data for all students.
+    //
+    // These reads are independent of each other, so fetching them one at a
+    // time made the wait the *sum* of every round trip — a class of thirty
+    // meant thirty sequential trips to Firestore before any statistic could
+    // be shown. Issued together, the wait is the slowest single trip
+    // instead. Concurrency is capped so a very large class doesn't open
+    // hundreds of sockets at once. The accumulation loop below is unchanged
+    // and still runs in student order.
+    const attendanceSnaps = await mapWithLimit(
+      students,
+      (student) => getDocs(collection(db,'students', student.id, 'attendance'))
+    );
+
+    for(let si = 0; si < students.length; si++) {
+      const student = students[si];
+      const attendanceSnap = attendanceSnaps[si];
+      if(!attendanceSnap) continue;
       const studentAttendance = [];
       attendanceSnap.forEach(d=> studentAttendance.push({ id:d.id, ...d.data() }) );
       
@@ -2689,6 +2741,7 @@ noteSave.addEventListener('click', async ()=>{
 });
 </script>
   <script src="/shared/hub-title-link.js" defer></script>
+  <script src="/shared/prefetch-nav.js" defer></script>
   <script src="/name-glow.js" defer></script>
   <script defer src="/assets/modern-ui.js"></script>
 </body>

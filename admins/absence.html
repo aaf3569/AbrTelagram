@@ -9,6 +9,13 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+<!-- perf: start the module graph downloading immediately -->
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js" crossorigin>
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js" crossorigin>
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js" crossorigin>
+<link rel="modulepreload" href="/shared/class-registry.js">
+<link rel="modulepreload" href="/shared/firebase.js">
+<link rel="modulepreload" href="/shared/kuwait-time.js">
   <title>تدقيق الغياب - ثانوية أحمد البشر الرومي</title>
 
   <!-- Noto Kufi Arabic -->
@@ -510,7 +517,7 @@
       doc, getDoc
     } from "/shared/firebase.js";
     import { kuwaitTodayISO } from "/shared/kuwait-time.js";
-    import { fetchClassList, groupByGrade, sortClassList } from "/shared/class-registry.js";
+    import { fetchClassList, groupByGrade, sortClassList, primeClassList } from "/shared/class-registry.js";
 
     const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
     let db;
@@ -519,6 +526,12 @@
     } catch (e) {
       db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true, useFetchStreams: false });
     }
+    // Kick the settings/classes read off now rather than after the role
+    // check returns — the two are independent, and awaiting them one
+    // after the other cost this page an extra Firestore round trip on
+    // every single load. fetchClassList() below picks up this result.
+    primeClassList(db);
+
     const auth = getAuth(app);
 
     // UI refs
@@ -1273,6 +1286,7 @@
   </script>
 
   <script src="/shared/hub-title-link.js" defer></script>
+<script src="/shared/prefetch-nav.js" defer></script>
 <script src="/name-glow.js" defer></script>
 </body>
 </html>
