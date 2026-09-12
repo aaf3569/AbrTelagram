@@ -5,7 +5,7 @@
 // the fallback if that doc doesn't exist yet (no manual seed step needed —
 // every page behaves identically until the first admin edit creates it) and
 // the pre-existing canonical list this replaces.
-import { doc, getDoc } from "/shared/firebase.js";
+import { doc, getDoc, onAuthStateChanged } from "/shared/firebase.js";
 
 export const DEFAULT_CLASS_LIST = [
   "10 / 1", "10 / 2", "10 / 3", "10 / 4", "10 / 5", "10 / 6", "10 / 7",
@@ -29,23 +29,51 @@ async function readClassList(db) {
 // A single in-flight read, handed to whoever awaits fetchClassList() next.
 let primed = null;
 
-// Starts the settings/classes read straight away, without waiting for the
-// caller to be ready for the answer.
+// Starts the settings/classes read as soon as we know who is signed in,
+// without waiting for the caller to be ready for the answer.
 //
 // Every page boots by doing two reads that have nothing to do with each
 // other: the signed-in user's role document, and this class list. They were
 // awaited one after the other, so the page paid two full Firestore round
-// trips back to back before it could show anything. Calling this as soon as
-// `db` exists overlaps them — by the time the role check returns, the class
-// list is usually already sitting here — which takes a whole round trip off
-// the load of nearly every page.
+// trips back to back before it could show anything. Starting this one the
+// moment auth resolves overlaps them — by the time the role check returns,
+// the class list is usually already sitting here — which takes a whole
+// round trip off the load of nearly every page.
+//
+// It waits for auth rather than firing immediately because the rules on
+// settings/classes require a role. Firing before sign-in is known would
+// mean a guaranteed permission-denied read, and a console error, on every
+// visit from someone who is signed out. Waiting costs nothing: the role
+// check the page does itself cannot start any earlier either, so the two
+// still go out together.
 //
 // Safe to call more than once, and safe to never await: readClassList()
 // handles its own errors and falls back to DEFAULT_CLASS_LIST, so this can
 // never produce an unhandled rejection.
-export function primeClassList(db) {
-  if (!primed) primed = { db, promise: readClassList(db) };
-  return primed.promise;
+export function primeClassList(db, auth) {
+  if (primed) return primed.promise;
+  const promise = auth
+    ? new Promise((resolve) => {
+        const stop = onAuthStateChanged(
+          auth,
+          (user) => {
+            stop();
+            // No signed-in user means no permission to read this, so don't
+            // try. Resolving to null rather than a list marks the prime as
+            // "nothing fetched", and fetchClassList() below falls through
+            // to a real read — so a caller that somehow asks later still
+            // gets live data instead of a stale placeholder.
+            resolve(user ? readClassList(db) : null);
+          },
+          () => {
+            stop();
+            resolve(null);
+          }
+        );
+      })
+    : readClassList(db);
+  primed = { db, promise };
+  return promise;
 }
 
 export async function fetchClassList(db) {
@@ -55,7 +83,10 @@ export async function fetchClassList(db) {
   if (primed && primed.db === db) {
     const { promise } = primed;
     primed = null;
-    return promise;
+    const list = await promise;
+    if (list) return list;
+    // The prime decided not to read (nobody was signed in yet). Fall
+    // through and do it properly now.
   }
   return readClassList(db);
 }

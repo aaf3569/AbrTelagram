@@ -495,13 +495,13 @@
     }catch(e){
       db = initializeFirestore(app, {});
     }
-    // Kick the settings/classes read off now rather than after the role
-    // check returns — the two are independent, and awaiting them one
-    // after the other cost this page an extra Firestore round trip on
-    // every single load. fetchClassList() below picks up this result.
-    primeClassList(db);
-
     const auth = getAuth(app);
+    // Start the settings/classes read the moment auth resolves, instead
+    // of waiting for the role check to come back first. The two reads are
+    // independent, and running them one after the other cost this page a
+    // whole extra Firestore round trip on every load. fetchClassList()
+    // below picks up the result.
+    primeClassList(db, auth);
     // Secondary app instance so creating a new teacher's Auth account doesn't
     // sign the head out of their own session — same pattern admins/teachers.html
     // uses (there named "AdminHelper"; named differently here only to avoid
