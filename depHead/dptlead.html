@@ -254,23 +254,6 @@
         .divider{width:100%;height:2px;background:linear-gradient(to right,transparent,rgba(3,60,84,.22) 15%,rgba(3,60,84,.22) 85%,transparent);margin:20px 0 32px;border-radius:1px}
         .stack{width:100%;display:flex;flex-direction:column;gap:18px;margin-top:16px;align-items:center}
         .stack.wide .btn{width:100%}
-
-        /* Phone layout only — the desktop grid at min-width:1024px below is
-           untouched, and already applies its own version of this fix.
-
-           #stateDashboard is the one state without .panel, so unlike
-           #stateLoading, #stateNotLogged and #stateDenied it has no width of
-           its own. As a flex item in a column with align-items:center that
-           makes it shrink-to-fit its widest child, which is the user's name,
-           so every button on the hub grew or shrank with how long that name
-           happened to be — and the dashboard didn't line up with the loading
-           skeleton above it either. Give it the same full width the other
-           states already have, and cap the buttons so they stop growing at a
-           sensible size instead of stretching across a wide phone. */
-        @media (max-width:768px){
-            #stateDashboard{ width:100%; }
-            .stack{ width:min(640px,100%); margin-inline:auto; }
-        }
         #telegramSettingsBtn{margin-top:16px;margin-bottom:16px}
         .btn{font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;width:100%;min-height:68px;border:none;border-radius:18px;cursor:pointer;font-weight:800;font-size:1.1rem;letter-spacing:.2px;padding:18px 24px;transition:var(--transition);user-select:none;display:flex;align-items:center;justify-content:center;gap:12px;position:relative;overflow:hidden}
         .btn::after{content:'';position:absolute;inset:0;background:rgba(255,255,255,.1);opacity:0;transition:var(--transition)}
