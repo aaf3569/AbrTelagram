@@ -588,6 +588,35 @@
       justify-content: center;
       white-space: nowrap;
     }
+    .all-schedules-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: 1 1 220px;
+      min-width: 0;
+    }
+    .more-actions .all-schedules-actions .btn-instagram {
+      flex: 0 0 44px;
+      width: 44px;
+      padding: 0;
+      border: 0;
+      color: #fff;
+      background: linear-gradient(35deg, #feda75 0%, #fa7e1e 22%, #d62976 50%, #962fbf 76%, #4f5bd5 100%);
+      box-shadow: 0 4px 12px rgba(214, 41, 118, 0.22);
+      font-size: 23px;
+    }
+    .btn-instagram:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+    .btn-instagram.loading i { visibility: hidden; }
+    .btn-instagram.loading::after { width: 18px; height: 18px; left: 13px; }
+    .all-schedules-actions #btnDownloadAllClassesPdf { flex: 1 1 auto; min-width: 0; }
+    .more-actions .filter-btn[hidden] { display: none; }
+    .class-export-status {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      margin-top: 10px;
+    }
+    .class-export-status:empty { display: none; }
     @media (max-width: 480px) {
       .more-actions { flex-direction: column; }
       .more-actions .filter-btn { width: 100%; flex: initial; }
@@ -948,6 +977,8 @@
       .filter-btn { padding: 0 14px; font-size: 0.85rem; }
       .view-toggle-btn { height: 36px; padding: 0 12px; font-size: 0.82rem; }
       .more-actions { flex-direction: column; }
+      .all-schedules-actions { flex: initial; width: 100%; }
+      .more-actions > .filter-btn { flex: initial; width: 100%; }
       .table { display: none; }
       .compact-table { display: grid; }
       .header-full { grid-column: 1; }
@@ -1109,15 +1140,21 @@
           </select>
         </div>
         <div class="more-actions">
-          <button id="btnDownloadAllClassesPdf" class="filter-btn btn-solid" type="button">
-            <i class="fas fa-file-arrow-down"></i>
-            <span>تنزيل كل الجداول</span>
-          </button>
+          <div class="all-schedules-actions">
+            <button id="btnDownloadAllClassesPng" class="filter-btn btn-instagram" type="button" aria-label="تنزيل كل الجداول كصور PNG لإنستغرام في ملف ZIP" title="تنزيل كل الجداول كصور إنستغرام (PNG)">
+              <i class="fab fa-instagram" aria-hidden="true"></i>
+            </button>
+            <button id="btnDownloadAllClassesPdf" class="filter-btn btn-solid" type="button">
+              <i class="fas fa-file-arrow-down"></i>
+              <span>تنزيل كل الجداول</span>
+            </button>
+          </div>
           <button id="btnDownloadSelectedClassPdf" class="filter-btn btn-ghost" type="button" hidden>
             <i class="fas fa-download"></i>
             <span>تنزيل هذا الفصل</span>
           </button>
         </div>
+        <div id="classExportStatus" class="class-export-status" role="status" aria-live="polite"></div>
       </div>
       <div class="card">
         <div class="grid-wrap">
@@ -1178,6 +1215,7 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" defer></script>
 
   <script type="module">
     import { firebaseConfig } from "/shared/firebase.js";
@@ -1496,7 +1534,9 @@
     const closeMore   = document.getElementById('closeMore');
     const classPicker = document.getElementById('classPicker');
     const btnDownloadAllClassesPdf = document.getElementById('btnDownloadAllClassesPdf');
+    const btnDownloadAllClassesPng = document.getElementById('btnDownloadAllClassesPng');
     const btnDownloadSelectedClassPdf = document.getElementById('btnDownloadSelectedClassPdf');
+    const classExportStatus = document.getElementById('classExportStatus');
     const classWeekGrid = document.getElementById('classWeekGrid');
 
     const modalEl = document.getElementById('modal');
@@ -1510,6 +1550,7 @@
 
     /* ========= State ========= */
     let weekDates = []; // ISO strings Sun→Thu
+    let classScheduleExportInProgress = false;
     let currentUser = null;
     let currentRole = '';
     let currentTeacherProfile = null;
@@ -1709,6 +1750,8 @@
     }
 
     const PDF_RENDER_SCALE = 1.35;
+    const INSTAGRAM_POST_WIDTH = 1080;
+    const INSTAGRAM_POST_HEIGHT = 1350;
 
     /* ========= NEW: time → current lesson index ========= */
     function getCurrentKuwaitMinutes() {
@@ -2565,7 +2608,10 @@
 
     async function waitForImageReady(imgEl){
       if (!imgEl) return;
-      if (imgEl.complete && imgEl.naturalWidth > 0) return;
+      if (imgEl.complete) {
+        if (imgEl.naturalWidth > 0) return;
+        throw new Error('image_load_failed');
+      }
       await new Promise((resolve, reject) => {
         const onLoad = () => {
           cleanup();
@@ -2997,7 +3043,7 @@
       return map;
     }
 
-    function buildClassSchedulePdfContainer({ classKey, map }){
+    function buildClassScheduleExportContainer({ classKey, map, instagram = false }){
       const classLabel = formatClassKeyLabel(classKey);
       const weekStart = weekDates[0] || '';
       const weekEnd = weekDates[weekDates.length - 1] || '';
@@ -3048,8 +3094,8 @@
       host.style.position = 'fixed';
       host.style.top = '0';
       host.style.left = '-10000px';
-      host.style.width = '794px';
-      host.style.height = '1123px';
+      host.style.width = instagram ? `${INSTAGRAM_POST_WIDTH}px` : '794px';
+      host.style.height = instagram ? `${INSTAGRAM_POST_HEIGHT}px` : '1123px';
       host.style.padding = '0';
       host.style.background = '#ffffff';
       host.style.zIndex = '-1';
@@ -3199,14 +3245,87 @@
             line-height: 1.2;
             word-break: break-word;
           }
+          #classPdfPage.instagram-post {
+            width: ${INSTAGRAM_POST_WIDTH}px;
+            min-height: ${INSTAGRAM_POST_HEIGHT}px;
+            padding: 40px;
+          }
+          #classPdfPage.instagram-post .pdf-header { margin-bottom: 28px; }
+          #classPdfPage.instagram-post .school-brand {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 18px;
+          }
+          #classPdfPage.instagram-post .pdf-logo { height: 44px; margin: 0; }
+          #classPdfPage.instagram-post .school-name { font-size: 20px; margin: 0; color: #5a748c; }
+          #classPdfPage.instagram-post .post-title {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 28px;
+            margin-top: 22px;
+            padding: 22px 32px;
+            border: 1px solid #dce7f2;
+            border-radius: 28px;
+            background: linear-gradient(135deg, #f0f6fc, #ffffff);
+          }
+          #classPdfPage.instagram-post .class-line {
+            flex: 1;
+            min-width: 0;
+            font-size: 76px;
+            line-height: 1.5;
+            margin: 0;
+            text-align: right;
+            overflow-wrap: anywhere;
+            color: #0f3f63;
+          }
+          #classPdfPage.instagram-post .post-calendar {
+            width: 180px;
+            height: 180px;
+            object-fit: contain;
+            flex: 0 0 auto;
+          }
+          #classPdfPage.instagram-post .header-sep { display: none; }
+          #classPdfPage.instagram-post .table-wrap { width: 100%; margin: 0; border-radius: 20px; }
+          #classPdfPage.instagram-post thead th { padding: 20px 6px; }
+          #classPdfPage.instagram-post .corner { width: 132px; font-size: 20px; }
+          #classPdfPage.instagram-post .lesson-small { font-size: 13px; margin-bottom: 4px; }
+          #classPdfPage.instagram-post .lesson-main { font-size: 17px; }
+          #classPdfPage.instagram-post .lesson-time { font-size: 13px; margin-top: 8px; }
+          #classPdfPage.instagram-post tbody tr { height: 156px; }
+          #classPdfPage.instagram-post .day-name { font-size: 20px; }
+          #classPdfPage.instagram-post .day-date { font-size: 14px; }
+          #classPdfPage.instagram-post td.lesson-cell { padding: 14px 7px; }
+          #classPdfPage.instagram-post .cell-subject { font-size: 19px; line-height: 1.65; margin-bottom: 10px; }
+          #classPdfPage.instagram-post .cell-teacher { font-size: 15px; line-height: 1.7; }
+          #classPdfPage.instagram-post.dense .lesson-main { font-size: 14px; }
+          #classPdfPage.instagram-post.dense .lesson-time { font-size: 11px; }
+          #classPdfPage.instagram-post.dense .corner { width: 100px; }
+          #classPdfPage.instagram-post.dense .day-name { font-size: 17px; }
+          #classPdfPage.instagram-post.dense .day-date { font-size: 12px; }
+          #classPdfPage.instagram-post.dense td.lesson-cell { padding: 12px 4px; }
+          #classPdfPage.instagram-post.dense .cell-subject { font-size: 12px; word-break: normal; }
+          #classPdfPage.instagram-post.dense .cell-teacher { font-size: 10.5px; word-break: normal; }
         </style>
-        <div id="classPdfPage">
+        <div id="classPdfPage" class="${instagram ? `instagram-post${FIXED_LESSON_COUNT > 9 ? ' dense' : ''}` : ''}">
           <div class="pdf-header">
+            ${instagram ? `
+            <div class="school-brand">
+              <img id="classPdfLogo" class="pdf-logo" src="/images/schoollogo.png" alt="School Logo">
+              <div class="school-name">ثانوية أحمد البشر الرومي</div>
+            </div>
+            <div class="post-title">
+              <div class="class-line">${escapeHtml(classLabel)}</div>
+              <img class="post-calendar" src="/images/calendar-icon.webp" alt="" aria-hidden="true">
+            </div>
+            ` : `
             <img id="classPdfLogo" class="pdf-logo" src="/images/schoollogo.png" alt="School Logo">
             <div class="school-name">ثانوية أحمد البشر الرومي</div>
             <div class="class-line">الفصل: ${escapeHtml(classLabel)}</div>
             <div class="title-line">جدول الفصل الأسبوعي</div>
             <div class="week-line">الأسبوع: ${escapeHtml(weekRangeText)}</div>
+            `}
             <div class="header-sep"></div>
           </div>
           <div class="table-wrap">
@@ -3242,27 +3361,54 @@
       docPdf.addImage(canvas.toDataURL('image/jpeg', 0.9), 'JPEG', x, y, drawW, drawH, undefined, 'FAST');
     }
 
-    async function renderClassScheduleCanvas(classKey, map){
-      const host = buildClassSchedulePdfContainer({ classKey, map });
+    async function renderClassScheduleCanvas(classKey, map, { instagram = false } = {}){
+      const host = buildClassScheduleExportContainer({ classKey, map, instagram });
       document.body.appendChild(host);
       try{
         if (document.fonts?.ready) await document.fonts.ready;
-        const logoEl = host.querySelector('#classPdfLogo');
-        try { await waitForImageReady(logoEl); } catch(_) {}
+        await Promise.all(Array.from(host.querySelectorAll('img'), async imgEl => {
+          try { await waitForImageReady(imgEl); } catch(_) {}
+        }));
 
         const pageEl = host.querySelector('#classPdfPage');
-        return await window.html2canvas(pageEl, {
+        const canvas = await window.html2canvas(pageEl, {
           backgroundColor: '#ffffff',
-          scale: PDF_RENDER_SCALE,
+          scale: instagram ? 1 : PDF_RENDER_SCALE,
           useCORS: true,
           logging: false
         });
+        if (!instagram) return canvas;
+
+        // Fit any extra height from long names without cropping the timetable.
+        const post = document.createElement('canvas');
+        post.width = INSTAGRAM_POST_WIDTH;
+        post.height = INSTAGRAM_POST_HEIGHT;
+        const ctx = post.getContext('2d');
+        if (!ctx) throw new Error('canvas_context_unavailable');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, post.width, post.height);
+        const ratio = Math.min(post.width / canvas.width, post.height / canvas.height);
+        const width = canvas.width * ratio;
+        const height = canvas.height * ratio;
+        ctx.drawImage(canvas, (post.width - width) / 2, (post.height - height) / 2, width, height);
+        canvas.width = canvas.height = 0;
+        return post;
       } finally {
         host.remove();
       }
     }
 
+    function setClassExportLoading(button, loading){
+      classScheduleExportInProgress = loading;
+      setLoading(button, loading);
+      button.setAttribute('aria-busy', String(loading));
+      [btnDownloadAllClassesPdf, btnDownloadAllClassesPng, btnDownloadSelectedClassPdf].forEach(btn => {
+        btn.disabled = loading;
+      });
+    }
+
     async function downloadSelectedClassSchedulePdf(){
+      if (classScheduleExportInProgress) return;
       const classKey = classPicker.value;
       if (!classKey) {
         toast({ title: 'ناقص', text: 'اختر الفصل أولاً.', icon: 'fa-circle-exclamation' });
@@ -3273,7 +3419,7 @@
         return;
       }
 
-      setLoading(btnDownloadSelectedClassPdf, true);
+      setClassExportLoading(btnDownloadSelectedClassPdf, true);
       try{
         initWeek();
         const map = await getWeekMapForClass(classKey);
@@ -3297,11 +3443,12 @@
         console.error(e);
         toast({ title: 'خطأ', text: 'تعذّر تنزيل جدول الفصل.', icon: 'fa-exclamation-circle' });
       } finally {
-        setLoading(btnDownloadSelectedClassPdf, false);
+        setClassExportLoading(btnDownloadSelectedClassPdf, false);
       }
     }
 
     async function downloadAllClassSchedulesPdf(){
+      if (classScheduleExportInProgress) return;
       if (!window.html2canvas || !window.jspdf?.jsPDF) {
         toast({ title: 'خطأ', text: 'مكتبة إنشاء PDF غير متاحة حالياً.', icon: 'fa-exclamation-circle' });
         return;
@@ -3313,8 +3460,7 @@
 
       const labelEl = btnDownloadAllClassesPdf.querySelector('span');
       const originalLabel = labelEl ? labelEl.textContent : '';
-      setLoading(btnDownloadAllClassesPdf, true);
-      btnDownloadSelectedClassPdf.setAttribute('disabled', 'disabled');
+      setClassExportLoading(btnDownloadAllClassesPdf, true);
 
       try{
         initWeek();
@@ -3345,8 +3491,67 @@
         toast({ title: 'خطأ', text: 'تعذّر تنزيل جميع الجداول.', icon: 'fa-exclamation-circle' });
       } finally {
         if (labelEl) labelEl.textContent = originalLabel;
-        setLoading(btnDownloadAllClassesPdf, false);
-        btnDownloadSelectedClassPdf.removeAttribute('disabled');
+        setClassExportLoading(btnDownloadAllClassesPdf, false);
+      }
+    }
+
+    async function downloadAllClassSchedulesPng(){
+      if (classScheduleExportInProgress) return;
+      if (!window.html2canvas || !window.JSZip) {
+        toast({ title: 'خطأ', text: 'مكتبة إنشاء الصور غير متاحة حالياً. أعد تحميل الصفحة وحاول مجدداً.', icon: 'fa-exclamation-circle' });
+        return;
+      }
+      if (!CLASS_OPTIONS.length) {
+        toast({ title: 'تنبيه', text: 'لا توجد فصول للتنزيل.', icon: 'fa-info-circle' });
+        return;
+      }
+
+      setClassExportLoading(btnDownloadAllClassesPng, true);
+      classExportStatus.textContent = 'جاري تحضير صور الجداول...';
+      try{
+        initWeek();
+        const zip = new window.JSZip();
+        const from = formatDateArabicCompact(weekDates[0] || '');
+        const to = formatDateArabicCompact(weekDates[weekDates.length - 1] || '');
+
+        for (let idx = 0; idx < CLASS_OPTIONS.length; idx++) {
+          const classKey = CLASS_OPTIONS[idx];
+          classExportStatus.textContent = `جاري تحضير الصور ${idx + 1}/${CLASS_OPTIONS.length}`;
+          const map = await getWeekMapForClass(classKey);
+          const canvas = await renderClassScheduleCanvas(classKey, map, { instagram: true });
+          try{
+            const blob = await new Promise((resolve, reject) => {
+              canvas.toBlob(result => result ? resolve(result) : reject(new Error('png_encoding_failed')), 'image/png');
+            });
+            const className = formatClassKeyLabel(classKey);
+            const name = filenameSafe(`${String(idx + 1).padStart(2, '0')}-جدول-الفصل-${className}-من-${from}-إلى-${to}`);
+            zip.file(`${name}.png`, blob);
+          } finally {
+            canvas.width = canvas.height = 0;
+          }
+        }
+
+        classExportStatus.textContent = 'جاري تجهيز ملف الصور...';
+        // PNGs are already compressed; store them together for a single download.
+        const archive = await zip.generateAsync({ type: 'blob', compression: 'STORE' });
+        const url = URL.createObjectURL(archive);
+        const link = document.createElement('a');
+        try{
+          link.href = url;
+          link.download = filenameSafe(`جميع-جداول-الفصول-إنستغرام-من-${from}-إلى-${to}`) + '.zip';
+          document.body.appendChild(link);
+          link.click();
+        } finally {
+          link.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 60000);
+        }
+        toast({ title: 'تم', text: 'تم تجهيز جميع الجداول كصور PNG لإنستغرام داخل ملف ZIP.', icon: 'fa-check-circle' });
+      } catch(e){
+        console.error(e);
+        toast({ title: 'خطأ', text: 'تعذّر تنزيل صور الجداول. حاول مجدداً.', icon: 'fa-exclamation-circle' });
+      } finally {
+        classExportStatus.textContent = '';
+        setClassExportLoading(btnDownloadAllClassesPng, false);
       }
     }
 
@@ -4847,6 +5052,7 @@
     });
     btnDownloadPdf.addEventListener('click', downloadWeeklySchedulePdf);
     btnDownloadAllClassesPdf.addEventListener('click', downloadAllClassSchedulesPdf);
+    btnDownloadAllClassesPng.addEventListener('click', downloadAllClassSchedulesPng);
     btnDownloadSelectedClassPdf.addEventListener('click', downloadSelectedClassSchedulePdf);
 
     classPicker.addEventListener('change', async ()=>{
