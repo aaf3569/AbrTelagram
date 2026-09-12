@@ -2998,7 +2998,8 @@
           // behind after the base schedule was wiped (or one that never
           // matched a real slot) rendered as a phantom "بديل" cell with no
           // real lesson behind it.
-          if (!map.get(iso).has(Number(x.lesson))) continue;
+          const scheduledLesson = map.get(iso).get(Number(x.lesson));
+          if (!scheduledLesson) continue;
 
           let tName = nameCache.get(x.newTeacherUid);
           if (!tName) {
@@ -3007,7 +3008,9 @@
           }
 
           map.get(iso).set(Number(x.lesson), {
-            subject: 'بديل',
+            // Cover/swap overrides change the assigned teacher, not the
+            // scheduled subject displayed in the class timetable.
+            subject: scheduledLesson.subject,
             teacherUid: x.newTeacherUid,
             teacherName: tName,
             classKey: x.classKey,
@@ -3072,8 +3075,10 @@
           const teacher = shortTeacherName(data.teacherName || data.teacherUid || '—');
           return `
             <td class="lesson-cell">
-              <div class="cell-subject">${escapeHtml(subject)}</div>
-              <div class="cell-teacher">${escapeHtml(teacher)}</div>
+              <div class="cell-content">
+                <div class="cell-subject">${escapeHtml(subject)}</div>
+                <div class="cell-teacher">${escapeHtml(teacher)}</div>
+              </div>
             </td>
           `;
         }).join('');
@@ -3292,13 +3297,26 @@
           #classPdfPage.instagram-post .corner { width: 132px; font-size: 20px; }
           #classPdfPage.instagram-post .lesson-small { font-size: 13px; margin-bottom: 4px; }
           #classPdfPage.instagram-post .lesson-main { font-size: 17px; }
-          #classPdfPage.instagram-post .lesson-time { font-size: 13px; margin-top: 8px; }
+          #classPdfPage.instagram-post .lesson-time {
+            font-size: 13px;
+            margin-top: 8px;
+            direction: ltr;
+            unicode-bidi: isolate;
+          }
           #classPdfPage.instagram-post tbody tr { height: 156px; }
           #classPdfPage.instagram-post .day-name { font-size: 20px; }
           #classPdfPage.instagram-post .day-date { font-size: 14px; }
           #classPdfPage.instagram-post td.lesson-cell { padding: 14px 7px; }
-          #classPdfPage.instagram-post .cell-subject { font-size: 19px; line-height: 1.65; margin-bottom: 10px; }
-          #classPdfPage.instagram-post .cell-teacher { font-size: 15px; line-height: 1.7; }
+          #classPdfPage.instagram-post .cell-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            text-align: center;
+          }
+          #classPdfPage.instagram-post .cell-subject { width: 100%; font-size: 21px; line-height: 1.6; margin-bottom: 0; }
+          #classPdfPage.instagram-post .cell-teacher { width: 100%; font-size: 11px; font-weight: 500; line-height: 1.7; color: #718397; }
           #classPdfPage.instagram-post.dense .lesson-main { font-size: 14px; }
           #classPdfPage.instagram-post.dense .lesson-time { font-size: 11px; }
           #classPdfPage.instagram-post.dense .corner { width: 100px; }
@@ -3306,7 +3324,7 @@
           #classPdfPage.instagram-post.dense .day-date { font-size: 12px; }
           #classPdfPage.instagram-post.dense td.lesson-cell { padding: 12px 4px; }
           #classPdfPage.instagram-post.dense .cell-subject { font-size: 12px; word-break: normal; }
-          #classPdfPage.instagram-post.dense .cell-teacher { font-size: 10.5px; word-break: normal; }
+          #classPdfPage.instagram-post.dense .cell-teacher { font-size: 9px; word-break: normal; }
         </style>
         <div id="classPdfPage" class="${instagram ? `instagram-post${FIXED_LESSON_COUNT > 9 ? ' dense' : ''}` : ''}">
           <div class="pdf-header">
