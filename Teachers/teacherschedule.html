@@ -272,27 +272,84 @@
     }
     .cell.clickable:hover::after { box-shadow: 0 0 0 3px rgba(2, 43, 66, 0.10); }
 
-    /* Grid */
-    .grid-wrap { overflow: visible; }
-    .grid { direction: rtl; display: grid; grid-template-columns: 140px repeat(7, minmax(130px, 1fr)); gap: 12px; align-items: stretch; }
+    /* Week grid.
+
+       Read as a table, not as a field of cards. The old version gave all
+       forty-eight slots the same outlined box, the same 12px gap and the same
+       800-900 weight, so a teacher's four lessons had to compete with thirty
+       or so empty slots drawn just as loudly. The signal here is which slots
+       are taught and which class — everything else should get out of the way.
+
+       Three moves: the 12px gutters become 1px rules (the gap shows the
+       container colour through, which draws the grid lines for free and
+       removes forty-eight borders); empty slots recede to a faint dash; and
+       the lessons themselves carry the only saturated colour and the only
+       heavy weight on the screen. */
+    /* The wrapper owns the frame and the scrolling, not the grid. Two
+       reasons: an element with overflow:hidden becomes the scroll container
+       for its own sticky children, so clipping on .grid would stop the day
+       column ever sticking; and the grid has a ~1050px minimum from its
+       column template, so at any width below that the old overflow:visible
+       simply spilled it out of the card. Scrolling here handles both. */
+    .grid-wrap {
+      overflow: auto;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-1);
+      -webkit-overflow-scrolling: touch;
+    }
+    .grid {
+      direction: rtl; display: grid;
+      grid-template-columns: 140px repeat(7, minmax(130px, 1fr));
+      align-items: stretch;
+      gap: 1px;
+      background: var(--border);
+    }
+    /* One unbroken header band. Seven separately-rounded gradient blocks read
+       as seven objects; at a 1px gutter a flat fill reads as one. */
     .gth {
-      background: linear-gradient(135deg, var(--primary-2), var(--primary)); color: var(--headerText);
-      border-radius: var(--radius-sm); padding: 14px 10px; text-align: center; font-weight: 900; box-shadow: var(--shadow-1);
+      background: var(--primary); color: var(--headerText);
+      border-radius: 0; padding: 13px 10px; text-align: center; font-weight: 800;
       display: grid;
       place-items: center;
       align-content: center;
       animation: gridCellIn 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
     }
+    .gth .lesson-title-row { font-weight: 800; letter-spacing: .2px; }
+    .gth .lesson-time-row {
+      font-weight: 600; font-size: .74rem;
+      color: rgba(255, 255, 255, .68); font-variant-numeric: tabular-nums;
+    }
+    /* The quiet default: an empty slot. */
     .gcell {
-      background: var(--card-bg); border: 1px solid var(--border-light); border-radius: var(--radius-sm);
-      padding: 14px 10px; display: grid; align-items: center; justify-items: center; text-align: center;
-      min-height: 60px; position: relative; font-weight: 800; transition: var(--transition);
+      background: var(--card-bg); border: 0; border-radius: 0;
+      padding: 13px 10px; display: grid; align-items: center; justify-items: center; text-align: center;
+      min-height: 62px; position: relative; font-weight: 400; color: rgba(100, 116, 139, .38);
+      transition: background-color .14s ease, color .14s ease, box-shadow .14s ease;
       animation: gridCellIn 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
     }
-    .gcell:hover { border-color: var(--border); transform: translateY(-2px); box-shadow: var(--shadow-1); }
-    .gcell.empty { color: rgba(100, 116, 139, 0.45); font-weight: 600; }
+    /* No lift on hover. The wrapper clips, so a raised cell at the edge would
+       be cut off, and a column of cells hopping as the pointer travels across
+       is a good part of what made this feel restless. A fill change is enough
+       to show which slot is under the cursor. */
+    .gcell:hover { background: #f7fafc; }
+    .gcell.empty { color: rgba(100, 116, 139, 0.38); font-weight: 400; }
     .gcell.clickable { cursor: pointer; }
-    .day-col { background: var(--primary-light); }
+    /* Day column: sticky, so the day stays readable while the week is
+       scrolled sideways on a phone. Needs an opaque fill to sit over the
+       cells passing beneath it. */
+    .day-col {
+      background: #f4f7fa;
+      position: sticky; inset-inline-start: 0; z-index: 2;
+      box-shadow: 1px 0 0 var(--border), -1px 0 0 var(--border);
+      font-weight: 400; color: var(--text);
+    }
+    .day-col > div:first-child { font-weight: 800; color: var(--primary); }
+    .day-col .small {
+      font-weight: 600; font-size: .74rem; color: var(--muted);
+      font-variant-numeric: tabular-nums; margin-top: 2px;
+    }
+    .grid > .gth:first-child { position: sticky; inset-inline-start: 0; z-index: 3; }
     @keyframes gridCellIn {
       from { opacity: 0; transform: translateY(5px); }
       to { opacity: 1; transform: translateY(0); }
@@ -331,13 +388,25 @@
       color: var(--primary); font-weight: 700; margin-top: 12px; display: none; align-items: center; gap: 10px;
     }
 
-    /* Highlight (has lesson) */
+    /* Highlight (has lesson) — the one place this view spends any colour.
+
+       The old sticky-note yellow (#fff9c4 on #ffd54f) belonged to a different
+       palette entirely and was the main reason the week read as dated next to
+       the rest of the app. A tinted wash in the brand navy carries the same
+       "this slot is taught" signal, and a solid bar down the reading edge
+       makes the taught slots scannable as a column at a glance. */
     .lesson-highlight {
-      background-color: #fff9c4 !important;
-      border: 2px solid #ffd54f !important;
-      color: #5d4037;
-      font-weight: 900;
+      background: linear-gradient(180deg, rgba(4, 69, 99, .10), rgba(4, 69, 99, .055)) !important;
+      border: 0 !important;
+      border-inline-start: 3px solid var(--primary-2) !important;
+      color: var(--primary);
+      font-weight: 800;
+      letter-spacing: .1px;
     }
+    .lesson-highlight:hover {
+      background: linear-gradient(180deg, rgba(4, 69, 99, .155), rgba(4, 69, 99, .09)) !important;
+    }
+    .lesson-highlight.clickable:hover { box-shadow: inset 0 0 0 1px rgba(4, 69, 99, .22); }
 
     /* Current lesson highlight (time-based, day view only) */
     .current-lesson {
