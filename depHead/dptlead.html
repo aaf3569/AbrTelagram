@@ -2227,6 +2227,10 @@
 
             try{
                 const tRef = doc(db, 'teachers', user.uid);
+                // Fired now rather than after the profile comes back: the two reads
+                // don't depend on each other, so overlapping them keeps the covered
+                // classes free instead of costing the hub another round trip.
+                const coveredTodayPromise = fetchCoveredClassesForToday(user.uid);
                 const snap = await getDoc(tRef);
                 if(!snap.exists()){
                     avatarUserUid = null;
@@ -2260,7 +2264,8 @@
                 loadStoredAvatar(user.uid);
 
                 // Load teacher's assigned classes
-                renderClassButtons(data?.classes || []);
+                // Own classes plus anything being covered today.
+                renderClassButtons(mergeCoveredClasses(data?.classes || [], await coveredTodayPromise));
                 renderMoreLists(await fetchClassList(db));
 
                 setTimeout(() => {
@@ -2279,6 +2284,64 @@
         });
 
         /* ========= Class buttons ========= */
+
+        // Classes this teacher is covering for someone else today.
+        //
+        // Accepting a تغطية writes a scheduleOverrides doc naming the covering
+        // teacher as newTeacherUid. Up to now this hub only listed the classes
+        // permanently assigned in teachers/{uid}.classes, so a lesson someone
+        // had agreed to cover never appeared here — they were the one taking
+        // the class but had no button for it.
+        //
+        // Scoped to today on purpose: a cover is granted for one specific date
+        // and lesson, and these buttons are what you tap to take attendance
+        // right now. A cover accepted for next week shouldn't sit on the hub
+        // until the day arrives, and it drops off by itself afterwards since
+        // the query is pinned to today's date.
+        //
+        // Never throws — a failure here leaves the usual classes in place
+        // rather than emptying the hub.
+        async function fetchCoveredClassesForToday(teacherUid){
+            if(!teacherUid) return [];
+            try{
+                const snap = await getDocs(query(
+                    collection(db, 'scheduleOverrides'),
+                    where('date', '==', getCurrentKuwaitDate()),
+                    where('newTeacherUid', '==', teacherUid)
+                ));
+                const out = [];
+                snap.forEach(d => {
+                    const cls = ((d.data() || {}).classKey || '').toString().trim();
+                    if(cls) out.push(cls);
+                });
+                return out;
+            }catch(e){
+                console.error('Error loading covered classes:', e);
+                return [];
+            }
+        }
+
+        // Merge today's covered classes into the teacher's own list, dropping
+        // any cover for a class they already have so it doesn't show twice.
+        //
+        // Keys are compared with case and runs of whitespace flattened, which
+        // is how the rest of the app matches class keys (see the current-lesson
+        // highlight). A schedule slot spelled "10 / 1" and an assigned class
+        // spelled "10  /  1" are the same class, and should be one button.
+        function mergeCoveredClasses(ownClasses, coveredClasses){
+            const norm = (v) => String(v || '').replace(/\s+/g, ' ').trim().toLowerCase();
+            const own = Array.isArray(ownClasses) ? ownClasses.filter(Boolean) : [];
+            const seen = new Set(own.map(norm));
+            const merged = [...own];
+            (Array.isArray(coveredClasses) ? coveredClasses : []).forEach(cls => {
+                const key = norm(cls);
+                if(!key || seen.has(key)) return;
+                seen.add(key);
+                merged.push(cls);
+            });
+            return merged;
+        }
+
         function renderClassButtons(classesArr){
             classesButtons.innerHTML = '';
             const clean = Array.isArray(classesArr) ? classesArr.filter(Boolean) : [];
