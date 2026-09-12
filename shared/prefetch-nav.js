@@ -51,7 +51,13 @@
       // Every page links back to the login screen as its sign-out target.
       // Signing out is rare and nobody minds waiting for it, so it should
       // not use up one of the few slots we allow ourselves.
-      if (url.pathname === "/index.html" || url.pathname === "/") return;
+      //
+      // Matched on the file name rather than the whole path on purpose:
+      // some of these links are written relative ("index.html"), so from a
+      // page inside a folder they resolve to /that-folder/index.html, which
+      // is not a real file. Skipping every index.html stops us requesting
+      // one of those and logging a 404 in the console.
+      if (url.pathname === "/" || /(?:^|\/)index\.html$/.test(url.pathname)) return;
       found.add(url.origin + url.pathname); // ignore query/hash for caching
     };
 
