@@ -3075,7 +3075,7 @@
           const teacher = shortTeacherName(data.teacherName || data.teacherUid || '—');
           return `
             <td class="lesson-cell">
-              <div class="cell-content">
+              <div class="cell-content" data-teacher="${escapeHtml(teacher)}">
                 <div class="cell-subject">${escapeHtml(subject)}</div>
                 <div class="cell-teacher">${escapeHtml(teacher)}</div>
               </div>
@@ -3292,8 +3292,13 @@
             flex: 0 0 auto;
           }
           #classPdfPage.instagram-post .header-sep { display: none; }
-          #classPdfPage.instagram-post .table-wrap { width: 100%; margin: 0; border-radius: 20px; }
-          #classPdfPage.instagram-post thead th { padding: 20px 6px; }
+          #classPdfPage.instagram-post .table-wrap { width: 100%; margin: 0; border: 2px solid #91adc5; border-radius: 20px; }
+          #classPdfPage.instagram-post thead th { padding: 20px 6px; border-left: 2px solid #91adc5; }
+          #classPdfPage.instagram-post td.lesson-cell,
+          #classPdfPage.instagram-post tbody th.day-cell {
+            border-top: 2px solid #91adc5;
+            border-left: 2px solid #91adc5;
+          }
           #classPdfPage.instagram-post .corner { width: 132px; font-size: 20px; }
           #classPdfPage.instagram-post .lesson-small { font-size: 13px; margin-bottom: 4px; }
           #classPdfPage.instagram-post .lesson-main { font-size: 17px; }
@@ -3306,7 +3311,7 @@
           #classPdfPage.instagram-post tbody tr { height: 156px; }
           #classPdfPage.instagram-post .day-name { font-size: 20px; }
           #classPdfPage.instagram-post .day-date { font-size: 14px; }
-          #classPdfPage.instagram-post td.lesson-cell { padding: 14px 7px; }
+          #classPdfPage.instagram-post td.lesson-cell { padding: 16px 14px; }
           #classPdfPage.instagram-post .cell-content {
             display: flex;
             flex-direction: column;
@@ -3315,16 +3320,21 @@
             gap: 8px;
             text-align: center;
           }
-          #classPdfPage.instagram-post .cell-subject { width: 100%; font-size: 21px; line-height: 1.6; margin-bottom: 0; }
-          #classPdfPage.instagram-post .cell-teacher { width: 100%; font-size: 11px; font-weight: 500; line-height: 1.7; color: #718397; }
+          /* Equal space above and below keeps the subject itself centered,
+             even when the teacher name wraps onto more than one line. */
+          #classPdfPage.instagram-post .cell-content::before { content: attr(data-teacher); visibility: hidden; }
+          #classPdfPage.instagram-post .cell-subject { width: 100%; font-size: 21px; line-height: 1.6; margin-bottom: 0; word-break: normal; }
+          #classPdfPage.instagram-post .cell-teacher,
+          #classPdfPage.instagram-post .cell-content::before { width: 100%; font-size: 11px; font-weight: 500; line-height: 1.7; color: #718397; word-break: break-word; }
           #classPdfPage.instagram-post.dense .lesson-main { font-size: 14px; }
           #classPdfPage.instagram-post.dense .lesson-time { font-size: 11px; }
           #classPdfPage.instagram-post.dense .corner { width: 100px; }
           #classPdfPage.instagram-post.dense .day-name { font-size: 17px; }
           #classPdfPage.instagram-post.dense .day-date { font-size: 12px; }
-          #classPdfPage.instagram-post.dense td.lesson-cell { padding: 12px 4px; }
+          #classPdfPage.instagram-post.dense td.lesson-cell { padding: 16px 10px; }
           #classPdfPage.instagram-post.dense .cell-subject { font-size: 12px; word-break: normal; }
-          #classPdfPage.instagram-post.dense .cell-teacher { font-size: 9px; word-break: normal; }
+          #classPdfPage.instagram-post.dense .cell-teacher,
+          #classPdfPage.instagram-post.dense .cell-content::before { font-size: 9px; }
         </style>
         <div id="classPdfPage" class="${instagram ? `instagram-post${FIXED_LESSON_COUNT > 9 ? ' dense' : ''}` : ''}">
           <div class="pdf-header">
@@ -3379,11 +3389,29 @@
       docPdf.addImage(canvas.toDataURL('image/jpeg', 0.9), 'JPEG', x, y, drawW, drawH, undefined, 'FAST');
     }
 
+    function fitClassScheduleExportSubjects(host){
+      const context = document.createElement('canvas').getContext('2d');
+      if (!context) return;
+      host.querySelectorAll('.cell-subject').forEach(subject => {
+        const style = getComputedStyle(subject);
+        context.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+        const words = subject.textContent.trim().split(/\s+/);
+        const widestWord = Math.max(...words.map(word => context.measureText(word).width));
+        const availableWidth = subject.clientWidth - 2;
+        if (widestWord > availableWidth && availableWidth > 0) {
+          // Keep Arabic words intact and inside the cell's padded area.
+          const fittedSize = parseFloat(style.fontSize) * availableWidth / widestWord;
+          subject.style.fontSize = `${Math.floor(fittedSize * 10) / 10}px`;
+        }
+      });
+    }
+
     async function renderClassScheduleCanvas(classKey, map, { instagram = false } = {}){
       const host = buildClassScheduleExportContainer({ classKey, map, instagram });
       document.body.appendChild(host);
       try{
         if (document.fonts?.ready) await document.fonts.ready;
+        if (instagram) fitClassScheduleExportSubjects(host);
         await Promise.all(Array.from(host.querySelectorAll('img'), async imgEl => {
           try { await waitForImageReady(imgEl); } catch(_) {}
         }));
