@@ -843,6 +843,10 @@
     };
     const closeSheet = (el)=>{ 
         el.classList.remove('open'); 
+        // Closing a sheet is nearly always a click on a button inside it, so that
+        // button still holds focus here. aria-hidden on an ancestor of the focused
+        // element is invalid and Chrome refuses it, so release focus first.
+        if (el && el.contains(document.activeElement)) document.activeElement.blur();
         el.setAttribute('aria-hidden','true'); 
         const anyOpen = document.querySelector('.sheet.open, .modal.open');
         if (!anyOpen) {

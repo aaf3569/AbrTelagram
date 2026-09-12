@@ -1509,7 +1509,15 @@ function syncClassesBackVisibility(){
 
 const show = (el)=> { [sLoading, sNotLog, sDenied, sClasses].forEach(x=>x.classList.remove('active')); el.classList.add('active'); syncClassesBackVisibility(); };
 const openSheet = (el)=> { el.classList.add('open'); el.setAttribute('aria-hidden','false'); syncClassesBackVisibility(); };
-const closeSheet = (el)=> { el.classList.remove('open'); el.setAttribute('aria-hidden','true'); syncClassesBackVisibility(); };
+const closeSheet = (el)=> {
+  el.classList.remove('open');
+  // Closing a sheet is nearly always a click on a button inside it, so that
+  // button still holds focus here. aria-hidden on an ancestor of the focused
+  // element is invalid and Chrome refuses it, so release focus first.
+  if (el && el.contains(document.activeElement)) document.activeElement.blur();
+  el.setAttribute('aria-hidden','true');
+  syncClassesBackVisibility();
+};
 const toArabicDigits = (str) => (str||"").toString().replace(/\d/g, d => '٠١٢٣٤٥٦٧٨٩'[d]);
 const arabicSort = (a,b) => (a||"").toString().localeCompare((b||"").toString(), 'ar', {sensitivity:'base'});
 const fmtDate = (d)=> new Intl.DateTimeFormat('ar-KW', { dateStyle:'medium', timeZone:'Asia/Kuwait' }).format(d);

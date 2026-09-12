@@ -1976,7 +1976,14 @@
     /* ========= Helpers ========= */
     const show = (el)=>{ [sLoading, sNotLog, sDenied, sAdmin].forEach(x=>x.classList.remove('active')); el.classList.add('active'); };
     const openSheet = (el)=>{ el.classList.add('open'); el.setAttribute('aria-hidden','false'); };
-    const closeSheet = (el)=>{ el.classList.remove('open'); el.setAttribute('aria-hidden','true'); };
+    const closeSheet = (el)=>{
+      el.classList.remove('open');
+      // Closing a sheet is nearly always a click on a button inside it, so that
+      // button still holds focus here. aria-hidden on an ancestor of the focused
+      // element is invalid and Chrome refuses it, so release focus first.
+      if (el && el.contains(document.activeElement)) document.activeElement.blur();
+      el.setAttribute('aria-hidden','true');
+    };
     const clearHash = ()=> history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
     const fmtDateTime = (d)=> new Intl.DateTimeFormat('ar-KW', { dateStyle:'medium', timeStyle:'short' }).format(d);
     const emailRx = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
