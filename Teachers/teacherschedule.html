@@ -3568,14 +3568,26 @@
         `;
       } else {
         body += `
-          <div class="info-box">
-            <div class="info-k"><i class="fas fa-user"></i> 3) اختر المعلّم للتغطية</div>
-            <div class="input-wrap" style="margin-top:10px">
-              <select id="reqTeacherUid" class="select">
-                ${teacherSelectOptions(teachers, currentUser.uid)}
-              </select>
+          <div class="split">
+            <div class="info-box">
+              <div class="info-k"><i class="fas fa-building"></i> 3) اختر القسم</div>
+              <div class="input-wrap" style="margin-top:10px">
+                <select id="reqDepartment" class="select">
+                  <option value="">كل الأقسام</option>
+                  ${departmentOptions}
+                </select>
+              </div>
+              <div class="muted" style="margin-top:8px">اختر قسمًا لعرض معلّميه فقط.</div>
             </div>
-            <div class="muted" style="margin-top:8px">يمكنك اختيار أي معلّم حتى لو لم يكن لديه حصة في هذا الوقت.</div>
+            <div class="info-box">
+              <div class="info-k"><i class="fas fa-user"></i> 4) اختر المعلّم للتغطية</div>
+              <div class="input-wrap" style="margin-top:10px">
+                <select id="reqTeacherUid" class="select">
+                  ${teacherSelectOptions(teachers, currentUser.uid)}
+                </select>
+              </div>
+              <div class="muted" style="margin-top:8px" id="teacherSelectMessage">يمكنك اختيار أي معلّم حتى لو لم يكن لديه حصة في هذا الوقت.</div>
+            </div>
           </div>
         `;
       }
@@ -3614,8 +3626,10 @@
       const teacherSelect = document.getElementById('reqTeacherUid');
       const reqMessage = document.getElementById('reqMessage');
 
-      const departmentSelect = isSwap ? document.getElementById('reqDepartment') : null;
-      const teacherMessage = isSwap ? document.getElementById('teacherSelectMessage') : null;
+      // Both request types now have a department filter above the teacher
+      // list, so these are no longer swap-only.
+      const departmentSelect = document.getElementById('reqDepartment');
+      const teacherMessage = document.getElementById('teacherSelectMessage');
       const toDateInput = isSwap ? document.getElementById('reqToDate') : null;
       const toLessonSelect = isSwap ? document.getElementById('reqToLesson') : null;
       const toPreview = isSwap ? document.getElementById('reqToPreview') : null;
@@ -3836,6 +3850,33 @@
           syncSendState();
         });
       } else {
+        // Narrow the teacher list to one department. Unlike the swap flow,
+        // the list starts populated with everyone and the filter is optional
+        // — a cover can legitimately be asked of a teacher in another
+        // department, so "كل الأقسام" has to stay reachable.
+        departmentSelect.addEventListener('change', () => {
+          const selected = resolveDepartmentName(departmentSelect.value);
+          const inDepartment = selected
+            ? teachers.filter(t => resolveDepartmentName(
+                t.normalizedDepartment || t.department || t.subject || ''
+              ) === selected)
+            : teachers;
+
+          teacherSelect.innerHTML = teacherSelectOptions(inDepartment, currentUser.uid);
+          state.toUid = '';
+          state.toDepartment = selected;
+
+          const count = inDepartment.filter(t => t.uid !== currentUser.uid).length;
+          if (!selected) {
+            teacherMessage.textContent = 'يمكنك اختيار أي معلّم حتى لو لم يكن لديه حصة في هذا الوقت.';
+          } else if (!count) {
+            teacherMessage.textContent = 'لا يوجد معلمون في هذا القسم.';
+          } else {
+            teacherMessage.textContent = 'اختر المعلّم من هذا القسم.';
+          }
+          syncSendState();
+        });
+
         teacherSelect.addEventListener('change', () => {
           state.toUid = safeText(teacherSelect.value).trim();
           syncSendState();
