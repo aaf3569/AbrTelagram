@@ -37,23 +37,6 @@
             --muted: #6b7f9f;
             --border: #e6edf7;
             --shadow-1: 0 8px 22px rgba(3, 60, 84, 0.14);
-            /* Button elevation.
-
-               A single wide blur reaches roughly offset + blur/2 below an
-               element, so the old "0 18px 40px" threw its shadow 38px down
-               while the button stack only leaves 18px between buttons. Every
-               shadow washed over its neighbour and the column read as one
-               grey smear rather than as separate buttons.
-
-               These stack tight layers instead: a short contact shadow that
-               defines the bottom edge, then progressively softer and wider
-               light above it, with the widest layer kept inside the 18px gap
-               so nothing reaches its neighbour. Same brand teal, same sense
-               of lift, no pooling. --elev-hover is allowed 20px because the
-               button also rises 3px on hover. */
-            --elev-rest: 0 1px 2px rgba(3,60,84,.07), 0 3px 6px rgba(3,60,84,.06);
-            --elev-raise: 0 1px 2px rgba(3,60,84,.16), 0 4px 8px rgba(3,60,84,.12), 0 9px 16px rgba(3,60,84,.10);
-            --elev-hover: 0 2px 4px rgba(3,60,84,.16), 0 6px 12px rgba(3,60,84,.12), 0 11px 18px rgba(3,60,84,.10);
             --radius: 16px;
             --chip: #eef5fb;
             --blueGlass: rgba(3, 60, 84, 0.08);
@@ -276,13 +259,13 @@
         .btn::after{content:'';position:absolute;inset:0;background:rgba(255,255,255,.1);opacity:0;transition:var(--transition)}
         .btn:hover::after{opacity:1}
         .btn .icon{width:24px;height:24px;display:inline-block;flex-shrink:0}
-        .btn.ghost{background:#fff;color:var(--primary);border:1px solid rgba(3,60,84,.25);box-shadow:var(--elev-rest)}
-        .btn.ghost:hover{transform:translateY(-3px);box-shadow:var(--elev-hover);border-color:rgba(3,60,84,.4)}
-        .btn.class-btn{background:linear-gradient(145deg,var(--primary),var(--primary-light));color:#fff;box-shadow:var(--elev-raise)}
-        .btn.class-btn:hover{transform:translateY(-3px);box-shadow:var(--elev-hover)}
-        .btn.class-btn.current-lesson{isolation:isolate;box-shadow:0 0 0 1.5px rgba(3,60,84,.28),0 0 14px rgba(3,60,84,.16),var(--elev-raise);animation:classLessonPulse 3.6s ease-in-out infinite}
+        .btn.ghost{background:#fff;color:var(--primary);border:1px solid rgba(3,60,84,.25);box-shadow:var(--shadow-1)}
+        .btn.ghost:hover{transform:translateY(-3px);box-shadow:0 18px 40px rgba(3,60,84,.22);border-color:rgba(3,60,84,.4)}
+        .btn.class-btn{background:linear-gradient(145deg,var(--primary),var(--primary-light));color:#fff;box-shadow:0 18px 40px rgba(3,60,84,.32)}
+        .btn.class-btn:hover{transform:translateY(-3px);box-shadow:0 22px 48px rgba(3,60,84,.38)}
+        .btn.class-btn.current-lesson{isolation:isolate;box-shadow:0 0 0 1.5px rgba(3,60,84,.28),0 0 14px rgba(3,60,84,.16),0 22px 48px rgba(3,60,84,.40);animation:classLessonPulse 3.6s ease-in-out infinite}
         .btn.class-btn.current-lesson::before{content:"";position:absolute;inset:0;border-radius:18px;padding:1.5px;background:conic-gradient(from var(--border-angle),transparent 0%,transparent 78%,rgba(148,197,255,.55) 89%,rgba(219,234,254,.9) 94%,rgba(148,197,255,.55) 99%,transparent 100%);-webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);mask-composite:exclude;pointer-events:none;animation:borderChase 4s linear infinite}
-        @keyframes classLessonPulse{0%,100%{box-shadow:0 0 0 1.5px rgba(3,60,84,.24),0 0 10px rgba(3,60,84,.12),var(--elev-raise)}50%{box-shadow:0 0 0 2px rgba(3,60,84,.34),0 0 16px rgba(3,60,84,.2),var(--elev-raise)}}
+        @keyframes classLessonPulse{0%,100%{box-shadow:0 0 0 1.5px rgba(3,60,84,.24),0 0 10px rgba(3,60,84,.12),0 22px 48px rgba(3,60,84,.40)}50%{box-shadow:0 0 0 2px rgba(3,60,84,.34),0 0 16px rgba(3,60,84,.2),0 22px 48px rgba(3,60,84,.40)}}
         @keyframes borderChase{to{--border-angle:1turn}}
 
         /* Disable styles */
@@ -618,7 +601,7 @@
                 flex-direction:column; align-items:center; justify-content:center;
                 text-align:center; gap:8px; font-size:1.05rem;
             }
-            .stack.wide .btn:hover{ transform:translateY(-4px); box-shadow:var(--elev-hover); }
+            .stack.wide .btn:hover{ transform:translateY(-4px); box-shadow:0 18px 40px rgba(3,60,84,.18); }
             .stack.wide .btn .icon{
                 order:-1; width:42px; height:42px; border-radius:13px;
                 background:rgba(3,60,84,.08); display:grid; place-items:center;
