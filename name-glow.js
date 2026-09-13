@@ -1,5 +1,5 @@
 (() => {
-  const TARGET_NAME = "عبدالله عبدالمحسن فاضل الصايغ";
+  const TARGET_NAME_PATTERN = "عبد\\s*الله\\s+عبد\\s+المحسن\\s+فاضل\\s+الصايغ";
   const STYLE_ID = "name-glow-effect-style";
   const GLOW_CLASS = "name-glow-effect";
   const NAME_CHAR_REGEX = /[\u0600-\u06FF\u0750-\u077FA-Za-z0-9]/;
@@ -8,20 +8,31 @@
     return !!ch && NAME_CHAR_REGEX.test(ch);
   }
 
-  function findNextExactNameIndex(text, fromIndex) {
-    let idx = text.indexOf(TARGET_NAME, fromIndex);
-    while (idx !== -1) {
+  function containsTargetName(text) {
+    return !!text && new RegExp(TARGET_NAME_PATTERN).test(text);
+  }
+
+  // Returns {index, length} of the next match whose surrounding characters
+  // aren't themselves name characters (so this can't match as a substring
+  // of some other, longer name), or null.
+  function findNextExactNameMatch(text, fromIndex) {
+    const re = new RegExp(TARGET_NAME_PATTERN, "g");
+    re.lastIndex = fromIndex;
+    let m;
+    while ((m = re.exec(text))) {
+      const idx = m.index;
+      const length = m[0].length;
       const before = idx > 0 ? text[idx - 1] : "";
-      const afterPos = idx + TARGET_NAME.length;
+      const afterPos = idx + length;
       const after = afterPos < text.length ? text[afterPos] : "";
 
       if (!isNameChar(before) && !isNameChar(after)) {
-        return idx;
+        return { index: idx, length };
       }
 
-      idx = text.indexOf(TARGET_NAME, idx + 1);
+      re.lastIndex = idx + 1;
     }
-    return -1;
+    return null;
   }
 
   function injectStyle() {
@@ -82,7 +93,7 @@
 
   function wrapNameInTextNode(textNode) {
     if (!textNode || textNode.nodeType !== Node.TEXT_NODE) return;
-    if (!textNode.nodeValue || !textNode.nodeValue.includes(TARGET_NAME)) return;
+    if (!containsTargetName(textNode.nodeValue)) return;
 
     const parent = textNode.parentElement;
     if (!parent) return;
@@ -92,20 +103,23 @@
     const original = textNode.nodeValue;
     const fragment = document.createDocumentFragment();
     let start = 0;
-    let index = findNextExactNameIndex(original, 0);
+    let match = findNextExactNameMatch(original, 0);
 
-    while (index !== -1) {
-      if (index > start) {
-        fragment.appendChild(document.createTextNode(original.slice(start, index)));
+    while (match) {
+      if (match.index > start) {
+        fragment.appendChild(document.createTextNode(original.slice(start, match.index)));
       }
 
       const glowSpan = document.createElement("span");
       glowSpan.className = GLOW_CLASS;
-      glowSpan.textContent = TARGET_NAME;
+      // Use the actual matched text, not a fixed canonical spelling — the
+      // pattern accepts more than one real spacing/joining of this name,
+      // and this preserves whichever one the source record actually uses.
+      glowSpan.textContent = original.slice(match.index, match.index + match.length);
       fragment.appendChild(glowSpan);
 
-      start = index + TARGET_NAME.length;
-      index = findNextExactNameIndex(original, start);
+      start = match.index + match.length;
+      match = findNextExactNameMatch(original, start);
     }
 
     if (start < original.length) {
@@ -124,7 +138,7 @@
     // name is nowhere in this subtree) this returns here and the walker,
     // which is the expensive part, never runs at all.
     const text = root.nodeType === Node.TEXT_NODE ? root.nodeValue : root.textContent;
-    if (!text || !text.includes(TARGET_NAME)) return;
+    if (!containsTargetName(text)) return;
 
     if (root.nodeType === Node.TEXT_NODE) {
       wrapNameInTextNode(root);
@@ -139,9 +153,9 @@
           const parent = node.parentElement;
           if (!parent) return NodeFilter.FILTER_REJECT;
           if (parent.classList.contains(GLOW_CLASS)) return NodeFilter.FILTER_REJECT;
-          if (!node.nodeValue || !node.nodeValue.includes(TARGET_NAME)) return NodeFilter.FILTER_SKIP;
+          if (!containsTargetName(node.nodeValue)) return NodeFilter.FILTER_SKIP;
           if (parent.closest("script, style, noscript, textarea")) return NodeFilter.FILTER_REJECT;
-          if (findNextExactNameIndex(node.nodeValue, 0) === -1) return NodeFilter.FILTER_SKIP;
+          if (!findNextExactNameMatch(node.nodeValue, 0)) return NodeFilter.FILTER_SKIP;
           return NodeFilter.FILTER_ACCEPT;
         },
       }
