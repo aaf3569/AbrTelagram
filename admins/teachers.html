@@ -815,6 +815,7 @@
     import { startPresenceHeartbeat, watchPresence } from "/shared/presence.js";
     import { fetchClassList, sortClassList, primeClassList } from "/shared/class-registry.js";
     import {
+      DEPARTMENTS,
       DEPARTMENT_LIST,
       resolveDepartmentName,
       isMergedDepartment,
@@ -1197,16 +1198,27 @@
       selectEl.innerHTML='<option value="">بدون</option>'+options.map(v=>`<option value="${v}">${v}</option>`).join('');
       selectEl.value=options.includes(currentValue) ? currentValue : '';
     }
+    const FRENCH_ELECTIVE='اللغة الفرنسية (اختيار حرّ)';
+    function secondSubjectPool(department){
+      return resolveDepartmentName(department)===DEPARTMENTS.FRENCH
+        ? [DEPARTMENTS.FRENCH, FRENCH_ELECTIVE]
+        : getMergedSubjectsForDepartment(department);
+    }
 
     function syncEditSpecializationField(department, currentSubject, currentSubject2){
       const mergedSubjects=getMergedSubjectsForDepartment(department);
       const show=mergedSubjects.length>0;
+      const french=resolveDepartmentName(department)===DEPARTMENTS.FRENCH;
       edTSpecializationField.hidden=!show;
-      edTSpecialization2Field.hidden=!show;
-      if(!show) return;
-      fillSelectOptions(edTSpecialization, mergedSubjects);
-      edTSpecialization.value=mergedSubjects.includes(currentSubject) ? currentSubject : mergedSubjects[0];
-      fillSpecialization2Options(edTSpecialization2, mergedSubjects, edTSpecialization.value, currentSubject2||'');
+      edTSpecialization2Field.hidden=!(show||french);
+      if(show){
+        fillSelectOptions(edTSpecialization, mergedSubjects);
+        edTSpecialization.value=mergedSubjects.includes(currentSubject) ? currentSubject : mergedSubjects[0];
+      }
+      if(show||french){
+        const secondSubject=currentSubject2 || (french && currentSubject===FRENCH_ELECTIVE ? FRENCH_ELECTIVE : '');
+        fillSpecialization2Options(edTSpecialization2, secondSubjectPool(department), show ? edTSpecialization.value : DEPARTMENTS.FRENCH, secondSubject);
+      }
     }
     // Re-run whenever the primary changes, so the second field's options
     // stay excluding whatever the primary now is — otherwise picking the
@@ -1219,11 +1231,13 @@
     function syncAddTeacherSpecializationField(){
       const mergedSubjects=getMergedSubjectsForDepartment(selectedSubject);
       const showSpecialization=mergedSubjects.length>0;
+      const french=resolveDepartmentName(selectedSubject)===DEPARTMENTS.FRENCH;
       teacherSpecializationField.hidden=!showSpecialization;
-      teacherSpecialization2Field.hidden=!showSpecialization;
+      teacherSpecialization2Field.hidden=!(showSpecialization||french);
       if(!showSpecialization){
         teacherSpecialization.innerHTML='';
-        teacherSpecialization2.innerHTML='';
+        if(french) fillSpecialization2Options(teacherSpecialization2, secondSubjectPool(selectedSubject), DEPARTMENTS.FRENCH, teacherSpecialization2.value);
+        else teacherSpecialization2.innerHTML='';
         return;
       }
       const prevValue=teacherSpecialization.value;
@@ -2295,10 +2309,9 @@
         // Only merged departments (تاريخ/جغرافيا وغيرها) expose the
         // specialization select — everywhere else the teacher's subject
         // stays whatever it already was, since there's nothing to pick.
-        const subjectToSave=!edTSpecializationField.hidden ? edTSpecialization.value : (currentTeacher?.data?.subject || '');
-        // Optional second تخصص داخلي — only meaningful while the field is
-        // showing (a merged department) and something other than "بدون"
-        // is picked; otherwise a teacher keeps no second subject at all.
+        const subjectToSave=teacherDepartment===DEPARTMENTS.FRENCH ? DEPARTMENTS.FRENCH : (!edTSpecializationField.hidden ? edTSpecialization.value : (currentTeacher?.data?.subject || ''));
+        // Save the optional second subject when its field is shown,
+        // including the French elective for French teachers.
         const subject2ToSave=(!edTSpecialization2Field.hidden && edTSpecialization2.value) ? edTSpecialization2.value : '';
         const prevPermissions=(currentTeacher?.data?.permissions&&typeof currentTeacher.data.permissions==='object')?currentTeacher.data.permissions:{};
         const permissions={...prevPermissions,allowEditSchedule:!!edTAllowEditSchedule.checked,allowMorningLate:!!edTAllowMorningLate.checked,allowSupervisorStudents:!!edTAllowSupervisorStudents.checked};
@@ -2449,10 +2462,9 @@
         const supervisorGrade=isSupervisor ? normalizeSupervisorGrade(addSupervisorGrade) : '';
         const permissions={allowEditSchedule:!!teacherAllowEditSchedule.checked,allowMorningLate:!!teacherAllowMorningLate.checked,allowSupervisorStudents:!!teacherAllowSupervisorStudents.checked};
         const selectedSpecialization=(teacherSpecialization.value||'').trim();
-        // Optional second تخصص داخلي — same rule as the edit form: only
-        // meaningful for a merged department, and only when something
-        // other than "بدون" is picked.
-        const selectedSpecialization2=isMergedDepartment(selectedSubject) ? (teacherSpecialization2.value||'').trim() : '';
+        // The French elective is an optional second subject, never the
+        // teacher's primary French specialization.
+        const selectedSpecialization2=!teacherSpecialization2Field.hidden ? (teacherSpecialization2.value||'').trim() : '';
         const mergedSubjects=getMergedSubjectsForDepartment(selectedSubject);
         const subjectToSave=isMergedDepartment(selectedSubject) ? selectedSpecialization : selectedSubject;
         // Some تخصص داخلي subjects (e.g. الاجتماعيات، الدستور) are shared
@@ -2533,9 +2545,6 @@
 <script src="/name-glow.js" defer></script>
 </body>
 </html>
-
-
-
 
 
 
