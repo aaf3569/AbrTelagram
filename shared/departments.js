@@ -219,20 +219,44 @@ export function getDepartmentSubjectFilters(department) {
 }
 
 /**
- * In the د (أدبي) track — 11د and 12د — some departments' curriculum
- * subject differs from a given teacher's own تخصص داخلي: math teaches
- * الإحصاء there instead of الرياضيات, and الجغرافيا والتاريخ teaches
- * التاريخ there instead of الاجتماعيات. Display-only: never changes what's
- * actually stored on a teacher or schedule record, only how the subject
- * is labeled for a د-track class (class rosters, schedule grids, etc).
+ * The subject a class's own curriculum actually uses often differs from
+ * a given teacher's own تخصص داخلي — a teacher's specialization is a
+ * hiring/HR concept, not necessarily what gets taught to a specific
+ * grade/track. Display-only: never changes what's actually stored on a
+ * teacher or schedule record, only how the subject is labeled for a
+ * given class (class rosters, schedule grids, etc).
+ *
+ * Grade 10 has no track and doesn't split a merged department into its
+ * separate subjects at all: every البيولوجيا/الجيولوجيا teacher shows as
+ * الأحياء, and every teacher from EITHER الجغرافيا والتاريخ or العلوم
+ * الفلسفية shows as الاجتماعيات, regardless of their own specific
+ * تخصص داخلي.
+ *
+ * In the د (أدبي) track — 11د and 12د — the departments DO split into
+ * their individual subjects again, except math teaches الإحصاء there
+ * instead of الرياضيات, and a teacher whose own subject is الاجتماعيات
+ * shows as التاريخ (الجغرافيا itself is untouched — both are separate,
+ * legitimate د-track subjects).
  */
+const GRADE_10_DEPARTMENT_SUBJECT = Object.freeze({
+  [DEPARTMENTS.BIOLOGY_GEOLOGY]: 'الأحياء',
+  [DEPARTMENTS.GEOGRAPHY_HISTORY]: 'الاجتماعيات',
+  [DEPARTMENTS.PHILOSOPHY_SCIENCES]: 'الاجتماعيات',
+});
 const TRACK_D_SUBJECT_OVERRIDES = Object.freeze({
   'الرياضيات': 'الإحصاء',
   'الاجتماعيات': 'التاريخ',
 });
-export function getDisplaySubjectForTrack(subject, track) {
+export function getDisplaySubjectForClass(subject, grade, track) {
   const rawSubject = (subject || '').toString().trim();
+  const rawGrade = (grade == null ? '' : grade).toString().trim();
   const rawTrack = (track || '').toString().trim();
-  if (rawTrack !== 'د') return subject;
-  return TRACK_D_SUBJECT_OVERRIDES[rawSubject] || subject;
+  if (rawGrade === '10') {
+    const dept = resolveDepartmentName(rawSubject);
+    return GRADE_10_DEPARTMENT_SUBJECT[dept] || subject;
+  }
+  if (rawTrack === 'د') {
+    return TRACK_D_SUBJECT_OVERRIDES[rawSubject] || subject;
+  }
+  return subject;
 }

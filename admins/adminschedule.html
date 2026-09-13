@@ -1384,7 +1384,7 @@
     import { initializeApp, getApp, getApps } from "/shared/firebase.js";
     import { getAuth, onAuthStateChanged, setPersistence, browserLocalPersistence } from "/shared/firebase.js";
     import { fetchClassList, groupByGrade, primeClassList } from "/shared/class-registry.js";
-    import { SUBJECT_LIST, getDisplaySubjectForTrack } from "/shared/departments.js";
+    import { SUBJECT_LIST, getDisplaySubjectForClass } from "/shared/departments.js";
     import {
       initializeFirestore,
       persistentSingleTabManager,
@@ -2046,8 +2046,8 @@
     function cellText(val){
       if(!val) return '—';
       const rawSubj = (val.subject||'').trim();
-      const track = parseClassKey(selectedClassKey).track;
-      const subj = (getDisplaySubjectForTrack(rawSubj, track) || '').trim();
+      const { grade, track } = parseClassKey(selectedClassKey);
+      const subj = (getDisplaySubjectForClass(rawSubj, grade, track) || '').trim();
       const tn = (val.teacherName||'').trim();
       if(!subj && !tn) return '—';
       if(subj && tn) return `${subj} | ${tn}`;
@@ -2281,9 +2281,9 @@
     }
 
     function setTeacherComboOptions(teacherOpts){
-      const track = parseClassKey(selectedClassKey).track;
+      const { grade, track } = parseClassKey(selectedClassKey);
       comboAssignOptions = (teacherOpts || []).map(t => {
-        const subject = (getDisplaySubjectForTrack(t.subject, track) || '—').toString().trim() || '—';
+        const subject = (getDisplaySubjectForClass(t.subject, grade, track) || '—').toString().trim() || '—';
         const name = t.name || '';
         // 👑 marks a department head included here regardless of their own
         // `classes` list — see getTeachersForClass(). Without it, an admin

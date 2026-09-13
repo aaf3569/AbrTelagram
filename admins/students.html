@@ -2199,7 +2199,7 @@ import { mountAttendanceSheet } from "/shared/attendance.js";
 import { fetchStudentAttendanceData, makeAttTile, makeMorningLateTile } from "/shared/attendance-tiles.js";
 import { renderWarningState, renderExcusedWarningState } from "/shared/warning-system.js";
 import { DEFAULT_CLASS_LIST, fetchClassList, groupByGrade, availableNumbersToAdd, buildClassKey, primeClassList, parseClassKey } from "/shared/class-registry.js";
-import { getDisplaySubjectForTrack } from "/shared/departments.js";
+import { getDisplaySubjectForClass } from "/shared/departments.js";
 
 
 
@@ -4231,16 +4231,7 @@ async function loadClassTeachers(className){
     const snap = await getDocs(collection(db,'teachers'));
     const teachers = snap.docs
       .map(d=>({uid:d.id, ...d.data()}))
-      .filter(t=>
-        (Array.isArray(t.classes) && t.classes.some(c=>classKeyMatches(c, className)))
-        // A head doesn't necessarily have every class in their own
-        // department listed in their own `classes` array, but they're
-        // still the right contact for any of them — same rationale
-        // admins/adminschedule.html's teacher picker already applies
-        // (reported case there: the التربية الإسلامية head wasn't
-        // selectable for 10 / 1 for exactly this reason).
-        || (t.role||'').toString().toLowerCase()==='head'
-      );
+      .filter(t=> Array.isArray(t.classes) && t.classes.some(c=>classKeyMatches(c, className)));
     // Heads first, then alphabetically — mirrors admins/teachers.html's ordering.
     teachers.sort((a,b)=>{
       const aHead=(a.role||'').toString().toLowerCase()==='head';
@@ -4274,12 +4265,13 @@ const SUBJECT_FILTER_ORDER = [
   'المكتبات','الدراسات العملية','التربية البيئية','الإحصاء',
 ];
 
-// The math department teaches الإحصاء, not الرياضيات, in the د track —
-// applies to whichever class the معلمو فصل sheet is currently open for,
-// regardless of what a given teacher's own تخصص داخلي is recorded as.
+// The class a معلمو فصل sheet is open for decides how a teacher's own
+// تخصص داخلي is labeled — grade 10 collapses merged departments to one
+// subject, and 11د/12د relabel a couple of subjects — regardless of what
+// the teacher's own record actually says. See getDisplaySubjectForClass.
 function classTeacherDisplaySubject(t){
-  const track = parseClassKey(selectedClass).track;
-  return (getDisplaySubjectForTrack(t.subject, track) || '').toString().trim();
+  const { grade, track } = parseClassKey(selectedClass);
+  return (getDisplaySubjectForClass(t.subject, grade, track) || '').toString().trim();
 }
 
 // Subject filter chips at the top of the sheet — only the subjects this
