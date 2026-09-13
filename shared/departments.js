@@ -126,18 +126,33 @@ export const SUBJECT_TO_ALLOWED_DEPARTMENTS = Object.freeze({
   'اللغة الفرنسية (اختيار حرّ)': [DEPARTMENTS.FRENCH],
 });
 
-// The 2-or-3-subject "headline" pairing a department was historically
-// built around — what a new hire's specialization picker offers, and what
-// counts as a "merged" (multi-specialization) department. Deliberately
-// narrower than SUBJECT_TO_ALLOWED_DEPARTMENTS's cross-department
-// eligibility: a teacher hired into الجغرافيا والتاريخ is a history-or-
-// geography teacher, not a philosophy teacher, even though a philosophy
-// teacher can later be scheduled to cover a geography lesson.
+// What a new hire's specialization picker offers when the chosen
+// department has more than one specialization.
+//
+// الجغرافيا والتاريخ and العلوم الفلسفية share the same full six-subject
+// list rather than each keeping their own narrower pair/triple. That
+// used to be two separate, smaller lists here, on the assumption that a
+// teacher hired into الجغرافيا والتاريخ would be a history-or-geography
+// teacher, never a philosophy one. The real staff roster disproves that:
+// التاريخ، الاجتماعيات، and الدستور each already have real teachers filed
+// under *both* departments (checked against the school's live roster,
+// not assumed) — e.g. الدستور has one teacher under الجغرافيا والتاريخ
+// and another under العلوم الفلسفية. So for these two, "which department
+// was this teacher hired into" and "which of the six subjects do they
+// teach" are independent questions, and the picker has to offer all six
+// under either department.
+//
+// الفيزياء والكيمياء and الأحياء والجيولوجيا stay narrow (2 subjects
+// each) — checked the same way, and every teacher in either one only
+// ever has the two headline subjects; التربية البيئية only ever shows up
+// as someone's *second* subject, never their primary one, so it isn't
+// offered here as a specialization choice at all.
+const GEOGRAPHY_PHILOSOPHY_SUBJECTS = ['التاريخ', 'الجغرافيا', 'الاجتماعيات', 'الفلسفة', 'علم النفس', 'الدستور'];
 const DEPARTMENT_SPECIALIZATIONS = Object.freeze({
   [DEPARTMENTS.PHYSICS_CHEMISTRY]:   ['الفيزياء', 'الكيمياء'],
   [DEPARTMENTS.BIOLOGY_GEOLOGY]:     ['الأحياء', 'الجيولوجيا'],
-  [DEPARTMENTS.GEOGRAPHY_HISTORY]:   ['التاريخ', 'الجغرافيا'],
-  [DEPARTMENTS.PHILOSOPHY_SCIENCES]: ['الفلسفة', 'علم النفس', 'الدستور'],
+  [DEPARTMENTS.GEOGRAPHY_HISTORY]:   GEOGRAPHY_PHILOSOPHY_SUBJECTS,
+  [DEPARTMENTS.PHILOSOPHY_SCIENCES]: GEOGRAPHY_PHILOSOPHY_SUBJECTS,
 });
 
 /**
