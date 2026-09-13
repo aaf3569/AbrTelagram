@@ -315,7 +315,7 @@
       align-content: center;
       animation: gridCellIn 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
     }
-    .gth .lesson-title-row { font-weight: 800; letter-spacing: .2px; }
+    .gth .lesson-title-row { font-weight: 800; }
     .gth .lesson-time-row {
       font-weight: 600; font-size: .74rem;
       color: rgba(255, 255, 255, .68); font-variant-numeric: tabular-nums;
@@ -401,7 +401,6 @@
       border-inline-start: 3px solid var(--primary-2) !important;
       color: var(--primary);
       font-weight: 800;
-      letter-spacing: .1px;
     }
     .lesson-highlight:hover {
       background: linear-gradient(180deg, rgba(4, 69, 99, .155), rgba(4, 69, 99, .09)) !important;
@@ -3285,7 +3284,6 @@
           #classPdfPage.instagram-post .pdf-logo { height: 48px; margin: 0; }
           #classPdfPage.instagram-post .school-name {
             font-size: 20px; font-weight: 800; margin: 0; color: #4d6b86;
-            letter-spacing: .2px;
           }
           #classPdfPage.instagram-post .brand-week {
             margin-inline-start: auto;
@@ -3332,11 +3330,20 @@
             overflow-wrap: anywhere;
             color: #ffffff;
           }
-          #classPdfPage.instagram-post .post-kicker {
-            font-size: 25px; font-weight: 800; color: #4d6b86; line-height: 1.3;
-            text-align: center;
+          /* A short rule closes the header instead of a caption. The post is
+             already unmistakably a timetable — the table is right beneath it
+             — so a line that says so was spending a whole text block to
+             repeat what the reader can see. The mark keeps the separation the
+             caption was providing without competing with the class label. */
+          #classPdfPage.instagram-post .header-sep {
+            display: block;
+            width: 132px;
+            height: 4px;
+            margin: 26px auto 0;
+            border: 0;
+            border-radius: 999px;
+            background: #cbdbe9;
           }
-          #classPdfPage.instagram-post .header-sep { display: none; }
           /* Rules.
 
              Every line was 2px of #91adc5 — a saturated mid-slate. Across
@@ -3375,7 +3382,7 @@
           #classPdfPage.instagram-post .lesson-label { line-height: 1.3; margin-bottom: 7px; }
           #classPdfPage.instagram-post .lesson-small {
             font-size: 12px; font-weight: 700; opacity: 0.70;
-            margin-bottom: 4px; letter-spacing: .3px;
+            margin-bottom: 4px;
           }
           #classPdfPage.instagram-post .lesson-main { font-size: 18px; line-height: 1.2; }
           #classPdfPage.instagram-post .lesson-time {
@@ -3383,7 +3390,6 @@
             font-weight: 600;
             opacity: 0.78;
             margin-top: 0;
-            letter-spacing: .2px;
             direction: ltr;
             unicode-bidi: isolate;
           }
@@ -3428,7 +3434,6 @@
             </div>
             <div class="post-title">
               <div class="class-chip"><div class="class-line">${escapeHtml(classLabel)}</div></div>
-              <div class="post-kicker">جدول الفصل الأسبوعي</div>
             </div>
             ` : `
             <img id="classPdfLogo" class="pdf-logo" src="/images/schoollogo.png" alt="School Logo">
