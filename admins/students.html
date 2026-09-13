@@ -1770,6 +1770,7 @@ html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%;
           <button id="openAddStudent" class="btn primary" type="button" style="height:48px; padding:0 16px;">إضافة طالب</button>
           <!-- NEW: Reorder students button -->
           <button id="openReorderModal" class="btn secondary" type="button" style="height:48px; padding:0 16px;">ترتيب الطلاب</button>
+          <button id="openClassTeachers" class="btn ghost" type="button" style="height:48px; padding:0 16px;">👨‍🏫 المعلمون</button>
         </div>
       </div>
     </div>
@@ -1789,6 +1790,19 @@ html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%;
         <input id="studentSearchInput" class="input" type="text" placeholder="ابحث عن طالب بالاسم…" autocomplete="off">
       </div>
       <div id="studentsList" class="list"></div>
+    </div>
+  </div>
+</section>
+
+<!-- CLASS TEACHERS SHEET -->
+<section id="classTeachersSheet" class="sheet small" aria-hidden="true">
+  <div class="sheet-header">
+    <button id="closeClassTeachers" class="back-btn" aria-label="رجوع">رجوع</button>
+    <h3 id="classTeachersTitle" class="sheet-title">معلمو الفصل</h3>
+  </div>
+  <div class="sheet-body">
+    <div class="section">
+      <div id="classTeachersList" class="list"></div>
     </div>
   </div>
 </section>
@@ -2258,6 +2272,11 @@ const closeClass = document.getElementById('closeClass');
 const classTitle = document.getElementById('classTitle');
 const classNameStrong = document.getElementById('classNameStrong');
 const refreshStudents = document.getElementById('refreshStudents');
+const openClassTeachersBtn = document.getElementById('openClassTeachers');
+const classTeachersSheet = document.getElementById('classTeachersSheet');
+const closeClassTeachers = document.getElementById('closeClassTeachers');
+const classTeachersTitle = document.getElementById('classTeachersTitle');
+const classTeachersList = document.getElementById('classTeachersList');
 const openAddStudent = document.getElementById('openAddStudent');
 const addStudentModal = document.getElementById('addStudentModal');
 const closeAddStudentModalBtn = document.getElementById('closeAddStudentModal');
@@ -4172,9 +4191,77 @@ function openClass(className){
 }
 
 closeClass.addEventListener('click', ()=> closeSheet(classSheet));
+
+// ---- Class teachers sheet: every teacher whose `classes` array includes
+// this class, opened from the class sheet's "المعلمون" button. Clicking a
+// teacher navigates to their profile in admins/teachers.html directly (a
+// real navigation, not a sheet — the teacher editor lives on that page).
+openClassTeachersBtn.addEventListener('click', ()=>{
+  if(!selectedClass) return;
+  classTeachersTitle.textContent = `معلمو فصل ${toArabicDigits(selectedClass)}`;
+  openSheet(classTeachersSheet);
+  loadClassTeachers(selectedClass);
+});
+closeClassTeachers.addEventListener('click', ()=> closeSheet(classTeachersSheet));
+
+async function loadClassTeachers(className){
+  classTeachersList.innerHTML='<div class="loading"><div class="spinner"></div><div class="muted">جاري تحميل قائمة المعلمين...</div></div>';
+  try{
+    const qy = query(collection(db,'teachers'), where('classes','array-contains', className));
+    const snap = await getDocs(qy);
+    if(snap.empty){
+      const empty=document.createElement('div');
+      empty.className='item';
+      empty.textContent='لا يوجد معلمون مسجّلون لهذا الفصل.';
+      classTeachersList.innerHTML='';
+      classTeachersList.appendChild(empty);
+      return;
+    }
+    const teachers = snap.docs.map(d=>({uid:d.id, ...d.data()}));
+    // Heads first, then alphabetically — mirrors admins/teachers.html's ordering.
+    teachers.sort((a,b)=>{
+      const aHead=(a.role||'').toString().toLowerCase()==='head';
+      const bHead=(b.role||'').toString().toLowerCase()==='head';
+      if(aHead!==bHead) return aHead ? -1 : 1;
+      return (a.name||'').localeCompare((b.name||''), 'ar');
+    });
+    const fragment = document.createDocumentFragment();
+    teachers.forEach(t=>{
+      const isHead=(t.role||'').toString().toLowerCase()==='head';
+      const subject=(t.subject||'').toString().trim() || '—';
+      const el=document.createElement('div');
+      el.className='item will-change';
+      el.innerHTML = `
+        <div>
+          <div>${isHead ? '<span aria-hidden="true" title="رئيس القسم">👑</span> ' : ''}${t.name || t.email || t.uid}</div>
+          <div class="sub">${subject}</div>
+        </div>
+        <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+      `;
+      el.addEventListener('click', ()=>{
+        window.location.href = `/admins/teachers.html#/teacher/${encodeURIComponent(t.uid)}`;
+      });
+      fragment.appendChild(el);
+    });
+    classTeachersList.innerHTML='';
+    classTeachersList.appendChild(fragment);
+  }catch(e){
+    console.error('[loadClassTeachers]', e);
+    const err=document.createElement('div');
+    err.className='item';
+    err.textContent='تعذّر تحميل قائمة المعلمين.';
+    classTeachersList.innerHTML='';
+    classTeachersList.appendChild(err);
+  }
+}
+
 document.addEventListener('keydown', (e)=>{
   if(e.key!=='Escape') return;
   closeSheet(attDetailSheet);
+  if(classTeachersSheet.classList.contains('open')){
+    closeSheet(classTeachersSheet);
+    return;
+  }
   if(studentRequestSheet.classList.contains('open')){
     closeSheet(studentRequestSheet);
     return;
