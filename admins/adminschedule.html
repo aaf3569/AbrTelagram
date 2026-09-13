@@ -3468,6 +3468,10 @@
           uid: t.uid || d.id,
           name: (t.name || t.email || d.id || '').toString(),
           subject: (t.subject || '').toString().trim(),
+          // A teacher can hold two تخصص داخلي (see shared/departments.js's
+          // DEPARTMENT_SPECIALIZATIONS) — a CSV row for either one should
+          // find them, not just their primary.
+          subject2: (t.subject2 || '').toString().trim(),
           classes: Array.isArray(t.classes) ? t.classes.map(c => (c || '').toString().trim()) : [],
         });
       });
@@ -3504,7 +3508,9 @@
 
       const siteClassKey = composeClassKey(classKey.grade, classKey.section, classKey.track);
       const teachers = await loadCsvTeacherIndex();
-      const candidates = teachers.filter(t => t.subject === subject && t.classes.includes(siteClassKey));
+      const candidates = teachers.filter(t =>
+        (t.subject === subject || t.subject2 === subject) && t.classes.includes(siteClassKey)
+      );
 
       const base = { ...raw, siteClassKey, dayIndex, lesson, subject };
       if(candidates.length === 1){

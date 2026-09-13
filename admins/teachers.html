@@ -585,6 +585,7 @@
               <div class="field"><label class="label" for="edTDisplayedPassword">كلمة المرور الظاهرة</label><div class="plain-value view-only"><span id="vEdTDisplayedPassword" class="view-value">—</span></div><div class="input-wrap edit-only password-field"><input id="edTDisplayedPassword" class="input" type="password" autocomplete="off" dir="ltr"><button id="toggleDisplayedPasswordBtn" class="eye-toggle" type="button" aria-label="إظهار كلمة المرور الظاهرة" title="إظهار كلمة المرور الظاهرة"><span aria-hidden="true">👁</span></button></div></div>
               <div class="field"><label class="label" for="edTRole">الدور</label><div class="plain-value view-only"><span id="vEdTRole" class="view-value">—</span></div><div class="input-wrap edit-only"><select id="edTRole" class="input"><option value="user">مدرس</option><option value="head">رئيس القسم</option></select></div></div>
               <div class="field" id="edTSpecializationField" hidden><label class="label" for="edTSpecialization">التخصص داخل القسم</label><div class="plain-value view-only"><span id="vEdTSpecialization" class="view-value">—</span></div><div class="input-wrap edit-only"><select id="edTSpecialization" class="input"></select></div></div>
+              <div class="field" id="edTSpecialization2Field" hidden><label class="label" for="edTSpecialization2">مادة ثانية (اختياري)</label><div class="plain-value view-only"><span id="vEdTSpecialization2" class="view-value">—</span></div><div class="input-wrap edit-only"><select id="edTSpecialization2" class="input"></select></div></div>
             </div>
           </section>
 
@@ -739,6 +740,7 @@
         <div class="field"><label class="label" for="teacherPhone">رقم الهاتف</label><div class="input-wrap"><input id="teacherPhone" class="input" type="tel"></div></div>
         <div class="field"><label class="label" for="teacherRole">الدور</label><div class="input-wrap"><select id="teacherRole" class="input"><option value="user">مدرس</option><option value="head">رئيس القسم</option></select></div></div>
         <div id="teacherSpecializationField" class="field" hidden><label class="label" for="teacherSpecialization">التخصص داخل القسم</label><div class="input-wrap"><select id="teacherSpecialization" class="input"><option value="الفيزياء">الفيزياء</option><option value="الكيمياء">الكيمياء</option></select></div></div>
+        <div id="teacherSpecialization2Field" class="field" hidden><label class="label" for="teacherSpecialization2">مادة ثانية (اختياري)</label><div class="input-wrap"><select id="teacherSpecialization2" class="input"></select></div></div>
         <div class="field add-teacher-full"><div class="checkbox-wrap"><input type="checkbox" id="teacherIsSupervisor"><label id="teacherIsSupervisorLabel" for="teacherIsSupervisor" class="label" style="margin:0;">تعيين كمشرف</label></div></div>
         <div class="field add-teacher-full"><div class="checkbox-wrap"><input type="checkbox" id="teacherAllowEditSchedule"><label for="teacherAllowEditSchedule" class="label" style="margin:0;">السماح بتعديل الجدول</label></div></div>
         <div class="field add-teacher-full"><div class="checkbox-wrap"><input type="checkbox" id="teacherAllowMorningLate"><label for="teacherAllowMorningLate" class="label" style="margin:0;">تسجيل تأخير الصباح</label></div></div>
@@ -933,6 +935,9 @@
     const edTRole=document.getElementById('edTRole');
     const edTSpecializationField=document.getElementById('edTSpecializationField');
     const edTSpecialization=document.getElementById('edTSpecialization');
+    const edTSpecialization2Field=document.getElementById('edTSpecialization2Field');
+    const edTSpecialization2=document.getElementById('edTSpecialization2');
+    const vEdTSpecialization2=document.getElementById('vEdTSpecialization2');
     const edTIsSupervisor=document.getElementById('edTIsSupervisor');
     const edTIsSupervisorLabel=document.getElementById('edTIsSupervisorLabel');
     const edTAllowEditSchedule=document.getElementById('edTAllowEditSchedule');
@@ -981,6 +986,8 @@
     const teacherRole=document.getElementById('teacherRole');
     const teacherSpecializationField=document.getElementById('teacherSpecializationField');
     const teacherSpecialization=document.getElementById('teacherSpecialization');
+    const teacherSpecialization2Field=document.getElementById('teacherSpecialization2Field');
+    const teacherSpecialization2=document.getElementById('teacherSpecialization2');
     const teacherIsSupervisor=document.getElementById('teacherIsSupervisor');
     const teacherIsSupervisorLabel=document.getElementById('teacherIsSupervisorLabel');
     const teacherAllowEditSchedule=document.getElementById('teacherAllowEditSchedule');
@@ -1174,26 +1181,48 @@
     function setTeacherSpecializationOptions(options){
       fillSelectOptions(teacherSpecialization, options);
     }
-    // Only the 4 merged departments (تاريخ/جغرافيا, نفس/فلسفة, فيزياء/كيمياء,
-    // جيولوجيا/أحياء) have a specific-subject distinction worth surfacing —
-    // every other department already equals its one subject 1:1, so the
-    // field stays hidden for those instead of showing a single-option
-    // no-op select.
-    function syncEditSpecializationField(department, currentSubject){
+    // Only departments with more than one تخصص داخلي (see
+    // shared/departments.js's DEPARTMENT_SPECIALIZATIONS) have a specific-
+    // subject distinction worth surfacing — every other department already
+    // equals its one subject 1:1, so the field stays hidden for those
+    // instead of showing a single-option no-op select.
+    //
+    // A teacher can hold up to two من هذا التخصص — a primary (this field)
+    // and an optional second (fillSpecialization2Options below), which
+    // must never be able to duplicate whatever the primary is currently
+    // set to.
+    function fillSpecialization2Options(selectEl, pool, excludeValue, currentValue){
+      const options=pool.filter(v=>v!==excludeValue);
+      selectEl.innerHTML='<option value="">بدون</option>'+options.map(v=>`<option value="${v}">${v}</option>`).join('');
+      selectEl.value=options.includes(currentValue) ? currentValue : '';
+    }
+
+    function syncEditSpecializationField(department, currentSubject, currentSubject2){
       const mergedSubjects=getMergedSubjectsForDepartment(department);
       const show=mergedSubjects.length>0;
       edTSpecializationField.hidden=!show;
+      edTSpecialization2Field.hidden=!show;
       if(!show) return;
       fillSelectOptions(edTSpecialization, mergedSubjects);
       edTSpecialization.value=mergedSubjects.includes(currentSubject) ? currentSubject : mergedSubjects[0];
+      fillSpecialization2Options(edTSpecialization2, mergedSubjects, edTSpecialization.value, currentSubject2||'');
     }
+    // Re-run whenever the primary changes, so the second field's options
+    // stay excluding whatever the primary now is — otherwise picking the
+    // same subject twice would be possible for exactly one frame.
+    edTSpecialization.addEventListener('change', ()=>{
+      const mergedSubjects=getMergedSubjectsForDepartment(resolveDepartmentName(currentTeacher?.data?.subject||selectedSubject));
+      fillSpecialization2Options(edTSpecialization2, mergedSubjects, edTSpecialization.value, edTSpecialization2.value);
+    });
+
     function syncAddTeacherSpecializationField(){
       const mergedSubjects=getMergedSubjectsForDepartment(selectedSubject);
       const showSpecialization=mergedSubjects.length>0;
       teacherSpecializationField.hidden=!showSpecialization;
-      teacherSpecialization.required=showSpecialization;
+      teacherSpecialization2Field.hidden=!showSpecialization;
       if(!showSpecialization){
         teacherSpecialization.innerHTML='';
+        teacherSpecialization2.innerHTML='';
         return;
       }
       const prevValue=teacherSpecialization.value;
@@ -1203,7 +1232,12 @@
       }else{
         teacherSpecialization.value=mergedSubjects[0];
       }
+      fillSpecialization2Options(teacherSpecialization2, mergedSubjects, teacherSpecialization.value, teacherSpecialization2.value);
     }
+    teacherSpecialization.addEventListener('change', ()=>{
+      const mergedSubjects=getMergedSubjectsForDepartment(selectedSubject);
+      fillSpecialization2Options(teacherSpecialization2, mergedSubjects, teacherSpecialization.value, teacherSpecialization2.value);
+    });
 
     function makeClassRow(initialValue="", onChange=updateProfileSummary){
       const row=document.createElement('div');row.className='class-row';
@@ -1648,6 +1682,7 @@
       setDisplayedPasswordPreview(displayedPassword);
       setViewValue(vEdTRole,role==='head'?'رئيس القسم':'مدرس');
       setViewValue(vEdTSpecialization, edTSpecializationField.hidden ? '—' : (edTSpecialization.value||'—'));
+      setViewValue(vEdTSpecialization2, edTSpecialization2Field.hidden ? '—' : (edTSpecialization2.value||'—'));
       renderPermissionsPreview({ isSupervisor, supervisorGrade, allowEditSchedule, allowMorningLate, allowSupervisorStudents });
       renderClassesPreview(getClassesFrom(edClasses));
       updateSupervisorCheckboxLabels();
@@ -1657,7 +1692,7 @@
       teacherEditMode=!!isEdit;
       teacherProfileShell.classList.toggle('teacher-readonly', !teacherEditMode);
       teacherProfileShell.classList.toggle('teacher-editing', teacherEditMode);
-      [edTName,edTEmail,edTPhone,edTTeams,edTDisplayedPassword,edTRole,edTSpecialization,edTIsSupervisor,edTAllowEditSchedule,edTAllowMorningLate,edTAllowSupervisorStudents].forEach(el=>el.disabled=!teacherEditMode);
+      [edTName,edTEmail,edTPhone,edTTeams,edTDisplayedPassword,edTRole,edTSpecialization,edTSpecialization2,edTIsSupervisor,edTAllowEditSchedule,edTAllowMorningLate,edTAllowSupervisorStudents].forEach(el=>el.disabled=!teacherEditMode);
       toggleDisplayedPasswordBtn.disabled=!teacherEditMode;
       if(!teacherEditMode) setDisplayedPasswordVisibility(false);
       classesEditorWrap.hidden=!teacherEditMode;
@@ -1968,7 +2003,7 @@
       edTDisplayedPassword.value=getStoredDisplayedPassword(d);
       setDisplayedPasswordVisibility(false);
       edTRole.value=d.role||'user';
-      syncEditSpecializationField(resolveDepartmentName(d.subject)||selectedSubject, (d.subject||'').toString().trim());
+      syncEditSpecializationField(resolveDepartmentName(d.subject)||selectedSubject, (d.subject||'').toString().trim(), (d.subject2||'').toString().trim());
       edTIsSupervisor.checked=!!d.isSupervisor;
       editSupervisorGrade=edTIsSupervisor.checked ? normalizeSupervisorGrade(d.supervisorGrade) : '';
       edTAllowEditSchedule.checked=!!normalizePermissions(d).allowEditSchedule;
@@ -2007,7 +2042,7 @@
       }
     });
     edAddClass.addEventListener('click',()=>{edClasses.appendChild(makeClassRow(""));updateProfileSummary();});
-    [edTName,edTEmail,edTPhone,edTTeams,edTDisplayedPassword,edTRole,edTSpecialization,edTAllowEditSchedule,edTAllowMorningLate,edTAllowSupervisorStudents].forEach(el=>{
+    [edTName,edTEmail,edTPhone,edTTeams,edTDisplayedPassword,edTRole,edTSpecialization,edTSpecialization2,edTAllowEditSchedule,edTAllowMorningLate,edTAllowSupervisorStudents].forEach(el=>{
       const ev=el.tagName==='SELECT'||el.type==='checkbox'?'change':'input';
       el.addEventListener(ev, updateProfileSummary);
     });
@@ -2208,7 +2243,7 @@
         const storedDisplayedPassword=(privData!=null&&privData.displayedPassword!=null)?String(privData.displayedPassword):getStoredDisplayedPassword(d);
         currentTeacher={uid,data:d,displayedPassword:storedDisplayedPassword};
         selectedSubject = resolveDepartmentName(d.subject) || selectedSubject;
-        syncEditSpecializationField(selectedSubject, (d.subject||'').toString().trim());
+        syncEditSpecializationField(selectedSubject, (d.subject||'').toString().trim(), (d.subject2||'').toString().trim());
         edTName.value=d.name||'';
         edTEmail.value=getTeacherCivilId(d);
         edTPhone.value=d.phone||'';
@@ -2250,6 +2285,10 @@
         // specialization select — everywhere else the teacher's subject
         // stays whatever it already was, since there's nothing to pick.
         const subjectToSave=!edTSpecializationField.hidden ? edTSpecialization.value : (currentTeacher?.data?.subject || '');
+        // Optional second تخصص داخلي — only meaningful while the field is
+        // showing (a merged department) and something other than "بدون"
+        // is picked; otherwise a teacher keeps no second subject at all.
+        const subject2ToSave=(!edTSpecialization2Field.hidden && edTSpecialization2.value) ? edTSpecialization2.value : '';
         const prevPermissions=(currentTeacher?.data?.permissions&&typeof currentTeacher.data.permissions==='object')?currentTeacher.data.permissions:{};
         const permissions={...prevPermissions,allowEditSchedule:!!edTAllowEditSchedule.checked,allowMorningLate:!!edTAllowMorningLate.checked,allowSupervisorStudents:!!edTAllowSupervisorStudents.checked};
         if(!name) throw new Error('أدخل الاسم.');
@@ -2259,10 +2298,10 @@
         if(role==='head') await ensureSingleHeadForDepartment(teacherDepartment,{ excludeUid: uid });
         await syncAuthEmailIfChanged(uid, currentTeacher?.data?.email, email);
         await Promise.all([
-          updateDoc(doc(db,'teachers',uid),{name,email,civilId,phone,teams,role,subject:subjectToSave,isSupervisor,supervisorGrade:isSupervisor?supervisorGrade:null,classes,permissions,displayedPassword:deleteField(),viewedPassword:deleteField()}),
+          updateDoc(doc(db,'teachers',uid),{name,email,civilId,phone,teams,role,subject:subjectToSave,subject2:subject2ToSave,isSupervisor,supervisorGrade:isSupervisor?supervisorGrade:null,classes,permissions,displayedPassword:deleteField(),viewedPassword:deleteField()}),
           setDoc(doc(db,'teachers',uid,'private','credentials'),{displayedPassword},{merge:true})
         ]);
-        currentTeacher.data={...(currentTeacher.data||{}),name,email,civilId,phone,teams,role,subject:subjectToSave,isSupervisor,supervisorGrade:isSupervisor?supervisorGrade:null,classes,permissions};
+        currentTeacher.data={...(currentTeacher.data||{}),name,email,civilId,phone,teams,role,subject:subjectToSave,subject2:subject2ToSave,isSupervisor,supervisorGrade:isSupervisor?supervisorGrade:null,classes,permissions};
         currentTeacher.displayedPassword=displayedPassword;
         setTeacherEditMode(false);
         edOk.textContent='تم حفظ التعديلات.';edOk.style.display='block';setTimeout(()=>{edOk.style.display='none';closeTeacherView();},900);
@@ -2399,6 +2438,10 @@
         const supervisorGrade=isSupervisor ? normalizeSupervisorGrade(addSupervisorGrade) : '';
         const permissions={allowEditSchedule:!!teacherAllowEditSchedule.checked,allowMorningLate:!!teacherAllowMorningLate.checked,allowSupervisorStudents:!!teacherAllowSupervisorStudents.checked};
         const selectedSpecialization=(teacherSpecialization.value||'').trim();
+        // Optional second تخصص داخلي — same rule as the edit form: only
+        // meaningful for a merged department, and only when something
+        // other than "بدون" is picked.
+        const selectedSpecialization2=isMergedDepartment(selectedSubject) ? (teacherSpecialization2.value||'').trim() : '';
         const mergedSubjects=getMergedSubjectsForDepartment(selectedSubject);
         const subjectToSave=isMergedDepartment(selectedSubject) ? selectedSpecialization : selectedSubject;
         const departmentToSave=resolveDepartmentName(subjectToSave) || selectedSubject;
@@ -2412,7 +2455,7 @@
         if(role==='head') await ensureSingleHeadForDepartment(departmentToSave);
         const cred=await createUserWithEmailAndPassword(helperAuth,email,password); const newUid=cred.user.uid;
         await Promise.all([
-          setDoc(doc(db,'teachers',newUid),{uid:newUid,name,email,civilId,phone,role,isSupervisor,supervisorGrade:isSupervisor?supervisorGrade:null,subject:subjectToSave,department:departmentToSave,classes,permissions,createdAt:serverTimestamp()},{merge:true}),
+          setDoc(doc(db,'teachers',newUid),{uid:newUid,name,email,civilId,phone,role,isSupervisor,supervisorGrade:isSupervisor?supervisorGrade:null,subject:subjectToSave,subject2:selectedSpecialization2,department:departmentToSave,classes,permissions,createdAt:serverTimestamp()},{merge:true}),
           setDoc(doc(db,'teachers',newUid,'private','credentials'),{displayedPassword})
         ]);
         try{await signOut(helperAuth);}catch{}
