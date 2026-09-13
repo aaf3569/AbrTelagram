@@ -162,6 +162,7 @@ const DEPARTMENT_SPECIALIZATIONS = Object.freeze({
   [DEPARTMENTS.GEOGRAPHY_HISTORY]:   ['الجغرافيا', 'التاريخ', 'الاجتماعيات', 'الدستور'],
   [DEPARTMENTS.PHILOSOPHY_SCIENCES]: ['الدستور', 'علم النفس', 'الفلسفة', 'الاجتماعيات'],
   [DEPARTMENTS.MATH]:                ['الرياضيات', 'الإحصاء'],
+  [DEPARTMENTS.FRENCH]:              ['اللغة الفرنسية', 'اللغة الفرنسية (اختيار حرّ)'],
 });
 
 /**
