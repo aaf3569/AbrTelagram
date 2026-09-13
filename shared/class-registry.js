@@ -92,7 +92,7 @@ export async function fetchClassList(db) {
 }
 
 export function parseClassKey(s) {
-  const m = String(s || "").match(/^(\d+)\s*\/\s*(\d+)(?:\s*(.*))?$/);
+  const m = String(s || "").trim().match(/^(\d+)\s*\/\s*(\d+)(?:\s*(.*))?$/);
   return m
     ? { grade: +m[1], section: +m[2], track: (m[3] || "").trim() }
     : { grade: 999, section: 999, track: "" };
