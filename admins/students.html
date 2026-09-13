@@ -4228,10 +4228,23 @@ async function loadClassTeachers(className){
   classTeachersFilters.hidden=true;
   classTeachersList.innerHTML='<div class="loading"><div class="spinner"></div><div class="muted">جاري تحميل قائمة المعلمين...</div></div>';
   try{
-    const snap = await getDocs(collection(db,'teachers'));
+    const { grade, section } = parseClassKey(className);
+    const [snap, scheduleSnap] = await Promise.all([
+      getDocs(collection(db,'teachers')),
+      getDocs(query(collection(db,'schedules'),
+        where('grade','==', String(grade)), where('section','==', String(section))))
+    ]);
+    const scheduledSubjects = new Map();
+    scheduleSnap.docs.forEach(d=>{
+      const lesson = d.data();
+      if(!lesson.teacherUid || !classKeyMatches(lesson.classKey, className) || !lesson.subject) return;
+      if(!scheduledSubjects.has(lesson.teacherUid)) scheduledSubjects.set(lesson.teacherUid, new Set());
+      scheduledSubjects.get(lesson.teacherUid).add(lesson.subject.trim());
+    });
     const teachers = snap.docs
       .map(d=>({uid:d.id, ...d.data()}))
-      .filter(t=> Array.isArray(t.classes) && t.classes.some(c=>classKeyMatches(c, className)));
+      .filter(t=> (Array.isArray(t.classes) && t.classes.some(c=>classKeyMatches(c, className))) || scheduledSubjects.has(t.uid))
+      .map(t=>({...t, scheduledSubjects: [...(scheduledSubjects.get(t.uid) || [])]}));
     // Heads first, then alphabetically — mirrors admins/teachers.html's ordering.
     teachers.sort((a,b)=>{
       const aHead=(a.role||'').toString().toLowerCase()==='head';
@@ -4265,13 +4278,37 @@ const SUBJECT_FILTER_ORDER = [
   'المكتبات','الدراسات العملية','التربية البيئية','الإحصاء',
 ];
 
-// The class a معلمو فصل sheet is open for decides how a teacher's own
-// تخصص داخلي is labeled — grade 10 collapses merged departments to one
-// subject, and 11د/12د relabel a couple of subjects — regardless of what
-// the teacher's own record actually says. See getDisplaySubjectForClass.
-function classTeacherDisplaySubject(t){
+// The standing schedule is authoritative for subjects taught to this class.
+// Only fall back to the teacher's specialization when no scheduled subject
+// exists for that teacher and class.
+function classTeacherDisplaySubjects(t){
   const { grade, track } = parseClassKey(selectedClass);
-  return (getDisplaySubjectForClass(t.subject, grade, track) || '').toString().trim();
+  const scheduled = t.scheduledSubjects || [];
+  if(track === 'د'){
+    const roles = [t.subject, t.subject2].map(subject=>(subject || '').trim());
+    const specificRoles = roles.filter(subject=>subject === 'الجغرافيا' || subject === 'التاريخ');
+    const specificLessons = scheduled.filter(subject=>subject === 'الجغرافيا' || subject === 'التاريخ');
+    // An old الاجتماعيات lesson is ambiguous on the د track. Resolve it
+    // from the teacher's actual geography/history specialization instead
+    // of automatically calling every such teacher a history teacher.
+    if(scheduled.includes('الاجتماعيات')){
+      const subjects = scheduled.filter(subject=>subject !== 'الاجتماعيات');
+      subjects.push(...specificRoles.filter(subject=>!specificLessons.includes(subject)));
+      const displaySubjects = subjects.map(subject=>getDisplaySubjectForClass(subject, grade, track));
+      if(!specificRoles.length && !specificLessons.length) displaySubjects.push('الاجتماعيات');
+      return [...new Set(displaySubjects)];
+    }
+    if(!scheduled.length && roles.includes('الاجتماعيات') && specificRoles.length){
+      return [...new Set(specificRoles)];
+    }
+    if(!scheduled.length && roles.includes('الاجتماعيات')) return ['الاجتماعيات'];
+  }
+  if(scheduled.length) return [...new Set(scheduled.map(subject=>getDisplaySubjectForClass(subject, grade, track)))];
+  const subject = (getDisplaySubjectForClass(t.subject, grade, track) || '').toString().trim();
+  return subject ? [subject] : [];
+}
+function classTeacherDisplaySubject(t){
+  return classTeacherDisplaySubjects(t).join('، ');
 }
 
 // Subject filter chips at the top of the sheet — only the subjects this
@@ -4279,7 +4316,7 @@ function classTeacherDisplaySubject(t){
 // since a filter offering subjects with zero matches would be dead weight.
 function renderClassTeachersFilters(){
   const subjects = [...new Set(
-    classTeachersCache.map(t=>classTeacherDisplaySubject(t)).filter(Boolean)
+    classTeachersCache.flatMap(t=>classTeacherDisplaySubjects(t))
   )].sort((a,b)=>{
     const ia=SUBJECT_FILTER_ORDER.indexOf(a), ib=SUBJECT_FILTER_ORDER.indexOf(b);
     if(ia===-1 && ib===-1) return a.localeCompare(b,'ar');
@@ -4312,7 +4349,7 @@ function renderClassTeachersFilters(){
 
 function renderClassTeachersList(){
   const filtered = classTeachersSubjectFilter
-    ? classTeachersCache.filter(t=>classTeacherDisplaySubject(t)===classTeachersSubjectFilter)
+    ? classTeachersCache.filter(t=>classTeacherDisplaySubjects(t).includes(classTeachersSubjectFilter))
     : classTeachersCache;
   classTeachersList.innerHTML='';
   if(filtered.length===0){
