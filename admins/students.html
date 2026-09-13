@@ -2198,7 +2198,7 @@ import { initializeFirestore, persistentSingleTabManager, collection, collection
 import { mountAttendanceSheet } from "/shared/attendance.js";
 import { fetchStudentAttendanceData, makeAttTile, makeMorningLateTile } from "/shared/attendance-tiles.js";
 import { renderWarningState, renderExcusedWarningState } from "/shared/warning-system.js";
-import { DEFAULT_CLASS_LIST, fetchClassList, groupByGrade, availableNumbersToAdd, buildClassKey, primeClassList } from "/shared/class-registry.js";
+import { DEFAULT_CLASS_LIST, fetchClassList, groupByGrade, availableNumbersToAdd, buildClassKey, primeClassList, parseClassKey } from "/shared/class-registry.js";
 
 
 
@@ -4208,14 +4208,29 @@ openClassTeachersBtn.addEventListener('click', ()=>{
 });
 closeClassTeachers.addEventListener('click', ()=> closeSheet(classTeachersSheet));
 
+// A teacher's `classes` entries aren't always byte-identical to the class
+// tile's own key — older records in particular can carry different
+// spacing around the "/" (e.g. "10/1" vs "10 / 1") even though they mean
+// the same class. Comparing the parsed {grade,section,track} instead of
+// the raw string (parseClassKey already tolerates that spacing) is the
+// same "structural translation, not string matching" fix already applied
+// to the CSV schedule importer — a plain array-contains query would
+// silently miss exactly this kind of legacy value.
+function classKeyMatches(rawClassValue, targetClassKey){
+  const a = parseClassKey(rawClassValue);
+  const b = parseClassKey(targetClassKey);
+  return a.grade === b.grade && a.section === b.section && a.track === b.track;
+}
+
 async function loadClassTeachers(className){
   classTeachersFilters.innerHTML='';
   classTeachersFilters.hidden=true;
   classTeachersList.innerHTML='<div class="loading"><div class="spinner"></div><div class="muted">جاري تحميل قائمة المعلمين...</div></div>';
   try{
-    const qy = query(collection(db,'teachers'), where('classes','array-contains', className));
-    const snap = await getDocs(qy);
-    const teachers = snap.docs.map(d=>({uid:d.id, ...d.data()}));
+    const snap = await getDocs(collection(db,'teachers'));
+    const teachers = snap.docs
+      .map(d=>({uid:d.id, ...d.data()}))
+      .filter(t=> Array.isArray(t.classes) && t.classes.some(c=>classKeyMatches(c, className)));
     // Heads first, then alphabetically — mirrors admins/teachers.html's ordering.
     teachers.sort((a,b)=>{
       const aHead=(a.role||'').toString().toLowerCase()==='head';
