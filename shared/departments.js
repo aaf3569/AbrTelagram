@@ -126,33 +126,42 @@ export const SUBJECT_TO_ALLOWED_DEPARTMENTS = Object.freeze({
   'اللغة الفرنسية (اختيار حرّ)': [DEPARTMENTS.FRENCH],
 });
 
-// What a new hire's specialization picker offers when the chosen
-// department has more than one specialization.
+// The official "تخصص داخلي" (internal specialization) pool for each
+// department — what a new hire's specialization picker offers, and each
+// teacher can hold up to two picks from their department's own pool (a
+// primary and a second specialization). Corrected directly against the
+// school's own account of its department structure — a previous pass
+// here had widened الجغرافيا والتاريخ and العلوم الفلسفية to share one
+// identical six-subject list, on the theory that these two departments'
+// real specialization pools were fully interchangeable. They aren't: the
+// two departments have their own separate leaders and their own distinct
+// (overlapping, not identical) pools.
 //
-// الجغرافيا والتاريخ and العلوم الفلسفية share the same full six-subject
-// list rather than each keeping their own narrower pair/triple. That
-// used to be two separate, smaller lists here, on the assumption that a
-// teacher hired into الجغرافيا والتاريخ would be a history-or-geography
-// teacher, never a philosophy one. The real staff roster disproves that:
-// التاريخ، الاجتماعيات، and الدستور each already have real teachers filed
-// under *both* departments (checked against the school's live roster,
-// not assumed) — e.g. الدستور has one teacher under الجغرافيا والتاريخ
-// and another under العلوم الفلسفية. So for these two, "which department
-// was this teacher hired into" and "which of the six subjects do they
-// teach" are independent questions, and the picker has to offer all six
-// under either department.
+//   الجغرافيا والتاريخ   → الجغرافيا، الاجتماعيات
+//   العلوم الفلسفية      → الدستور، علم النفس، الفلسفة، الاجتماعيات
+//   الرياضيات            → الرياضيات، الإحصاء
+//   الأحياء والجيولوجيا  → الأحياء، الجيولوجيا، التربية البيئية
+//   الفيزياء والكيمياء   → الفيزياء، الكيمياء
 //
-// الفيزياء والكيمياء and الأحياء والجيولوجيا stay narrow (2 subjects
-// each) — checked the same way, and every teacher in either one only
-// ever has the two headline subjects; التربية البيئية only ever shows up
-// as someone's *second* subject, never their primary one, so it isn't
-// offered here as a specialization choice at all.
-const GEOGRAPHY_PHILOSOPHY_SUBJECTS = ['التاريخ', 'الجغرافيا', 'الاجتماعيات', 'الفلسفة', 'علم النفس', 'الدستور'];
+// الاجتماعيات is the one subject genuinely shared by both pools — that
+// part of the earlier overlap finding still holds. الرياضيات is now
+// "merged" (2 specializations) too, which it never was before.
+//
+// ⚠️ This list is deliberately narrower than SUBJECT_TO_DEPARTMENT and
+// SUBJECT_TO_ALLOWED_DEPARTMENTS above, which still cover all 25 real
+// subjects — including التاريخ, which real teachers do carry as their
+// subject under الجغرافيا والتاريخ even though it isn't one of that
+// department's two official specialization picks. Those two maps decide
+// authorization and scheduling eligibility for every subject a teacher
+// might actually have on record; this one only decides what the
+// add/edit-teacher form offers as a choice going forward. Narrowing this
+// list must never mean narrowing those.
 const DEPARTMENT_SPECIALIZATIONS = Object.freeze({
   [DEPARTMENTS.PHYSICS_CHEMISTRY]:   ['الفيزياء', 'الكيمياء'],
-  [DEPARTMENTS.BIOLOGY_GEOLOGY]:     ['الأحياء', 'الجيولوجيا'],
-  [DEPARTMENTS.GEOGRAPHY_HISTORY]:   GEOGRAPHY_PHILOSOPHY_SUBJECTS,
-  [DEPARTMENTS.PHILOSOPHY_SCIENCES]: GEOGRAPHY_PHILOSOPHY_SUBJECTS,
+  [DEPARTMENTS.BIOLOGY_GEOLOGY]:     ['الأحياء', 'الجيولوجيا', 'التربية البيئية'],
+  [DEPARTMENTS.GEOGRAPHY_HISTORY]:   ['الجغرافيا', 'الاجتماعيات'],
+  [DEPARTMENTS.PHILOSOPHY_SCIENCES]: ['الدستور', 'علم النفس', 'الفلسفة', 'الاجتماعيات'],
+  [DEPARTMENTS.MATH]:                ['الرياضيات', 'الإحصاء'],
 });
 
 /**
