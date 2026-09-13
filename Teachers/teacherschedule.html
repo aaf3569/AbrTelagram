@@ -2633,7 +2633,9 @@
       const weekStart = weekDates[0] || '';
       const weekEnd = weekDates[weekDates.length - 1] || '';
       const teacherDisplay = shortTeacherName(teacherName);
-      const weekRangeText = `${formatDateArabic(weekStart)} → ${formatDateArabic(weekEnd)}`;
+      // Points left: the line is RTL, so the start date sits on the right and
+      // the end on the left, and the arrow has to follow the reading direction.
+      const weekRangeText = `${formatDateArabic(weekStart)} ← ${formatDateArabic(weekEnd)}`;
 
       const headerCells = Array.from({ length: FIXED_LESSON_COUNT }, (_, idx) => {
         const lessonNumber = idx + 1;
@@ -3049,7 +3051,9 @@
       const classLabel = formatClassKeyLabel(classKey);
       const weekStart = weekDates[0] || '';
       const weekEnd = weekDates[weekDates.length - 1] || '';
-      const weekRangeText = `${formatDateArabic(weekStart)} → ${formatDateArabic(weekEnd)}`;
+      // Points left: the line is RTL, so the start date sits on the right and
+      // the end on the left, and the arrow has to follow the reading direction.
+      const weekRangeText = `${formatDateArabic(weekStart)} ← ${formatDateArabic(weekEnd)}`;
 
       const headerCells = Array.from({ length: FIXED_LESSON_COUNT }, (_, idx) => {
         const lessonNumber = idx + 1;
@@ -3337,7 +3341,7 @@
              caption was providing without competing with the class label. */
           #classPdfPage.instagram-post .header-sep {
             display: block;
-            width: 132px;
+            width: 280px;
             height: 4px;
             margin: 26px auto 0;
             border: 0;
@@ -3369,8 +3373,8 @@
           #classPdfPage.instagram-post thead th:last-child { border-left: none; }
           #classPdfPage.instagram-post td.lesson-cell,
           #classPdfPage.instagram-post tbody th.day-cell {
-            border-top: 1px solid #e6eef6;
-            border-left: 1px solid #e6eef6;
+            border-top: 1.5px solid #d3e1ee;
+            border-left: 1.5px solid #d3e1ee;
           }
           #classPdfPage.instagram-post tbody th.day-cell { border-left: 2px solid #cbdbe9; }
           #classPdfPage.instagram-post tbody tr:nth-child(even) td.lesson-cell { background: #fafcfe; }
