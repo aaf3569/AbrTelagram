@@ -3255,56 +3255,135 @@
             min-height: ${INSTAGRAM_POST_HEIGHT}px;
             padding: 40px;
           }
-          #classPdfPage.instagram-post .pdf-header { margin-bottom: 28px; }
+          /* Header.
+
+             This post's job is to be scanned. A student thumbing through a
+             feed is looking for one thing — their class — so the class label
+             is the whole hero and everything else is support.
+
+             The old header worked against that. The class shared a row with a
+             180px calendar ornament, which capped how wide it could be, and
+             it was set at 76px on a 1.5 line-height, so a third of its space
+             was leading. Now it gets the full width, centred, in a navy badge
+             that sizes to the label. At 108px on a 1.0 line-height it is
+             roughly twice the ink it was, and it holds up at the ~0.4x a feed
+             renders a 1080px post at.
+
+             Everything else is compressed into one thin identity strip: the
+             school on the reading side, the week on the other, with the
+             calendar mark next to the dates where it actually means
+             something rather than floating as decoration. */
+          #classPdfPage.instagram-post .pdf-header { margin-bottom: 30px; }
           #classPdfPage.instagram-post .school-brand {
             display: flex;
             align-items: center;
             justify-content: flex-start;
-            gap: 18px;
+            gap: 15px;
+            padding-bottom: 18px;
+            border-bottom: 1px solid #e4edf6;
           }
-          #classPdfPage.instagram-post .pdf-logo { height: 44px; margin: 0; }
-          #classPdfPage.instagram-post .school-name { font-size: 20px; margin: 0; color: #5a748c; }
-          #classPdfPage.instagram-post .post-title {
+          #classPdfPage.instagram-post .pdf-logo { height: 48px; margin: 0; }
+          #classPdfPage.instagram-post .school-name {
+            font-size: 20px; font-weight: 800; margin: 0; color: #4d6b86;
+            letter-spacing: .2px;
+          }
+          #classPdfPage.instagram-post .brand-week {
+            margin-inline-start: auto;
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            gap: 28px;
-            margin-top: 22px;
-            padding: 22px 32px;
-            border: 1px solid #dce7f2;
-            border-radius: 28px;
-            background: linear-gradient(135deg, #f0f6fc, #ffffff);
-          }
-          #classPdfPage.instagram-post .class-line {
-            flex: 1;
-            min-width: 0;
-            font-size: 76px;
-            line-height: 1.5;
-            margin: 0;
-            text-align: right;
-            overflow-wrap: anywhere;
-            color: #0f3f63;
+            gap: 10px;
+            font-size: 17px;
+            font-weight: 700;
+            color: #6d8298;
+            white-space: nowrap;
           }
           #classPdfPage.instagram-post .post-calendar {
-            width: 180px;
-            height: 180px;
+            width: 34px;
+            height: 34px;
             object-fit: contain;
             flex: 0 0 auto;
+            opacity: .9;
+          }
+          #classPdfPage.instagram-post .post-title {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 14px;
+            margin-top: 26px;
+            padding: 0;
+            border: 0;
+            background: none;
+          }
+          /* Sizes to the label rather than stretching, so a short class reads
+             as a deliberate badge instead of a banner with a word adrift in
+             it. Navy ties it to the table header below. */
+          #classPdfPage.instagram-post .class-chip {
+            max-width: 94%;
+            padding: 22px 56px 30px;
+            border-radius: 30px;
+            background: linear-gradient(135deg, #13466f, #2b6793);
+          }
+          #classPdfPage.instagram-post .class-line {
+            font-size: 108px;
+            font-weight: 900;
+            line-height: 1;
+            margin: 0;
+            text-align: center;
+            overflow-wrap: anywhere;
+            color: #ffffff;
+          }
+          #classPdfPage.instagram-post .post-kicker {
+            font-size: 25px; font-weight: 800; color: #4d6b86; line-height: 1.3;
+            text-align: center;
           }
           #classPdfPage.instagram-post .header-sep { display: none; }
-          #classPdfPage.instagram-post .table-wrap { width: 100%; margin: 0; border: 2px solid #91adc5; border-radius: 20px; }
-          #classPdfPage.instagram-post thead th { padding: 20px 6px; border-left: 2px solid #91adc5; }
+          /* Rules.
+
+             Every line was 2px of #91adc5 — a saturated mid-slate. Across
+             seven columns and five rows that is roughly twenty strokes at
+             full strength, and the grid ended up louder than the timetable
+             inside it.
+
+             Weight now follows meaning. Two structural lines stay heavy: the
+             outer frame, and the edge separating the day column from the
+             lessons. Everything else drops to a 1px tint. Alternating row
+             fills carry the horizontal tracking that the heavy rules used to
+             do, which is what lets the lines get this light without the eye
+             losing its place across a row. */
+          #classPdfPage.instagram-post .table-wrap {
+            width: 100%; margin: 0;
+            border: 2px solid #cbdbe9;
+            border-radius: 22px;
+          }
+          #classPdfPage.instagram-post thead th {
+            padding: 24px 11px;
+            border-left: 1px solid rgba(255, 255, 255, 0.18);
+          }
+          #classPdfPage.instagram-post thead th:last-child { border-left: none; }
           #classPdfPage.instagram-post td.lesson-cell,
           #classPdfPage.instagram-post tbody th.day-cell {
-            border-top: 2px solid #91adc5;
-            border-left: 2px solid #91adc5;
+            border-top: 1px solid #e6eef6;
+            border-left: 1px solid #e6eef6;
           }
+          #classPdfPage.instagram-post tbody th.day-cell { border-left: 2px solid #cbdbe9; }
+          #classPdfPage.instagram-post tbody tr:nth-child(even) td.lesson-cell { background: #fafcfe; }
           #classPdfPage.instagram-post .corner { width: 132px; font-size: 20px; }
-          #classPdfPage.instagram-post .lesson-small { font-size: 13px; margin-bottom: 4px; }
-          #classPdfPage.instagram-post .lesson-main { font-size: 17px; }
+          /* Lesson headings had 6px of side padding in a ~124px column and a
+             1.08 line-height, so three stacked lines sat almost touching. The
+             repeated word "الحصة" now recedes and the ordinal leads, which
+             gives the stack a hierarchy instead of three competing lines. */
+          #classPdfPage.instagram-post .lesson-label { line-height: 1.3; margin-bottom: 7px; }
+          #classPdfPage.instagram-post .lesson-small {
+            font-size: 12px; font-weight: 700; opacity: 0.70;
+            margin-bottom: 4px; letter-spacing: .3px;
+          }
+          #classPdfPage.instagram-post .lesson-main { font-size: 18px; line-height: 1.2; }
           #classPdfPage.instagram-post .lesson-time {
-            font-size: 13px;
-            margin-top: 8px;
+            font-size: 12.5px;
+            font-weight: 600;
+            opacity: 0.78;
+            margin-top: 0;
+            letter-spacing: .2px;
             direction: ltr;
             unicode-bidi: isolate;
           }
@@ -3342,10 +3421,14 @@
             <div class="school-brand">
               <img id="classPdfLogo" class="pdf-logo" src="/images/schoollogo.png" alt="School Logo">
               <div class="school-name">ثانوية أحمد البشر الرومي</div>
+              <div class="brand-week">
+                <img class="post-calendar" src="/images/calendar-icon.webp" alt="" aria-hidden="true">
+                <span>${escapeHtml(weekRangeText)}</span>
+              </div>
             </div>
             <div class="post-title">
-              <div class="class-line">${escapeHtml(classLabel)}</div>
-              <img class="post-calendar" src="/images/calendar-icon.webp" alt="" aria-hidden="true">
+              <div class="class-chip"><div class="class-line">${escapeHtml(classLabel)}</div></div>
+              <div class="post-kicker">جدول الفصل الأسبوعي</div>
             </div>
             ` : `
             <img id="classPdfLogo" class="pdf-logo" src="/images/schoollogo.png" alt="School Logo">
