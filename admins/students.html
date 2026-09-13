@@ -4191,6 +4191,9 @@ function openClass(className){
   // filter this one's roster.
   studentSearchQuery = '';
   studentSearchInput.value = '';
+  showOnlySpecialCases = false;
+  filterSpecialCases.textContent = 'عرض الحالات الخاصة فقط';
+  filterSpecialCases.classList.remove('filter-active');
   openSheet(classSheet);
   loadStudents(className);
 }
@@ -4421,6 +4424,15 @@ async function loadStudents(className){
     const snap = await getDocs(qy);
     const arr = [];
     snap.forEach(d=> arr.push({ id:d.id, ...d.data() }));
+    // Older student records can use different spacing in their class key.
+    // The school total still counts them, but an exact Firestore query does
+    // not. Only scan the collection when the exact roster is empty.
+    if(!arr.length){
+      const allStudents = await getDocs(collection(db,'students'));
+      allStudents.forEach(d=>{
+        if(classKeyMatches(d.data().class, className)) arr.push({ id:d.id, ...d.data() });
+      });
+    }
     
     // Check if any students are missing studentNumber
     const studentsMissingNumber = arr.filter(st => st.studentNumber === undefined || st.studentNumber === null);
