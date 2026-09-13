@@ -2057,25 +2057,44 @@
       const cached = teachersCache.get(classKey);
       if(cached && (Date.now() - cached.at) < TEACHERS_TTL_MS) return cached.list;
 
-      // Fast query using array-contains
-      const qs = query(collection(db,'teachers'), where('classes','array-contains', classKey));
-      const snap = await getDocs(qs);
+      // Two queries, merged: teachers explicitly assigned this class, PLUS
+      // every department head regardless of their own `classes` array.
+      //
+      // A head doesn't necessarily teach every class in their department
+      // themselves, but they need to be assignable to any of them as a
+      // substitute — this is exactly how findHeadOfDepartment() in
+      // teacherschedule.html already looks heads up too: by role, never by
+      // a per-class assignment. Reported case: the الإسلامية head wasn't
+      // selectable for 10 / 1 because that class was never in his own
+      // `classes` list, even though he's still the right person to cover
+      // an Islamic-studies lesson there.
+      const [byClassSnap, headsSnap] = await Promise.all([
+        getDocs(query(collection(db,'teachers'), where('classes','array-contains', classKey))),
+        getDocs(query(collection(db,'teachers'), where('role','==','head'))),
+      ]);
 
-      const out = [];
-      snap.forEach(d=>{
+      const byUid = new Map();
+      const addTeacherDoc = (d, { forcedHead = false } = {}) => {
         const t = d.data() || {};
-        out.push({
-          uid: t.uid || d.id,
+        const uid = t.uid || d.id;
+        if(byUid.has(uid)) return; // already included from the other query
+        byUid.set(uid, {
+          uid,
           name: t.name || t.email || t.uid || d.id,
           isSupervisor: !!t.isSupervisor,
+          isHead: forcedHead || (t.role || '').toString().toLowerCase() === 'head',
           subject: t.subject || ''
         });
-      });
+      };
+      byClassSnap.forEach(d => addTeacherDoc(d));
+      headsSnap.forEach(d => addTeacherDoc(d, { forcedHead: true }));
+
+      const out = Array.from(byUid.values());
 
       out.sort((a,b)=>{
-        const aS = a.isSupervisor ? 1 : 0;
-        const bS = b.isSupervisor ? 1 : 0;
-        if(aS !== bS) return bS - aS;
+        const aTop = (a.isSupervisor || a.isHead) ? 1 : 0;
+        const bTop = (b.isSupervisor || b.isHead) ? 1 : 0;
+        if(aTop !== bTop) return bTop - aTop;
         return (a.name||"").localeCompare((b.name||""), 'ar');
       });
 
@@ -2166,12 +2185,18 @@
       comboAssignOptions = (teacherOpts || []).map(t => {
         const subject = (t.subject || '—').trim();
         const name = t.name || '';
+        // 👑 marks a department head included here regardless of their own
+        // `classes` list — see getTeachersForClass(). Without it, an admin
+        // has no way to tell why someone who doesn't normally teach this
+        // class showed up in the picker.
+        const badge = `${t.isSupervisor ? ' ⭐' : ''}${t.isHead ? ' 👑' : ''}`;
         return {
           value: JSON.stringify({ subject, teacherUid: t.uid, teacherName: name }),
           name,
           subject,
           isSupervisor: !!t.isSupervisor,
-          text: `${subject} | ${name}${t.isSupervisor ? ' ⭐' : ''}`
+          isHead: !!t.isHead,
+          text: `${subject} | ${name}${badge}`
         };
       });
     }
@@ -2206,8 +2231,9 @@
 
     function teacherOptionRowHtml(opt, queryText){
       const star = opt.isSupervisor ? ' <span class="tc-star">⭐</span>' : '';
+      const crown = opt.isHead ? ' <span class="tc-star">👑</span>' : '';
       return `
-        <span class="tc-name">${highlightMatch(opt.name, queryText)}${star}</span>
+        <span class="tc-name">${highlightMatch(opt.name, queryText)}${star}${crown}</span>
         <span class="tc-subject">${highlightMatch(opt.subject, queryText)}</span>
       `;
     }
