@@ -2199,6 +2199,7 @@ import { mountAttendanceSheet } from "/shared/attendance.js";
 import { fetchStudentAttendanceData, makeAttTile, makeMorningLateTile } from "/shared/attendance-tiles.js";
 import { renderWarningState, renderExcusedWarningState } from "/shared/warning-system.js";
 import { DEFAULT_CLASS_LIST, fetchClassList, groupByGrade, availableNumbersToAdd, buildClassKey, primeClassList, parseClassKey } from "/shared/class-registry.js";
+import { getDisplaySubjectForTrack } from "/shared/departments.js";
 
 
 
@@ -4230,7 +4231,16 @@ async function loadClassTeachers(className){
     const snap = await getDocs(collection(db,'teachers'));
     const teachers = snap.docs
       .map(d=>({uid:d.id, ...d.data()}))
-      .filter(t=> Array.isArray(t.classes) && t.classes.some(c=>classKeyMatches(c, className)));
+      .filter(t=>
+        (Array.isArray(t.classes) && t.classes.some(c=>classKeyMatches(c, className)))
+        // A head doesn't necessarily have every class in their own
+        // department listed in their own `classes` array, but they're
+        // still the right contact for any of them — same rationale
+        // admins/adminschedule.html's teacher picker already applies
+        // (reported case there: the التربية الإسلامية head wasn't
+        // selectable for 10 / 1 for exactly this reason).
+        || (t.role||'').toString().toLowerCase()==='head'
+      );
     // Heads first, then alphabetically — mirrors admins/teachers.html's ordering.
     teachers.sort((a,b)=>{
       const aHead=(a.role||'').toString().toLowerCase()==='head';
@@ -4264,12 +4274,20 @@ const SUBJECT_FILTER_ORDER = [
   'المكتبات','الدراسات العملية','التربية البيئية','الإحصاء',
 ];
 
+// The math department teaches الإحصاء, not الرياضيات, in the د track —
+// applies to whichever class the معلمو فصل sheet is currently open for,
+// regardless of what a given teacher's own تخصص داخلي is recorded as.
+function classTeacherDisplaySubject(t){
+  const track = parseClassKey(selectedClass).track;
+  return (getDisplaySubjectForTrack(t.subject, track) || '').toString().trim();
+}
+
 // Subject filter chips at the top of the sheet — only the subjects this
 // class's own teachers actually hold, not the school's full subject list,
 // since a filter offering subjects with zero matches would be dead weight.
 function renderClassTeachersFilters(){
   const subjects = [...new Set(
-    classTeachersCache.map(t=>(t.subject||'').toString().trim()).filter(Boolean)
+    classTeachersCache.map(t=>classTeacherDisplaySubject(t)).filter(Boolean)
   )].sort((a,b)=>{
     const ia=SUBJECT_FILTER_ORDER.indexOf(a), ib=SUBJECT_FILTER_ORDER.indexOf(b);
     if(ia===-1 && ib===-1) return a.localeCompare(b,'ar');
@@ -4302,7 +4320,7 @@ function renderClassTeachersFilters(){
 
 function renderClassTeachersList(){
   const filtered = classTeachersSubjectFilter
-    ? classTeachersCache.filter(t=>(t.subject||'').toString().trim()===classTeachersSubjectFilter)
+    ? classTeachersCache.filter(t=>classTeacherDisplaySubject(t)===classTeachersSubjectFilter)
     : classTeachersCache;
   classTeachersList.innerHTML='';
   if(filtered.length===0){
@@ -4317,7 +4335,7 @@ function renderClassTeachersList(){
   const fragment = document.createDocumentFragment();
   filtered.forEach(t=>{
     const isHead=(t.role||'').toString().toLowerCase()==='head';
-    const subject=(t.subject||'').toString().trim() || '—';
+    const subject=classTeacherDisplaySubject(t) || '—';
     const el=document.createElement('div');
     el.className='item will-change';
     el.innerHTML = `

@@ -217,3 +217,22 @@ export function getDepartmentSubjectFilters(department) {
   const subjects = SUBJECT_LIST.filter((s) => SUBJECT_TO_ALLOWED_DEPARTMENTS[s].includes(dept));
   return subjects.length ? subjects : [dept];
 }
+
+/**
+ * In the د (أدبي) track — 11د and 12د — some departments' curriculum
+ * subject differs from a given teacher's own تخصص داخلي: math teaches
+ * الإحصاء there instead of الرياضيات, and الجغرافيا والتاريخ teaches
+ * التاريخ there instead of الاجتماعيات. Display-only: never changes what's
+ * actually stored on a teacher or schedule record, only how the subject
+ * is labeled for a د-track class (class rosters, schedule grids, etc).
+ */
+const TRACK_D_SUBJECT_OVERRIDES = Object.freeze({
+  'الرياضيات': 'الإحصاء',
+  'الاجتماعيات': 'التاريخ',
+});
+export function getDisplaySubjectForTrack(subject, track) {
+  const rawSubject = (subject || '').toString().trim();
+  const rawTrack = (track || '').toString().trim();
+  if (rawTrack !== 'د') return subject;
+  return TRACK_D_SUBJECT_OVERRIDES[rawSubject] || subject;
+}
