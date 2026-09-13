@@ -626,6 +626,7 @@
       initializeFirestore, persistentSingleTabManager, collection, getDocs, query, where,
       doc, getDoc, Timestamp
     } from "/shared/firebase.js";
+    import { resolveDepartmentName, getDepartmentSubjectFilters } from "/shared/departments.js";
 
 
 
@@ -713,26 +714,10 @@
       }).format(date);
     }
 
-    const MERGED_DEPARTMENTS = [
-      { department: 'الفيزياء والكيمياء', subjects: ['الفيزياء','الكيمياء'] },
-      { department: 'الجيولوجيا والأحياء', subjects: ['الجيولوجيا','الأحياء'] },
-      { department: 'علم النفس والفلسفة', subjects: ['علم النفس','الفلسفة'] },
-      { department: 'التاريخ والجغرافيا', subjects: ['التاريخ','الجغرافيا','جغرافيا'] }
-    ];
-    function resolveDepartmentName(rawValue){
-      const value=(rawValue||'').toString().trim();
-      if(!value) return '';
-      for(const group of MERGED_DEPARTMENTS){
-        if(value===group.department || group.subjects.includes(value)) return group.department;
-      }
-      return value;
-    }
-    function getDepartmentSubjectFilters(department){
-      const normalized=resolveDepartmentName(department);
-      const group=MERGED_DEPARTMENTS.find(item=>item.department===normalized);
-      if(!group) return [normalized].filter(Boolean);
-      return [group.department, ...group.subjects];
-    }
+    // Department taxonomy and resolveDepartmentName/getDepartmentSubjectFilters
+    // now come from shared/departments.js — this file's own copy had two
+    // departments' names in the wrong word order and was missing الدستور
+    // from the philosophy/psychology department.
 
     let headDept = '';
     let teachersList = [];

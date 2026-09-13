@@ -485,6 +485,7 @@
     } from "/shared/firebase.js";
     import { watchPresence } from "/shared/presence.js";
     import { fetchClassList, sortClassList, primeClassList } from "/shared/class-registry.js";
+    import { resolveDepartmentName, getMergedSubjectsForDepartment, getDepartmentSubjectFilters } from "/shared/departments.js";
 
 
 
@@ -528,20 +529,10 @@
     const deptLabel = document.getElementById('deptLabel');
     const btnBack = document.getElementById('btnBack');
 
-    const MERGED_DEPARTMENTS = [
-      { department: 'الفيزياء والكيمياء', subjects: ['الفيزياء','الكيمياء'] },
-      { department: 'الجيولوجيا والأحياء', subjects: ['الجيولوجيا','الأحياء'] },
-      { department: 'علم النفس والفلسفة', subjects: ['علم النفس','الفلسفة'] },
-      { department: 'التاريخ والجغرافيا', subjects: ['التاريخ','الجغرافيا','جغرافيا'] }
-    ];
-    function resolveDepartmentName(rawValue){
-      const value=(rawValue||'').toString().trim();
-      if(!value) return '';
-      for(const group of MERGED_DEPARTMENTS){
-        if(value===group.department || group.subjects.includes(value)) return group.department;
-      }
-      return value;
-    }
+    // Department taxonomy and resolveDepartmentName/getMergedSubjectsForDepartment/
+    // getDepartmentSubjectFilters now come from shared/departments.js — this
+    // file's own copy had two departments' names in the wrong word order
+    // and was missing الدستور from the philosophy/psychology department.
 
     /* ========= Data Loading ========= */
     let headDept = '';
@@ -648,17 +639,6 @@
     // loadTeachers() — makeClassRow() (the only consumer) is only ever
     // invoked later from a user-opened add/edit teacher form.
     let classOptions = [];
-
-    // Reuses this file's own MERGED_DEPARTMENTS instead of porting
-    // admins/teachers.html's separate hardcoded per-department constants.
-    function getMergedSubjectsForDepartment(dept){
-      const group = MERGED_DEPARTMENTS.find(g => g.department === dept);
-      return group ? group.subjects : [];
-    }
-    function getDepartmentSubjectFilters(dept){
-      const subjects = getMergedSubjectsForDepartment(dept);
-      return subjects.length ? [dept, ...subjects] : [dept];
-    }
 
     function buildTeacherEmailFromCivilId(civilId){
       const digits=(civilId||'').toString().replace(/\D+/g,'');

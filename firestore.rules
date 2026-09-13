@@ -19,13 +19,30 @@ service cloud.firestore {
       return (d != null && d.role is string) ? d.role : "";
     }
 
+    // Mirrors shared/departments.js' resolveDepartmentName() and index.js'
+    // canonicalDepartment() — all three must resolve every input the same
+    // way, or a department head's write access here disagrees with what
+    // the client (or the password-reset endpoint in index.js) thinks
+    // they're allowed to do.
+    //
+    // Accepts both the corrected department names (shared/departments.js
+    // is the source of truth for these) and the old, wrongly-ordered or
+    // wrongly-grouped names some existing teacher docs may still carry
+    // ("الجيولوجيا والأحياء", "علم النفس والفلسفة", "التاريخ والجغرافيا")
+    // so a head's access does not change mid-migration, before every
+    // existing doc has been renamed to the corrected department name.
+    // Once the migration in admins/teachers.html has run against every
+    // teacher doc, the three old-name branches below can be removed.
     function canonicalDepartment(raw) {
       let v = (raw is string) ? raw : "";
       return (
         (v == "الفيزياء" || v == "الكيمياء" || v == "الفيزياء والكيمياء") ? "الفيزياء والكيمياء" :
-        (v == "الجيولوجيا" || v == "الأحياء" || v == "الجيولوجيا والأحياء") ? "الجيولوجيا والأحياء" :
-        (v == "علم النفس" || v == "الفلسفة" || v == "علم النفس والفلسفة") ? "علم النفس والفلسفة" :
-        (v == "التاريخ" || v == "الجغرافيا" || v == "جغرافيا" || v == "التاريخ والجغرافيا") ? "التاريخ والجغرافيا" :
+        (v == "الجيولوجيا" || v == "الأحياء" || v == "التربية البيئية"
+          || v == "الأحياء والجيولوجيا" || v == "الجيولوجيا والأحياء") ? "الأحياء والجيولوجيا" :
+        (v == "الفلسفة" || v == "علم النفس" || v == "الدستور"
+          || v == "العلوم الفلسفية" || v == "علم النفس والفلسفة") ? "العلوم الفلسفية" :
+        (v == "التاريخ" || v == "الجغرافيا" || v == "جغرافيا" || v == "الاجتماعيات"
+          || v == "الجغرافيا والتاريخ" || v == "التاريخ والجغرافيا") ? "الجغرافيا والتاريخ" :
         v
       );
     }

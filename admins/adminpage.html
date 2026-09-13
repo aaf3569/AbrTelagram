@@ -1290,6 +1290,7 @@
     import { mountTelegramSettings } from "/shared/telegram-settings.js";
     import { initNotificationPopup } from "/shared/notification-popup.js";
     import { mountFeedbackSheet } from "/shared/feedback.js";
+    import { DEPARTMENT_LIST, getDepartmentSubjectFilters } from "/shared/departments.js";
     import { startPresenceHeartbeat } from "/shared/presence.js";
     import { mountAttendanceSheet } from "/shared/attendance.js";
     import { fetchClassList, sortClassList, primeClassList } from "/shared/class-registry.js";
@@ -2036,13 +2037,10 @@
     };
 
     /* ========= Subjects ========= */
-    const subjectsKW = [
-      "اللغة العربية", "اللغة الإنجليزية", "الرياضيات",
-      "التربية الإسلامية", "التاريخ", "الجغرافيا",
-      "الاقتصاد", "الفلسفة", "علم النفس",
-      "الفيزياء", "الكيمياء", "الأحياء", "الجيولوجيا",
-      "الحاسوب", "التربية البدنية", "التربية الفنية"
-    ];
+    // One entry per real department (16) — "الاقتصاد" (Economics) used to
+    // be listed here; it isn't a real department at this school at all.
+    // See shared/departments.js for the corrected taxonomy this now uses.
+    const subjectsKW = DEPARTMENT_LIST.slice();
 
     function renderSubjects(){
       subjectsList.innerHTML = '';
@@ -2952,7 +2950,16 @@
     async function loadTeachers(subject){
       teachersList.innerHTML='';
       try{
-        const q = query(collection(db,'teachers'), where('subject','==', subject));
+        // subjectsKW's entries are department names, but a teacher's own
+        // `subject` field is always the specific subject taught (e.g.
+        // "الفلسفة"), never the department name — a plain equality query
+        // against a merged department like "العلوم الفلسفية" always came
+        // back empty. Expand to every subject eligible under that
+        // department first.
+        const eligibleSubjects = getDepartmentSubjectFilters(subject);
+        const q = eligibleSubjects.length > 1
+          ? query(collection(db,'teachers'), where('subject','in', eligibleSubjects))
+          : query(collection(db,'teachers'), where('subject','==', eligibleSubjects[0] || subject));
         const snap = await getDocs(q);
         if(snap.empty){
           const empty=document.createElement('div');

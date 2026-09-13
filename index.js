@@ -1058,14 +1058,24 @@ async function requireAdminFromRequest(req, res) {
 }
 
 // Mirrors firestore.rules' canonicalDepartment()/headDepartment()/
-// teacherInHeadDepartment() exactly (same merged-department groups), so a
-// department head's server-side authorization here agrees with what their
+// teacherInHeadDepartment() exactly, and shared/departments.js'
+// resolveDepartmentName() (the browser-side copy of this same taxonomy —
+// this file is plain Node/CommonJS so it can't import that ES module
+// directly; keep this list in sync with it by hand), so a department
+// head's server-side authorization here agrees with what their
 // client-side Firestore writes are already scoped to.
+//
+// Accepts both the corrected department names and the old, wrongly-
+// ordered or wrongly-grouped names some existing teacher docs may still
+// carry ("الجيولوجيا والأحياء", "علم النفس والفلسفة", "التاريخ والجغرافيا")
+// so access doesn't change mid-migration. Once every teacher doc has been
+// renamed (the migration tool in admins/teachers.html), the old-name
+// entries in each group below can be dropped.
 const MERGED_DEPARTMENTS = [
   { department: "الفيزياء والكيمياء", subjects: ["الفيزياء", "الكيمياء"] },
-  { department: "الجيولوجيا والأحياء", subjects: ["الجيولوجيا", "الأحياء"] },
-  { department: "علم النفس والفلسفة", subjects: ["علم النفس", "الفلسفة"] },
-  { department: "التاريخ والجغرافيا", subjects: ["التاريخ", "الجغرافيا", "جغرافيا"] },
+  { department: "الأحياء والجيولوجيا", subjects: ["الجيولوجيا", "الأحياء", "التربية البيئية", "الجيولوجيا والأحياء"] },
+  { department: "العلوم الفلسفية", subjects: ["الفلسفة", "علم النفس", "الدستور", "علم النفس والفلسفة"] },
+  { department: "الجغرافيا والتاريخ", subjects: ["التاريخ", "الجغرافيا", "جغرافيا", "الاجتماعيات", "التاريخ والجغرافيا"] },
 ];
 function canonicalDepartment(raw) {
   const value = typeof raw === "string" ? raw : "";

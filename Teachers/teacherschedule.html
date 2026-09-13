@@ -1233,6 +1233,7 @@
       getOverriddenClassKeys, mergeCustomIntoLessonMap, classKeyFromRow, normalizeClassKey
     } from "/shared/schedule-priority.js";
     import { fetchClassList, sortClassList, primeClassList } from "/shared/class-registry.js";
+    import { DEPARTMENT_LIST, resolveDepartmentName, getDepartmentSubjectFilters } from "/shared/departments.js";
 
 
 
@@ -1296,39 +1297,12 @@
     // the only consumer) is first called.
     let CLASS_OPTIONS = [];
 
-    const FIXED_DEPARTMENTS = [
-      "اللغة العربية",
-      "اللغة الإنجليزية",
-      "الرياضيات",
-      "التربية الإسلامية",
-      "التاريخ",
-      "الجغرافيا",
-      "الاقتصاد",
-      "الفلسفة",
-      "علم النفس",
-      "الفيزياء",
-      "الكيمياء",
-      "الأحياء",
-      "الجيولوجيا",
-      "الحاسوب",
-      "التربية البدنية",
-      "التربية الفنية"
-    ];
-
-    const MERGED_DEPARTMENT_GROUPS = [
-      { department: "الفيزياء والكيمياء", subjects: ["الفيزياء","الكيمياء"] },
-      { department: "الجيولوجيا والأحياء", subjects: ["الجيولوجيا","الأحياء"] },
-      { department: "علم النفس والفلسفة", subjects: ["علم النفس","الفلسفة"] },
-      { department: "التاريخ والجغرافيا", subjects: ["التاريخ","الجغرافيا","جغرافيا"] }
-    ];
-    function resolveDepartmentName(rawValue){
-      const value = (rawValue || "").toString().trim();
-      if(!value) return "";
-      for(const group of MERGED_DEPARTMENT_GROUPS){
-        if(value === group.department || group.subjects.includes(value)) return group.department;
-      }
-      return value;
-    }
+    // FIXED_DEPARTMENTS/MERGED_DEPARTMENT_GROUPS/resolveDepartmentName used
+    // to be a local, hand-copied taxonomy (16 subjects, no الدستور، wrong
+    // word order on two merged departments, and a phantom "الاقتصاد" that
+    // isn't a real department here at all). Now shared with every other
+    // page from one corrected source — see shared/departments.js for what
+    // changed and why.
 
     /* ========= Live Lesson Times ========= */
     const DEFAULT_LESSON_TIMES = [
@@ -3906,7 +3880,7 @@
       const defaultFromLesson = normalizeLessonNumber(meta?.lesson);
       const defaultFromClassKey = safeText(meta?.classKey).trim() || '—';
 
-      const departmentSet = new Set(FIXED_DEPARTMENTS.map(resolveDepartmentName).filter(Boolean));
+      const departmentSet = new Set(DEPARTMENT_LIST);
       teachers.forEach(t => {
         const dep = resolveDepartmentName(t.normalizedDepartment || t.department || t.subject || '');
         if (dep) departmentSet.add(dep);
@@ -4268,10 +4242,18 @@
         // department, so "كل الأقسام" has to stay reachable.
         departmentSelect.addEventListener('change', () => {
           const selected = resolveDepartmentName(departmentSelect.value);
+          // Widened to every subject eligible under this department, not
+          // just an exact department-name match — الجغرافيا والتاريخ and
+          // العلوم الفلسفية share one academic supervision at this school,
+          // so picking either one should also surface the other's
+          // teachers as valid cover candidates.
+          const eligibleSubjects = selected ? getDepartmentSubjectFilters(selected) : null;
           const inDepartment = selected
-            ? teachers.filter(t => resolveDepartmentName(
-                t.normalizedDepartment || t.department || t.subject || ''
-              ) === selected)
+            ? teachers.filter(t => {
+                const subject = (t.subject || '').toString().trim();
+                if (subject && eligibleSubjects.includes(subject)) return true;
+                return resolveDepartmentName(t.normalizedDepartment || t.department || t.subject || '') === selected;
+              })
             : teachers;
 
           teacherSelect.innerHTML = teacherSelectOptions(inDepartment, currentUser.uid);

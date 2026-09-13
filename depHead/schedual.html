@@ -840,6 +840,7 @@
       limit, orderBy, onSnapshot, writeBatch
     } from "/shared/firebase.js";
     import { fetchClassList, sortClassList, primeClassList } from "/shared/class-registry.js";
+    import { resolveDepartmentName, getDepartmentSubjectFilters } from "/shared/departments.js";
 
     
 
@@ -957,20 +958,10 @@
       weekKey: ""
     };
 
-    const MERGED_DEPARTMENTS = [
-      { department: 'الفيزياء والكيمياء', subjects: ['الفيزياء','الكيمياء'] },
-      { department: 'الجيولوجيا والأحياء', subjects: ['الجيولوجيا','الأحياء'] },
-      { department: 'علم النفس والفلسفة', subjects: ['علم النفس','الفلسفة'] },
-      { department: 'التاريخ والجغرافيا', subjects: ['التاريخ','الجغرافيا','جغرافيا'] }
-    ];
-    function resolveDepartmentName(rawValue){
-      const value=(rawValue||'').toString().trim();
-      if(!value) return '';
-      for(const group of MERGED_DEPARTMENTS){
-        if(value===group.department || group.subjects.includes(value)) return group.department;
-      }
-      return value;
-    }
+    // Department taxonomy and resolveDepartmentName/getDepartmentSubjectFilters
+    // now come from shared/departments.js — this file's own copy had two
+    // departments' names in the wrong word order and was missing الدستور
+    // from the philosophy/psychology department.
 
     /* ========= Helpers ========= */
     const pad2 = (n)=> String(n).padStart(2,'0');
@@ -1290,12 +1281,19 @@
 
     async function getTeachersByDepartment(department, excludeUid = headUid){
       const normalizedDepartment = resolveDepartmentName(department);
+      // Widened to every subject eligible under this department, not just
+      // an exact department-name match — الجغرافيا والتاريخ and العلوم
+      // الفلسفية share one academic supervision at this school, so a swap
+      // request against either should also surface the other's teachers.
+      const eligibleSubjects = getDepartmentSubjectFilters(normalizedDepartment);
       const teachers = await loadTeachersList();
       return teachers
-        .filter(t=>
-          t.uid !== excludeUid &&
-          resolveDepartmentName(t.normalizedDepartment || t.department || t.subject || '') === normalizedDepartment
-        )
+        .filter(t=>{
+          if(t.uid === excludeUid) return false;
+          const subject = (t.subject || '').toString().trim();
+          if(subject && eligibleSubjects.includes(subject)) return true;
+          return resolveDepartmentName(t.normalizedDepartment || t.department || t.subject || '') === normalizedDepartment;
+        })
         .sort((a,b)=> a.name.localeCompare(b.name,'ar'));
     }
 

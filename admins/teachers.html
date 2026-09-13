@@ -479,6 +479,16 @@
           </div>
           <div class="sidebar-heading">الأقسام الدراسية</div>
         </div>
+        <!-- One-time fix (see shared/departments.js): renames any teacher
+             doc still carrying one of the old, wrongly-ordered/wrongly-
+             grouped department names to the corrected one. Safe to run
+             more than once — a doc already on the corrected name is left
+             untouched, so once every doc is fixed this reports nothing to
+             do and can stay in place harmlessly. -->
+        <button id="btnFixDepartments" class="subject subject-card" type="button" style="margin-bottom:10px; color:#8a5a00; border-color:rgba(138,90,0,.3);">
+          <span>🛠️ إصلاح أسماء الأقسام (مرّة واحدة)</span>
+          <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+        </button>
         <button id="openAdminsTop" class="subject subject-card subject-admin-entry" type="button" aria-label="الإدارة">
           <span>الإدارة</span>
           <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
@@ -487,6 +497,31 @@
       </section>
     </div>
   </main>
+
+  <!-- Department-name migration report -->
+  <div id="fixDeptModal" class="modal-overlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="fixDeptTitle">
+      <div class="modal-header">
+        <h3 id="fixDeptTitle" class="modal-title">إصلاح أسماء الأقسام</h3>
+        <button id="fixDeptClose" class="close-modal" type="button" aria-label="إغلاق">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="muted" style="margin-bottom:12px;">
+          يصحّح اسم القسم في سجلّ كلّ معلّم لا يزال يحمل الاسم القديم:
+          «الجيولوجيا والأحياء» ← «الأحياء والجيولوجيا»،
+          «علم النفس والفلسفة» ← «العلوم الفلسفية»،
+          «التاريخ والجغرافيا» ← «الجغرافيا والتاريخ».
+          لا يغيّر مادّة أيّ معلّم، فقط اسم قسمه.
+        </p>
+        <div id="fixDeptStatus" class="muted">اضغط "تشغيل" لفحص كلّ المعلّمين.</div>
+        <div id="fixDeptReport" style="margin-top:12px; display:flex; flex-direction:column; gap:8px;"></div>
+      </div>
+      <div class="modal-footer">
+        <button id="fixDeptCancel" class="btn ghost" type="button">إغلاق</button>
+        <button id="fixDeptRun" class="btn primary" type="button">تشغيل</button>
+      </div>
+    </div>
+  </div>
 
   <section id="desktopWelcome" aria-hidden="true">
     <div class="desktop-welcome-inner">
@@ -774,9 +809,17 @@
     import { firebaseConfig } from "/shared/firebase.js";
     import { initializeApp, getApp, getApps } from "/shared/firebase.js";
     import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signOut, EmailAuthProvider, reauthenticateWithCredential } from "/shared/firebase.js";
-    import { initializeFirestore, persistentSingleTabManager, collection, getDocs, query, where, doc, getDoc, setDoc, updateDoc, deleteField, serverTimestamp } from "/shared/firebase.js";
+    import { initializeFirestore, persistentSingleTabManager, collection, getDocs, query, where, doc, getDoc, setDoc, updateDoc, deleteField, serverTimestamp, writeBatch } from "/shared/firebase.js";
     import { startPresenceHeartbeat, watchPresence } from "/shared/presence.js";
     import { fetchClassList, sortClassList, primeClassList } from "/shared/class-registry.js";
+    import {
+      DEPARTMENT_LIST,
+      resolveDepartmentName,
+      isMergedDepartment,
+      getMergedSubjectsForDepartment,
+      getDepartmentSubjectFilters,
+      getMergedDepartmentSpecializationMessage,
+    } from "/shared/departments.js";
 
 
     const app=getApps().length?getApp():initializeApp(firebaseConfig);
@@ -922,6 +965,13 @@
     const edAddClass=document.getElementById('edAddClass');
     const addTeacherModal=document.getElementById('addTeacherModal');
     const closeAddTeacherModal=document.querySelector('#addTeacherModal .close-modal');
+    const btnFixDepartments=document.getElementById('btnFixDepartments');
+    const fixDeptModal=document.getElementById('fixDeptModal');
+    const fixDeptClose=document.getElementById('fixDeptClose');
+    const fixDeptCancel=document.getElementById('fixDeptCancel');
+    const fixDeptRun=document.getElementById('fixDeptRun');
+    const fixDeptStatus=document.getElementById('fixDeptStatus');
+    const fixDeptReport=document.getElementById('fixDeptReport');
     const cancelAddTeacher=document.getElementById('cancelAddTeacher');
     const teacherName=document.getElementById('teacherName');
     const teacherEmail=document.getElementById('teacherEmail');
@@ -1009,15 +1059,11 @@
     const emailRx=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const toArabicDigits=(str)=>(str||'').toString().replace(/\d/g,d=>'٠١٢٣٤٥٦٧٨٩'[d]);
     const TEACHER_HASH_PREFIX = '#/teacher/';
-    const PHYSICS_CHEM_DEPARTMENT = "الفيزياء والكيمياء";
-    const PHYSICS_CHEM_SUBJECTS = ["الفيزياء","الكيمياء"];
-    const GEO_BIO_DEPARTMENT = "الجيولوجيا والأحياء";
-    const GEO_BIO_SUBJECTS = ["الجيولوجيا","الأحياء"];
-    const PSY_PHIL_DEPARTMENT = "علم النفس والفلسفة";
-    const PSY_PHIL_SUBJECTS = ["علم النفس","الفلسفة"];
-    const HIST_GEO_DEPARTMENT = "التاريخ والجغرافيا";
-    const HIST_GEO_SUBJECTS = ["التاريخ","الجغرافيا"];
-    const HIST_GEO_SUBJECT_MATCHES = ["التاريخ","الجغرافيا","جغرافيا"];
+    // Department/subject taxonomy, and the merged-department helpers below
+    // that used to be hand-copied here, now come from shared/departments.js
+    // — that copy had two departments' names in the wrong word order, was
+    // missing الدستور from the philosophy/psychology department entirely,
+    // and had a phantom "الاقتصاد" that isn't a real department here.
     const SUPERVISOR_GRADE_MAP = {
       "10":"مشرف الصف العاشر",
       "11":"مشرف الصف الحادي عشر",
@@ -1087,43 +1133,16 @@
       syncBodyScrollLock();
     };
 
-    const subjectsKW=["اللغة العربية","اللغة الإنجليزية","الرياضيات","التربية الإسلامية",HIST_GEO_DEPARTMENT,PSY_PHIL_DEPARTMENT,PHYSICS_CHEM_DEPARTMENT,GEO_BIO_DEPARTMENT,"الحاسوب","التربية البدنية","التربية الفنية","الدراسات العملية","التربية الموسيقية","اللغة الفرنسية","المكتبات","التجاري"];
+    // One entry per real department (16) — for a single-specialization
+    // department the department name and its one subject are the same
+    // string, so this doubles as "pick your subject" for those.
+    const subjectsKW = DEPARTMENT_LIST.slice();
 
     // Fetched from settings/classes inside onAuthStateChanged below, before
     // show(sTeachers) — makeClassRow() (the only consumer) is only ever
     // invoked later from a user-opened add/edit teacher form.
     let classOptions=[];
 
-    function getMergedSubjectsForDepartment(subject){
-      if(subject===PHYSICS_CHEM_DEPARTMENT) return PHYSICS_CHEM_SUBJECTS;
-      if(subject===GEO_BIO_DEPARTMENT) return GEO_BIO_SUBJECTS;
-      if(subject===PSY_PHIL_DEPARTMENT) return PSY_PHIL_SUBJECTS;
-      if(subject===HIST_GEO_DEPARTMENT) return HIST_GEO_SUBJECTS;
-      return [];
-    }
-    function isMergedDepartment(subject){
-      return getMergedSubjectsForDepartment(subject).length>0;
-    }
-    function mapTeacherSubjectToDepartment(subject){
-      if(!subject) return null;
-      if(subject===PHYSICS_CHEM_DEPARTMENT || PHYSICS_CHEM_SUBJECTS.includes(subject)) return PHYSICS_CHEM_DEPARTMENT;
-      if(subject===GEO_BIO_DEPARTMENT || GEO_BIO_SUBJECTS.includes(subject)) return GEO_BIO_DEPARTMENT;
-      if(subject===PSY_PHIL_DEPARTMENT || PSY_PHIL_SUBJECTS.includes(subject)) return PSY_PHIL_DEPARTMENT;
-      if(subject===HIST_GEO_DEPARTMENT || HIST_GEO_SUBJECT_MATCHES.includes(subject)) return HIST_GEO_DEPARTMENT;
-      return subject;
-    }
-    function getDepartmentSubjectFilters(subject){
-      const mergedSubjects=getMergedSubjectsForDepartment(subject);
-      if(subject===HIST_GEO_DEPARTMENT) return [subject, ...HIST_GEO_SUBJECT_MATCHES];
-      return mergedSubjects.length ? [subject, ...mergedSubjects] : [subject];
-    }
-    function getMergedDepartmentSpecializationMessage(subject){
-      if(subject===PHYSICS_CHEM_DEPARTMENT) return 'اختر التخصص: الفيزياء أو الكيمياء.';
-      if(subject===GEO_BIO_DEPARTMENT) return 'اختر التخصص: الجيولوجيا أو الأحياء.';
-      if(subject===PSY_PHIL_DEPARTMENT) return 'اختر التخصص: علم النفس أو الفلسفة.';
-      if(subject===HIST_GEO_DEPARTMENT) return 'اختر التخصص: التاريخ أو الجغرافيا.';
-      return 'اختر التخصص.';
-    }
     async function ensureSingleHeadForDepartment(department, { excludeUid=null } = {}){
       if(!isMergedDepartment(department)) return;
       const subjectFilters=[...new Set(getDepartmentSubjectFilters(department).filter(Boolean))];
@@ -1949,7 +1968,7 @@
       edTDisplayedPassword.value=getStoredDisplayedPassword(d);
       setDisplayedPasswordVisibility(false);
       edTRole.value=d.role||'user';
-      syncEditSpecializationField(mapTeacherSubjectToDepartment(d.subject)||selectedSubject, (d.subject||'').toString().trim());
+      syncEditSpecializationField(resolveDepartmentName(d.subject)||selectedSubject, (d.subject||'').toString().trim());
       edTIsSupervisor.checked=!!d.isSupervisor;
       editSupervisorGrade=edTIsSupervisor.checked ? normalizeSupervisorGrade(d.supervisorGrade) : '';
       edTAllowEditSchedule.checked=!!normalizePermissions(d).allowEditSchedule;
@@ -2029,6 +2048,87 @@
     });
     closeAddTeacherModal.addEventListener('click',()=>closeModal(addTeacherModal));
     cancelAddTeacher.addEventListener('click',()=>closeModal(addTeacherModal));
+
+    // One-time department-name fix — see shared/departments.js. Old name
+    // -> corrected name; a teacher's `subject` field is never touched.
+    const OLD_DEPARTMENT_RENAMES = {
+      'الجيولوجيا والأحياء': 'الأحياء والجيولوجيا',
+      'علم النفس والفلسفة':  'العلوم الفلسفية',
+      'التاريخ والجغرافيا':  'الجغرافيا والتاريخ',
+    };
+    // Not a real department at all (see shared/departments.js) — flagged
+    // for a human to resolve rather than guessed at automatically.
+    const PHANTOM_DEPARTMENT = 'الاقتصاد';
+
+    btnFixDepartments.addEventListener('click', ()=>{
+      fixDeptStatus.textContent='اضغط "تشغيل" لفحص كلّ المعلّمين.';
+      fixDeptReport.innerHTML='';
+      openModal(fixDeptModal);
+    });
+    fixDeptClose.addEventListener('click',()=>closeModal(fixDeptModal,{fallbackFocus:btnFixDepartments}));
+    fixDeptCancel.addEventListener('click',()=>closeModal(fixDeptModal,{fallbackFocus:btnFixDepartments}));
+
+    async function runDepartmentNameFix(){
+      fixDeptRun.disabled=true;
+      fixDeptStatus.textContent='جارٍ الفحص...';
+      fixDeptReport.innerHTML='';
+      try{
+        const snap=await getDocs(collection(db,'teachers'));
+        const renamed=[];
+        const phantom=[];
+        const batch=writeBatch(db);
+        let batchCount=0;
+        snap.forEach(docSnap=>{
+          const data=docSnap.data()||{};
+          const rawDept=(data.department||'').toString().trim();
+          if(!rawDept) return;
+          if(rawDept===PHANTOM_DEPARTMENT){
+            phantom.push({name:data.name||docSnap.id, uid:docSnap.id});
+            return;
+          }
+          const corrected=OLD_DEPARTMENT_RENAMES[rawDept];
+          if(!corrected) return;
+          batch.update(doc(db,'teachers',docSnap.id),{department:corrected});
+          batchCount++;
+          renamed.push({name:data.name||docSnap.id, from:rawDept, to:corrected});
+        });
+        if(batchCount>0) await batch.commit();
+
+        const parts=[];
+        if(renamed.length){
+          parts.push(`<div style="font-weight:900; color:var(--ok,#126a2e);">تمّ تصحيح ${renamed.length} معلّمًا:</div>`);
+          renamed.forEach(r=>{
+            parts.push(`<div style="padding:8px 10px; border:1px solid var(--border); border-radius:10px; font-size:.92rem;">
+              <strong>${escapeHtmlFD(r.name)}</strong><br>
+              <span class="muted">${escapeHtmlFD(r.from)} ← ${escapeHtmlFD(r.to)}</span>
+            </div>`);
+          });
+        }
+        if(phantom.length){
+          parts.push(`<div style="font-weight:900; color:#a11; margin-top:${renamed.length?'12px':'0'};">
+            يحتاج مراجعة يدويّة — قسمه "الاقتصاد" غير موجود فعليًّا في المدرسة (${phantom.length}):</div>`);
+          phantom.forEach(p=>{
+            parts.push(`<div style="padding:8px 10px; border:1px solid rgba(161,17,17,.3); border-radius:10px; font-size:.92rem; background:rgba(161,17,17,.06);">
+              <strong>${escapeHtmlFD(p.name)}</strong> — اختر له قسمًا حقيقيًّا من نموذج تعديل المعلّم.
+            </div>`);
+          });
+        }
+        if(!renamed.length && !phantom.length){
+          parts.push('<div class="muted">لا يوجد شيء لتصحيحه — كلّ الأقسام صحيحة بالفعل.</div>');
+        }
+        fixDeptReport.innerHTML=parts.join('');
+        fixDeptStatus.textContent=`تمّ الفحص. ${renamed.length} تصحيح، ${phantom.length} يحتاج مراجعة يدويّة.`;
+      }catch(e){
+        console.error('runDepartmentNameFix failed:', e);
+        fixDeptStatus.textContent='تعذّر الفحص: '+(e?.message||'خطأ غير معروف');
+      }finally{
+        fixDeptRun.disabled=false;
+      }
+    }
+    function escapeHtmlFD(str){
+      return String(str??'').replace(/[&<>"']/g, ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+    }
+    fixDeptRun.addEventListener('click', runDepartmentNameFix);
     auAddClass.addEventListener('click',()=>auClasses.appendChild(makeClassRow("")));
     closeSuccessModal.addEventListener('click', closeSuccessModalFn);
     edTEmail.addEventListener('input',()=>{const digits=edTEmail.value.replace(/\D+/g,''); if(edTEmail.value!==digits) edTEmail.value=digits;});
@@ -2107,7 +2207,7 @@
         // Load displayedPassword from private subcollection; fall back to main doc for legacy records
         const storedDisplayedPassword=(privData!=null&&privData.displayedPassword!=null)?String(privData.displayedPassword):getStoredDisplayedPassword(d);
         currentTeacher={uid,data:d,displayedPassword:storedDisplayedPassword};
-        selectedSubject = mapTeacherSubjectToDepartment(d.subject) || selectedSubject;
+        selectedSubject = resolveDepartmentName(d.subject) || selectedSubject;
         syncEditSpecializationField(selectedSubject, (d.subject||'').toString().trim());
         edTName.value=d.name||'';
         edTEmail.value=getTeacherCivilId(d);
@@ -2145,7 +2245,7 @@
         const displayedPassword=edTDisplayedPassword.value;
         const role=edTRole.value, isSupervisor=edTIsSupervisor.checked, classes=getClassesFrom(edClasses);
         const supervisorGrade=isSupervisor ? normalizeSupervisorGrade(editSupervisorGrade) : '';
-        const teacherDepartment=mapTeacherSubjectToDepartment((currentTeacher?.data?.subject || '').toString().trim()) || mapTeacherSubjectToDepartment(selectedSubject) || selectedSubject;
+        const teacherDepartment=resolveDepartmentName((currentTeacher?.data?.subject || '').toString().trim()) || resolveDepartmentName(selectedSubject) || selectedSubject;
         // Only merged departments (تاريخ/جغرافيا وغيرها) expose the
         // specialization select — everywhere else the teacher's subject
         // stays whatever it already was, since there's nothing to pick.
@@ -2301,7 +2401,7 @@
         const selectedSpecialization=(teacherSpecialization.value||'').trim();
         const mergedSubjects=getMergedSubjectsForDepartment(selectedSubject);
         const subjectToSave=isMergedDepartment(selectedSubject) ? selectedSpecialization : selectedSubject;
-        const departmentToSave=mapTeacherSubjectToDepartment(subjectToSave) || selectedSubject;
+        const departmentToSave=resolveDepartmentName(subjectToSave) || selectedSubject;
         if(!name) throw new Error('أدخل الاسم الكامل.');
         if(!civilId) throw new Error('أدخل رقم المستخدم بالأرقام فقط.');
         if(!emailRx.test(email)) throw new Error('تعذّر توليد البريد الإلكتروني من رقم المستخدم.');
