@@ -1130,6 +1130,23 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Auto-generation engine config — admins/adminschedule.html's
+    // "إعدادات المولّد"/"القيود" (ported from the school's Google Sheet
+    // scheduling system). Nothing reads these yet besides that editor
+    // itself; same read/write shape as settings/lessonTimes above.
+    match /settings/scheduleEngine {
+      allow read: if isTeacherSupervisorOrAdmin();
+      allow write: if isAdmin();
+    }
+    match /settings/scheduleConstraintParams {
+      allow read: if isTeacherSupervisorOrAdmin();
+      allow write: if isAdmin();
+    }
+    match /scheduleConstraintRules/{ruleId} {
+      allow read: if isTeacherSupervisorOrAdmin();
+      allow write: if isAdmin();
+    }
+
     /* ---------- attendanceSessions ---------- */
     match /attendanceSessions/{sessionId} {
 
