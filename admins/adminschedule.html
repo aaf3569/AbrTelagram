@@ -1384,7 +1384,7 @@
     import { initializeApp, getApp, getApps } from "/shared/firebase.js";
     import { getAuth, onAuthStateChanged, setPersistence, browserLocalPersistence } from "/shared/firebase.js";
     import { fetchClassList, groupByGrade, primeClassList } from "/shared/class-registry.js";
-    import { SUBJECT_LIST, getDisplaySubjectForClass } from "/shared/departments.js";
+    import { SUBJECT_LIST, getDisplaySubjectForClass, getDisplaySubjectForTeacherClass } from "/shared/departments.js";
     import {
       initializeFirestore,
       persistentSingleTabManager,
@@ -2182,7 +2182,8 @@
           name: t.name || t.email || t.uid || d.id,
           isSupervisor: !!t.isSupervisor,
           isHead: forcedHead || (t.role || '').toString().toLowerCase() === 'head',
-          subject: t.subject || ''
+          subject: t.subject || '',
+          subject2: t.subject2 || ''
         });
       };
       byClassSnap.forEach(d => addTeacherDoc(d));
@@ -2283,7 +2284,8 @@
     function setTeacherComboOptions(teacherOpts){
       const { grade, track } = parseClassKey(selectedClassKey);
       comboAssignOptions = (teacherOpts || []).map(t => {
-        const subject = (getDisplaySubjectForClass(t.subject, grade, track) || '—').toString().trim() || '—';
+        const resolvedSubject = getDisplaySubjectForTeacherClass(t.subject, t.subject2, grade, track) ?? getDisplaySubjectForClass(t.subject, grade, track);
+        const subject = (resolvedSubject || '—').toString().trim() || '—';
         const name = t.name || '';
         // 👑 marks a department head included here regardless of their own
         // `classes` list — see getTeachersForClass(). Without it, an admin

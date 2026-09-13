@@ -260,3 +260,54 @@ export function getDisplaySubjectForClass(subject, grade, track) {
   }
   return subject;
 }
+
+// Some العلوم الفلسفية specializations are the primary HR designation but
+// not what's actually taught in ع classes — the teacher's second
+// specialization is the real ع-track subject for these (e.g. a فلسفة
+// teacher whose second specialization is الدستور teaches الدستور in ع
+// classes, but stays فلسفة — their primary — in د classes).
+const SCIENCE_TRACK_SECONDARY_OVERRIDE_PRIMARIES = ['علم النفس', 'الفلسفة'];
+// Subjects a merged department still splits into even outside grade 10 —
+// unlike GRADE_10_DEPARTMENT_SUBJECT's single collapsed label, a teacher's
+// OWN specialization (subject or subject2) decides which one applies,
+// since the department/track alone can't say whether they teach
+// الجغرافيا or التاريخ (or الأحياء or الجيولوجيا).
+const TRACK_SPLIT_SUBJECTS = Object.freeze({
+  'د': ['الجغرافيا', 'التاريخ'],
+  'ع': ['الأحياء', 'الجيولوجيا'],
+});
+
+/**
+ * Same idea as getDisplaySubjectForClass, but also takes a teacher's
+ * second تخصص داخلي into account — needed because a class's real subject
+ * sometimes depends on which of a teacher's two specializations applies
+ * to this specific grade/track, not just the grade/track alone. Used
+ * wherever a specific teacher (not just a raw subject string) is being
+ * labeled for a class — the "assign teacher" picker in
+ * admins/adminschedule.html, and admins/students.html's معلمو فصل sheet.
+ *
+ * Returns null when no teacher-specific override applies (grade 10, or
+ * neither specialization is a recognized split/override subject) — the
+ * caller decides the fallback (a plain getDisplaySubjectForClass call,
+ * or something else, like a scheduled-lessons lookup) rather than this
+ * function silently picking one, since callers that also have a
+ * scheduled-subjects signal need to prioritize an actual override over
+ * that before falling back, not the other way around.
+ */
+export function getDisplaySubjectForTeacherClass(subject, subject2, grade, track) {
+  const primary = (subject || '').toString().trim();
+  const secondary = (subject2 || '').toString().trim();
+  const rawGrade = (grade == null ? '' : grade).toString().trim();
+  const rawTrack = (track || '').toString().trim();
+  if (rawGrade === '10') return null;
+  if (rawTrack === 'ع' && SCIENCE_TRACK_SECONDARY_OVERRIDE_PRIMARIES.includes(primary) && secondary && secondary !== primary) {
+    return secondary;
+  }
+  const splitSubjects = TRACK_SPLIT_SUBJECTS[rawTrack] || TRACK_SPLIT_SUBJECTS['ع'];
+  const specialization = [primary, secondary].find((s) => splitSubjects.includes(s));
+  if (specialization) return specialization;
+  // An old الاجتماعيات label does not identify which د-track subject this
+  // teacher teaches; do not turn it into التاريخ by assumption.
+  if (rawTrack === 'د' && primary === 'الاجتماعيات') return 'الاجتماعيات';
+  return null;
+}

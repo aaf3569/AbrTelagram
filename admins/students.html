@@ -2199,7 +2199,7 @@ import { mountAttendanceSheet } from "/shared/attendance.js";
 import { fetchStudentAttendanceData, makeAttTile, makeMorningLateTile } from "/shared/attendance-tiles.js";
 import { renderWarningState, renderExcusedWarningState } from "/shared/warning-system.js";
 import { DEFAULT_CLASS_LIST, fetchClassList, groupByGrade, availableNumbersToAdd, buildClassKey, primeClassList, parseClassKey } from "/shared/class-registry.js";
-import { getDisplaySubjectForClass } from "/shared/departments.js";
+import { getDisplaySubjectForClass, getDisplaySubjectForTeacherClass } from "/shared/departments.js";
 
 
 
@@ -4281,29 +4281,18 @@ const SUBJECT_FILTER_ORDER = [
   'المكتبات','الدراسات العملية','التربية البيئية','الإحصاء',
 ];
 
-// In split-subject grades, the teacher's own specialization distinguishes
-// geography from history and biology from geology. Schedule labels can be
-// generic or stale, so they must not overwrite that distinction.
+// A teacher's own specialization (subject/subject2) can identify their
+// real class subject more precisely than the standing schedule — see
+// getDisplaySubjectForTeacherClass's own doc comment for why that takes
+// priority over a scheduled lesson's (possibly generic or stale) subject
+// label, not the other way around.
 function classTeacherDisplaySubjects(t){
   const { grade, track } = parseClassKey(selectedClass);
   const scheduled = t.scheduledSubjects || [];
   const primary = (t.subject || '').toString().trim();
   const secondary = (t.subject2 || '').toString().trim();
-  if(grade !== 10){
-    // علم النفس is the primary HR specialization for some ع-track
-    // teachers, while their second specialization is the class subject.
-    if(track === 'ع' && primary === 'علم النفس' && secondary && secondary !== primary){
-      return [secondary];
-    }
-    const splitSubjects = track === 'د'
-      ? ['الجغرافيا', 'التاريخ']
-      : ['الأحياء', 'الجيولوجيا'];
-    const specialization = [primary, secondary].find(subject=>splitSubjects.includes(subject));
-    if(specialization) return [specialization];
-    // An old الاجتماعيات label does not identify which د-track subject
-    // this teacher teaches; do not turn it into التاريخ by assumption.
-    if(track === 'د' && primary === 'الاجتماعيات') return ['الاجتماعيات'];
-  }
+  const specialized = getDisplaySubjectForTeacherClass(primary, secondary, grade, track);
+  if(specialized) return [specialized];
   if(scheduled.length) return [...new Set(scheduled.map(subject=>getDisplaySubjectForClass(subject, grade, track)))];
   const subject = (getDisplaySubjectForClass(primary, grade, track) || '').toString().trim();
   return subject ? [subject] : [];
