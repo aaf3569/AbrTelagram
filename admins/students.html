@@ -4287,6 +4287,11 @@ function classTeacherDisplaySubjects(t){
   const primary = (t.subject || '').toString().trim();
   const secondary = (t.subject2 || '').toString().trim();
   if(grade !== 10){
+    // علم النفس is the primary HR specialization for some ع-track
+    // teachers, while their second specialization is the class subject.
+    if(track === 'ع' && primary === 'علم النفس' && secondary && secondary !== primary){
+      return [secondary];
+    }
     const splitSubjects = track === 'د'
       ? ['الجغرافيا', 'التاريخ']
       : ['الأحياء', 'الجيولوجيا'];
