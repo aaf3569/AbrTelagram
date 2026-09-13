@@ -897,7 +897,7 @@
 
     .row{ display:grid; grid-template-columns: 1fr; gap:16px; }
 
-    .themed-select, .notes-input{
+    .themed-select{
       border:1px solid var(--border);
       border-radius:12px;
       padding:0 12px;
@@ -905,23 +905,57 @@
       background:#fff;
       transition: box-shadow .12s ease, border-color .12s ease;
       font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-    }
-    .themed-select{
       height:48px;
       font-weight:950;
       font-size:15px;
     }
-    .notes-input{
-      min-height:96px;
-      padding:12px;
-      resize:vertical;
-      font-weight:700;
-      line-height:1.7;
-    }
-    .themed-select:focus, .notes-input:focus{
+    .themed-select:focus{
       border-color: rgba(121,179,200,.9);
       box-shadow: 0 0 0 4px rgba(121,179,200,.20);
     }
+
+    /* Teacher search combobox */
+    .teacher-combo{ position:relative; }
+    .teacher-combo-input{ width:100%; padding-inline-end:38px; }
+    .teacher-combo-input:disabled{ background:var(--page); color:var(--muted); cursor:wait; }
+    .teacher-combo-clear{
+      position:absolute; top:50%; inset-inline-end:6px; transform:translateY(-50%);
+      width:28px; height:28px; border-radius:8px; border:0; background:transparent;
+      color:var(--muted); cursor:pointer; font-size:18px; line-height:1;
+      display:flex; align-items:center; justify-content:center;
+      transition: background .12s ease, color .12s ease;
+    }
+    .teacher-combo-clear:hover{ background:var(--page); color:var(--danger); }
+    .teacher-combo-list{
+      position:absolute; top:calc(100% + 6px); inset-inline:0; z-index:60;
+      background:#fff; border:1px solid var(--border); border-radius:12px;
+      box-shadow: var(--shadow-strong);
+      max-height:264px; overflow-y:auto;
+      padding:6px;
+    }
+    .teacher-combo-option{
+      display:flex; align-items:baseline; justify-content:space-between; gap:10px;
+      padding:10px 12px; border-radius:9px; cursor:pointer;
+      font-weight:800; font-size:14px; color:var(--text);
+    }
+    .teacher-combo-option:hover,
+    .teacher-combo-option.active{ background: var(--page); }
+    .teacher-combo-option .tc-name{ min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .teacher-combo-option .tc-subject{ color:var(--muted); font-weight:700; font-size:12px; flex-shrink:0; }
+    .teacher-combo-option .tc-star{ color:#b8860b; }
+    .teacher-combo-option mark{
+      background: rgba(121,179,200,.38); color:var(--primary);
+      border-radius:3px; padding:0 1px; font-weight:950;
+    }
+    .teacher-combo-empty{
+      padding:16px 12px; color:var(--muted); font-weight:700; font-size:13px; text-align:center;
+    }
+    /* Subject-browse rows (shown when the field is empty) and the "back to
+       all subjects" row shown one level in. Distinguished from a teacher
+       row mainly by giving the subject name the primary color, since it's
+       a category to drill into rather than something you're picking. */
+    .teacher-combo-subject-row .tc-name{ color:var(--primary); font-weight:900; }
+    .teacher-combo-back{ color:var(--muted); font-weight:800; border-bottom:1px solid var(--border); border-radius:9px 9px 0 0; margin-bottom:4px; }
 
     .pop-desc{ color:var(--muted); font-size:12px; font-weight:800; }
     .pop-desc.err{ color:#a11; }
@@ -1107,10 +1141,27 @@
     <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
       <div id="modalTitle" class="pop-title">—</div>
       <div class="row">
-        <select id="comboAssign" class="themed-select">
-          <option value="">(اختياري) تغيير المادة | المعلم</option>
-        </select>
-        <textarea id="notesInput" class="notes-input" placeholder="ملاحظات للحصة (اختياري)"></textarea>
+        <!-- Searchable teacher combobox. Was a plain <select> — with a class
+             carrying dozens of eligible teachers, scrolling a native
+             dropdown to find one by eye was slow. Typing narrows the list
+             and highlights the matched letters; a pick still resolves to
+             the same {subject, teacherUid, teacherName} JSON the old
+             <option value> carried, read from comboAssignSelectedValue
+             instead of a select's .value. -->
+        <div class="teacher-combo" id="teacherCombo">
+          <input
+            id="comboAssignInput"
+            class="themed-select teacher-combo-input"
+            type="text"
+            autocomplete="off"
+            role="combobox"
+            aria-expanded="false"
+            aria-autocomplete="list"
+            aria-controls="comboAssignList"
+          />
+          <button type="button" id="comboAssignClear" class="teacher-combo-clear" title="مسح الاختيار" aria-label="مسح الاختيار" hidden>&times;</button>
+          <div id="comboAssignList" class="teacher-combo-list" role="listbox" hidden></div>
+        </div>
         <div class="pop-desc">اليوم ثابت حسب الصف، ويمكنك تعديل الحصة فقط يدويًا.</div>
       </div>
       <div class="pop-actions">
@@ -1327,8 +1378,10 @@
     // Schedule modal refs
     const modal = document.getElementById('modal');
     const modalTitle = document.getElementById('modalTitle');
-    const comboAssign = document.getElementById('comboAssign');
-    const notesInput = document.getElementById('notesInput');
+    const comboAssignInput = document.getElementById('comboAssignInput');
+    const comboAssignList = document.getElementById('comboAssignList');
+    const comboAssignClear = document.getElementById('comboAssignClear');
+    const teacherCombo = document.getElementById('teacherCombo');
     const okBtn = document.getElementById('okBtn');
     const cancelBtn = document.getElementById('cancelBtn');
     const clearBtn = document.getElementById('clearBtn');
@@ -2038,56 +2091,348 @@
       }
     }
 
+    /* ======= Teacher search combobox =======
+       Replaces a native <select> that just listed every eligible teacher in
+       one long scroll. This filters as you type, highlights the matched
+       letters, and still resolves to the same {subject, teacherUid,
+       teacherName} JSON payload the old <option value> carried — okBtn reads
+       it from comboAssignSelectedValue instead of a select's .value. */
+
+    const TEACHER_COMBO_PLACEHOLDER = '(اختياري) ابحث عن معلّم أو مادة للتغيير...';
+    const TEACHER_COMBO_LOADING_PLACEHOLDER = 'جارِ تحميل المعلمين...';
+    comboAssignInput.placeholder = TEACHER_COMBO_PLACEHOLDER;
+
+    let comboAssignOptions = [];        // [{ value, text, name, subject, isSupervisor }]
+    let comboAssignRows = [];           // [{ el, activate }] for whatever the list is showing right now
+    let comboAssignActiveIndex = -1;    // keyboard-highlighted index into comboAssignRows
+    let comboAssignSelectedValue = '';  // committed JSON value; '' = no change
+    let comboAssignSelectedText = '';   // committed display text, restored on blur if typing wasn't committed
+    let comboAssignBrowseSubject = null; // null = browsing subjects; a string = browsing that subject's teachers
+
+    function escapeHtml(str){
+      return String(str ?? '').replace(/[&<>"']/g, ch => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[ch]));
+    }
+
+    // A 1:1 character map (no deletions from the *output* side) so match
+    // positions found in the normalized string still point at the right
+    // spot in the original for highlighting. Diacritics are dropped, so a
+    // separate index map records which original index each normalized
+    // character came from.
+    function normalizeForSearch(text){
+      const original = String(text ?? '');
+      let normalized = '';
+      const indexMap = [];
+      for(let i = 0; i < original.length; i++){
+        const ch = original[i];
+        if(/[ً-ٰٟـ]/.test(ch)) continue; // skip harakat/tatweel
+        let nch = ch.toLowerCase();
+        if('أإآٱ'.includes(nch)) nch = 'ا';
+        else if(nch === 'ى') nch = 'ي';
+        else if(nch === 'ة') nch = 'ه';
+        normalized += nch;
+        indexMap.push(i);
+      }
+      return { normalized, indexMap, original };
+    }
+
+    // Finds the query inside text (diacritic/alef/ta-marbuta-insensitive)
+    // and returns { index, length } in the *original* string's coordinates,
+    // or null if there's no match.
+    function findMatchRange(text, query){
+      if(!query) return null;
+      const { normalized } = normalizeForSearch(text);
+      const { normalized: nq } = normalizeForSearch(query);
+      if(!nq) return null;
+      const at = normalized.indexOf(nq);
+      if(at === -1) return null;
+      const { indexMap } = normalizeForSearch(text);
+      const start = indexMap[at];
+      const end = indexMap[at + nq.length - 1] + 1;
+      return { index: start, length: end - start, matchIndex: at };
+    }
+
+    function highlightMatch(text, query){
+      const range = query ? findMatchRange(text, query) : null;
+      if(!range) return escapeHtml(text);
+      const before = text.slice(0, range.index);
+      const match = text.slice(range.index, range.index + range.length);
+      const after = text.slice(range.index + range.length);
+      return `${escapeHtml(before)}<mark>${escapeHtml(match)}</mark>${escapeHtml(after)}`;
+    }
+
+    function setTeacherComboOptions(teacherOpts){
+      comboAssignOptions = (teacherOpts || []).map(t => {
+        const subject = (t.subject || '—').trim();
+        const name = t.name || '';
+        return {
+          value: JSON.stringify({ subject, teacherUid: t.uid, teacherName: name }),
+          name,
+          subject,
+          isSupervisor: !!t.isSupervisor,
+          text: `${subject} | ${name}${t.isSupervisor ? ' ⭐' : ''}`
+        };
+      });
+    }
+
+    function filterTeacherComboOptions(queryText){
+      const q = (queryText || '').trim();
+      const scored = [];
+      comboAssignOptions.forEach(opt => {
+        const nameMatch = findMatchRange(opt.name, q);
+        const subjectMatch = !nameMatch ? findMatchRange(opt.subject, q) : null;
+        const match = nameMatch || subjectMatch;
+        if(!match) return;
+        // Rank: matches in the name before matches only in the subject, then
+        // by how early the match falls, so a name starting with the typed
+        // letters ranks above one that merely contains them.
+        const rank = (nameMatch ? 0 : 1000) + match.matchIndex;
+        scored.push({ opt, rank });
+      });
+      scored.sort((a, b) => a.rank - b.rank);
+      return scored.map(s => s.opt);
+    }
+
+    // Unique subjects among the current class's teachers, alphabetical
+    // (Arabic collation), with the "no subject" bucket pushed to the end.
+    function getTeacherComboSubjects(){
+      const counts = new Map();
+      comboAssignOptions.forEach(o => counts.set(o.subject, (counts.get(o.subject) || 0) + 1));
+      return Array.from(counts.keys())
+        .sort((a, b) => (a === '—') - (b === '—') || a.localeCompare(b, 'ar'))
+        .map(subject => ({ subject, count: counts.get(subject) }));
+    }
+
+    function teacherOptionRowHtml(opt, queryText){
+      const star = opt.isSupervisor ? ' <span class="tc-star">⭐</span>' : '';
+      return `
+        <span class="tc-name">${highlightMatch(opt.name, queryText)}${star}</span>
+        <span class="tc-subject">${highlightMatch(opt.subject, queryText)}</span>
+      `;
+    }
+
+    // Appends one row to the open list and registers it for keyboard nav.
+    // mousedown (not click) fires before the input's blur, so a pick commits
+    // before the blur handler below would otherwise revert the typed text.
+    function addTeacherComboRow(innerHtml, onActivate, extraClass){
+      const el = document.createElement('div');
+      el.className = extraClass ? `teacher-combo-option ${extraClass}` : 'teacher-combo-option';
+      el.setAttribute('role', 'option');
+      el.innerHTML = innerHtml;
+      el.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        onActivate();
+      });
+      comboAssignList.appendChild(el);
+      comboAssignRows.push({ el, activate: onActivate });
+    }
+
+    function renderTeacherComboEmpty(message){
+      const empty = document.createElement('div');
+      empty.className = 'teacher-combo-empty';
+      empty.textContent = message;
+      comboAssignList.appendChild(empty);
+    }
+
+    // Typing searches every teacher directly, by name or subject — that's
+    // the fast path for someone who already knows who they want. Leaving
+    // the field empty instead browses subject-first: pick "رياضيات", then
+    // see just its teachers, the way the school actually thinks about
+    // "who can cover this slot" when the name isn't top of mind.
+    function renderTeacherComboList(queryText){
+      const q = (queryText || '').trim();
+      comboAssignList.innerHTML = '';
+      comboAssignRows = [];
+      comboAssignActiveIndex = -1;
+
+      if(!comboAssignOptions.length){
+        return renderTeacherComboEmpty('لا يوجد معلمون متاحون لهذا الفصل.');
+      }
+
+      if(q){
+        const matches = filterTeacherComboOptions(q);
+        if(!matches.length) return renderTeacherComboEmpty('لا يوجد معلمون مطابقون لبحثك.');
+        matches.forEach(opt => {
+          addTeacherComboRow(teacherOptionRowHtml(opt, q), () => commitTeacherComboOption(opt));
+        });
+        return;
+      }
+
+      if(!comboAssignBrowseSubject){
+        getTeacherComboSubjects().forEach(({ subject, count }) => {
+          const html = `
+            <span class="tc-name">${escapeHtml(subject)}</span>
+            <span class="tc-subject">${count} ${count === 1 ? 'معلّم' : 'معلمين'} ‹</span>
+          `;
+          addTeacherComboRow(html, () => {
+            comboAssignBrowseSubject = subject;
+            renderTeacherComboList('');
+          }, 'teacher-combo-subject-row');
+        });
+        return;
+      }
+
+      addTeacherComboRow('<span class="tc-name">› كل المواد</span>', () => {
+        comboAssignBrowseSubject = null;
+        renderTeacherComboList('');
+      }, 'teacher-combo-back');
+
+      comboAssignOptions
+        .filter(o => o.subject === comboAssignBrowseSubject)
+        .forEach(opt => addTeacherComboRow(teacherOptionRowHtml(opt, ''), () => commitTeacherComboOption(opt)));
+    }
+
+    function setTeacherComboActiveIndex(idx){
+      comboAssignRows.forEach(r => r.el.classList.remove('active'));
+      if(idx >= 0 && idx < comboAssignRows.length){
+        comboAssignRows[idx].el.classList.add('active');
+        comboAssignRows[idx].el.scrollIntoView({ block: 'nearest' });
+      }
+      comboAssignActiveIndex = idx;
+    }
+
+    function openTeacherComboList(){
+      renderTeacherComboList(comboAssignInput.value);
+      comboAssignList.hidden = false;
+      comboAssignInput.setAttribute('aria-expanded', 'true');
+    }
+
+    function closeTeacherComboList(){
+      comboAssignList.hidden = true;
+      comboAssignInput.setAttribute('aria-expanded', 'false');
+      comboAssignActiveIndex = -1;
+    }
+
+    function commitTeacherComboOption(opt){
+      comboAssignInput.value = opt.text;
+      comboAssignSelectedValue = opt.value;
+      comboAssignSelectedText = opt.text;
+      comboAssignClear.hidden = false;
+      comboAssignBrowseSubject = null; // next open starts back at the subject list
+      closeTeacherComboList();
+    }
+
+    function clearTeacherComboSelection({ focus = false } = {}){
+      comboAssignInput.value = '';
+      comboAssignSelectedValue = '';
+      comboAssignSelectedText = '';
+      comboAssignClear.hidden = true;
+      comboAssignBrowseSubject = null;
+      closeTeacherComboList();
+      if(focus) comboAssignInput.focus();
+    }
+
+    function resetTeacherCombo(){
+      comboAssignOptions = [];
+      comboAssignBrowseSubject = null;
+      clearTeacherComboSelection();
+    }
+
+    function selectTeacherComboByUid(uid){
+      const opt = comboAssignOptions.find(o => {
+        try{ return JSON.parse(o.value).teacherUid === uid; }
+        catch{ return false; }
+      });
+      if(opt) commitTeacherComboOption(opt);
+    }
+
+    comboAssignInput.addEventListener('input', () => {
+      // Typing invalidates whatever was committed — a pick only counts once
+      // it's chosen again from the (now filtered) list or the field is left
+      // untouched, which is checked on blur below.
+      comboAssignSelectedValue = '';
+      comboAssignClear.hidden = !comboAssignInput.value;
+      openTeacherComboList();
+    });
+
+    comboAssignInput.addEventListener('focus', () => {
+      openTeacherComboList();
+    });
+
+    comboAssignInput.addEventListener('keydown', (e) => {
+      if(e.key === 'ArrowDown'){
+        e.preventDefault();
+        if(comboAssignList.hidden) return openTeacherComboList();
+        setTeacherComboActiveIndex(Math.min(comboAssignActiveIndex + 1, comboAssignRows.length - 1));
+      } else if(e.key === 'ArrowUp'){
+        e.preventDefault();
+        if(comboAssignList.hidden) return openTeacherComboList();
+        setTeacherComboActiveIndex(Math.max(comboAssignActiveIndex - 1, 0));
+      } else if(e.key === 'Enter'){
+        e.preventDefault();
+        if(!comboAssignList.hidden && comboAssignRows.length){
+          const idx = comboAssignActiveIndex >= 0 ? comboAssignActiveIndex : 0;
+          comboAssignRows[idx].activate();
+        }
+      } else if(e.key === 'Escape'){
+        closeTeacherComboList();
+        comboAssignInput.value = comboAssignSelectedText;
+        comboAssignClear.hidden = !comboAssignSelectedText;
+      }
+    });
+
+    comboAssignInput.addEventListener('blur', () => {
+      // Deferred so a suggestion's mousedown (which calls preventDefault,
+      // but blur can still be queued by some browsers) has a chance to
+      // commit first.
+      setTimeout(() => {
+        closeTeacherComboList();
+        if(comboAssignInput.value !== comboAssignSelectedText){
+          // Typed text was never turned into a pick — revert rather than
+          // silently keeping free text that doesn't map to a real teacher.
+          comboAssignInput.value = comboAssignSelectedText;
+        }
+        comboAssignClear.hidden = !comboAssignSelectedText;
+      }, 150);
+    });
+
+    comboAssignClear.addEventListener('mousedown', (e) => {
+      e.preventDefault(); // keep focus in the input instead of blurring it
+      clearTeacherComboSelection({ focus: true });
+    });
+
+    document.addEventListener('mousedown', (e) => {
+      if(!teacherCombo.contains(e.target)) closeTeacherComboList();
+    });
+
     /* ======= Modal handling ======= */
     function closeModal(){
       overlay.classList.remove('show');
       modal.classList.remove('show');
-      comboAssign.innerHTML = `<option value="">(اختياري) تغيير المادة | المعلم</option>`;
-      notesInput.value = '';
+      resetTeacherCombo();
       assignmentCtx = null;
     }
 
     async function openAssignmentEditor({ title, classKey, current, onApply, onClear }){
       if(loading) return;
-      assignmentCtx = { onApply, onClear };
+      // The notes textarea is gone from this modal, but a lesson can still
+      // carry a note from before this change (or from data entered another
+      // way). Carrying it through here means editing the teacher no longer
+      // silently wipes it.
+      assignmentCtx = { onApply, onClear, notes: current.notes || '' };
       modalTitle.textContent = title;
 
-      comboAssign.innerHTML = `<option value="">(اختياري) تغيير المادة | المعلم</option>`;
-      notesInput.value = current.notes || '';
+      resetTeacherCombo();
 
       overlay.classList.add('show');
       modal.classList.add('show');
 
       try{
-        comboAssign.disabled = true;
-        comboAssign.classList.add('loading');
+        comboAssignInput.disabled = true;
+        comboAssignInput.classList.add('loading');
+        comboAssignInput.placeholder = TEACHER_COMBO_LOADING_PLACEHOLDER;
 
         const teacherOpts = await getTeachersForClass(classKey || selectedClassKey);
-
-        teacherOpts.forEach(t=>{
-          const subj = (t.subject || '—').trim();
-          const text = `${subj} | ${t.name}${t.isSupervisor ? ' ⭐' : ''}`;
-          const val = JSON.stringify({ subject: subj, teacherUid: t.uid, teacherName: t.name });
-          const opt = document.createElement('option');
-          opt.value = val;
-          opt.textContent = text;
-          comboAssign.appendChild(opt);
-        });
+        setTeacherComboOptions(teacherOpts);
 
         if(current.teacherUid){
-          const idx = Array.from(comboAssign.options).findIndex(o=>{
-            try{
-              const v = JSON.parse(o.value || '{}');
-              return v.teacherUid === current.teacherUid;
-            }catch{
-              return false;
-            }
-          });
-          if(idx >= 0) comboAssign.selectedIndex = idx;
+          selectTeacherComboByUid(current.teacherUid);
         }
       } finally{
-        comboAssign.disabled = false;
-        comboAssign.classList.remove('loading');
+        comboAssignInput.disabled = false;
+        comboAssignInput.classList.remove('loading');
+        comboAssignInput.placeholder = TEACHER_COMBO_PLACEHOLDER;
       }
     }
 
@@ -2138,8 +2483,11 @@
     okBtn.addEventListener('click', ()=>{
       if(!assignmentCtx) return closeModal();
 
-      const picked = comboAssign.value;
-      let next = {subject:'', teacherUid:'', teacherName:'', notes:''};
+      const picked = comboAssignSelectedValue;
+      // notes has no input in this modal anymore, per-request — but
+      // whatever a lesson already had is passed through unchanged rather
+      // than cleared, since save/export/import elsewhere still read it.
+      let next = {subject:'', teacherUid:'', teacherName:'', notes: assignmentCtx.notes || ''};
 
       if(picked){
         try{
@@ -2152,7 +2500,6 @@
         }
       }
 
-      next.notes = (notesInput.value || '').trim();
       assignmentCtx.onApply?.(next);
 
       closeModal();
