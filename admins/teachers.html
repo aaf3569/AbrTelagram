@@ -1161,6 +1161,7 @@
       const existingHead=snap.docs.find(docSnap=>{
         if(docSnap.id===excludeUid) return false;
         const data=docSnap.data()||{};
+        if(resolveDepartmentName(data.department||data.subject)!==resolveDepartmentName(department)) return false;
         return (data.role||'').toString().toLowerCase()==='head';
       });
       if(existingHead){
@@ -2186,10 +2187,10 @@
           ? query(collection(db,'teachers'), where('subject','==',subjectFilters[0]))
           : query(collection(db,'teachers'), where('subject','in',subjectFilters));
         const snap=await getDocs(qy);
-        if(snap.empty){const empty=document.createElement('div');empty.className='teacher-item';empty.textContent='لا يوجد معلمون بعد.';teachersList.appendChild(empty);return;}
         const allTeachers = snap.docs
           .map(d=>d.data())
-          .filter(t=>subjectFilters.includes((t.subject||'').toString().trim()));
+          .filter(t=>resolveDepartmentName(t.department||t.subject)===subject);
+        if(allTeachers.length===0){const empty=document.createElement('div');empty.className='teacher-item';empty.textContent='لا يوجد معلمون بعد.';teachersList.appendChild(empty);return;}
         const heads = allTeachers.filter(t => (t.role || '').toString().toLowerCase() === 'head');
         const regularTeachers = allTeachers.filter(t => (t.role || '').toString().toLowerCase() !== 'head');
         const orderedTeachers = [...heads, ...regularTeachers];
