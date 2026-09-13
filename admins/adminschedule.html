@@ -874,6 +874,51 @@
     }
     @keyframes pop { from{ transform:scale(.98); opacity:0 } to{ transform:scale(1); opacity:1 } }
 
+    /* CSV import — a much longer, table-heavy modal than the compact ones
+       above, so it gets a wider card that scrolls internally. */
+    .modal-card.wide-card{
+      width:min(920px, 100%);
+      max-height:88vh;
+      display:flex;
+      flex-direction:column;
+    }
+    .modal-card.wide-card .modal-scroll{
+      overflow-y:auto;
+      padding-inline-end:4px;
+      margin-inline-end:-4px;
+    }
+    .csv-drop-zone{
+      border:2px dashed var(--border);
+      border-radius:14px;
+      padding:36px 16px;
+      text-align:center;
+      color:var(--muted);
+      font-weight:800;
+      transition:var(--transition);
+      cursor:pointer;
+    }
+    .csv-drop-zone.dragover{ border-color:var(--primary); background:rgba(3,60,84,.05); color:var(--primary); }
+    .csv-drop-zone svg{ width:38px; height:38px; margin-bottom:10px; opacity:.6; }
+    .csv-summary{ display:flex; flex-wrap:wrap; gap:10px; margin:14px 0; }
+    .csv-chip{
+      padding:8px 14px; border-radius:999px; font-weight:900; font-size:13px;
+      border:1px solid var(--border); background:#fff;
+    }
+    .csv-chip.ok{ color:var(--ok,#126a2e); border-color:rgba(18,106,46,.3); background:rgba(18,106,46,.06); }
+    .csv-chip.warn{ color:#8a5a00; border-color:rgba(138,90,0,.3); background:rgba(138,90,0,.06); }
+    .csv-chip.err{ color:var(--danger); border-color:rgba(180,35,24,.3); background:rgba(180,35,24,.06); }
+    .csv-chip.skip{ color:var(--muted); }
+    .csv-table-wrap{ overflow-x:auto; border:1px solid var(--border); border-radius:12px; margin-top:6px; }
+    table.csv-table{ width:100%; border-collapse:collapse; min-width:760px; font-size:12.5px; }
+    table.csv-table th{
+      background:var(--page); color:var(--muted); font-weight:900;
+      padding:8px 6px; text-align:center; border-bottom:1px solid var(--border); white-space:nowrap;
+    }
+    table.csv-table td{ padding:6px; border-bottom:1px solid var(--border-light,#eef3f8); text-align:center; }
+    table.csv-table tr.csv-row-ambiguous{ background:rgba(138,90,0,.05); }
+    table.csv-table tr.csv-row-error{ background:rgba(180,35,24,.05); }
+    table.csv-table select{ width:100%; height:32px; border-radius:8px; border:1px solid var(--border); font-family:inherit; }
+
     .pop-title{
       font-weight:950;
       color:var(--primary);
@@ -1096,6 +1141,7 @@
             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
           </svg>
         </button>
+        <button id="csvImportBtn" class="new-schedule-btn" type="button" title="استيراد الجدول من CSV">📥 استيراد CSV</button>
       </div>
     </div>
   </header>
@@ -1270,6 +1316,55 @@
     </div>
   </div>
 
+  <!-- استيراد الجدول من CSV — matches each row's (الصف، المادة) against
+       this school's own teachers/{uid}.classes + .subject to find who
+       teaches it, rather than requiring the CSV to name a teacher at all.
+       Never writes anything until the admin has seen the full preview and
+       pressed "تأكيد الاستيراد" — see openCsvImportModal() below. -->
+  <div id="csvImportModal" class="modal" aria-hidden="true">
+    <div class="modal-card wide-card" role="dialog" aria-modal="true" aria-labelledby="csvImportTitle">
+      <div class="pop-title-row">
+        <div id="csvImportTitle" class="pop-title">استيراد الجدول من CSV</div>
+        <button id="csvImportXBtn" class="pop-close" type="button" aria-label="إغلاق">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <div class="modal-scroll">
+        <div id="csvDropZone" class="csv-drop-zone" tabindex="0" role="button" aria-label="رفع ملف CSV">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 3v12m0-12 4 4m-4-4-4 4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>
+          </svg>
+          <div>اسحب ملف CSV هنا، أو اضغط لاختيار ملف</div>
+          <div class="pop-desc" style="margin-top:6px;">الأعمدة المطلوبة: الصف، اليوم، الحصة، المادة</div>
+        </div>
+        <input id="csvFileInput" type="file" accept=".csv,text/csv" hidden>
+
+        <div id="csvPreviewArea" hidden>
+          <div class="csv-summary">
+            <span class="csv-chip ok" id="csvChipResolved">✅ 0</span>
+            <span class="csv-chip warn" id="csvChipAmbiguous">⚠️ 0</span>
+            <span class="csv-chip err" id="csvChipUnmatched">❌ 0</span>
+            <span class="csv-chip skip" id="csvChipSkipped">⏭ 0</span>
+            <button id="csvChooseAnother" class="btn ghost" type="button" style="margin-inline-start:auto;">اختيار ملف آخر</button>
+          </div>
+          <div class="csv-table-wrap">
+            <table class="csv-table">
+              <thead>
+                <tr><th>الصف</th><th>اليوم</th><th>الحصة</th><th>المادة</th><th>الحالة</th><th>المعلّم</th></tr>
+              </thead>
+              <tbody id="csvPreviewBody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div id="csvImportMsg" class="pop-desc"></div>
+      </div>
+      <div class="pop-actions">
+        <button id="csvImportCancelBtn" class="btn" type="button">إلغاء</button>
+        <button id="csvImportConfirmBtn" class="btn primary" type="button" disabled>تأكيد الاستيراد</button>
+      </div>
+    </div>
+  </div>
+
   <div id="saveSuccessModal" class="success-modal" aria-hidden="true">
     <div class="success-card">
       <div class="success-check">
@@ -1289,6 +1384,7 @@
     import { initializeApp, getApp, getApps } from "/shared/firebase.js";
     import { getAuth, onAuthStateChanged, setPersistence, browserLocalPersistence } from "/shared/firebase.js";
     import { fetchClassList, groupByGrade, primeClassList } from "/shared/class-registry.js";
+    import { SUBJECT_LIST } from "/shared/departments.js";
     import {
       initializeFirestore,
       persistentSingleTabManager,
@@ -1625,7 +1721,8 @@
       errorModal.classList.remove('show');
       errorModal.setAttribute('aria-hidden', 'true');
       if(!modal.classList.contains('show') && !timeModal.classList.contains('show')
-        && !createScheduleModal.classList.contains('show') && !settingsModal.classList.contains('show')){
+        && !createScheduleModal.classList.contains('show') && !settingsModal.classList.contains('show')
+        && !csvImportModal.classList.contains('show')){
         overlay.classList.remove('show');
       }
     }
@@ -3243,6 +3340,380 @@
     settingsBtn.addEventListener('click', openSettingsModal);
     settingsCloseBtn.addEventListener('click', closeSettingsModal);
     settingsModalXBtn.addEventListener('click', closeSettingsModal);
+
+    /* ======= استيراد الجدول من CSV =======
+       Matches each row by (الصف، المادة) against this school's own
+       teachers/{uid}.classes + .subject — never by name or civil ID, since
+       the CSV's source system (the scheduling Google Sheet) and this site
+       agree on subjects and classes but not on identity fields. A row
+       resolves only when exactly one teacher in our own records has that
+       exact subject and teaches that exact class; 0 or 2+ matches go into
+       the preview for a human to see rather than being guessed at.
+
+       Nothing is written until the admin presses "تأكيد الاستيراد" after
+       reviewing the full preview, and only rows explicitly present in the
+       file are touched — every other (class, day, lesson) slot already in
+       Firestore is left exactly as it was. */
+
+    const csvImportModal = document.getElementById('csvImportModal');
+    const csvImportBtn = document.getElementById('csvImportBtn');
+    const csvImportXBtn = document.getElementById('csvImportXBtn');
+    const csvImportCancelBtn = document.getElementById('csvImportCancelBtn');
+    const csvImportConfirmBtn = document.getElementById('csvImportConfirmBtn');
+    const csvImportMsg = document.getElementById('csvImportMsg');
+    const csvDropZone = document.getElementById('csvDropZone');
+    const csvFileInput = document.getElementById('csvFileInput');
+    const csvPreviewArea = document.getElementById('csvPreviewArea');
+    const csvPreviewBody = document.getElementById('csvPreviewBody');
+    const csvChooseAnother = document.getElementById('csvChooseAnother');
+    const csvChipResolved = document.getElementById('csvChipResolved');
+    const csvChipAmbiguous = document.getElementById('csvChipAmbiguous');
+    const csvChipUnmatched = document.getElementById('csvChipUnmatched');
+    const csvChipSkipped = document.getElementById('csvChipSkipped');
+
+    let csvRows = []; // parsed + matched rows for the current file
+
+    // ---------- CSV parsing (RFC4180-ish: quoted fields, "" escapes, CRLF/LF) ----------
+    function parseCsvText(text){
+      const clean = text.replace(/^﻿/, ''); // strip a UTF-8 BOM if present
+      const rows = [];
+      let row = [], field = '', inQuotes = false;
+      for(let i = 0; i < clean.length; i++){
+        const c = clean[i];
+        if(inQuotes){
+          if(c === '"'){
+            if(clean[i + 1] === '"'){ field += '"'; i++; }
+            else inQuotes = false;
+          } else field += c;
+        } else if(c === '"'){
+          inQuotes = true;
+        } else if(c === ','){
+          row.push(field); field = '';
+        } else if(c === '\r'){
+          // ignore — \n (bare or in \r\n) is what actually ends the row
+        } else if(c === '\n'){
+          row.push(field); field = '';
+          rows.push(row); row = [];
+        } else {
+          field += c;
+        }
+      }
+      if(field !== '' || row.length){ row.push(field); rows.push(row); }
+      return rows.filter(r => r.some(v => v.trim() !== ''));
+    }
+
+    function csvRowsToObjects(rows){
+      if(!rows.length) return [];
+      const headers = rows[0].map(h => h.trim());
+      return rows.slice(1).map(cells => {
+        const obj = {};
+        headers.forEach((h, i) => { obj[h] = (cells[i] ?? '').trim(); });
+        return obj;
+      });
+    }
+
+    // ---------- Sheet-format class key -> this site's own class key ----------
+    // The sheet writes classes as grade+track+section concatenated with no
+    // separators ("11ع2", "12د1"), or grade/section for the untracked
+    // grade 10 ("10/1"). This site's own canonical key is a completely
+    // different arrangement — grade, a slash, section, THEN the track
+    // letter, e.g. "11 / 2 ع" (see shared/class-registry.js's
+    // DEFAULT_CLASS_LIST) — so this isn't a whitespace problem, it's a
+    // structural one: parse the sheet's shape into (grade, section, track)
+    // and rebuild it with this site's own composeClassKey, rather than
+    // ever comparing the two spellings directly.
+    function parseSheetClassKey(raw){
+      const v = (raw || '').toString().replace(/\s+/g, '');
+      let m = v.match(/^(10)\/(\d+)$/);
+      if(m) return { grade: m[1], section: m[2], track: '' };
+      m = v.match(/^(11|12)([عد])(\d+)$/);
+      if(m) return { grade: m[1], section: m[3], track: m[2] };
+      // Tolerate the site's own arrangement too, in case a hand-edited CSV
+      // already uses it ("11 / 2 ع" or "10 / 1").
+      const parsed = parseClassKey((raw || '').toString());
+      if(!Number.isNaN(parsed.grade) && !Number.isNaN(parsed.section)){
+        return { grade: String(parsed.grade), section: String(parsed.section), track: parsed.track || '' };
+      }
+      return null;
+    }
+
+    const CSV_DAY_NAMES = ["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس"];
+    function parseDayValue(raw){
+      const v = (raw || '').toString().trim();
+      if(/^[0-4]$/.test(v)) return Number(v);
+      const idx = CSV_DAY_NAMES.findIndex(d => d === v || v.replace('إ','ا') === d.replace('إ','ا'));
+      return idx >= 0 ? idx : null;
+    }
+
+    const CSV_LESSON_ORDINALS = ["الأولى","الثانية","الثالثة","الرابعة","الخامسة","السادسة","السابعة","الثامنة","التاسعة","العاشرة"];
+    function parseLessonValue(raw){
+      const v = (raw || '').toString().trim();
+      if(/^\d+$/.test(v)){
+        const n = Number(v);
+        return (n >= 1 && n <= FIXED_LESSON_COUNT) ? n : null;
+      }
+      const idx = CSV_LESSON_ORDINALS.indexOf(v);
+      return (idx >= 0 && idx + 1 <= FIXED_LESSON_COUNT) ? idx + 1 : null;
+    }
+
+    // ---------- Teacher index (loaded once per import session) ----------
+    let csvTeacherIndex = null;
+    async function loadCsvTeacherIndex(){
+      if(csvTeacherIndex) return csvTeacherIndex;
+      const snap = await getDocs(collection(db, 'teachers'));
+      const list = [];
+      snap.forEach(d => {
+        const t = d.data() || {};
+        list.push({
+          uid: t.uid || d.id,
+          name: (t.name || t.email || d.id || '').toString(),
+          subject: (t.subject || '').toString().trim(),
+          classes: Array.isArray(t.classes) ? t.classes.map(c => (c || '').toString().trim()) : [],
+        });
+      });
+      csvTeacherIndex = list;
+      return list;
+    }
+
+    // ---------- Row matching ----------
+    async function matchCsvRow(raw){
+      const kindRaw = (raw['النوع'] || '').toString().trim();
+      if(kindRaw && kindRaw !== 'LESSON'){
+        return { ...raw, status: 'skipped', reason: 'ليست حصّة دراسيّة (اجتماع)' };
+      }
+
+      const classKey = parseSheetClassKey(raw['الصف']);
+      if(!classKey){
+        return { ...raw, status: 'error', reason: `صيغة صفّ غير معروفة: "${raw['الصف'] || ''}"` };
+      }
+      const dayIndex = parseDayValue(raw['اليوم']);
+      if(dayIndex === null){
+        return { ...raw, status: 'error', reason: `يوم غير صالح: "${raw['اليوم'] || ''}"` };
+      }
+      const lesson = parseLessonValue(raw['الحصة']);
+      if(lesson === null){
+        return { ...raw, status: 'error', reason: `حصّة غير صالحة: "${raw['الحصة'] || ''}"` };
+      }
+      const subject = (raw['المادة'] || '').toString().trim();
+      if(!subject){
+        return { ...raw, status: 'error', reason: 'لا يوجد اسم مادّة' };
+      }
+      if(!SUBJECT_LIST.includes(subject)){
+        return { ...raw, status: 'error', reason: `مادّة غير معروفة: "${subject}"` };
+      }
+
+      const siteClassKey = composeClassKey(classKey.grade, classKey.section, classKey.track);
+      const teachers = await loadCsvTeacherIndex();
+      const candidates = teachers.filter(t => t.subject === subject && t.classes.includes(siteClassKey));
+
+      const base = { ...raw, siteClassKey, dayIndex, lesson, subject };
+      if(candidates.length === 1){
+        return { ...base, status: 'resolved', teacherUid: candidates[0].uid, teacherName: candidates[0].name };
+      }
+      if(candidates.length === 0){
+        return { ...base, status: 'unmatched', reason: `لا يوجد معلّم بمادّة "${subject}" في صفّ "${siteClassKey}"` };
+      }
+      return { ...base, status: 'ambiguous', candidates };
+    }
+
+    // ---------- Preview rendering ----------
+    function renderCsvPreviewRow(row, index){
+      const tr = document.createElement('tr');
+      const dayLabel = Number.isInteger(row.dayIndex) ? CSV_DAY_NAMES[row.dayIndex] : (row['اليوم'] || '—');
+      const lessonLabel = row.lesson || row['الحصة'] || '—';
+      const classLabel = row.siteClassKey || row['الصف'] || '—';
+      const subjectLabel = row.subject || row['المادة'] || '—';
+
+      let statusCell, teacherCell;
+      if(row.status === 'resolved'){
+        statusCell = '<span class="csv-chip ok">✅ تلقائي</span>';
+        teacherCell = row.teacherName;
+      } else if(row.status === 'ambiguous'){
+        tr.classList.add('csv-row-ambiguous');
+        statusCell = '<span class="csv-chip warn">⚠️ أكثر من معلّم</span>';
+        teacherCell = `<select class="csv-ambiguous-pick" data-index="${index}">
+          <option value="">— اختر —</option>
+          ${row.candidates.map(c => `<option value="${c.uid}">${c.name}</option>`).join('')}
+        </select>`;
+      } else if(row.status === 'unmatched'){
+        tr.classList.add('csv-row-error');
+        statusCell = '<span class="csv-chip err">❌ غير متطابق</span>';
+        teacherCell = row.reason;
+      } else if(row.status === 'error'){
+        tr.classList.add('csv-row-error');
+        statusCell = '<span class="csv-chip err">❌ خطأ</span>';
+        teacherCell = row.reason;
+      } else {
+        statusCell = '<span class="csv-chip skip">⏭ متجاوز</span>';
+        teacherCell = row.reason || '';
+      }
+
+      tr.innerHTML = `
+        <td>${classLabel}</td>
+        <td>${dayLabel}</td>
+        <td>${lessonLabel}</td>
+        <td>${subjectLabel}</td>
+        <td>${statusCell}</td>
+        <td>${teacherCell}</td>
+      `;
+      return tr;
+    }
+
+    function updateCsvSummary(){
+      const counts = { resolved: 0, ambiguous: 0, unmatched: 0, error: 0, skipped: 0 };
+      csvRows.forEach(r => { counts[r.status] = (counts[r.status] || 0) + 1; });
+      csvChipResolved.textContent = `✅ ${counts.resolved}`;
+      csvChipAmbiguous.textContent = `⚠️ ${counts.ambiguous}`;
+      csvChipUnmatched.textContent = `❌ ${counts.unmatched + counts.error}`;
+      csvChipSkipped.textContent = `⏭ ${counts.skipped}`;
+      // Confirm is available once there's at least one row that will
+      // actually be written — a resolved row, or an ambiguous row the
+      // admin has since picked a teacher for.
+      const anyPicked = csvRows.some(r => r.status === 'ambiguous' && r._picked);
+      csvImportConfirmBtn.disabled = !(counts.resolved > 0 || anyPicked);
+    }
+
+    function renderCsvPreview(){
+      csvPreviewBody.innerHTML = '';
+      csvRows.forEach((row, i) => csvPreviewBody.appendChild(renderCsvPreviewRow(row, i)));
+      csvPreviewBody.querySelectorAll('.csv-ambiguous-pick').forEach(sel => {
+        sel.addEventListener('change', () => {
+          const i = Number(sel.dataset.index);
+          const uid = sel.value;
+          const picked = csvRows[i].candidates.find(c => c.uid === uid);
+          csvRows[i]._picked = picked || null;
+          updateCsvSummary();
+        });
+      });
+      csvPreviewArea.hidden = false;
+      updateCsvSummary();
+    }
+
+    async function handleCsvFile(file){
+      csvImportMsg.textContent = 'جارٍ القراءة والمطابقة...';
+      csvImportConfirmBtn.disabled = true;
+      try{
+        const text = await file.text();
+        const rawRows = csvRowsToObjects(parseCsvText(text));
+        if(!rawRows.length){
+          csvImportMsg.textContent = 'الملف فارغ أو لا يمكن قراءته.';
+          return;
+        }
+        await loadCsvTeacherIndex();
+        csvRows = await Promise.all(rawRows.map(matchCsvRow));
+        renderCsvPreview();
+        csvImportMsg.textContent = '';
+      }catch(error){
+        console.error('CSV import parse/match failed:', error);
+        csvImportMsg.textContent = 'تعذّرت قراءة الملف. تأكّد أنّه CSV صالح.';
+      }
+    }
+
+    // ---------- Commit (writes only resolved + admin-picked-ambiguous rows) ----------
+    async function commitCsvImport(){
+      const toWrite = csvRows.filter(r => r.status === 'resolved' || (r.status === 'ambiguous' && r._picked));
+      if(!toWrite.length) return;
+
+      csvImportConfirmBtn.disabled = true;
+      csvImportMsg.textContent = 'جارٍ الحفظ...';
+      try{
+        const base = kuwaitTodayISO();
+        const start = startOfWeekSunday(base);
+        const importWeekDates = [0,1,2,3,4].map(i => addDaysISO(start, i));
+
+        // Firestore batches cap at 500 writes — chunk defensively.
+        let written = 0;
+        for(let offset = 0; offset < toWrite.length; offset += 450){
+          const chunk = toWrite.slice(offset, offset + 450);
+          const batch = writeBatch(db);
+          chunk.forEach(row => {
+            const teacherUid = row.status === 'resolved' ? row.teacherUid : row._picked.uid;
+            const teacherName = row.status === 'resolved' ? row.teacherName : row._picked.name;
+            const { grade, section, track } = parseClassKey(row.siteClassKey);
+            const trackKey = trackKeyOf(track);
+            // Not docIdFor(date, ...) here on purpose: that derives the
+            // stable D{dayIndex} form by looking the date up inside the
+            // page's *currently displayed* week array, which has no
+            // reason to equal the week this import computed for itself —
+            // it would silently fall back to a one-off date-keyed id
+            // instead, breaking the exact idempotency (same slot, same id,
+            // every time) this whole design depends on. dayIndex is
+            // already known here, so build the same stable id directly.
+            const id = `${grade}-${section}-${encodeURIComponent(trackKey)}-D${row.dayIndex}-L${row.lesson}`;
+            batch.set(doc(db, 'schedules', id), {
+              dayIndex: row.dayIndex,
+              date: importWeekDates[row.dayIndex],
+              day: DAYS_AR[row.dayIndex],
+              classKey: row.siteClassKey,
+              grade: String(grade),
+              section: String(section),
+              track: track || "",
+              trackKey,
+              lesson: String(row.lesson),
+              subject: row.subject,
+              teacherUid,
+              teacherName,
+              notes: "",
+              importedFromCsv: true,
+              updatedAt: serverTimestamp(),
+            }, { merge: true });
+          });
+          await batch.commit();
+          written += chunk.length;
+        }
+
+        addStatusLine('ok', `تم استيراد ${written} حصّة من ملف CSV.`);
+        closeCsvImportModal();
+      }catch(error){
+        console.error('CSV import commit failed:', error);
+        csvImportMsg.textContent = 'تعذّر الحفظ. حاول مرّة أخرى.';
+      }finally{
+        csvImportConfirmBtn.disabled = false;
+      }
+    }
+
+    function resetCsvImportUI(){
+      csvRows = [];
+      csvFileInput.value = '';
+      csvPreviewArea.hidden = true;
+      csvPreviewBody.innerHTML = '';
+      csvImportMsg.textContent = '';
+      csvImportConfirmBtn.disabled = true;
+      csvDropZone.classList.remove('dragover');
+    }
+
+    function openCsvImportModal(){
+      resetCsvImportUI();
+      overlay.classList.add('show');
+      csvImportModal.classList.add('show');
+    }
+    function closeCsvImportModal(){
+      csvImportModal.classList.remove('show');
+      overlay.classList.remove('show');
+    }
+
+    csvImportBtn.addEventListener('click', openCsvImportModal);
+    csvImportXBtn.addEventListener('click', closeCsvImportModal);
+    csvImportCancelBtn.addEventListener('click', closeCsvImportModal);
+    csvImportConfirmBtn.addEventListener('click', commitCsvImport);
+    csvChooseAnother.addEventListener('click', resetCsvImportUI);
+
+    csvDropZone.addEventListener('click', () => csvFileInput.click());
+    csvDropZone.addEventListener('keydown', (e) => {
+      if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); csvFileInput.click(); }
+    });
+    csvDropZone.addEventListener('dragover', (e) => { e.preventDefault(); csvDropZone.classList.add('dragover'); });
+    csvDropZone.addEventListener('dragleave', () => csvDropZone.classList.remove('dragover'));
+    csvDropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      csvDropZone.classList.remove('dragover');
+      const file = e.dataTransfer?.files?.[0];
+      if(file) handleCsvFile(file);
+    });
+    csvFileInput.addEventListener('change', () => {
+      const file = csvFileInput.files?.[0];
+      if(file) handleCsvFile(file);
+    });
 
     // Continues the day's rhythm for a newly-added lesson slot: a 5-minute
     // gap after the previous lesson ends, then a standard 45-minute lesson —
