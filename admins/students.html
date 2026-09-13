@@ -1802,6 +1802,7 @@ html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%;
   </div>
   <div class="sheet-body">
     <div class="section">
+      <div id="classTeachersFilters" class="tabs" style="margin-bottom:14px;"></div>
       <div id="classTeachersList" class="list"></div>
     </div>
   </div>
@@ -2276,7 +2277,10 @@ const openClassTeachersBtn = document.getElementById('openClassTeachers');
 const classTeachersSheet = document.getElementById('classTeachersSheet');
 const closeClassTeachers = document.getElementById('closeClassTeachers');
 const classTeachersTitle = document.getElementById('classTeachersTitle');
+const classTeachersFilters = document.getElementById('classTeachersFilters');
 const classTeachersList = document.getElementById('classTeachersList');
+let classTeachersCache = [];
+let classTeachersSubjectFilter = '';
 const openAddStudent = document.getElementById('openAddStudent');
 const addStudentModal = document.getElementById('addStudentModal');
 const closeAddStudentModalBtn = document.getElementById('closeAddStudentModal');
@@ -4205,18 +4209,12 @@ openClassTeachersBtn.addEventListener('click', ()=>{
 closeClassTeachers.addEventListener('click', ()=> closeSheet(classTeachersSheet));
 
 async function loadClassTeachers(className){
+  classTeachersFilters.innerHTML='';
+  classTeachersFilters.hidden=true;
   classTeachersList.innerHTML='<div class="loading"><div class="spinner"></div><div class="muted">جاري تحميل قائمة المعلمين...</div></div>';
   try{
     const qy = query(collection(db,'teachers'), where('classes','array-contains', className));
     const snap = await getDocs(qy);
-    if(snap.empty){
-      const empty=document.createElement('div');
-      empty.className='item';
-      empty.textContent='لا يوجد معلمون مسجّلون لهذا الفصل.';
-      classTeachersList.innerHTML='';
-      classTeachersList.appendChild(empty);
-      return;
-    }
     const teachers = snap.docs.map(d=>({uid:d.id, ...d.data()}));
     // Heads first, then alphabetically — mirrors admins/teachers.html's ordering.
     teachers.sort((a,b)=>{
@@ -4225,34 +4223,84 @@ async function loadClassTeachers(className){
       if(aHead!==bHead) return aHead ? -1 : 1;
       return (a.name||'').localeCompare((b.name||''), 'ar');
     });
-    const fragment = document.createDocumentFragment();
-    teachers.forEach(t=>{
-      const isHead=(t.role||'').toString().toLowerCase()==='head';
-      const subject=(t.subject||'').toString().trim() || '—';
-      const el=document.createElement('div');
-      el.className='item will-change';
-      el.innerHTML = `
-        <div>
-          <div>${isHead ? '<span aria-hidden="true" title="رئيس القسم">👑</span> ' : ''}${t.name || t.email || t.uid}</div>
-          <div class="sub">${subject}</div>
-        </div>
-        <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
-      `;
-      el.addEventListener('click', ()=>{
-        window.location.href = `/admins/teachers.html#/teacher/${encodeURIComponent(t.uid)}`;
-      });
-      fragment.appendChild(el);
-    });
-    classTeachersList.innerHTML='';
-    classTeachersList.appendChild(fragment);
+    classTeachersCache = teachers;
+    classTeachersSubjectFilter = '';
+    renderClassTeachersFilters();
+    renderClassTeachersList();
   }catch(e){
     console.error('[loadClassTeachers]', e);
+    classTeachersCache = [];
     const err=document.createElement('div');
     err.className='item';
     err.textContent='تعذّر تحميل قائمة المعلمين.';
     classTeachersList.innerHTML='';
     classTeachersList.appendChild(err);
   }
+}
+
+// Subject filter chips at the top of the sheet — only the subjects this
+// class's own teachers actually hold, not the school's full subject list,
+// since a filter offering subjects with zero matches would be dead weight.
+function renderClassTeachersFilters(){
+  const subjects = [...new Set(
+    classTeachersCache.map(t=>(t.subject||'').toString().trim()).filter(Boolean)
+  )].sort((a,b)=>a.localeCompare(b,'ar'));
+  classTeachersFilters.innerHTML='';
+  if(subjects.length < 2){
+    classTeachersFilters.hidden=true;
+    return;
+  }
+  classTeachersFilters.hidden=false;
+  const makeTab=(label, value)=>{
+    const btn=document.createElement('button');
+    btn.type='button';
+    btn.className='tab'+(classTeachersSubjectFilter===value ? ' active' : '');
+    btn.textContent=label;
+    btn.addEventListener('click', ()=>{
+      if(classTeachersSubjectFilter===value) return;
+      classTeachersSubjectFilter=value;
+      renderClassTeachersFilters();
+      renderClassTeachersList();
+    });
+    return btn;
+  };
+  classTeachersFilters.appendChild(makeTab('الكل', ''));
+  subjects.forEach(subj=> classTeachersFilters.appendChild(makeTab(subj, subj)));
+}
+
+function renderClassTeachersList(){
+  const filtered = classTeachersSubjectFilter
+    ? classTeachersCache.filter(t=>(t.subject||'').toString().trim()===classTeachersSubjectFilter)
+    : classTeachersCache;
+  classTeachersList.innerHTML='';
+  if(filtered.length===0){
+    const empty=document.createElement('div');
+    empty.className='item';
+    empty.textContent = classTeachersSubjectFilter
+      ? 'لا يوجد معلمون لهذه المادة.'
+      : 'لا يوجد معلمون مسجّلون لهذا الفصل.';
+    classTeachersList.appendChild(empty);
+    return;
+  }
+  const fragment = document.createDocumentFragment();
+  filtered.forEach(t=>{
+    const isHead=(t.role||'').toString().toLowerCase()==='head';
+    const subject=(t.subject||'').toString().trim() || '—';
+    const el=document.createElement('div');
+    el.className='item will-change';
+    el.innerHTML = `
+      <div>
+        <div>${isHead ? '<span aria-hidden="true" title="رئيس القسم">👑</span> ' : ''}${t.name || t.email || t.uid}</div>
+        <div class="sub">${subject}</div>
+      </div>
+      <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+    `;
+    el.addEventListener('click', ()=>{
+      window.location.href = `/admins/teachers.html#/teacher/${encodeURIComponent(t.uid)}`;
+    });
+    fragment.appendChild(el);
+  });
+  classTeachersList.appendChild(fragment);
 }
 
 document.addEventListener('keydown', (e)=>{
