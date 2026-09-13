@@ -1212,7 +1212,7 @@
     // stay excluding whatever the primary now is — otherwise picking the
     // same subject twice would be possible for exactly one frame.
     edTSpecialization.addEventListener('change', ()=>{
-      const mergedSubjects=getMergedSubjectsForDepartment(resolveDepartmentName(currentTeacher?.data?.subject||selectedSubject));
+      const mergedSubjects=getMergedSubjectsForDepartment(selectedSubject);
       fillSpecialization2Options(edTSpecialization2, mergedSubjects, edTSpecialization.value, edTSpecialization2.value);
     });
 
@@ -2005,7 +2005,7 @@
       edTDisplayedPassword.value=getStoredDisplayedPassword(d);
       setDisplayedPasswordVisibility(false);
       edTRole.value=d.role||'user';
-      syncEditSpecializationField(resolveDepartmentName(d.subject)||selectedSubject, (d.subject||'').toString().trim(), (d.subject2||'').toString().trim());
+      syncEditSpecializationField(resolveDepartmentName(d.department)||resolveDepartmentName(d.subject)||selectedSubject, (d.subject||'').toString().trim(), (d.subject2||'').toString().trim());
       edTIsSupervisor.checked=!!d.isSupervisor;
       editSupervisorGrade=edTIsSupervisor.checked ? normalizeSupervisorGrade(d.supervisorGrade) : '';
       edTAllowEditSchedule.checked=!!normalizePermissions(d).allowEditSchedule;
@@ -2244,7 +2244,11 @@
         // Load displayedPassword from private subcollection; fall back to main doc for legacy records
         const storedDisplayedPassword=(privData!=null&&privData.displayedPassword!=null)?String(privData.displayedPassword):getStoredDisplayedPassword(d);
         currentTeacher={uid,data:d,displayedPassword:storedDisplayedPassword};
-        selectedSubject = resolveDepartmentName(d.subject) || selectedSubject;
+        // Prefer the teacher's own stored department over deriving it from
+        // their subject — a shared تخصص داخلي subject (e.g. الاجتماعيات،
+        // الدستور) can't be traced back to a single department once two
+        // departments' pools both include it.
+        selectedSubject = resolveDepartmentName(d.department) || resolveDepartmentName(d.subject) || selectedSubject;
         syncEditSpecializationField(selectedSubject, (d.subject||'').toString().trim(), (d.subject2||'').toString().trim());
         edTName.value=d.name||'';
         edTEmail.value=getTeacherCivilId(d);
@@ -2282,7 +2286,12 @@
         const displayedPassword=edTDisplayedPassword.value;
         const role=edTRole.value, isSupervisor=edTIsSupervisor.checked, classes=getClassesFrom(edClasses);
         const supervisorGrade=isSupervisor ? normalizeSupervisorGrade(editSupervisorGrade) : '';
-        const teacherDepartment=resolveDepartmentName((currentTeacher?.data?.subject || '').toString().trim()) || resolveDepartmentName(selectedSubject) || selectedSubject;
+        // Prefer the teacher's own stored department (the real source of
+        // truth once they exist) over re-deriving it from their subject —
+        // a shared تخصص داخلي subject (e.g. الاجتماعيات، الدستور) can't be
+        // traced back to a single department once two departments' pools
+        // both include it.
+        const teacherDepartment=resolveDepartmentName(currentTeacher?.data?.department) || resolveDepartmentName(selectedSubject) || selectedSubject;
         // Only merged departments (تاريخ/جغرافيا وغيرها) expose the
         // specialization select — everywhere else the teacher's subject
         // stays whatever it already was, since there's nothing to pick.
@@ -2446,7 +2455,12 @@
         const selectedSpecialization2=isMergedDepartment(selectedSubject) ? (teacherSpecialization2.value||'').trim() : '';
         const mergedSubjects=getMergedSubjectsForDepartment(selectedSubject);
         const subjectToSave=isMergedDepartment(selectedSubject) ? selectedSpecialization : selectedSubject;
-        const departmentToSave=resolveDepartmentName(subjectToSave) || selectedSubject;
+        // Some تخصص داخلي subjects (e.g. الاجتماعيات، الدستور) are shared
+        // between two departments' specialization pools, so their single
+        // SUBJECT_TO_DEPARTMENT "home" can disagree with the department
+        // page the admin is actually adding this teacher under. The page
+        // the admin explicitly opened is the real answer, not the subject.
+        const departmentToSave=selectedSubject;
         if(!name) throw new Error('أدخل الاسم الكامل.');
         if(!civilId) throw new Error('أدخل رقم المستخدم بالأرقام فقط.');
         if(!emailRx.test(email)) throw new Error('تعذّر توليد البريد الإلكتروني من رقم المستخدم.');

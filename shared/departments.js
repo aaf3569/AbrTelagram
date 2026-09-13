@@ -159,7 +159,7 @@ export const SUBJECT_TO_ALLOWED_DEPARTMENTS = Object.freeze({
 const DEPARTMENT_SPECIALIZATIONS = Object.freeze({
   [DEPARTMENTS.PHYSICS_CHEMISTRY]:   ['الفيزياء', 'الكيمياء'],
   [DEPARTMENTS.BIOLOGY_GEOLOGY]:     ['الأحياء', 'الجيولوجيا', 'التربية البيئية'],
-  [DEPARTMENTS.GEOGRAPHY_HISTORY]:   ['الجغرافيا', 'الاجتماعيات'],
+  [DEPARTMENTS.GEOGRAPHY_HISTORY]:   ['الجغرافيا', 'التاريخ', 'الاجتماعيات', 'الدستور'],
   [DEPARTMENTS.PHILOSOPHY_SCIENCES]: ['الدستور', 'علم النفس', 'الفلسفة', 'الاجتماعيات'],
   [DEPARTMENTS.MATH]:                ['الرياضيات', 'الإحصاء'],
 });

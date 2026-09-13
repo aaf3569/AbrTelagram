@@ -343,11 +343,27 @@ service cloud.firestore {
       // department AND subject both resolve to the head's own department,
       // and may never plant supervisor/permission/password fields on the
       // world-readable main doc. ----
+      // الجغرافيا والتاريخ and العلوم الفلسفية each let a head pick a
+      // تخصص داخلي from a pool that includes subjects whose OWN canonical
+      // department is the other one (mirrors shared/departments.js'
+      // DEPARTMENT_SPECIALIZATIONS) — so once department is confirmed to
+      // be the head's own, subject only needs to be one of the six
+      // subjects these two departments deliberately share, not strictly
+      // canonicalDepartment(subject) == headDepartment().
+      function isSharedGeoPhiloSubject(subject) {
+        return subject in ["التاريخ", "الجغرافيا", "الاجتماعيات", "الفلسفة", "علم النفس", "الدستور"];
+      }
       function createDeptFieldsMatchHead(d) {
         return ('department' in d) && (d.department is string)
           && ('subject' in d) && (d.subject is string)
           && canonicalDepartment(d.department) == headDepartment()
-          && canonicalDepartment(d.subject) == headDepartment();
+          && (
+            canonicalDepartment(d.subject) == headDepartment()
+            || (
+              headDepartment() in ["الجغرافيا والتاريخ", "العلوم الفلسفية"]
+              && isSharedGeoPhiloSubject(d.subject)
+            )
+          );
       }
       function createFieldsValid(d) {
         return ('uid' in d) && d.uid == uid
