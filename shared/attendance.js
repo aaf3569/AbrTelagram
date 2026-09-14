@@ -98,8 +98,9 @@ const STYLES = `
   #attBlockedModal .blocked-icon path{fill:none;stroke:#dc2626;stroke-width:7;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:56;stroke-dashoffset:56;animation:attBlockedXDraw 1.2s ease-in-out infinite}
   #attBlockedModal .blocked-title{margin:0;color:#991b1b;font-weight:900;font-size:1.06rem}
   #attBlockedModal .blocked-msg{margin:0;color:#7f1d1d;font-weight:800;font-size:.95rem;line-height:1.7}
-  #attBlockedModal .blocked-actions{width:100%;display:flex;justify-content:center}
-  #attBlockedModal .blocked-actions .btn{max-width:180px;min-height:52px}
+  #attBlockedModal .blocked-actions{width:100%;display:flex;justify-content:center;gap:10px;flex-wrap:wrap}
+  #attBlockedModal .blocked-actions .btn{max-width:180px;min-height:52px;flex:1 1 auto}
+  #attBlockedModal .blocked-actions .btn[hidden]{display:none}
   #attBlockedModal.open .blocked-card{animation:attBlockedCardIn .2s ease}
   /* Skeleton loader — the sheet opens the instant the button is tapped and
      shows shimmering placeholder cards shaped like the real student cards
@@ -255,6 +256,7 @@ const SHEET_HTML = `
       <h3 id="attBlockedTitle" class="blocked-title">غير مسموح</h3>
       <p id="attBlockedBody" class="blocked-msg">ليس وقت الحصص الآن.</p>
       <div class="blocked-actions">
+        <button id="attBlockedEdit" class="btn primary" type="button" hidden>تعديل التسجيل</button>
         <button id="attBlockedOk" class="btn primary" type="button">إغلاق</button>
       </div>
     </div>
@@ -430,6 +432,7 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
     blockedBody: document.getElementById("attBlockedBody"),
     blockedClose: document.getElementById("attBlockedClose"),
     blockedOk: document.getElementById("attBlockedOk"),
+    blockedEdit: document.getElementById("attBlockedEdit"),
     successModal: document.getElementById("attSuccessModal"),
     successTitle: document.getElementById("attSuccessTitle"),
     successOk: document.getElementById("attSuccessOk"),
@@ -458,6 +461,7 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
   let openingInProgress = false; // guards against double-taps on the open buttons
   let savingInProgress = false;  // guards against double-taps on the confirm-save button
   let todayMapCache = { key: "", at: 0, map: null };
+  let blockedDialogProbe = null;
 
   // Sheet/modal helpers (operate on this module's elements only)
   // Host pages (admins/students.html, Teachers/user.html, ...) use the same
@@ -530,7 +534,8 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
     openModal(els.criticalErrorModal);
   }
 
-  function showBlocked(reason) {
+  function showBlocked(reason, probe = null) {
+    blockedDialogProbe = reason === "already_taken" ? (probe || lastSessionProbe) : null;
     let m;
     switch (reason) {
       case "outside_lessons":
@@ -541,7 +546,7 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
       case "no_lessons_left":
         m = "لقد سجّلت الغياب لجميع حصصك في هذا الفصل اليوم بالفعل."; break;
       case "already_taken":
-        m = "لقد سجّلت الغياب لهذه الحصة مسبقًا."; break;
+        m = "يوجد تسجيل غياب محفوظ لهذه الحصة."; break;
       case "time_locked":
         m = "انتهى وقت تسجيل الغياب لهذه الحصة."; break;
       case "not_logged_in":
@@ -555,35 +560,76 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
         m = "يمكنك تسجيل الغياب فقط أثناء حصتك الحالية.";
     }
     els.blockedBody.textContent = m;
+    if (els.blockedEdit) els.blockedEdit.hidden = true;
     openModal(els.blockedModal);
     if (reason === "already_taken") {
-      logAlreadyTakenDiagnostics();
-      describeWhoRecorded();
+      logAlreadyTakenDiagnostics(blockedDialogProbe);
+      describeAlreadyTaken(blockedDialogProbe);
     }
   }
 
-  // "لقد سجّلت الغياب لهذه الحصة مسبقًا" says *you* already recorded this
-  // lesson. Very often it was a different teacher, and telling someone they
-  // did something they know they didn't do is what turns a schedule problem
-  // into a bug report. Once the recording teacher's name is known, the
-  // dialog is rewritten to name them.
-  async function describeWhoRecorded() {
-    const blockedBy = lastSessionProbe?.blockedBy;
+  // Kuwait wall-clock time of an ISO instant, e.g. "١٢:٢٠ م".
+  function kuwaitClockFromISO(iso) {
+    if (!iso) return "";
+    try {
+      return new Date(iso).toLocaleTimeString("ar-KW", {
+        timeZone: "Asia/Kuwait", hour: "numeric", minute: "2-digit",
+      });
+    } catch { return ""; }
+  }
+
+  // Identify the saved record without claiming the caller submitted it.
+  // An expired record still needs an admin correction, even if today's
+  // bell times have since been changed to make that lesson active again.
+  async function describeAlreadyTaken(probe) {
+    const blockedBy = probe?.blockedBy;
     if (!blockedBy) return;
     const myUid = auth.currentUser?.uid || null;
     const theirUid = blockedBy.teacherUid || null;
-    if (!theirUid || (myUid && theirUid === myUid)) return; // it really was this teacher
-    let name = blockedBy.teacherName || "";
-    if (!name) {
-      try {
-        const tSnap = await getDoc(doc(db, "teachers", theirUid));
-        if (tSnap.exists()) name = (tSnap.data() || {}).name || "";
-      } catch { /* fall through to the generic wording below */ }
+    const recordedAt = kuwaitClockFromISO(blockedBy.createdAt);
+    const mine = !!myUid && theirUid === myUid;
+
+    if (!mine) {
+      let name = blockedBy.teacherName || "";
+      if (!name && theirUid) {
+        try {
+          const tSnap = await getDoc(doc(db, "teachers", theirUid));
+          if (tSnap.exists()) name = (tSnap.data() || {}).name || "";
+        } catch { /* fall through to the generic wording below */ }
+      }
+      if (blockedDialogProbe !== probe || !els.blockedModal.classList.contains("open")) return;
+      const who = name ? `المعلم ${name}` : "معلم آخر";
+      els.blockedBody.textContent = recordedAt
+        ? `سجّل الغياب لهذه الحصة ${who} بالفعل (الساعة ${recordedAt}).`
+        : `سجّل الغياب لهذه الحصة ${who} بالفعل.`;
+      return;
     }
-    if (!els.blockedModal.classList.contains("open")) return; // teacher already dismissed it
-    els.blockedBody.textContent = name
-      ? `سجّل الغياب لهذه الحصة المعلم ${name} بالفعل.`
-      : "سجّل الغياب لهذه الحصة معلم آخر بالفعل.";
+
+    if (blockedDialogProbe !== probe || !els.blockedModal.classList.contains("open")) return;
+    const cutoff = blockedBy.sessionCutoffTs ? new Date(blockedBy.sessionCutoffTs) : null;
+    const canEdit = isWithinAttendanceEditWindow(blockedBy.date, blockedBy.lesson,
+      cutoff ? { toDate: () => cutoff } : null);
+    if (!canEdit) {
+      els.blockedBody.textContent = recordedAt
+        ? `يوجد تسجيل غياب محفوظ لحسابك لهذه الحصة الساعة ${recordedAt}. انتهت مهلة تعديله؛ يرجى مراجعة الإدارة لتصحيح التسجيل إذا لم تقم به.`
+        : "يوجد تسجيل غياب محفوظ لحسابك لهذه الحصة وانتهت مهلة تعديله. يرجى مراجعة الإدارة لتصحيح التسجيل إذا لم تقم به.";
+      return;
+    }
+    els.blockedBody.textContent = recordedAt
+      ? `يوجد تسجيل غياب محفوظ لحسابك لهذه الحصة الساعة ${recordedAt}. يمكنك تعديل التسجيل.`
+      : "يوجد تسجيل غياب محفوظ لحسابك لهذه الحصة. يمكنك تعديل التسجيل.";
+
+    // Offer the edit only for a session this teacher owns. openForEdit
+    // enforces the edit window and the Firestore rules enforce ownership,
+    // so this button widens nothing — it just saves the teacher from a
+    // dead end and a support message.
+    if (!els.blockedEdit) return;
+    const sessionId = blockedBy.matchedId;
+    els.blockedEdit.hidden = false;
+    els.blockedEdit.onclick = () => {
+      closeModal(els.blockedModal);
+      openForEdit(sessionId);
+    };
   }
 
   // Prints exactly which attendance document caused the "لقد سجّلت الغياب
@@ -591,8 +637,7 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
   // from real data instead of a guess: which class the code thought it was
   // asking about, which document IDs it probed, what each one contained,
   // and which one it accepted as the block.
-  function logAlreadyTakenDiagnostics() {
-    const probe = lastSessionProbe;
+  function logAlreadyTakenDiagnostics(probe = lastSessionProbe) {
     const header = "⛔ [attendance] BLOCKED: لقد سجّلت الغياب لهذه الحصة مسبقًا";
     if (!probe) {
       console.warn(`${header}\n  No lookup was recorded — the block did NOT come from ` +
@@ -606,7 +651,7 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
     // school's real bell times, the wrong lesson is being recorded.
     console.log("Bell times in use:", LESSON_TIMES.map(l => `L${l.index} ${l.start}-${l.end}`).join("  "));
     console.log("Document IDs probed:", probe.ids);
-    if (probe.error) console.log("Read error (check failed open):", probe.error);
+    if (probe.error) console.log("Read error (session could not be verified):", probe.error);
     console.log(`Probed ${probe.probed.length} document(s):`);
     console.table(probe.probed);
     if (probe.blockedBy) {
@@ -700,15 +745,24 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
     els.lessonPicker.style.display = "none";
     renderListSkeleton();
     openSheet(els.sheet);
+    let ready = false;
     try {
+      await ensureLessonTimes({ force: true });
+      if (lessonTimesReadFailed) {
+        showBlocked("lesson_times_unavailable");
+        closeSheet(els.sheet);
+        return;
+      }
       const ok = await fn();
       if (ok === false) closeSheet(els.sheet);
+      else ready = true;
     } catch (e) {
       console.error("[attendance] open failed:", e);
       closeSheet(els.sheet);
       showError("خطأ", "تعذّر فتح تسجيل الغياب. حاول مرة أخرى.");
     } finally {
       openingInProgress = false;
+      setControlsEnabled(ready && !!els.lessonSelect.value && attStudentList.length > 0);
     }
   }
 
@@ -908,8 +962,8 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
     });
   }
 
-  async function buildTodayMapWithOverrides(teacherUid, dateISO) {
-    const cacheKey = `${teacherUid}|${dateISO}`;
+  async function buildTodayMapWithOverrides(teacherUid, dateISO, { includeCustom = true } = {}) {
+    const cacheKey = `${teacherUid}|${dateISO}|${includeCustom}`;
     const nowMs = Date.now();
     if (todayMapCache.key === cacheKey && todayMapCache.map && nowMs - todayMapCache.at < TODAY_MAP_CACHE_MS) {
       return todayMapCache.map;
@@ -988,10 +1042,11 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
       applyOverrideCandidates(map, ovNewSnap, ovOriginalSnap, overriddenClassKeys);
       // Enabled custom schedules always win — overwrite whatever's in the
       // slot above, don't just fill gaps.
-      mergeCustomIntoLessonMap(map, teacherUid, customRows);
+      if (includeCustom) mergeCustomIntoLessonMap(map, teacherUid, customRows);
       todayMapCache = { key: cacheKey, at: nowMs, map };
     } catch (e) {
       console.error("[attendance] buildTodayMap:", e);
+      throw e;
     }
     return map;
   }
@@ -1021,19 +1076,21 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
       }
     } catch (e) {
       console.error("[attendance] getCustomSchedules:", e);
+      throw e;
     }
     const rows = Array.from(rowsById.values());
     customScheduleCache = { key, at: now, rows };
     return rows;
   }
 
-  async function getMyActiveCustomLessonMetaForNow(teacherUid, dateISO) {
+  async function getMyActiveCustomLessonMetaForNow(teacherUid, dateISO, { checkExisting = true } = {}) {
     // Custom/extra schedules can be created for any day including Fri/Sat,
     // unlike the main weekly schedule (school days only) below.
     const dayIndex = getKuwaitDayIndexSunSat();
     if (dayIndex < 0) return null;
     const nowMin = getCurrentKuwaitMinutes();
     const rows = await getCustomSchedulesForToday(dayIndex);
+    let existingResult = null;
     for (const row of rows) {
       const lessons = Array.isArray(row.lessons) ? row.lessons : [];
       const times = Array.isArray(row.times) ? row.times : [];
@@ -1054,8 +1111,7 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
         // later overlapping one for the same teacher isn't — keep scanning
         // instead of getting stuck reporting "already taken" for the wrong
         // lesson.
-        if (await hasExistingAttendanceSession(dateISO, i + 1, classKey)) continue;
-        return {
+        const meta = {
           ok: true,
           lesson: i + 1,
           date: dateISO,
@@ -1066,9 +1122,12 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
           teacherUid,
           scheduleData: { ...lesson, ...row, _source: "custom_weekly", _coveredAway: false },
         };
+        const result = checkExisting ? await resolveAttendanceSession(meta) : meta;
+        if (result.ok && !result.editSessionId) return result;
+        if (!existingResult || (!existingResult.ok && result.ok)) existingResult = result;
       }
     }
-    return null;
+    return existingResult;
   }
 
   // Checks the current (safe) session ID first, then the old buggy one if
@@ -1148,14 +1207,21 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
           probe.probed.push({ ...info, verdict: "no such document" });
           continue;
         }
-        const found = normalizeClassKeyForCompare((snap.data() || {}).classKey);
-        // A doc with no classKey at all predates that field; it can only
-        // have come from this class's own ID, so accept it.
+        const data = snap.data() || {};
+        const found = normalizeClassKeyForCompare(data.classKey);
+        if ((data.date && data.date !== dateISO)
+            || (data.lesson != null && Number(data.lesson) !== Number(lesson))
+            || (!found && id !== safeId)) {
+          probe.probed.push({ ...info, verdict: "REJECTED — session identity does not establish this class/date/lesson" });
+          if (id === safeId) throw new Error("Attendance session ID conflicts with its stored date or lesson");
+          continue;
+        }
         if (found && found !== wanted) {
           probe.probed.push({
             ...info,
             verdict: `REJECTED — belongs to a different class ("${found}" != "${wanted}")`,
           });
+          if (id === safeId) throw new Error("Attendance session ID conflicts with its stored class");
           continue;
         }
         probe.probed.push({
@@ -1171,75 +1237,91 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
     } catch (e) {
       probe.error = e?.message || String(e);
       console.error("[attendance] findExistingAttendanceSession:", e);
-      return null; // fail open — a transient read error shouldn't block a legit submission
+      throw e; // Unknown is not absent: never create over an unread saved session.
     }
   }
 
-  async function hasExistingAttendanceSession(dateISO, lesson, classKey) {
-    return !!(await findExistingAttendanceSession(dateISO, lesson, classKey));
+  // Reuse the saved document for its owner while it is editable. Opening
+  // attendance again must not create a second session or discard statuses.
+  async function resolveAttendanceSession(meta) {
+    const existing = await findExistingAttendanceSession(meta.date, meta.lesson, meta.classKey);
+    if (!existing) return meta;
+    const data = existing.snap.data() || {};
+    if (data.teacherUid === auth.currentUser?.uid
+        && isWithinAttendanceEditWindow(data.date, data.lesson, data.sessionCutoffTs)) {
+      return { ...meta, editSessionId: existing.id };
+    }
+    return { ok: false, reason: "already_taken", sessionProbe: lastSessionProbe };
   }
 
-  async function getMyActiveLessonMetaForNow() {
+  async function getMyActiveLessonMetaForNow({ checkExisting = true } = {}) {
     const user = auth.currentUser;
     if (!user) return { ok: false, reason: "not_logged_in" };
     // Must precede any lesson-index computation — see fetchLessonTimes.
     await ensureLessonTimes();
     if (lessonTimesReadFailed) return { ok: false, reason: "lesson_times_unavailable" };
     const todayISO = kuwaitTodayISO();
+    const resolve = meta => checkExisting ? resolveAttendanceSession(meta) : meta;
     const G = getGracePeriodLessonIndex();
     const L = getActiveLessonIndex();
     // These two schedule sources are independent of each other — check them
     // at the same time instead of one after the other. The map is needed if
     // either a grace-period or a currently-active lesson exists.
     const [customHit, map] = await Promise.all([
-      getMyActiveCustomLessonMetaForNow(user.uid, todayISO),
-      (G !== null || L !== null) ? buildTodayMapWithOverrides(user.uid, todayISO) : Promise.resolve(new Map()),
+      getMyActiveCustomLessonMetaForNow(user.uid, todayISO, { checkExisting }),
+      // Custom lesson numbers have their own clock. They must not replace
+      // another class's normal lesson with the same number in this map.
+      (G !== null || L !== null)
+        ? buildTodayMapWithOverrides(user.uid, todayISO, { includeCustom: false })
+        : Promise.resolve(new Map()),
     ]);
-    // getMyActiveCustomLessonMetaForNow already skips already-taken slots
-    // internally, so a hit here is guaranteed usable.
-    if (customHit?.ok) return customHit;
+    // Prefer an untaken custom lesson. Keep an existing custom record as
+    // a fallback so a grace-period record doesn't hide an untaken normal
+    // lesson. The global candidates below must exclude custom entries.
+    if (customHit?.ok && !customHit.editSessionId) return customHit;
 
     // A lesson that just ended and is still inside its grace window takes
     // priority over one that just started — otherwise the teacher who had
     // the previous lesson would be silently locked out the moment the next
     // lesson's time slot begins, even though their own grace period hasn't
     // closed yet.
+    let graceResult = customHit;
     if (G !== null) {
       const graceHit = map.get(String(G));
-      if (graceHit && graceHit._coveredAway !== true) {
+      if (graceHit && graceHit._coveredAway !== true && graceHit._source !== "custom") {
         const graceClassKey = resolveClassKeyFromScheduleHit(graceHit);
-        if (!(await hasExistingAttendanceSession(todayISO, G, graceClassKey))) {
-          const graceLesson = LESSON_TIMES.find(l => l.index === G);
-          return {
-            ok: true, lesson: G, date: todayISO, classKey: graceClassKey,
-            subject: graceHit.subject || "", activeStart: graceLesson?.start || "00:00",
-            activeEnd: graceLesson?.end || "00:00", teacherUid: user.uid, scheduleData: graceHit,
-          };
-        }
+        const graceLesson = LESSON_TIMES.find(l => l.index === G);
+        const candidate = await resolve({
+          ok: true, lesson: G, date: todayISO, classKey: graceClassKey,
+          subject: graceHit.subject || "", activeStart: graceLesson?.start || "00:00",
+          activeEnd: graceLesson?.end || "00:00", teacherUid: user.uid, scheduleData: graceHit,
+        });
+        if (candidate.ok && !candidate.editSessionId) return candidate;
+        if (!graceResult || (!graceResult.ok && candidate.ok)) graceResult = candidate;
       }
     }
 
-    if (L === null) return { ok: false, reason: "outside_lessons" };
+    if (L === null) return graceResult || { ok: false, reason: "outside_lessons" };
     const hit = map.get(String(L));
-    if (!hit || hit._coveredAway === true) return { ok: false, reason: "not_my_lesson" };
+    if (!hit || hit._coveredAway === true || hit._source === "custom") {
+      return graceResult || { ok: false, reason: "not_my_lesson" };
+    }
     const w = getLessonWindowStatus(L);
     if (!w.ok) return { ok: false, reason: "time_locked" };
     const lesson = LESSON_TIMES.find(l => l.index === L);
     const classKey = resolveClassKeyFromScheduleHit(hit);
-    if (await hasExistingAttendanceSession(todayISO, L, classKey)) {
-      return { ok: false, reason: "already_taken" };
-    }
-    return {
+    const result = await resolve({
       ok: true, lesson: L, date: todayISO, classKey,
       subject: hit.subject || "", activeStart: lesson?.start || "00:00",
       activeEnd: lesson?.end || "00:00", teacherUid: user.uid, scheduleData: hit,
-    };
+    });
+    return result.ok ? result : (graceResult?.ok ? graceResult : result);
   }
 
   async function checkAllowed(showFeedback = true) {
     const meta = await getMyActiveLessonMetaForNow();
     if (!meta.ok) {
-      if (showFeedback) showBlocked(meta.reason);
+      if (showFeedback) showBlocked(meta.reason, meta.sessionProbe);
       return { allowed: false, meta };
     }
     return { allowed: true, meta };
@@ -1289,6 +1371,7 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
   }
 
   function setControlsEnabled(enabled) {
+    enabled = enabled && !openingInProgress && !!currentMeta;
     els.sheet.querySelectorAll(".seg button").forEach(b => (b.disabled = !enabled));
     if (els.submitBtn) els.submitBtn.disabled = !enabled;
   }
@@ -1456,6 +1539,7 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
       renderList(attStudentList);
     } catch (e) {
       console.error("[attendance] prefillStatuses:", e);
+      throw e;
     }
   }
 
@@ -1662,15 +1746,15 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
     recalcStats();
   }
 
-  function openWithMeta(meta) {
+  async function openWithMeta(meta) {
     if (!meta || !meta.ok) {
       showBlocked("not_my_lesson");
       return;
     }
     currentMeta = { ...meta, mode: "self" };
     buildLessonOption(meta.lesson);
-    loadStudentsForClass(meta.classKey);
     openSheet(els.sheet);
+    await loadStudentsForClass(meta.classKey);
   }
 
   async function openForClass(classKey) {
@@ -1713,13 +1797,16 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
       }
       currentMeta = { ok: true, mode: "any", date: dateISO, classKey, lesson: null };
       buildManualLessonOptions(available);
-      loadStudentsForClass(classKey);
+      await loadStudentsForClass(classKey);
     });
   }
 
   async function openForEdit(sessionId) {
     if (!sessionId) return;
-    await withSkeletonOpen(async () => {
+    await withSkeletonOpen(() => loadSessionForEdit(sessionId));
+  }
+
+  async function loadSessionForEdit(sessionId) {
       const sessionRef = doc(db, ATTENDANCE_SESSIONS_COLLECTION, sessionId);
       const snap = await getDoc(sessionRef);
       if (!snap.exists()) {
@@ -1727,6 +1814,10 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
         return false;
       }
       const data = snap.data() || {};
+      if (!privilegedEdit && (!auth.currentUser || data.teacherUid !== auth.currentUser.uid)) {
+        showError("تعذّر التعديل", "يمكنك تعديل تسجيلاتك فقط.");
+        return false;
+      }
       const createdAt = data.createdAt || null;
       const sessionDate = data.date || kuwaitTodayISO();
       const lessonIndex = Number(data.lesson) || 0;
@@ -1742,13 +1833,20 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
         sessionCutoffTs: data.sessionCutoffTs || null,
       };
       buildFixedLessonOption(lessonIndex, lessonLabel);
-      // The student list and the saved statuses load together
-      // (loadStudentsForClass only defaults statuses prefill hasn't set).
-      await Promise.all([
-        loadStudentsForClass(classKey),
-        prefillStatusesFromSession(sessionId),
-      ]);
-    });
+      // Keep save disabled until BOTH reads succeed. A failed status read
+      // must never leave an editable sheet defaulted to "present".
+      try {
+        const results = await Promise.allSettled([
+          loadStudentsForClass(classKey),
+          prefillStatusesFromSession(sessionId),
+        ]);
+        const failed = results.find(result => result.status === "rejected");
+        if (failed) throw failed.reason;
+      } catch (e) {
+        currentMeta = null;
+        setControlsEnabled(false);
+        throw e;
+      }
   }
 
   // An admin backfilling attendance for a lesson nobody ever took it for —
@@ -1780,6 +1878,7 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
 
   // Submit handlers
   els.submitBtn.addEventListener("click", async () => {
+    if (openingInProgress || !currentMeta) return;
     if (currentMeta?.mode === "edit") {
       if (!isWithinAttendanceEditWindow(currentMeta.date, currentMeta.lesson, currentMeta.sessionCutoffTs)) {
         showError("تعذّر الحفظ", "انتهت مهلة تعديل هذه الحصة.");
@@ -2168,7 +2267,8 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
       await withSkeletonOpen(async () => {
         const c = await checkAllowed(true);
         if (!c.allowed) return false;
-        openWithMeta(c.meta);
+        if (c.meta.editSessionId) return loadSessionForEdit(c.meta.editSessionId);
+        await openWithMeta(c.meta);
       });
     },
     open: openWithMeta,
@@ -2176,38 +2276,12 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
     openForEdit,
     openForAdminCreate,
     canEditSession(sessionData) { return isWithinAttendanceEditWindow(sessionData?.date, sessionData?.lesson, sessionData?.sessionCutoffTs); },
-    // Deliberately NOT checkAllowed()/getMyActiveLessonMetaForNow() — those
-    // also fail on "already_taken", which is exactly the normal case for a
-    // host wanting to gate a "my attendance log" button on "what class is my
-    // current lesson", since by definition they're looking at a lesson they
-    // likely already submitted. This mirrors only the outside_lessons/
-    // not_my_lesson checks, then shows the same blocked-reason modal for
-    // consistency with the attendance-taking flow.
+    // Use the same schedule/time resolution for the log, without excluding
+    // lessons that already have attendance (the purpose of opening a log).
     async getCurrentLessonClass(showFeedback = true) {
-      const user = auth.currentUser;
-      if (!user) {
-        if (showFeedback) showBlocked("not_logged_in");
-        return { ok: false, reason: "not_logged_in" };
-      }
-      // Must precede any lesson-index computation — see fetchLessonTimes.
-      await ensureLessonTimes();
-      if (lessonTimesReadFailed) {
-        if (showFeedback) showBlocked("lesson_times_unavailable");
-        return { ok: false, reason: "lesson_times_unavailable" };
-      }
-      const todayISO = kuwaitTodayISO();
-      const L = getActiveLessonIndex();
-      if (L === null) {
-        if (showFeedback) showBlocked("outside_lessons");
-        return { ok: false, reason: "outside_lessons" };
-      }
-      const map = await buildTodayMapWithOverrides(user.uid, todayISO);
-      const hit = map.get(String(L));
-      if (!hit || hit._coveredAway === true) {
-        if (showFeedback) showBlocked("not_my_lesson");
-        return { ok: false, reason: "not_my_lesson" };
-      }
-      return { ok: true, lesson: L, date: todayISO, classKey: resolveClassKeyFromScheduleHit(hit), scheduleData: hit };
+      const meta = await getMyActiveLessonMetaForNow({ checkExisting: false });
+      if (!meta.ok && showFeedback) showBlocked(meta.reason);
+      return meta;
     },
     // For hosts that don't know the caller's role until auth resolves
     // (mountAttendanceSheet is called at module load) — e.g.

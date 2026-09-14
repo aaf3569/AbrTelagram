@@ -15,7 +15,7 @@ export function classKeyFromRow(row) {
 }
 
 export function normalizeClassKey(s) {
-  return String(s || "").replace(/\s+/g, " ").trim().toLowerCase();
+  return String(s || "").replace(/\s*\/\s*/g, "/").replace(/\s+/g, " ").trim().toLowerCase();
 }
 
 // customRowsForDay: customDaySchedules docs already filtered to a single
