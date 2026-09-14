@@ -330,6 +330,13 @@
         .card.error{border-color:rgba(180,35,24,.25);box-shadow:0 24px 60px rgba(180,35,24,.20)}
         .card.error h3{color:var(--red)}
         .card.error .row .btn.primary{background:linear-gradient(145deg,#a93a33,#b42318)}
+
+        /* جدول المعلم popup — kept small and plain on purpose: a title and
+           two options, nothing else. */
+        .schedule-choice-card{width:min(340px,92vw);text-align:center}
+        .schedule-choice-card h3{margin-bottom:16px}
+        .schedule-choice-options{display:flex;flex-direction:column;gap:12px}
+        .schedule-choice-options .btn{min-height:58px}
         /* Toast */
         .toast{position:fixed;inset-inline:0;bottom:20px;display:flex;justify-content:center;pointer-events:none;z-index:1200}
         .toast .inner{pointer-events:auto;background:#fff;border:1px solid var(--border);border-radius:16px;box-shadow:0 20px 50px rgba(3,60,84,.25);padding:14px 18px;min-width:min(520px,92vw);display:flex;flex-direction:column;gap:6px}
@@ -728,6 +735,17 @@
             </div>
         </div>
     </div>
+    <!-- Schedule Picker Popup (جدول المعلم) -->
+    <div id="scheduleChoiceModal" class="modal" aria-hidden="true">
+        <div class="overlay"></div>
+        <div class="card schedule-choice-card" role="dialog" aria-modal="true" aria-labelledby="scheduleChoiceTitle">
+            <h3 id="scheduleChoiceTitle">الجدول</h3>
+            <div class="schedule-choice-options">
+                <button id="myScheduleOption" class="btn ghost" type="button">جدولي</button>
+                <button id="deptScheduleOption" class="btn ghost" type="button">جدول القسم</button>
+            </div>
+        </div>
+    </div>
     <!-- Not Allowed Popup -->
     <div id="blockedModal" class="modal blocked-modal" aria-hidden="true">
         <div class="overlay"></div>
@@ -873,6 +891,10 @@
         const errorModal = document.getElementById('errorModal');
         const errorBody = document.getElementById('errorBody');
         const errorOk = document.getElementById('errorOk');
+
+        const scheduleChoiceModal = document.getElementById('scheduleChoiceModal');
+        const myScheduleOption = document.getElementById('myScheduleOption');
+        const deptScheduleOption = document.getElementById('deptScheduleOption');
         const blockedModal = document.getElementById('blockedModal');
         const blockedBody = document.getElementById('blockedBody');
         const blockedClose = document.getElementById('blockedClose');
@@ -1902,10 +1924,19 @@
         chaptersBtn.addEventListener('click', () => {
             window.location.href = '/supervisors/supervisorstudents.html';
         });
-        teacherScheduleBtn.addEventListener('click', () => {
+        /* ========= جدول المعلم — choice popup (جدولي / جدول القسم) ========= */
+        teacherScheduleBtn.addEventListener('click', () => openModal(scheduleChoiceModal));
+        myScheduleOption.addEventListener('click', () => {
+            closeModal(scheduleChoiceModal);
             try { sessionStorage.setItem('teacherScheduleReturnTo', '/supervisors/supervisor.html'); } catch {}
             window.location.href = '/teachers/teacherschedule.html';
         });
+        deptScheduleOption.addEventListener('click', () => {
+            closeModal(scheduleChoiceModal);
+            try { sessionStorage.setItem('deptScheduleReturnTo', '/supervisors/supervisor.html'); } catch {}
+            window.location.href = '/depHead/dptschedual.html';
+        });
+        scheduleChoiceModal.querySelector('.overlay').addEventListener('click', () => closeModal(scheduleChoiceModal));
         adminScheduleEditBtn.addEventListener('click', () => {
             window.location.href = '/admins/adminschedule.html';
         });

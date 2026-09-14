@@ -764,7 +764,7 @@
     import { getAuth, onAuthStateChanged } from "/shared/firebase.js";
     import {
       initializeFirestore, persistentSingleTabManager, collection, getDocs, query, where,
-      doc, getDoc, setDoc, updateDoc, serverTimestamp, Timestamp
+      doc, getDoc, setDoc, updateDoc, serverTimestamp
     } from "/shared/firebase.js";
     import { resolveDepartmentName, getDepartmentSubjectFilters } from "/shared/departments.js";
     import { mountAttendanceSheet, LESSON_END_GRACE_MINUTES } from "/shared/attendance.js";
@@ -830,16 +830,6 @@
       return `${y}-${m}-${da}`;
     }
 
-    function startOfDay(d){
-      const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-      x.setHours(0,0,0,0);
-      return x;
-    }
-    function endOfDay(d){
-      const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-      x.setHours(23,59,59,999);
-      return x;
-    }
 
     function formatTime(timestamp){
       if (!timestamp) return '—';
@@ -1008,66 +998,35 @@
     }
 
     // Check attendance for a specific teacher's class on a date and lesson
+    // Queries attendanceSessions directly — the source of truth every
+    // other page (admins/overallabsence.html, Teachers/user.html, ...)
+    // already uses — instead of walking every student's legacy
+    // students/{id}/attendance mirror and matching its createdBy/updatedBy
+    // against teacherUid. That mirror match was wrong two ways: (1) it
+    // silently returned "not taken" for a whole class whenever the
+    // students collection's own classKey spelling didn't exactly match
+    // this page's — the same class-key drift bug fixed elsewhere in
+    // shared/attendance.js and admins/overallabsence.html this session —
+    // and (2) createdBy/updatedBy on that mirror is always the ACTUAL
+    // SUBMITTER, not the lesson's assigned teacher — so any session
+    // recorded on someone's behalf (an admin backfill, or a department
+    // colleague via this very page's own تسجيل الغياب) never matched at
+    // all. attendanceSessions' own teacherUid field is always the
+    // assigned teacher regardless of who actually submitted it, so
+    // filtering on that directly is both simpler and correct either way.
     async function checkAttendanceTaken(teacherUid, classKey, dateObj, lesson){
-      const start = startOfDay(dateObj);
-      const end = endOfDay(dateObj);
-      const startTs = Timestamp.fromDate(start);
-      const endTs = Timestamp.fromDate(end);
-      
-      // We need to find students in this class
       try {
-        const studentsQuery = query(collection(db, 'students'), where('class', '==', classKey));
-        const studentsSnap = await getDocs(studentsQuery);
-        
-        if (studentsSnap.empty) return { taken: false, time: null };
-        
-        const studentIds = [];
-        studentsSnap.forEach(docSnap => {
-          studentIds.push(docSnap.id);
-        });
-        
-        // Check each student's attendance for this lesson with concurrency limit
-        let foundAttendance = false;
-        let earliestTime = null;
-        
-        await promisePool(studentIds, async (studentId) => {
-          if (foundAttendance) return; // Early exit
-          
-          const attendanceRef = collection(db, 'students', studentId, 'attendance');
-          const q = query(
-            attendanceRef,
-            where('lessonIndex', '==', lesson),
-            where('createdAt', '>=', startTs),
-            where('createdAt', '<=', endTs)
-          );
-          
-          try {
-            const snap = await getDocs(q);
-            snap.forEach(docSnap => {
-              const data = docSnap.data();
-              const createdBy = data.createdBy;
-              const updatedBy = data.updatedBy;
-              
-              if (createdBy === teacherUid || updatedBy === teacherUid){
-                foundAttendance = true;
-                const time = data.createdAt || data.updatedAt;
-                if (time){
-                  const timeMs = time.toMillis ? time.toMillis() : (time.seconds * 1000);
-                  if (!earliestTime || timeMs < earliestTime){
-                    earliestTime = timeMs;
-                  }
-                }
-              }
-            });
-          } catch (e) {
-            // Skip this student if error
-          }
-        }, 8);
-        
-        return {
-          taken: foundAttendance,
-          time: earliestTime ? Timestamp.fromMillis(earliestTime) : null
-        };
+        const dateISO = toInputDate(dateObj);
+        const snap = await getDocs(query(
+          collection(db, 'attendanceSessions'),
+          where('classKey', '==', classKey),
+          where('teacherUid', '==', teacherUid),
+          where('date', '==', dateISO),
+          where('lesson', '==', lesson)
+        ));
+        if (snap.empty) return { taken: false, time: null };
+        const data = snap.docs[0].data() || {};
+        return { taken: true, time: data.createdAt || data.sessionStartTs || null };
       } catch (e) {
         console.error('Error checking attendance:', e);
         return { taken: false, time: null };
@@ -1495,7 +1454,16 @@
     });
 
     backBtn.addEventListener('click', () => {
-      window.location.href = isHeadViewer ? 'dptlead.html' : '/Teachers/user.html';
+      // Set by whichever page's جدول القسم option actually sent the viewer
+      // here (Teachers/user.html, supervisors/supervisor.html, or
+      // depHead/dptlead.html's own قسمي button) — takes them back to where
+      // they actually came from, not a guess based on role alone (a
+      // supervisor and a regular teacher both read as "not head" here).
+      // Falls back to the role-based default only when there's no marker
+      // at all — a direct link or bookmark, or sessionStorage unavailable.
+      let returnTo = null;
+      try { returnTo = sessionStorage.getItem('deptScheduleReturnTo'); sessionStorage.removeItem('deptScheduleReturnTo'); } catch {}
+      window.location.href = returnTo || (isHeadViewer ? 'dptlead.html' : '/Teachers/user.html');
     });
 
     document.addEventListener('click', (e) => {

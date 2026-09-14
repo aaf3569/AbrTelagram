@@ -2433,6 +2433,7 @@
         });
         
         deptScheduleBtn.addEventListener('click', () => {
+            try { sessionStorage.setItem('deptScheduleReturnTo', '/dephead/dptlead.html'); } catch {}
             window.location.href = 'dptschedual.html';
         });
 

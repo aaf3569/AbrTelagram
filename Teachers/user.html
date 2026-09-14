@@ -3852,6 +3852,7 @@
         if (deptScheduleOption) {
             deptScheduleOption.addEventListener('click', ()=> {
                 closeModal(scheduleChoiceModal);
+                try { sessionStorage.setItem('deptScheduleReturnTo', '/Teachers/user.html'); } catch {}
                 location.href = '/depHead/dptschedual.html';
             });
         }
