@@ -257,6 +257,12 @@
       box-shadow: 0 4px 12px rgba(3,60,84,.08);
     }
 
+    /* Full "الحصة الأولى"-style label by default; a narrow phone swaps to
+       just the numeral (.th-short) instead — see the mobile media query
+       below. aria-label on the <th> itself keeps the full name available
+       to screen readers either way. */
+    .th-short{ display:none; }
+
     /* Sticky right column */
     th.sticky-col, td.sticky-col{
       position:sticky;
@@ -532,17 +538,20 @@
       .header-inner{ grid-template-columns: 40px 1fr 40px; }
       .icon-btn{ width:40px; height:40px; border-radius:12px; }
 
-      table{ min-width: 980px; }
-      th.sticky-col, td.sticky-col{ min-width: 132px; }
+      /* The full "الحصة الأولى" label used to be forced to wrap inside a
+         narrow column and still looked cut off; a phone shows just the
+         numeral instead (aria-label keeps the full name for screen
+         readers), so the lesson columns — and the table as a whole —
+         need much less width than before. */
+      .th-full{ display:none; }
+      .th-short{ display:inline-block; font-size:1.05rem; }
+
+      table{ min-width: 700px; }
+      th.sticky-col, td.sticky-col{ min-width: 120px; }
       .table-shell{ height: calc(100vh - var(--headerH) - 10px); }
 
       thead th{
-        padding:12px 6px;
-        font-size:.82rem;
-        line-height:1.25;
-        white-space: normal;
-        word-break: keep-all;
-        overflow: visible;
+        padding:12px 4px;
       }
 
       .teacher-name {
@@ -554,6 +563,15 @@
         padding: 12px 16px;
         min-height: 48px;
       }
+
+      /* Popover: pop-head/pop-body content gets tighter padding and
+         smaller chip text so the (now taller, with تغطية) popup content
+         fits comfortably in the larger phone-sized popover from
+         openPopoverForCell's isPhone sizing. */
+      .pop-head{ padding:12px 12px; }
+      .pop-body{ padding:12px 12px 14px 12px; gap:10px; }
+      .chip{ font-size:.85rem; padding:7px 9px; }
+      .cover-list{ max-height:32vh; }
     }
 
     @supports (-webkit-touch-callout: none) {
@@ -645,13 +663,13 @@
             <thead>
               <tr>
                 <th class="sticky-col">المعلمين</th>
-                <th>الحصة الأولى</th>
-                <th>الحصة الثانية</th>
-                <th>الحصة الثالثة</th>
-                <th>الحصة الرابعة</th>
-                <th>الحصة الخامسة</th>
-                <th>الحصة السادسة</th>
-                <th>الحصة السابعة</th>
+                <th aria-label="الحصة الأولى"><span class="th-full">الحصة الأولى</span><span class="th-short">١</span></th>
+                <th aria-label="الحصة الثانية"><span class="th-full">الحصة الثانية</span><span class="th-short">٢</span></th>
+                <th aria-label="الحصة الثالثة"><span class="th-full">الحصة الثالثة</span><span class="th-short">٣</span></th>
+                <th aria-label="الحصة الرابعة"><span class="th-full">الحصة الرابعة</span><span class="th-short">٤</span></th>
+                <th aria-label="الحصة الخامسة"><span class="th-full">الحصة الخامسة</span><span class="th-short">٥</span></th>
+                <th aria-label="الحصة السادسة"><span class="th-full">الحصة السادسة</span><span class="th-short">٦</span></th>
+                <th aria-label="الحصة السابعة"><span class="th-full">الحصة السابعة</span><span class="th-short">٧</span></th>
               </tr>
             </thead>
             <tbody id="gridBody"></tbody>
@@ -1092,8 +1110,18 @@
         </div>
       `;
 
-      const popW = Math.min(520, Math.floor(window.innerWidth * 0.92));
-      const popH = Math.min(520, Math.floor(window.innerHeight * 0.70));
+      // The 520px cap reads fine on a desktop-sized viewport, but on a
+      // phone it was leaving real height on the table even after the
+      // تغطية section made the popover's content noticeably taller — a
+      // phone gets a much bigger share of its own screen instead of that
+      // same fixed cap.
+      const isPhone = window.innerWidth <= 480;
+      const popW = isPhone
+        ? Math.floor(window.innerWidth * 0.96)
+        : Math.min(520, Math.floor(window.innerWidth * 0.92));
+      const popH = isPhone
+        ? Math.floor(window.innerHeight * 0.85)
+        : Math.min(520, Math.floor(window.innerHeight * 0.70));
       popover.style.width = popW + 'px';
       popover.style.maxHeight = popH + 'px';
 
