@@ -224,6 +224,20 @@
 
     .pop-body{ padding:18px; display:flex; flex-direction:column; gap:14px; overflow-y:auto; }
 
+    /* Phone: 92vw of a ~360-390px screen left barely 220px for the title
+       between the two 36px round buttons — a longer Arabic teacher name
+       had nowhere to go but a hard ellipsis cut, reading as broken. Uses
+       nearly the full screen width instead, with just enough margin either
+       side to still see the blurred backdrop, and a taller max-height so
+       the request form has real room too. */
+    @media (max-width:480px){
+      .popover{ width:calc(100vw - 28px); max-height:88vh; }
+      .popover.popover-wide{ width:calc(100vw - 20px); max-height:90vh; }
+      .pop-head{ padding:14px 14px; gap:6px; }
+      .pop-title b{ font-size:1rem; }
+      .pop-title span{ white-space:normal; }
+    }
+
     /* Clean two-column info grid for lesson details — the whole point of
        this popup, kept to exactly the four facts that matter. */
     .info-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
