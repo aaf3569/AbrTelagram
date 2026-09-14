@@ -1467,7 +1467,7 @@
     } from "/shared/firebase.js";
     import { kuwaitTodayISO, getCurrentKuwaitMinutes } from "/shared/kuwait-time.js";
     import { fetchClassList, sortClassList, primeClassList } from "/shared/class-registry.js";
-    import { mountAttendanceSheet, createAttendanceSessionId } from "/shared/attendance.js";
+    import { mountAttendanceSheet, createAttendanceSessionId, legacyAttendanceSessionId } from "/shared/attendance.js";
 
 
 
@@ -3033,40 +3033,67 @@
       downloadModal.classList.remove('open');
     }
 
-    // Migrates every attendanceSessions doc still sitting under the old,
-    // collision-prone ID scheme (see shared/attendance.js's
-    // legacyAttendanceSessionId — \w is ASCII-only, so a class's track
-    // letter ع/د was silently dropped when building the doc ID, meaning
-    // e.g. "12 / 2 ع" and "12 / 2 د" computed the exact same ID; whichever
-    // teacher submitted first for a given date+lesson "won" that document,
-    // and every other class's sibling-track teacher got a false "already
-    // taken" from then on). The new code only ever WRITES the safe,
-    // collision-free ID going forward, but an already-existing legacy
-    // document keeps blocking its sibling class until it's moved off that
-    // shared ID — this does exactly that, using each doc's own (never
-    // corrupted) date/lesson/classKey fields as the source of truth for
-    // where it truly belongs. No attendance data is changed, only moved —
-    // including each session's attendanceRecords subcollection.
+    // Moves attendanceSessions docs OFF a shared/colliding legacy ID (see
+    // shared/attendance.js's legacyAttendanceSessionId — \w is ASCII-only,
+    // so a class's track letter ع/د was silently dropped when building the
+    // doc ID, meaning e.g. "12 / 2 ع" and "12 / 2 د" computed the exact
+    // same ID; whichever teacher submitted first for a given date+lesson
+    // "won" that document, and every other class's sibling-track teacher
+    // got a false "already taken" from then on).
+    //
+    // Deliberately narrow: only touches sessions for classes that actually
+    // share a legacy-ID segment with another class in the CURRENT class
+    // list right now (computed from classKey alone — date/lesson don't
+    // affect whether two classes collide). Every other class's sessions —
+    // the overwhelming majority, including every grade-10 class, which
+    // never had a track letter to strip in the first place — are never
+    // even inspected, let alone touched. Data safety: for each session it
+    // does move, it copies the session doc and every one of its
+    // attendanceRecords first, and only deletes the original after that
+    // copy succeeds; if the destination ID is already occupied by another
+    // document, it's left alone and reported instead of overwritten.
+    async function findCollisionProneClassKeys(){
+      const classList = await fetchClassList(db);
+      const bySegment = new Map(); // legacy classKey segment -> [classKey, ...]
+      classList.forEach(classKey => {
+        const segment = legacyAttendanceSessionId('', '', classKey);
+        if (!bySegment.has(segment)) bySegment.set(segment, []);
+        bySegment.get(segment).push(classKey);
+      });
+      const atRisk = new Set();
+      bySegment.forEach(keys => { if (keys.length > 1) keys.forEach(k => atRisk.add(k)); });
+      return atRisk;
+    }
+
     async function fixSessionCollisions(){
       if (fixSessionCollisionsBtn.disabled) return;
-      const confirmed = window.confirm(
-        'سيفحص هذا كل سجلّات الحضور المخزَّنة، وينقل أيّ سجلّ محفوظ تحت معرّف قديم متعارض (بسبب حرف الشعبة ع/د) ' +
-        'إلى معرّفه الصحيح الحالي. لا تُحذف أو تُغيَّر أي بيانات فعليّة — فقط يُعاد نقل مكانها. ' +
-        'قد يستغرق هذا بعض الوقت حسب عدد السجلّات. متابعة؟'
-      );
-      if (!confirmed) return;
 
       fixSessionCollisionsBtn.disabled = true;
       const originalLabel = fixSessionCollisionsBtn.textContent;
       fixSessionCollisionsBtn.textContent = 'جاري الفحص...';
       try {
-        const snap = await getDocs(collection(db, 'attendanceSessions'));
-        const sessions = [];
-        snap.forEach(d => sessions.push({ id: d.id, data: d.data() || {} }));
+        const atRiskClassKeys = await findCollisionProneClassKeys();
+        if (atRiskClassKeys.size === 0) {
+          alert('لا يوجد أي فصلين في قائمة الفصول الحاليّة يتشاركان نفس المعرّف — لا حاجة لأي إصلاح.');
+          return;
+        }
 
-        const toMigrate = sessions.filter(({ id, data }) => {
-          if (!data.date || !data.lesson || !data.classKey) return false;
-          return createAttendanceSessionId(data.date, data.lesson, data.classKey) !== id;
+        const confirmed = window.confirm(
+          `سيُنقل سجلّ الحضور المتعارض للفصول التالية فقط إلى معرّفه الصحيح — بقيّة الفصول لن تُفحص أو تُلمَس إطلاقًا:\n` +
+          [...atRiskClassKeys].join(' ، ') +
+          `\n\nلا تُحذف أو تُغيَّر أي بيانات فعليّة — يُنسخ كل سجلّ ويُتحقّق من نجاح النسخ قبل حذف نسخته القديمة. متابعة؟`
+        );
+        if (!confirmed) return;
+        fixSessionCollisionsBtn.textContent = 'جاري النقل...';
+
+        const snap = await getDocs(collection(db, 'attendanceSessions'));
+        const toMigrate = [];
+        snap.forEach(d => {
+          const data = d.data() || {};
+          const classKey = (data.classKey || '').toString().trim();
+          if (!atRiskClassKeys.has(classKey) || !data.date || !data.lesson) return;
+          const correctId = createAttendanceSessionId(data.date, data.lesson, data.classKey);
+          if (correctId !== d.id) toMigrate.push({ id: d.id, data });
         });
 
         let migrated = 0;
@@ -3099,8 +3126,8 @@
         }
 
         const parts = [
-          `تم فحص ${sessions.length} سجلّ حضور. ${toMigrate.length} منها كانت تحت معرّف قديم.`,
-          `تم نقل ${migrated} سجلًّا بنجاح إلى معرّفه الصحيح.`,
+          `الفصول المتأثرة: ${[...atRiskClassKeys].join(' ، ')}.`,
+          `تم فحص ${toMigrate.length} سجلًّا متعارضًا لهذه الفصول فقط. تم نقل ${migrated} منها بنجاح إلى معرّفه الصحيح.`,
         ];
         if (occupiedList.length) {
           parts.push(`تعذّر نقل ${occupiedList.length} سجلًّا لأن معرّفها الصحيح محجوز بالفعل بسجلّ آخر — يحتاج مراجعة يدويّة:\n` + occupiedList.join('\n'));
