@@ -858,6 +858,29 @@
       user-select:none;
     }
 
+    /* A lesson with zero absences but some late students — same shape as
+       .cell-btn (a count, not an exclamation glyph, so it never reads as
+       the "!" missed-attendance indicator) in the app-wide amber used for
+       "late" everywhere else (shared/attendance.js's late status/dot). */
+    .cell-late{
+      width:56px; height:38px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      border-radius:12px;
+      border:1px solid rgba(245,158,11,.35);
+      background: var(--yellowBg);
+      color: var(--yellow);
+      font-weight:900;
+      cursor:pointer;
+      transition: transform .12s ease, box-shadow .12s ease, filter .12s ease, border-color .12s ease;
+      box-shadow: 0 10px 20px rgba(245,158,11,.12);
+      font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+    .cell-late:hover{ transform: translateY(-1px); box-shadow: 0 14px 26px rgba(245,158,11,.18); border-color: rgba(245,158,11,.55) }
+    .cell-late:active{ transform: translateY(0) scale(.99) }
+    .cell-late:focus-visible{ outline:3px solid var(--focus); outline-offset:2px }
+
     /* Missed indicator badge */
     .missed-indicator {
       position: absolute;
@@ -2083,6 +2106,21 @@
               openModalForCell(btn, cn, lesson, 'absent');
             });
             td.appendChild(btn);
+          } else if (cell.lateCount > 0) {
+            // Attendance WAS taken (so this isn't "missed") and nobody was
+            // absent — but students were marked late. That used to fall
+            // straight through to the empty cell below, hiding every late
+            // arrival whenever a lesson had no absences at all.
+            const btn = document.createElement('button');
+            btn.className = 'cell-late';
+            btn.type = 'button';
+            btn.textContent = toArabicDigits(cell.lateCount);
+            btn.title = 'يوجد طلاب متأخرون (لا يوجد غياب)';
+            btn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              openModalForCell(btn, cn, lesson, 'absent');
+            });
+            td.appendChild(btn);
           } else if (cell.missed) {
             const btn = document.createElement('button');
             btn.className = 'cell-missed';
@@ -2403,7 +2441,10 @@
         }
 
       } else {
-        if (cell.count <= 0) return;
+        // A cell with no absences but some late students still has real
+        // content to show (the Lates tab below) — only truly-empty cells
+        // (neither absent nor late) have nothing worth opening.
+        if (cell.count <= 0 && cell.lateCount <= 0) return;
 
         modalTitle.textContent = `${niceClass} | الحصة ${niceLesson}`;
         modalSubtitle.textContent = `التاريخ: ${niceDate}`;
@@ -2446,6 +2487,12 @@
           tabLates.classList.add('active'); tabAbsent.classList.remove('active');
           panelLates.classList.add('active'); panelAbsent.classList.remove('active');
         });
+
+        // Opened via the lates-only cell (nothing to show on the absent
+        // tab) — land straight on the tab that actually has content.
+        if (cell.count <= 0 && cell.lateCount > 0) {
+          tabLates.click();
+        }
 
         // Populate lates panel (students marked late during attendance)
         if (cell.lateCount > 0) {
