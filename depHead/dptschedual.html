@@ -257,11 +257,12 @@
       box-shadow: 0 4px 12px rgba(3,60,84,.08);
     }
 
-    /* Full "الحصة الأولى"-style label by default; a narrow phone swaps to
-       just the numeral (.th-short) instead — see the mobile media query
+    /* Full "الحصة الأولى"-style single-line label by default; a narrow
+       phone swaps to a two-line stack instead ("الحصة" on top, the
+       ordinal word bigger underneath) — see the mobile media query
        below. aria-label on the <th> itself keeps the full name available
        to screen readers either way. */
-    .th-short{ display:none; }
+    .th-stack{ display:none; }
 
     /* Sticky right column */
     th.sticky-col, td.sticky-col{
@@ -539,19 +540,29 @@
       .icon-btn{ width:40px; height:40px; border-radius:12px; }
 
       /* The full "الحصة الأولى" label used to be forced to wrap inside a
-         narrow column and still looked cut off; a phone shows just the
-         numeral instead (aria-label keeps the full name for screen
-         readers), so the lesson columns — and the table as a whole —
-         need much less width than before. */
+         narrow column and still looked cut off; a phone stacks it into
+         two lines instead — "الحصة" small on top, the ordinal word
+         (الأولى، الثانية، …) bigger underneath — which reads clearly in
+         much less width than the single-line version did. aria-label on
+         the <th> keeps the full name available to screen readers either
+         way. */
       .th-full{ display:none; }
-      .th-short{ display:inline-block; font-size:1.05rem; }
+      .th-stack{
+        display:flex;
+        flex-direction:column;
+        align-items:center;
+        gap:2px;
+        line-height:1.15;
+      }
+      .th-word{ font-size:.68rem; font-weight:800; color:var(--muted); }
+      .th-ordinal{ font-size:1rem; font-weight:900; color:var(--primary); white-space:nowrap; }
 
-      table{ min-width: 700px; }
+      table{ min-width: 760px; }
       th.sticky-col, td.sticky-col{ min-width: 120px; }
       .table-shell{ height: calc(100vh - var(--headerH) - 10px); }
 
       thead th{
-        padding:12px 4px;
+        padding:10px 4px;
       }
 
       .teacher-name {
@@ -663,13 +674,13 @@
             <thead>
               <tr>
                 <th class="sticky-col">المعلمين</th>
-                <th aria-label="الحصة الأولى"><span class="th-full">الحصة الأولى</span><span class="th-short">١</span></th>
-                <th aria-label="الحصة الثانية"><span class="th-full">الحصة الثانية</span><span class="th-short">٢</span></th>
-                <th aria-label="الحصة الثالثة"><span class="th-full">الحصة الثالثة</span><span class="th-short">٣</span></th>
-                <th aria-label="الحصة الرابعة"><span class="th-full">الحصة الرابعة</span><span class="th-short">٤</span></th>
-                <th aria-label="الحصة الخامسة"><span class="th-full">الحصة الخامسة</span><span class="th-short">٥</span></th>
-                <th aria-label="الحصة السادسة"><span class="th-full">الحصة السادسة</span><span class="th-short">٦</span></th>
-                <th aria-label="الحصة السابعة"><span class="th-full">الحصة السابعة</span><span class="th-short">٧</span></th>
+                <th aria-label="الحصة الأولى"><span class="th-full">الحصة الأولى</span><span class="th-stack"><span class="th-word">الحصة</span><span class="th-ordinal">الأولى</span></span></th>
+                <th aria-label="الحصة الثانية"><span class="th-full">الحصة الثانية</span><span class="th-stack"><span class="th-word">الحصة</span><span class="th-ordinal">الثانية</span></span></th>
+                <th aria-label="الحصة الثالثة"><span class="th-full">الحصة الثالثة</span><span class="th-stack"><span class="th-word">الحصة</span><span class="th-ordinal">الثالثة</span></span></th>
+                <th aria-label="الحصة الرابعة"><span class="th-full">الحصة الرابعة</span><span class="th-stack"><span class="th-word">الحصة</span><span class="th-ordinal">الرابعة</span></span></th>
+                <th aria-label="الحصة الخامسة"><span class="th-full">الحصة الخامسة</span><span class="th-stack"><span class="th-word">الحصة</span><span class="th-ordinal">الخامسة</span></span></th>
+                <th aria-label="الحصة السادسة"><span class="th-full">الحصة السادسة</span><span class="th-stack"><span class="th-word">الحصة</span><span class="th-ordinal">السادسة</span></span></th>
+                <th aria-label="الحصة السابعة"><span class="th-full">الحصة السابعة</span><span class="th-stack"><span class="th-word">الحصة</span><span class="th-ordinal">السابعة</span></span></th>
               </tr>
             </thead>
             <tbody id="gridBody"></tbody>
