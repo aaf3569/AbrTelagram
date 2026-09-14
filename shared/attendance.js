@@ -21,8 +21,10 @@ const ATTENDANCE_SESSIONS_COLLECTION = "attendanceSessions";
 const ATTENDANCE_RECORDS_SUBCOLLECTION = "attendanceRecords";
 // Attendance for a lesson can be taken/edited from the moment it starts
 // until this many minutes after it ends — configured lesson times come from
-// settings/lessonTimes (edited in admins/adminschedule.html).
-const LESSON_END_GRACE_MINUTES = 4;
+// settings/lessonTimes (edited in admins/adminschedule.html). Exported so
+// admins/adminschedule.html can compute the exact same sessionCutoffTs this
+// module would when it resyncs today's sessions after a bell-time edit.
+export const LESSON_END_GRACE_MINUTES = 4;
 
 const STYLES = `
   /* Attendance sheet — bundled by /shared/attendance.js */

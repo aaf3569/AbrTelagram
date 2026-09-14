@@ -1297,6 +1297,17 @@
 
         <div class="tc-divider"></div>
 
+        <div class="tc-row tc-row-resync">
+          <span class="tc-section-label">مزامنة مهلة تعديل الغياب</span>
+          <div class="pop-desc" style="margin-bottom:8px">
+            إذا تم تغيير وقت حصة اليوم بعد أن سجّل معلّمون غيابها بالفعل، يبقى تسجيلهم محدودًا بمهلة الوقت القديم حتى تتم هذه المزامنة — بدون هذا، قد لا يتمكّن المعلّم من تعديل ما سجّله رغم أنّ الشاشة تسمح له بذلك.
+          </div>
+          <button id="resyncCutoffsBtn" class="btn ghost" type="button">مزامنة الآن لكل حصص اليوم</button>
+          <div id="resyncCutoffsMsg" class="pop-desc"></div>
+        </div>
+
+        <div class="tc-divider"></div>
+
         <div class="tc-row tc-row-breaks">
           <span class="tc-section-label">أوقات الفرصة</span>
           <div class="tc-break-grid">
@@ -1392,8 +1403,11 @@
       collection, getDocs, query, where,
       doc, getDoc, setDoc,
       writeBatch,
-      serverTimestamp
+      serverTimestamp,
+      Timestamp
     } from "/shared/firebase.js";
+    import { kuwaitDateTimeToDate, addMinutesToDate } from "/shared/kuwait-time.js";
+    import { LESSON_END_GRACE_MINUTES } from "/shared/attendance.js";
 
 
 
@@ -1509,6 +1523,8 @@
     const lessonCountInput = document.getElementById('lessonCountInput');
     const lessonCountSaveBtn = document.getElementById('lessonCountSaveBtn');
     const lessonCountMsg = document.getElementById('lessonCountMsg');
+    const resyncCutoffsBtn = document.getElementById('resyncCutoffsBtn');
+    const resyncCutoffsMsg = document.getElementById('resyncCutoffsMsg');
 
     /* ========= State ========= */
     // Remember the last-viewed grade/class across page reloads — otherwise every
@@ -1913,6 +1929,61 @@
       return h * 60 + m;
     }
 
+    // Re-anchors today's already-recorded attendanceSessions for this
+    // lesson number to the bell time that was JUST saved.
+    //
+    // Every session stores its own sessionStartTs/sessionCutoffTs, frozen
+    // from the bell times in effect at the moment it was recorded — that's
+    // what firestore.rules' canWriteSessionTime actually checks before
+    // allowing an edit, not the live settings/lessonTimes. If an admin
+    // moves a lesson's time after attendance for it was already taken
+    // today, every one of those sessions keeps the OLD cutoff, which the
+    // teacher's own edit window has no way to fix from the client side —
+    // the edit save would be silently rejected by the rules even though
+    // the teacher's screen (which does track the live schedule) says
+    // editing should still be allowed right now.
+    //
+    // Only touches TODAY's sessions for this exact lesson number — never a
+    // past day, never a different lesson. Best-effort: a failure here must
+    // never undo or block the bell-time save that already succeeded.
+    // Re-anchors today's attendanceSessions for one lesson number to a
+    // given start/end — the actual Firestore work, shared by both the
+    // automatic per-edit resync below and the manual "sync all" button.
+    // Returns how many session documents were touched.
+    async function resyncTodaySessionCutoffsFor(lessonIndexOneBased, startTime, endTime) {
+      const todayISO = kuwaitTodayISO();
+      const snap = await getDocs(query(
+        collection(db, 'attendanceSessions'),
+        where('date', '==', todayISO),
+        where('lesson', '==', lessonIndexOneBased)
+      ));
+      if (snap.empty) return 0;
+
+      const sessionStartTs = Timestamp.fromDate(kuwaitDateTimeToDate(todayISO, startTime));
+      const sessionCutoffTs = Timestamp.fromDate(
+        addMinutesToDate(kuwaitDateTimeToDate(todayISO, endTime), LESSON_END_GRACE_MINUTES)
+      );
+
+      const batch = writeBatch(db);
+      snap.forEach((docSnap) => {
+        batch.update(docSnap.ref, { sessionStartTs, sessionCutoffTs });
+      });
+      await batch.commit();
+      return snap.size;
+    }
+
+    async function resyncTodaySessionCutoffs(lessonIndexOneBased, startTime, endTime) {
+      try {
+        const n = await resyncTodaySessionCutoffsFor(lessonIndexOneBased, startTime, endTime);
+        if (n > 0) {
+          addStatusLine("ok", `تمت مزامنة مهلة تعديل الغياب المسجّل اليوم لهذه الحصة (${n} تقرير).`);
+        }
+      } catch (error) {
+        console.error("[resyncTodaySessionCutoffs]", error);
+        addStatusLine("err", "تعذّرت مزامنة مهلة تعديل تقارير الغياب المسجّلة اليوم لهذه الحصة — قد لا يتمكّن المعلمون من تعديلها بعد تغيير الوقت.");
+      }
+    }
+
     async function saveLessonTime(index, startTime, endTime) {
       if (index < 0 || index >= FIXED_LESSON_COUNT) return false;
 
@@ -1940,24 +2011,59 @@
 
         // Update local cache
         lessonTimes[index] = { start: startTime, end: endTime };
-        
+
         // Update Firestore
         const docRef = doc(db, 'settings', 'lessonTimes');
         await setDoc(docRef, {
           times: lessonTimes,
           updatedAt: serverTimestamp()
         }, { merge: true });
-        
+
         // Update grid header
         updateLessonTimeHeader(index);
-        
+
         addStatusLine("ok", `تم تحديث وقت ${LESSONS_AR[index]} بنجاح`);
+
+        // Never let a resync problem look like the time save itself failed —
+        // the save above already succeeded and returns true regardless.
+        resyncTodaySessionCutoffs(index + 1, startTime, endTime);
+
         return true;
       } catch (error) {
         console.error("Error saving lesson time:", error);
         addStatusLine("err", "فشل في حفظ الوقت");
         return false;
       }
+    }
+
+    // Manual catch-up for sessions recorded BEFORE this resync existed, or
+    // recorded between a bell-time edit and the moment that particular
+    // edit's own resyncTodaySessionCutoffs call ran — re-syncs every
+    // lesson index against the schedule currently on screen, not just the
+    // one index a single saveLessonTime call touches.
+    if (resyncCutoffsBtn) {
+      resyncCutoffsBtn.addEventListener('click', async () => {
+        resyncCutoffsBtn.disabled = true;
+        resyncCutoffsMsg.textContent = 'جاري المزامنة...';
+        resyncCutoffsMsg.classList.remove('err');
+        try {
+          let totalSynced = 0;
+          for (let i = 0; i < FIXED_LESSON_COUNT; i++) {
+            const time = lessonTimes[i];
+            if (!time || !time.start || !time.end) continue;
+            totalSynced += await resyncTodaySessionCutoffsFor(i + 1, time.start, time.end);
+          }
+          resyncCutoffsMsg.textContent = totalSynced > 0
+            ? `تمت مزامنة ${totalSynced} تقرير غياب مسجّل اليوم مع الجدول الحالي.`
+            : 'لا توجد تقارير غياب مسجّلة اليوم بحاجة إلى مزامنة.';
+        } catch (error) {
+          console.error('[resyncCutoffsBtn]', error);
+          resyncCutoffsMsg.textContent = 'تعذّرت المزامنة. حاول مرة أخرى.';
+          resyncCutoffsMsg.classList.add('err');
+        } finally {
+          resyncCutoffsBtn.disabled = false;
+        }
+      });
     }
 
     function updateLessonTimeHeader(index) {
