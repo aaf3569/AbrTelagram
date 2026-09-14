@@ -126,7 +126,9 @@
     table{ width:100%; border-collapse:separate; border-spacing:0; min-width:940px; direction:rtl; table-layout:fixed; }
     thead{ position:sticky; top:0; z-index:20; background:#fff; }
     thead th{ position:relative; background:#fff; border-bottom:2px solid var(--primary); padding:16px 10px; text-align:center; font-weight:900; color:var(--primary); white-space:nowrap; overflow:visible; box-shadow: 0 4px 12px rgba(3,60,84,.08); }
-    .th-stack{ display:none; }
+    .lesson-th{ display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; line-height:1.35; }
+    .th-ordinal{ font-size:1rem; font-weight:900; color:var(--primary); }
+    .th-time{ font-size:.74rem; font-weight:700; color:var(--muted); direction:ltr; unicode-bidi:isolate; }
 
     th.sticky-col, td.sticky-col{ position:sticky; right:0; background:#fff; border-left:2px solid var(--border); text-align:center; min-width:150px; padding:12px 10px; z-index:15; }
     thead th.sticky-col{ z-index:25; box-shadow: 4px 0 12px rgba(3,60,84,.08); }
@@ -295,10 +297,7 @@
     .toast-text{ font-weight:800; color:var(--text); font-size:.9rem; }
 
     @media (max-width: 860px){
-      .th-full{ display:none; }
-      .th-stack{ display:flex; flex-direction:column; align-items:center; gap:1px; }
-      .th-word{ font-size:.68rem; font-weight:800; color:var(--muted); }
-      .th-ordinal{ font-size:1rem; font-weight:900; color:var(--primary); white-space:nowrap; }
+      .th-time{ font-size:.68rem; }
       table{ min-width: 760px; }
       th.sticky-col, td.sticky-col{ min-width: 120px; }
       .table-shell{ height: calc(100vh - var(--headerH) - 10px); }
@@ -361,13 +360,13 @@
             <thead>
               <tr>
                 <th class="sticky-col">المعلمين</th>
-                <th aria-label="الحصة الأولى"><span class="th-full">الحصة الأولى</span><span class="th-stack"><span class="th-word">الحصة</span><span class="th-ordinal">الأولى</span></span></th>
-                <th aria-label="الحصة الثانية"><span class="th-full">الحصة الثانية</span><span class="th-stack"><span class="th-word">الحصة</span><span class="th-ordinal">الثانية</span></span></th>
-                <th aria-label="الحصة الثالثة"><span class="th-full">الحصة الثالثة</span><span class="th-stack"><span class="th-word">الحصة</span><span class="th-ordinal">الثالثة</span></span></th>
-                <th aria-label="الحصة الرابعة"><span class="th-full">الحصة الرابعة</span><span class="th-stack"><span class="th-word">الحصة</span><span class="th-ordinal">الرابعة</span></span></th>
-                <th aria-label="الحصة الخامسة"><span class="th-full">الحصة الخامسة</span><span class="th-stack"><span class="th-word">الحصة</span><span class="th-ordinal">الخامسة</span></span></th>
-                <th aria-label="الحصة السادسة"><span class="th-full">الحصة السادسة</span><span class="th-stack"><span class="th-word">الحصة</span><span class="th-ordinal">السادسة</span></span></th>
-                <th aria-label="الحصة السابعة"><span class="th-full">الحصة السابعة</span><span class="th-stack"><span class="th-word">الحصة</span><span class="th-ordinal">السابعة</span></span></th>
+                <th aria-label="الحصة الأولى" data-lesson-header="1"><span class="lesson-th"><span class="th-ordinal">الأولى</span><span class="th-time"></span></span></th>
+                <th aria-label="الحصة الثانية" data-lesson-header="2"><span class="lesson-th"><span class="th-ordinal">الثانية</span><span class="th-time"></span></span></th>
+                <th aria-label="الحصة الثالثة" data-lesson-header="3"><span class="lesson-th"><span class="th-ordinal">الثالثة</span><span class="th-time"></span></span></th>
+                <th aria-label="الحصة الرابعة" data-lesson-header="4"><span class="lesson-th"><span class="th-ordinal">الرابعة</span><span class="th-time"></span></span></th>
+                <th aria-label="الحصة الخامسة" data-lesson-header="5"><span class="lesson-th"><span class="th-ordinal">الخامسة</span><span class="th-time"></span></span></th>
+                <th aria-label="الحصة السادسة" data-lesson-header="6"><span class="lesson-th"><span class="th-ordinal">السادسة</span><span class="th-time"></span></span></th>
+                <th aria-label="الحصة السابعة" data-lesson-header="7"><span class="lesson-th"><span class="th-ordinal">السابعة</span><span class="th-time"></span></span></th>
               </tr>
             </thead>
             <tbody id="gridBody"></tbody>
@@ -456,8 +455,7 @@
 
     // Department separators (tr.dept-row td) stick just under the table's
     // own sticky column-header row — measured, not guessed, since the
-    // header's real height shifts with the responsive two-line "th-stack"
-    // layout on narrow screens.
+    // header's real height shifts with the two-line lesson and time labels.
     function syncTheadH(){
       const thead = document.querySelector('#stateOk thead');
       const h = thead ? thead.getBoundingClientRect().height : 0;
@@ -536,6 +534,14 @@
       const t = times[lessonIndex - 1];
       if (!t || !t.start || !t.end) return '—';
       return `${toArabicDigits(t.start)} – ${toArabicDigits(t.end)}`;
+    }
+    function updateLessonHeaders(){
+      document.querySelectorAll('[data-lesson-header]').forEach(th => {
+        const lesson = Number(th.dataset.lessonHeader);
+        const time = lessonTimeLabel(lesson);
+        th.querySelector('.th-time').textContent = time;
+        th.setAttribute('aria-label', `${LESSONS_AR[lesson - 1]}، ${time}`);
+      });
     }
 
     let selectedDate = new Date();
@@ -720,6 +726,7 @@
       mobileDateInput.value = toInputDate(dateObj);
       try {
         await Promise.all([loadScheduleForDate(dateObj), ensureLessonTimesLoaded()]);
+        updateLessonHeaders();
         renderGrid();
         show(sOk);
       } catch (e) {

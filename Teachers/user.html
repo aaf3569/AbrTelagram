@@ -444,11 +444,11 @@
         .card.error h3{color:var(--red)}
         .card.error .row .btn.primary{background:linear-gradient(145deg,#a93a33,#b42318)}
 
-        /* Place the close control on the card's outer corner, clear of the options. */
+        /* The close action follows the schedule choices inside the card. */
         .modal .schedule-choice-card{width:min(320px,92vw);padding:20px}
-        .schedule-choice-close{position:absolute;top:-20px;left:0;width:40px;height:40px;border-radius:50%;border:1px solid rgba(3,60,84,.22);background:#fff;color:var(--primary);display:grid;place-items:center;cursor:pointer;transition:var(--transition);z-index:2;box-shadow:0 6px 16px rgba(3,60,84,.14)}
-        .schedule-choice-close svg{width:16px;height:16px}
-        .schedule-choice-close:hover{background:rgba(3,60,84,.10);transform:scale(1.08);box-shadow:0 8px 20px rgba(3,60,84,.20)}
+        .schedule-choice-close{display:block;width:100%;min-height:44px;margin-top:18px;border-radius:12px;border:1px solid rgba(3,60,84,.22);background:#f8fafc;color:var(--primary);font:inherit;font-weight:900;cursor:pointer;transition:var(--transition)}
+        .schedule-choice-close:hover{background:rgba(3,60,84,.10);border-color:rgba(3,60,84,.36)}
+
         .schedule-choice-options{display:flex;flex-direction:column;gap:10px}
         .schedule-choice-option{width:100%;display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:16px;border:1px solid var(--border);background:#fff;cursor:pointer;text-align:right;transition:var(--transition)}
         .schedule-choice-option:hover{border-color:rgba(3,60,84,.3);background:#f8fafc;transform:translateY(-1px);box-shadow:0 12px 26px rgba(3,60,84,.10)}
@@ -950,9 +950,6 @@
     <div id="scheduleChoiceModal" class="modal" aria-hidden="true">
         <div class="overlay"></div>
         <div class="card schedule-choice-card" role="dialog" aria-modal="true" aria-label="اختيار الجدول">
-            <button id="closeScheduleChoiceModal" class="schedule-choice-close" aria-label="إغلاق" type="button">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
-            </button>
             <div class="schedule-choice-options">
                 <button id="myScheduleOption" class="schedule-choice-option opt-mine" type="button">
                     <span class="opt-icon" aria-hidden="true">
@@ -976,6 +973,7 @@
                     <svg class="opt-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
                 </button>
             </div>
+            <button id="closeScheduleChoiceModal" class="schedule-choice-close" type="button">إغلاق</button>
         </div>
     </div>
 
