@@ -71,23 +71,14 @@
       position:sticky; top:0; z-index:30;
       background: rgba(255,255,255,.86);
       backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-      padding:14px 14px 12px;
+      padding:8px 14px;
       border-bottom:1px solid rgba(3,60,84,.10);
       box-shadow: 0 2px 10px rgba(3,60,84,.06);
     }
     .header-inner{
       width:min(100%, 1200px); margin:0 auto;
-      display:grid; grid-template-columns: 44px 1fr 44px;
+      display:grid; grid-template-columns: 44px minmax(0, 1fr) 44px;
       align-items:center; gap:10px;
-    }
-    .header-center{
-      display:flex; flex-direction:column; align-items:center; justify-content:center;
-      gap:2px; text-align:center; padding:2px 0;
-    }
-    .site-title{
-      margin:0; font-weight:900; letter-spacing:.2px;
-      font-size: clamp(1.05rem, 2.8vw, 1.5rem);
-      color: var(--primary); line-height:1.25;
     }
     .icon-btn{
       width:44px; height:44px; border-radius:14px;
@@ -99,17 +90,18 @@
     .icon-btn:active{ transform:translateY(0) scale(.99) }
     .icon-btn:focus-visible{ outline:3px solid var(--focus); outline-offset:2px }
 
-    .date-chip{ margin-top:10px; width:min(100%, 1200px); margin-inline:auto; display:flex; justify-content:center; position:relative; }
+    .date-chip{ min-width:0; width:100%; display:flex; justify-content:center; position:relative; }
     .date-btn{
       border:none; cursor:pointer; font-family:inherit; font-weight:900; font-size:.95rem;
       color:var(--primary); display:inline-flex; align-items:center; gap:10px;
-      padding:10px 14px; border-radius:999px; background:#fff; border:1px solid var(--border);
-      box-shadow: var(--shadow-1); transition: var(--transition); max-width:95%; position:relative;
+      padding:7px 12px; border-radius:999px; background:#fff; border:1px solid var(--border);
+      box-shadow: var(--shadow-1); transition: var(--transition); max-width:100%; min-width:0; position:relative;
     }
     .date-btn:hover{ transform: translateY(-1px); box-shadow: var(--shadow-2); border-color: rgba(3,60,84,.22) }
     .date-btn:active{ transform: translateY(0) scale(.99) }
     .date-btn:focus-visible{ outline:3px solid var(--focus); outline-offset:2px }
-    .date-btn span{ font-weight:900 }
+    .date-btn svg{ flex-shrink:0; }
+    .date-btn span{ min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:900 }
     .date-btn small{ color:var(--muted); font-weight:900; font-size:.82rem }
 
     .date-input-wrapper{ position:absolute; inset:0; opacity:0; pointer-events:auto; }
@@ -159,13 +151,18 @@
       padding:0; border-bottom:none;
     }
     .dept-sep{
-      display:flex; align-items:center; justify-content:center; gap:8px;
-      padding:10px 16px;
+      position:relative; height:44px;
+      display:flex; align-items:center; justify-content:center;
       background: linear-gradient(145deg, var(--primary-light), var(--primary));
       color:#fff;
       box-shadow: 0 4px 14px rgba(3,60,84,.22);
     }
-    .dept-sep-name{ font-weight:900; font-size:.95rem; }
+    .dept-sep-name{
+      position:absolute; top:50%; left:var(--deptCenterX, 50%);
+      transform:translate(-50%, -50%);
+      max-width:calc(100vw - 32px); text-align:center;
+      font-weight:900; font-size:.95rem;
+    }
 
     .cell-btn{
       width:100%; min-width:56px; height:38px;
@@ -307,7 +304,8 @@
       .table-shell{ height: calc(100vh - var(--headerH) - 10px); }
       thead th{ padding:10px 4px; }
       .teacher-name{ font-size: 0.85rem; padding: 0 2px; }
-      .date-btn{ padding: 12px 16px; min-height: 48px; }
+      .date-btn{ padding: 8px 14px; min-height: 40px; }
+      .date-btn small{ display:none; }
       .info-grid{ grid-template-columns:1fr; }
     }
 
@@ -323,23 +321,19 @@
       <button class="icon-btn" id="backBtn" title="رجوع" aria-label="رجوع">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
       </button>
-      <div class="header-center">
-        <h1 class="site-title">جدول المدرسة</h1>
+      <div class="date-chip">
+        <button class="date-btn" id="dateBtn" type="button" aria-label="اختيار تاريخ">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+          <span id="dateLabel">—</span>
+          <small>اضغط لتغيير التاريخ</small>
+          <div class="date-input-wrapper" aria-hidden="true">
+            <input class="mobile-date-input" id="mobileDateInput" type="date" inputmode="none" />
+          </div>
+        </button>
       </div>
       <div></div>
-    </div>
-
-    <div class="date-chip">
-      <button class="date-btn" id="dateBtn" type="button" aria-label="اختيار تاريخ">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-        </svg>
-        <span id="dateLabel">—</span>
-        <small>اضغط لتغيير التاريخ</small>
-        <div class="date-input-wrapper" aria-hidden="true">
-          <input class="mobile-date-input" id="mobileDateInput" type="date" inputmode="none" />
-        </div>
-      </button>
     </div>
   </header>
 
@@ -432,6 +426,7 @@
 
     const backBtn = document.getElementById('backBtn');
     const gridBody = document.getElementById('gridBody');
+    const tableScroll = document.getElementById('tableScroll');
 
     const dateBtn = document.getElementById('dateBtn');
     const dateLabel = document.getElementById('dateLabel');
@@ -467,6 +462,15 @@
       const thead = document.querySelector('#stateOk thead');
       const h = thead ? thead.getBoundingClientRect().height : 0;
       document.documentElement.style.setProperty('--theadH', (h || 54) + 'px');
+    }
+
+    function syncDeptLabelCenter(){
+      const separator = gridBody.querySelector('.dept-sep');
+      if (!separator) return;
+      const viewport = tableScroll.getBoundingClientRect();
+      const separatorRect = separator.getBoundingClientRect();
+      const center = viewport.left + tableScroll.clientWidth / 2 - separatorRect.left;
+      tableScroll.style.setProperty('--deptCenterX', center + 'px');
     }
 
     function toast(text, isError = false){
@@ -722,7 +726,7 @@
         console.error('[schoolschedule] loadGridForDate:', e);
         show(sDenied);
       }
-      requestAnimationFrame(() => { syncHeaderH(); syncTheadH(); });
+      requestAnimationFrame(() => { syncHeaderH(); syncTheadH(); syncDeptLabelCenter(); });
     }
 
     /* ========= Lesson popover — info view, then (on demand) the request
@@ -1058,7 +1062,8 @@
       window.location.href = returnTo || '/Teachers/user.html';
     });
 
-    window.addEventListener('resize', () => { if (sOk.classList.contains('active')) { syncHeaderH(); syncTheadH(); } });
+    tableScroll.addEventListener('scroll', syncDeptLabelCenter, { passive: true });
+    window.addEventListener('resize', () => { if (sOk.classList.contains('active')) { syncHeaderH(); syncTheadH(); syncDeptLabelCenter(); } });
     window.addEventListener('load', () => {
       syncHeaderH(); syncTheadH();
       setTimeout(() => { syncHeaderH(); syncTheadH(); }, 250);
