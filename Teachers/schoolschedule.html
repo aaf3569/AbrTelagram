@@ -166,7 +166,6 @@
       box-shadow: 0 4px 14px rgba(3,60,84,.22);
     }
     .dept-sep-name{ font-weight:900; font-size:.95rem; }
-    .dept-sep-count{ font-weight:800; font-size:.78rem; opacity:.8; }
 
     .cell-btn{
       width:100%; min-width:56px; height:38px;
@@ -637,7 +636,6 @@
         sepTd.innerHTML = `
           <div class="dept-sep">
             <span class="dept-sep-name">${escapeHtml(deptName)}</span>
-            <span class="dept-sep-count">${toArabicDigits(teachers.length)} ${teachers.length === 1 ? 'معلّم' : 'معلمين'}</span>
           </div>`;
         sepTr.appendChild(sepTd);
         gridBody.appendChild(sepTr);
