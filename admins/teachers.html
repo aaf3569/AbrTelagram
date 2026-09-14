@@ -479,16 +479,6 @@
           </div>
           <div class="sidebar-heading">الأقسام الدراسية</div>
         </div>
-        <!-- One-time fix (see shared/departments.js): renames any teacher
-             doc still carrying one of the old, wrongly-ordered/wrongly-
-             grouped department names to the corrected one. Safe to run
-             more than once — a doc already on the corrected name is left
-             untouched, so once every doc is fixed this reports nothing to
-             do and can stay in place harmlessly. -->
-        <button id="btnFixDepartments" class="subject subject-card" type="button" style="margin-bottom:10px; color:#8a5a00; border-color:rgba(138,90,0,.3);">
-          <span>🛠️ إصلاح أسماء الأقسام (مرّة واحدة)</span>
-          <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
-        </button>
         <button id="openAdminsTop" class="subject subject-card subject-admin-entry" type="button" aria-label="الإدارة">
           <span>الإدارة</span>
           <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
@@ -498,30 +488,6 @@
     </div>
   </main>
 
-  <!-- Department-name migration report -->
-  <div id="fixDeptModal" class="modal-overlay" aria-hidden="true">
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="fixDeptTitle">
-      <div class="modal-header">
-        <h3 id="fixDeptTitle" class="modal-title">إصلاح أسماء الأقسام</h3>
-        <button id="fixDeptClose" class="close-modal" type="button" aria-label="إغلاق">&times;</button>
-      </div>
-      <div class="modal-body">
-        <p class="muted" style="margin-bottom:12px;">
-          يصحّح اسم القسم في سجلّ كلّ معلّم لا يزال يحمل الاسم القديم:
-          «الجيولوجيا والأحياء» ← «الأحياء والجيولوجيا»،
-          «علم النفس والفلسفة» ← «العلوم الفلسفية»،
-          «التاريخ والجغرافيا» ← «الجغرافيا والتاريخ».
-          لا يغيّر مادّة أيّ معلّم، فقط اسم قسمه.
-        </p>
-        <div id="fixDeptStatus" class="muted">اضغط "تشغيل" لفحص كلّ المعلّمين.</div>
-        <div id="fixDeptReport" style="margin-top:12px; display:flex; flex-direction:column; gap:8px;"></div>
-      </div>
-      <div class="modal-footer">
-        <button id="fixDeptCancel" class="btn ghost" type="button">إغلاق</button>
-        <button id="fixDeptRun" class="btn primary" type="button">تشغيل</button>
-      </div>
-    </div>
-  </div>
 
   <section id="desktopWelcome" aria-hidden="true">
     <div class="desktop-welcome-inner">
@@ -811,7 +777,7 @@
     import { firebaseConfig } from "/shared/firebase.js";
     import { initializeApp, getApp, getApps } from "/shared/firebase.js";
     import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signOut, EmailAuthProvider, reauthenticateWithCredential } from "/shared/firebase.js";
-    import { initializeFirestore, persistentSingleTabManager, collection, getDocs, query, where, doc, getDoc, setDoc, updateDoc, deleteField, serverTimestamp, writeBatch } from "/shared/firebase.js";
+    import { initializeFirestore, persistentSingleTabManager, collection, getDocs, query, where, doc, getDoc, setDoc, updateDoc, deleteField, serverTimestamp } from "/shared/firebase.js";
     import { startPresenceHeartbeat, watchPresence } from "/shared/presence.js";
     import { fetchClassList, sortClassList, primeClassList } from "/shared/class-registry.js";
     import {
@@ -971,13 +937,6 @@
     const edAddClass=document.getElementById('edAddClass');
     const addTeacherModal=document.getElementById('addTeacherModal');
     const closeAddTeacherModal=document.querySelector('#addTeacherModal .close-modal');
-    const btnFixDepartments=document.getElementById('btnFixDepartments');
-    const fixDeptModal=document.getElementById('fixDeptModal');
-    const fixDeptClose=document.getElementById('fixDeptClose');
-    const fixDeptCancel=document.getElementById('fixDeptCancel');
-    const fixDeptRun=document.getElementById('fixDeptRun');
-    const fixDeptStatus=document.getElementById('fixDeptStatus');
-    const fixDeptReport=document.getElementById('fixDeptReport');
     const cancelAddTeacher=document.getElementById('cancelAddTeacher');
     const teacherName=document.getElementById('teacherName');
     const teacherEmail=document.getElementById('teacherEmail');
@@ -2100,86 +2059,6 @@
     closeAddTeacherModal.addEventListener('click',()=>closeModal(addTeacherModal));
     cancelAddTeacher.addEventListener('click',()=>closeModal(addTeacherModal));
 
-    // One-time department-name fix — see shared/departments.js. Old name
-    // -> corrected name; a teacher's `subject` field is never touched.
-    const OLD_DEPARTMENT_RENAMES = {
-      'الجيولوجيا والأحياء': 'الأحياء والجيولوجيا',
-      'علم النفس والفلسفة':  'العلوم الفلسفية',
-      'التاريخ والجغرافيا':  'الجغرافيا والتاريخ',
-    };
-    // Not a real department at all (see shared/departments.js) — flagged
-    // for a human to resolve rather than guessed at automatically.
-    const PHANTOM_DEPARTMENT = 'الاقتصاد';
-
-    btnFixDepartments.addEventListener('click', ()=>{
-      fixDeptStatus.textContent='اضغط "تشغيل" لفحص كلّ المعلّمين.';
-      fixDeptReport.innerHTML='';
-      openModal(fixDeptModal);
-    });
-    fixDeptClose.addEventListener('click',()=>closeModal(fixDeptModal,{fallbackFocus:btnFixDepartments}));
-    fixDeptCancel.addEventListener('click',()=>closeModal(fixDeptModal,{fallbackFocus:btnFixDepartments}));
-
-    async function runDepartmentNameFix(){
-      fixDeptRun.disabled=true;
-      fixDeptStatus.textContent='جارٍ الفحص...';
-      fixDeptReport.innerHTML='';
-      try{
-        const snap=await getDocs(collection(db,'teachers'));
-        const renamed=[];
-        const phantom=[];
-        const batch=writeBatch(db);
-        let batchCount=0;
-        snap.forEach(docSnap=>{
-          const data=docSnap.data()||{};
-          const rawDept=(data.department||'').toString().trim();
-          if(!rawDept) return;
-          if(rawDept===PHANTOM_DEPARTMENT){
-            phantom.push({name:data.name||docSnap.id, uid:docSnap.id});
-            return;
-          }
-          const corrected=OLD_DEPARTMENT_RENAMES[rawDept];
-          if(!corrected) return;
-          batch.update(doc(db,'teachers',docSnap.id),{department:corrected});
-          batchCount++;
-          renamed.push({name:data.name||docSnap.id, from:rawDept, to:corrected});
-        });
-        if(batchCount>0) await batch.commit();
-
-        const parts=[];
-        if(renamed.length){
-          parts.push(`<div style="font-weight:900; color:var(--ok,#126a2e);">تمّ تصحيح ${renamed.length} معلّمًا:</div>`);
-          renamed.forEach(r=>{
-            parts.push(`<div style="padding:8px 10px; border:1px solid var(--border); border-radius:10px; font-size:.92rem;">
-              <strong>${escapeHtmlFD(r.name)}</strong><br>
-              <span class="muted">${escapeHtmlFD(r.from)} ← ${escapeHtmlFD(r.to)}</span>
-            </div>`);
-          });
-        }
-        if(phantom.length){
-          parts.push(`<div style="font-weight:900; color:#a11; margin-top:${renamed.length?'12px':'0'};">
-            يحتاج مراجعة يدويّة — قسمه "الاقتصاد" غير موجود فعليًّا في المدرسة (${phantom.length}):</div>`);
-          phantom.forEach(p=>{
-            parts.push(`<div style="padding:8px 10px; border:1px solid rgba(161,17,17,.3); border-radius:10px; font-size:.92rem; background:rgba(161,17,17,.06);">
-              <strong>${escapeHtmlFD(p.name)}</strong> — اختر له قسمًا حقيقيًّا من نموذج تعديل المعلّم.
-            </div>`);
-          });
-        }
-        if(!renamed.length && !phantom.length){
-          parts.push('<div class="muted">لا يوجد شيء لتصحيحه — كلّ الأقسام صحيحة بالفعل.</div>');
-        }
-        fixDeptReport.innerHTML=parts.join('');
-        fixDeptStatus.textContent=`تمّ الفحص. ${renamed.length} تصحيح، ${phantom.length} يحتاج مراجعة يدويّة.`;
-      }catch(e){
-        console.error('runDepartmentNameFix failed:', e);
-        fixDeptStatus.textContent='تعذّر الفحص: '+(e?.message||'خطأ غير معروف');
-      }finally{
-        fixDeptRun.disabled=false;
-      }
-    }
-    function escapeHtmlFD(str){
-      return String(str??'').replace(/[&<>"']/g, ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
-    }
-    fixDeptRun.addEventListener('click', runDepartmentNameFix);
     auAddClass.addEventListener('click',()=>auClasses.appendChild(makeClassRow("")));
     closeSuccessModal.addEventListener('click', closeSuccessModalFn);
     edTEmail.addEventListener('input',()=>{const digits=edTEmail.value.replace(/\D+/g,''); if(edTEmail.value!==digits) edTEmail.value=digits;});
