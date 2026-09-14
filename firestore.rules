@@ -1161,18 +1161,32 @@ service cloud.firestore {
         return (d.sessionCutoffTs is timestamp) && request.time <= d.sessionCutoffTs;
       }
 
+      function newSessionShapeValid() {
+        let d = newSessionData();
+        return isISODate(d.date)
+          && isValidLessonIndex(d.lesson)
+          && isValidClassKey(d.classKey)
+          && (d.sessionStartTs is timestamp)
+          && (d.sessionCutoffTs is timestamp)
+          && (d.locked is bool);
+      }
+
       allow get, list: if isTeacherSupervisorOrAdmin();
 
+      // A teacher can only create their own current/today's session
+      // (teacherUid must be them, and it must still be within the lesson's
+      // own time window). An admin backfilling a lesson nobody ever took
+      // attendance for is exempt from both — the lesson's real (absent)
+      // teacher goes in teacherUid instead of the admin's own uid, and the
+      // whole point is that the lesson's time window has already passed.
       allow create: if
-        isTeacherSupervisorOrAdmin()
-        && newSessionData().teacherUid == request.auth.uid
-        && isISODate(newSessionData().date)
-        && isValidLessonIndex(newSessionData().lesson)
-        && isValidClassKey(newSessionData().classKey)
-        && (newSessionData().sessionStartTs is timestamp)
-        && (newSessionData().sessionCutoffTs is timestamp)
-        && (newSessionData().locked is bool)
-        && canWriteSessionTime(newSessionData());
+        (isAdmin() && newSessionShapeValid() && nonEmptyString(newSessionData().teacherUid))
+        || (
+          isTeacherSupervisorOrAdmin()
+          && newSessionData().teacherUid == request.auth.uid
+          && newSessionShapeValid()
+          && canWriteSessionTime(newSessionData())
+        );
 
       allow update: if
         isAdmin()

@@ -732,6 +732,13 @@
       box-shadow: 0 4px 12px rgba(3,60,84,.08);
     }
 
+    /* Full "الحصة الأولى"-style single-line label by default; a narrow
+       phone swaps to a two-line stack instead ("الحصة" on top, the ordinal
+       word bigger underneath) — see the mobile media query below.
+       aria-label on the <th> keeps the full name available to screen
+       readers either way. */
+    .th-stack{ display:none; }
+
     /* الصف column - rightmost, frozen so it stays visible while the lesson
        columns scroll horizontally underneath it. */
     .class-col {
@@ -1051,8 +1058,26 @@
       .header-inner{ grid-template-columns: 40px 1fr 40px; }
       .icon-btn{ width:40px; height:40px; border-radius:12px; }
 
-      table{ min-width: 1060px; }
-      
+      /* The full "الحصة الأولى" label used to be forced to wrap inside a
+         narrow column and still looked cut off; a phone stacks it into
+         two lines instead — "الحصة" small on top, the ordinal word
+         (الأولى، الثانية، …) bigger underneath — which reads clearly in
+         much less width than the single-line version did. aria-label on
+         the <th> keeps the full name available to screen readers either
+         way. */
+      .th-full{ display:none; }
+      .th-stack{
+        display:flex;
+        flex-direction:column;
+        align-items:center;
+        gap:2px;
+        line-height:1.15;
+      }
+      .th-word{ font-size:.68rem; font-weight:800; color:var(--muted); }
+      .th-ordinal{ font-size:1rem; font-weight:900; color:var(--primary); white-space:nowrap; }
+
+      table{ min-width: 820px; }
+
       /* Adjust widths for mobile */
       th.class-col, td.class-col {
         width: 132px;
@@ -1062,16 +1087,11 @@
         width: 70px;
         min-width: 70px;
       }
-      
+
       .table-shell{ height: calc(100vh - var(--headerH) - 10px); }
 
       thead th{
-        padding:12px 6px;
-        font-size:.82rem;
-        line-height:1.25;
-        white-space: normal;
-        word-break: keep-all;
-        overflow: visible;
+        padding:10px 4px;
       }
 
       .date-btn {
@@ -1280,13 +1300,13 @@
               <tr>
                 <th class="class-col">الصف</th>
                 <th class="morning-col">الصبح</th>
-                <th>الحصة الأولى</th>
-                <th>الحصة الثانية</th>
-                <th>الحصة الثالثة</th>
-                <th>الحصة الرابعة</th>
-                <th>الحصة الخامسة</th>
-                <th>الحصة السادسة</th>
-                <th>الحصة السابعة</th>
+                <th aria-label="الحصة الأولى"><span class="th-full">الحصة الأولى</span><span class="th-stack"><span class="th-word">الحصة</span><span class="th-ordinal">الأولى</span></span></th>
+                <th aria-label="الحصة الثانية"><span class="th-full">الحصة الثانية</span><span class="th-stack"><span class="th-word">الحصة</span><span class="th-ordinal">الثانية</span></span></th>
+                <th aria-label="الحصة الثالثة"><span class="th-full">الحصة الثالثة</span><span class="th-stack"><span class="th-word">الحصة</span><span class="th-ordinal">الثالثة</span></span></th>
+                <th aria-label="الحصة الرابعة"><span class="th-full">الحصة الرابعة</span><span class="th-stack"><span class="th-word">الحصة</span><span class="th-ordinal">الرابعة</span></span></th>
+                <th aria-label="الحصة الخامسة"><span class="th-full">الحصة الخامسة</span><span class="th-stack"><span class="th-word">الحصة</span><span class="th-ordinal">الخامسة</span></span></th>
+                <th aria-label="الحصة السادسة"><span class="th-full">الحصة السادسة</span><span class="th-stack"><span class="th-word">الحصة</span><span class="th-ordinal">السادسة</span></span></th>
+                <th aria-label="الحصة السابعة"><span class="th-full">الحصة السابعة</span><span class="th-stack"><span class="th-word">الحصة</span><span class="th-ordinal">السابعة</span></span></th>
               </tr>
             </thead>
             <tbody id="gridBody"></tbody>
@@ -1463,8 +1483,14 @@
     // isPrivilegedEdit: true — this page is admin-only (see the role check
     // in onAuthStateChanged below), so the "تعديل" button in the cell
     // popover can edit any past session regardless of the normal
-    // lesson-time-anchored edit window teachers themselves are held to.
-    const attendance = mountAttendanceSheet({ db, auth, isPrivilegedEdit: true });
+    // lesson-time-anchored edit window teachers themselves are held to, and
+    // openForAdminCreate (تسجيل الغياب on a missed lesson) can create one at
+    // all. onSaved reloads the grid so a just-taken/edited lesson's cell
+    // reflects it immediately instead of waiting for the next date change.
+    const attendance = mountAttendanceSheet({
+      db, auth, isPrivilegedEdit: true,
+      onSaved: () => requestGridLoad(selectedDate),
+    });
 
     const sLoading = document.getElementById('stateLoading');
     const sNotLog  = document.getElementById('stateNotLogged');
@@ -1622,38 +1648,36 @@
       return taken;
     }
 
-    // Missed lesson detection
+    // Missed lesson detection — "missed" now covers any date up to and
+    // including today (not just today), so an admin can spot and backfill
+    // an untaken lesson from any past day, not only one that just ended.
+    // A future date's lessons haven't happened yet, so they're never
+    // eligible.
     function isLessonMissed(className, lessonIndex, dateObj, scheduleExists) {
-      // Check if today in Kuwait
+      if (!scheduleExists) return false;
+
       const todayISO = kuwaitTodayISO();
       const dateISO = toInputDate(dateObj);
-      if (dateISO !== todayISO) return false;
-
-      // Check if there's a scheduled lesson
-      if (!scheduleExists) return false;
+      if (dateISO > todayISO) return false;
+      if (dateISO < todayISO) return true; // any past day's lesson is fully over already
 
       const currentMinutes = getCurrentKuwaitMinutes();
       const lessonEndMinutes = timeToMinutes(LESSON_TIMES[lessonIndex - 1].end);
-
-      // Only missed if lesson has ended and attendance not taken
       return currentMinutes > lessonEndMinutes;
     }
 
     // Update missed status for all cells
     function updateMissedStatus() {
-      const todayISO = kuwaitTodayISO();
-      const dateISO = toInputDate(selectedDate);
-
       for (const className of ALL_CLASSES) {
         for (let lessonIndex = 1; lessonIndex <= 7; lessonIndex++) {
           const cell = GRID?.[className]?.[lessonIndex];
           if (!cell) continue;
 
-          const scheduleExists = scheduleMap?.[className]?.[lessonIndex] && 
-                                (scheduleMap[className][lessonIndex].teacherUid || 
+          const scheduleExists = scheduleMap?.[className]?.[lessonIndex] &&
+                                (scheduleMap[className][lessonIndex].teacherUid ||
                                  scheduleMap[className][lessonIndex].teacherName);
 
-          if (dateISO === todayISO && scheduleExists && !cell.hasAnyRecord) {
+          if (scheduleExists && !cell.hasAnyRecord) {
             const attendanceTaken = isAttendanceTaken(className, lessonIndex, selectedDate);
             const isMissed = !attendanceTaken && isLessonMissed(className, lessonIndex, selectedDate, true);
             cell.missed = isMissed;
@@ -2296,8 +2320,36 @@
           lateBtn.addEventListener('click', () => {
             showLateDetailsView(currentCellInfo);
           });
-          
+
           modalFooter.appendChild(lateBtn);
+        }
+
+        // "تسجيل الغياب" — lets an admin take attendance for this lesson
+        // right now, however long ago it happened, through the same
+        // shared attendance sheet used everywhere else (mounted with
+        // isPrivilegedEdit above). Needs exactly one resolvable teacher,
+        // since a session can only be recorded under one.
+        if (scheduleExists) {
+          const expectedUids = [...cell.expectedTeacherUids].filter(Boolean);
+          if (expectedUids.length === 1) {
+            const takeBtn = document.createElement('button');
+            takeBtn.className = 'modal-btn primary';
+            takeBtn.type = 'button';
+            takeBtn.innerHTML = '<i class="fas fa-clipboard-check"></i> تسجيل الغياب';
+            takeBtn.addEventListener('click', () => {
+              const teacherUid = expectedUids[0];
+              const teacherName = [...cell.expectedTeacherNames].filter(Boolean)[0] || '';
+              closeModal();
+              attendance.openForAdminCreate({
+                date: dateISO,
+                classKey: className,
+                lesson: lessonIndex,
+                teacherUid,
+                teacherName,
+              });
+            });
+            modalFooter.appendChild(takeBtn);
+          }
         }
 
       } else {

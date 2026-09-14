@@ -1050,7 +1050,7 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
     setControlsEnabled(false);
   }
 
-  function buildFixedLessonOption(lessonIndex, lessonLabel) {
+  function buildFixedLessonOption(lessonIndex, lessonLabel, titlePrefix = "تعديل") {
     els.lessonPicker.style.display = "none";
     els.lessonSelect.innerHTML = "";
     const l = LESSON_TIMES.find(x => x.index === lessonIndex);
@@ -1062,7 +1062,7 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
     opt.disabled = true;
     els.lessonSelect.appendChild(opt);
     els.lessonSelect.disabled = true;
-    updateSheetTitle(`تعديل: ${label}`);
+    updateSheetTitle(`${titlePrefix}: ${label}`);
     setControlsEnabled(true);
   }
 
@@ -1433,6 +1433,34 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
     });
   }
 
+  // An admin backfilling attendance for a lesson nobody ever took it for —
+  // any past date, not just today, and not gated on the caller actually
+  // teaching that class. teacherUid/teacherName identify the lesson's real
+  // (absent) teacher, so the resulting session still shows them as the
+  // teacher of record everywhere else that reads it; only mount() being
+  // called with isPrivilegedEdit lets this run at all (checked again, more
+  // authoritatively, by the admin branch of firestore.rules' attendanceSessions
+  // create rule — this client check is just an early, friendlier failure).
+  async function openForAdminCreate({ date, classKey, lesson, teacherUid, teacherName } = {}) {
+    if (!privilegedEdit) return;
+    const lessonIndex = Number(lesson);
+    if (!date || !classKey || !lessonIndex || !teacherUid) return;
+    await withSkeletonOpen(async () => {
+      const sessionId = createAttendanceSessionId(date, lessonIndex, classKey);
+      const existing = await getDoc(doc(db, ATTENDANCE_SESSIONS_COLLECTION, sessionId));
+      if (existing.exists()) {
+        showError("تم تسجيله بالفعل", "تم تسجيل غياب هذه الحصّة مسبقًا.");
+        return false;
+      }
+      currentMeta = {
+        ok: true, mode: "admin", date, classKey, lesson: lessonIndex,
+        teacherUid, teacherName: teacherName || "",
+      };
+      buildFixedLessonOption(lessonIndex, null, "تسجيل الغياب");
+      await loadStudentsForClass(classKey);
+    });
+  }
+
   // Submit handlers
   els.submitBtn.addEventListener("click", async () => {
     if (currentMeta?.mode === "edit") {
@@ -1440,12 +1468,14 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
         showError("تعذّر الحفظ", "انتهت مهلة تعديل هذه الحصة.");
         return;
       }
-    } else if (currentMeta?.mode !== "any") {
+    } else if (currentMeta?.mode !== "any" && currentMeta?.mode !== "admin") {
       // Schedule eligibility was already verified (with a couple of Firestore
       // round trips) when the sheet was opened via checkAllowed(). Re-running
       // that full check here just to confirm the lesson window is still open
       // was adding a very noticeable delay to every single submit — this is a
       // pure client-side time check instead, no network involved.
+      // "admin" is exempt too — the entire point is backfilling a lesson
+      // whose time window is long over.
       const w = getMetaWindowStatus(currentMeta);
       if (!w.ok) {
         showBlocked("time_locked");
@@ -1587,11 +1617,23 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
         return;
       }
 
-      // Create flow: "self" (time-gated, own current lesson) or "any" (manual class/lesson pick)
+      // Create flow: "self" (time-gated, own current lesson), "any" (manual
+      // class/lesson pick, still today and still the caller's own class),
+      // or "admin" (an admin backfilling a past lesson nobody ever took
+      // attendance for — arbitrary date, and teacherUid names the lesson's
+      // actual scheduled teacher, not whoever is submitting).
       const newSessionId = createAttendanceSessionId(dateKW, lessonIndex, classKey);
       const sessionRef = doc(db, ATTENDANCE_SESSIONS_COLLECTION, newSessionId);
       let activeMeta = {};
-      if (mode === "self") {
+      if (mode === "admin") {
+        const existing = await getDoc(sessionRef);
+        if (existing.exists()) {
+          closeModal(els.confirmModal);
+          showError("تعذّر الحفظ", "تم تسجيل غياب هذه الحصّة مسبقًا.");
+          pendingSave = null;
+          return;
+        }
+      } else if (mode === "self") {
         // Schedule eligibility and "not already taken" were both verified over
         // the network when the sheet opened; the only thing that can genuinely
         // change while filling the sheet is the clock — a sync check. (The
@@ -1644,7 +1686,13 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
         date: dateKW,
         lesson: lessonIndex,
         classKey,
-        teacherUid: uid,
+        // Admin mode records attendance on behalf of the lesson's actual
+        // teacher (who was absent, which is why nobody took it) — the
+        // session's teacherUid must stay that teacher's, not the admin's,
+        // for every other page that reads "who teaches this lesson" from
+        // this field. recordedByAdminUid keeps the real audit trail.
+        teacherUid: mode === "admin" ? currentMeta.teacherUid : uid,
+        ...(mode === "admin" ? { recordedByAdminUid: uid } : {}),
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
         sessionStartTs: Timestamp.fromDate(sessionStartTs),
@@ -1807,6 +1855,7 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
     open: openWithMeta,
     openForClass,
     openForEdit,
+    openForAdminCreate,
     canEditSession(sessionData) { return isWithinAttendanceEditWindow(sessionData?.date, sessionData?.lesson, sessionData?.sessionCutoffTs); },
     // Deliberately NOT checkAllowed()/getMyActiveLessonMetaForNow() — those
     // also fail on "already_taken", which is exactly the normal case for a
