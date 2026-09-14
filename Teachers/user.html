@@ -1687,6 +1687,16 @@
             }));
         }
 
+        // The bell times decide which lesson NUMBER attendance is filed
+        // under, so stale ones file it against the wrong lesson — which then
+        // blocks that lesson's real teacher with "already taken" for a
+        // lesson nobody taught. Loaded once at sign-in isn't enough: this
+        // page stays open all day, across any change to settings/lessonTimes.
+        const LESSON_TIMES_TTL_MS = 60 * 1000;
+        let lessonTimesLoadedAt = 0;
+        let lessonTimesReadFailed = false;
+        let lessonTimesInFlight = null;
+
         async function fetchLessonTimes() {
             try {
                 const docRef = doc(db, 'settings', 'lessonTimes');
@@ -1702,12 +1712,31 @@
                         }));
                     }
                 }
+                // A missing settings document is a valid configuration —
+                // the defaults are then the school's real bell times. Only
+                // a failed READ leaves us not knowing which times apply.
+                lessonTimesReadFailed = false;
+                lessonTimesLoadedAt = Date.now();
             } catch (error) {
+                lessonTimesReadFailed = true;
                 console.error('Error fetching lesson times:', error);
             } finally {
                 refreshLessonRanges();
                 teacherDayLessonsCache = { key: '', at: 0, lessons: [] };
             }
+        }
+
+        // Re-reads at most once a minute, and collapses concurrent callers
+        // onto a single read.
+        function ensureLessonTimes({ force = false } = {}) {
+            const fresh = !force
+                && lessonTimesLoadedAt > 0
+                && (Date.now() - lessonTimesLoadedAt) < LESSON_TIMES_TTL_MS;
+            if (fresh) return Promise.resolve();
+            if (!lessonTimesInFlight) {
+                lessonTimesInFlight = fetchLessonTimes().finally(() => { lessonTimesInFlight = null; });
+            }
+            return lessonTimesInFlight;
         }
         refreshLessonRanges();
 
@@ -2055,7 +2084,15 @@
             if (!user) {
                 return { ok: false, reason: "not_logged_in" };
             }
-            
+
+            // 0. Bell times must be current before ANY lesson index is
+            // computed — a stale or failed read files attendance under the
+            // wrong lesson number. Never guess from the built-in defaults.
+            await ensureLessonTimes();
+            if (lessonTimesReadFailed) {
+                return { ok: false, reason: "lesson_times_unavailable" };
+            }
+
             // 1. Today's date
             const todayISO = kuwaitTodayISO();
 
@@ -2160,6 +2197,12 @@
                     break;
                 case 'not_logged_in':
                     message = '\u064A\u0631\u062C\u0649 \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062F\u062E\u0648\u0644 \u0623\u0648\u0644\u0627\u064B.';
+                    break;
+                case 'lesson_times_unavailable':
+                    // Never fall back to the built-in times for this: a
+                    // wrong lesson number files the attendance against
+                    // another lesson and blocks its real teacher.
+                    message = '\u062A\u0639\u0630\u0651\u0631 \u062A\u062D\u0645\u064A\u0644 \u0623\u0648\u0642\u0627\u062A \u0627\u0644\u062D\u0635\u0635. \u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0648\u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.';
                     break;
                 default:
                     message = '\u064A\u0645\u0643\u0646\u0643 \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u063A\u064A\u0627\u0628 \u0641\u0642\u0637 \u0623\u062B\u0646\u0627\u0621 \u062D\u0635\u062A\u0643 \u0627\u0644\u062D\u0627\u0644\u064A\u0629.';
@@ -2867,7 +2910,7 @@
                 setPermissionBtnVisibility(adminScheduleEditBtn, allowScheduleEdit);
                 setPermissionBtnVisibility(morningLateBtn, allowMorningLate);
                 setPermissionBtnVisibility(supervisorStudentsBtn, allowSupervisorStudents);
-                await fetchLessonTimes();
+                await ensureLessonTimes();
                 displayName.textContent = data?.name || (user.email ? user.email.split('@')[0] : 'مستخدم');
                 avatarUserUid = user.uid;
                 loadStoredAvatar(user.uid);

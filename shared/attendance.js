@@ -546,12 +546,44 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
         m = "انتهى وقت تسجيل الغياب لهذه الحصة."; break;
       case "not_logged_in":
         m = "يرجى تسجيل الدخول أولاً."; break;
+      case "lesson_times_unavailable":
+        // Never guess the lesson number from the built-in fallback times:
+        // a wrong guess files the attendance under another lesson and
+        // blocks that lesson's real teacher.
+        m = "تعذّر تحميل أوقات الحصص. يرجى التحقق من الاتصال والمحاولة مرة أخرى."; break;
       default:
         m = "يمكنك تسجيل الغياب فقط أثناء حصتك الحالية.";
     }
     els.blockedBody.textContent = m;
     openModal(els.blockedModal);
-    if (reason === "already_taken") logAlreadyTakenDiagnostics();
+    if (reason === "already_taken") {
+      logAlreadyTakenDiagnostics();
+      describeWhoRecorded();
+    }
+  }
+
+  // "لقد سجّلت الغياب لهذه الحصة مسبقًا" says *you* already recorded this
+  // lesson. Very often it was a different teacher, and telling someone they
+  // did something they know they didn't do is what turns a schedule problem
+  // into a bug report. Once the recording teacher's name is known, the
+  // dialog is rewritten to name them.
+  async function describeWhoRecorded() {
+    const blockedBy = lastSessionProbe?.blockedBy;
+    if (!blockedBy) return;
+    const myUid = auth.currentUser?.uid || null;
+    const theirUid = blockedBy.teacherUid || null;
+    if (!theirUid || (myUid && theirUid === myUid)) return; // it really was this teacher
+    let name = blockedBy.teacherName || "";
+    if (!name) {
+      try {
+        const tSnap = await getDoc(doc(db, "teachers", theirUid));
+        if (tSnap.exists()) name = (tSnap.data() || {}).name || "";
+      } catch { /* fall through to the generic wording below */ }
+    }
+    if (!els.blockedModal.classList.contains("open")) return; // teacher already dismissed it
+    els.blockedBody.textContent = name
+      ? `سجّل الغياب لهذه الحصة المعلم ${name} بالفعل.`
+      : "سجّل الغياب لهذه الحصة معلم آخر بالفعل.";
   }
 
   // Prints exactly which attendance document caused the "لقد سجّلت الغياب
@@ -569,6 +601,10 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
     }
     console.group(header);
     console.log("Asked about:", probe.askedFor);
+    console.log("Signed in as:", auth.currentUser?.uid || "(nobody)");
+    // The lesson number is derived from these — if they don't match the
+    // school's real bell times, the wrong lesson is being recorded.
+    console.log("Bell times in use:", LESSON_TIMES.map(l => `L${l.index} ${l.start}-${l.end}`).join("  "));
     console.log("Document IDs probed:", probe.ids);
     if (probe.error) console.log("Read error (check failed open):", probe.error);
     console.log(`Probed ${probe.probed.length} document(s):`);
@@ -676,7 +712,23 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
     }
   }
 
-  // Lesson time loading
+  // Lesson time loading.
+  //
+  // The bell times decide WHICH lesson number a teacher is recording, so
+  // getting them wrong does not merely mislabel the record — it files the
+  // attendance under some other lesson's number. That document then blocks
+  // the real teacher of that lesson with "لقد سجّلت الغياب لهذه الحصة
+  // مسبقًا" for a lesson nobody taught, while the lesson that actually was
+  // taught still looks untaken. This was previously kicked off unawaited at
+  // mount, exactly once, so a teacher who clicked before the read resolved
+  // — or whose read failed, or who left the page open across a change to
+  // settings/lessonTimes — computed the lesson number from the hardcoded
+  // DEFAULT_LESSON_TIMES instead of the school's real ones.
+  const LESSON_TIMES_TTL_MS = 60 * 1000;
+  let lessonTimesLoadedAt = 0;
+  let lessonTimesReadFailed = false;
+  let lessonTimesInFlight = null;
+
   async function fetchLessonTimes() {
     try {
       const snap = await getDoc(doc(db, "settings", "lessonTimes"));
@@ -691,9 +743,30 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
           }));
         }
       }
+      // A missing settings document is a valid configuration — the defaults
+      // are then genuinely the school's bell times. Only a failed READ
+      // leaves us not knowing which times apply, and that is the case worth
+      // refusing on.
+      lessonTimesReadFailed = false;
+      lessonTimesLoadedAt = Date.now();
     } catch (e) {
+      lessonTimesReadFailed = true;
       console.error("[attendance] fetchLessonTimes:", e);
     }
+  }
+
+  // Awaited by every path that resolves a lesson number. Re-reads once a
+  // minute so a page left open across a bell-time change stops using the
+  // old ones, and de-duplicates concurrent callers onto one read.
+  function ensureLessonTimes({ force = false } = {}) {
+    const fresh = !force
+      && lessonTimesLoadedAt > 0
+      && (Date.now() - lessonTimesLoadedAt) < LESSON_TIMES_TTL_MS;
+    if (fresh) return Promise.resolve();
+    if (!lessonTimesInFlight) {
+      lessonTimesInFlight = fetchLessonTimes().finally(() => { lessonTimesInFlight = null; });
+    }
+    return lessonTimesInFlight;
   }
 
   function getActiveLessonIndex() {
@@ -1037,6 +1110,13 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
       recordedByAdminUid: d.recordedByAdminUid ?? null,
       createdAt: ts(d.createdAt),
       updatedAt: ts(d.updatedAt),
+      // The lesson's real wall-clock window as it stood when the session
+      // was created. If this doesn't line up with the bell times currently
+      // in settings/lessonTimes, the times were changed after the fact and
+      // this record is filed under a lesson number that now means a
+      // different time of day.
+      sessionStartTs: ts(d.sessionStartTs),
+      sessionCutoffTs: ts(d.sessionCutoffTs),
     };
   }
 
@@ -1102,6 +1182,9 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
   async function getMyActiveLessonMetaForNow() {
     const user = auth.currentUser;
     if (!user) return { ok: false, reason: "not_logged_in" };
+    // Must precede any lesson-index computation — see fetchLessonTimes.
+    await ensureLessonTimes();
+    if (lessonTimesReadFailed) return { ok: false, reason: "lesson_times_unavailable" };
     const todayISO = kuwaitTodayISO();
     const G = getGracePeriodLessonIndex();
     const L = getActiveLessonIndex();
@@ -2074,8 +2157,11 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
   els.blockedModal.querySelector(".overlay").addEventListener("click", () => closeModal(els.blockedModal));
   els.lessonDetailModal.querySelector(".overlay").addEventListener("click", () => closeModal(els.lessonDetailModal));
 
-  // Boot: load lesson times on first mount
-  fetchLessonTimes();
+  // Boot: start loading lesson times immediately so the first click is
+  // usually already warm. Every path that resolves a lesson number awaits
+  // ensureLessonTimes() regardless, so this head start is an optimisation,
+  // never the guarantee.
+  ensureLessonTimes();
 
   return {
     async start() {
@@ -2103,6 +2189,12 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
         if (showFeedback) showBlocked("not_logged_in");
         return { ok: false, reason: "not_logged_in" };
       }
+      // Must precede any lesson-index computation — see fetchLessonTimes.
+      await ensureLessonTimes();
+      if (lessonTimesReadFailed) {
+        if (showFeedback) showBlocked("lesson_times_unavailable");
+        return { ok: false, reason: "lesson_times_unavailable" };
+      }
       const todayISO = kuwaitTodayISO();
       const L = getActiveLessonIndex();
       if (L === null) {
@@ -2123,6 +2215,6 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
     // allowMorningLate users who must keep the 45-minute window.
     setPrivilegedEdit(v) { privilegedEdit = !!v; },
     close() { closeSheet(els.sheet); },
-    refreshLessonTimes: fetchLessonTimes,
+    refreshLessonTimes: () => ensureLessonTimes({ force: true }),
   };
 }
