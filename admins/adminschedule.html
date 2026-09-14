@@ -1142,6 +1142,7 @@
           </svg>
         </button>
         <button id="csvImportBtn" class="new-schedule-btn" type="button" title="استيراد الجدول من CSV">📥 استيراد CSV</button>
+        <button id="forceResaveAllBtn" class="new-schedule-btn" type="button" title="إعادة حفظ كل حصص كل الجداول بختم وقت جديد، بلا أي تغيير في البيانات">🔄 إعادة حفظ الكل</button>
       </div>
     </div>
   </header>
@@ -1452,6 +1453,7 @@
     const grid = document.getElementById('grid');
     const saveBtn = document.getElementById('saveBtn');
     const discardBtn = document.getElementById('discardBtn');
+    const forceResaveAllBtn = document.getElementById('forceResaveAllBtn');
     const floatingSaveBar = document.getElementById('floatingSaveBar');
     const unsavedModal = document.getElementById('unsavedModal');
     const unsavedLeaveBtn = document.getElementById('unsavedLeaveBtn');
@@ -4311,8 +4313,93 @@
       }
     }
 
+    // Re-saves every schedule document in the entire system (every class,
+    // not just the one currently open) with a fresh updatedAt, unchanged
+    // otherwise — a blunt fix for pages elsewhere (Teachers/user.html,
+    // teacherschedule.html, the attendance sheet, ...) that resolve "which
+    // class is this teacher in right now" from a teacher's own schedule
+    // docs and can end up picking between two competing ones.
+    //
+    // While at it, this is also the one place with visibility into the
+    // WHOLE schedules collection at once, so it doubles as a real conflict
+    // report: if the same teacher is on record for two different classes
+    // at the same weekday+lesson, that's surfaced by name instead of
+    // silently leaving whichever page resolves it next to guess.
+    async function forceResaveAllSchedules(){
+      if(loading) return;
+      const confirmed = window.confirm(
+        'سيُعاد حفظ كل حصة في كل جداول المدرسة (كل الفصول) بختم وقت جديد، دون تغيير أي بيانات فعلية. ' +
+        'قد يستغرق هذا بعض الوقت حسب عدد الحصص. متابعة؟'
+      );
+      if(!confirmed) return;
+
+      setLoading(true, "جاري إعادة حفظ كل الجداول...");
+      setStatusHTML("");
+      try{
+        const snap = await getDocs(collection(db,'schedules'));
+        const docs = [];
+        snap.forEach(d => docs.push({ id: d.id, data: d.data() || {} }));
+
+        const bySlot = new Map(); // `${dayIndex}|${lesson}|${teacherUid}` -> Map(classKey -> teacherName)
+        docs.forEach(({ data }) => {
+          const teacherUid = (data.teacherUid || '').toString().trim();
+          const dayIndex = data.dayIndex;
+          const lesson = data.lesson;
+          if(!teacherUid || dayIndex === undefined || dayIndex === null || !lesson) return;
+          const classKey = (data.classKey || `${data.grade||''} / ${data.section||''}${data.track ? ' '+data.track : ''}`).toString();
+          const key = `${dayIndex}|${lesson}|${teacherUid}`;
+          if(!bySlot.has(key)) bySlot.set(key, new Map());
+          bySlot.get(key).set(classKey, data.teacherName || teacherUid);
+        });
+
+        const conflicts = [];
+        bySlot.forEach((classMap, key) => {
+          if(classMap.size <= 1) return;
+          const [dayIndexStr, lesson] = key.split('|');
+          const [firstName] = classMap.values();
+          conflicts.push({
+            dayIndex: Number(dayIndexStr),
+            lesson,
+            teacherName: firstName,
+            classKeys: [...classMap.keys()],
+          });
+        });
+
+        // 500 writes per batch is Firestore's hard limit — well under it.
+        const CHUNK = 400;
+        let written = 0;
+        for(let i=0; i<docs.length; i+=CHUNK){
+          const chunk = docs.slice(i, i+CHUNK);
+          const batch = writeBatch(db);
+          chunk.forEach(({ id }) => {
+            batch.set(doc(db,'schedules',id), { updatedAt: serverTimestamp() }, { merge:true });
+          });
+          await batch.commit();
+          written += chunk.length;
+        }
+
+        if(conflicts.length){
+          addStatusLine("warn", `تمّت إعادة حفظ ${written} حصة. لكن تم العثور على ${conflicts.length} تعارض — معلّم مسند لأكثر من فصل في نفس اليوم/الحصة، يجب تصحيحه يدويًّا:`);
+          conflicts.forEach(c => {
+            addStatusLine("warn", `${c.teacherName}: ${c.classKeys.join(' ، ')} — ${DAYS_AR[c.dayIndex] || 'يوم غير معروف'}، الحصة ${c.lesson}`);
+          });
+        } else {
+          setStatusHTML(`<div class="ok">تمّت إعادة حفظ ${written} حصة بنجاح في كل الجداول. لا يوجد أي تعارض.</div>`);
+          openSaveSuccessModal();
+        }
+
+        if(selectedClassKey) await fetchExisting();
+      }catch(e){
+        console.error('[forceResaveAllSchedules]', e);
+        openErrorModal(`تعذّرت إعادة الحفظ: ${(e && e.message) ? e.message : e}`);
+      }finally{
+        setLoading(false);
+      }
+    }
+
     saveBtn.addEventListener('click', saveAll);
     discardBtn.addEventListener('click', discardAllChanges);
+    forceResaveAllBtn.addEventListener('click', forceResaveAllSchedules);
     breakAfterLesson1Sel?.addEventListener('change', ()=> handleBreakSelectChange('first'));
     breakAfterLesson2Sel?.addEventListener('change', ()=> handleBreakSelectChange('second'));
 
