@@ -1,0 +1,1089 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.gstatic.com https://abrschool-bot.onrender.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; manifest-src 'self'; upgrade-insecure-requests; block-all-mixed-content">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js" crossorigin>
+  <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js" crossorigin>
+  <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js" crossorigin>
+  <link rel="modulepreload" href="/shared/firebase.js">
+  <title>جدول المعلّمين - ثانوية أحمد البشر الرومي</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/shared/base.css" />
+  <style>
+    :root{
+      --primary:#033C54;
+      --primary-2:#065372;
+      --primary-light:#065372;
+
+      --page:#f6f8fb;
+      --text:#0f172a;
+      --muted:#6b7f9f;
+
+      --border:#e6edf7;
+      --shadow-1:0 8px 22px rgba(3,60,84,.10);
+      --shadow-2:0 18px 44px rgba(2,6,23,.14);
+
+      --radius:14px;
+      --radius-lg:18px;
+      --focus:#79b3c8;
+
+      --green:#10b981;
+      --yellow:#f59e0b;
+      --red:#ef4444;
+
+      --greenBg: rgba(16,185,129,.10);
+      --yellowBg: rgba(245,158,11,.10);
+      --redBg: rgba(239,68,68,.10);
+
+      --chip:#f1f5f9;
+      --headerH: 122px;
+
+      --transition: transform .12s ease, box-shadow .12s ease, background-color .12s ease, border-color .12s ease, color .12s ease, opacity .12s ease;
+    }
+
+    *{ box-sizing:border-box; margin:0; padding:0 }
+    html,body{ height:100% }
+
+    body{
+      margin:0;
+      background: var(--page);
+      color:var(--text);
+      font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      display:flex; flex-direction:column; min-height:100vh;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    @media (prefers-reduced-motion: reduce){
+      *{ animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.001ms !important; scroll-behavior:auto !important; }
+    }
+
+    /* Header */
+    .site-header{
+      position:sticky; top:0; z-index:30;
+      background: rgba(255,255,255,.86);
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      padding:14px 14px 12px;
+      border-bottom:1px solid rgba(3,60,84,.10);
+      box-shadow: 0 2px 10px rgba(3,60,84,.06);
+    }
+    .header-inner{
+      width:min(100%, 1200px); margin:0 auto;
+      display:grid; grid-template-columns: 44px 1fr 44px;
+      align-items:center; gap:10px;
+    }
+    .header-center{
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      gap:2px; text-align:center; padding:2px 0;
+    }
+    .site-title{
+      margin:0; font-weight:900; letter-spacing:.2px;
+      font-size: clamp(1.05rem, 2.8vw, 1.5rem);
+      color: var(--primary); line-height:1.25;
+    }
+    .icon-btn{
+      width:44px; height:44px; border-radius:14px;
+      border:1px solid rgba(3,60,84,.12); background:#fff; color:var(--primary);
+      display:flex; align-items:center; justify-content:center;
+      cursor:pointer; transition: var(--transition); box-shadow: var(--shadow-1);
+    }
+    .icon-btn:hover{ transform:translateY(-1px); box-shadow: var(--shadow-2); border-color: rgba(3,60,84,.22) }
+    .icon-btn:active{ transform:translateY(0) scale(.99) }
+    .icon-btn:focus-visible{ outline:3px solid var(--focus); outline-offset:2px }
+
+    .date-chip{ margin-top:10px; width:min(100%, 1200px); margin-inline:auto; display:flex; justify-content:center; position:relative; }
+    .date-btn{
+      border:none; cursor:pointer; font-family:inherit; font-weight:900; font-size:.95rem;
+      color:var(--primary); display:inline-flex; align-items:center; gap:10px;
+      padding:10px 14px; border-radius:999px; background:#fff; border:1px solid var(--border);
+      box-shadow: var(--shadow-1); transition: var(--transition); max-width:95%; position:relative;
+    }
+    .date-btn:hover{ transform: translateY(-1px); box-shadow: var(--shadow-2); border-color: rgba(3,60,84,.22) }
+    .date-btn:active{ transform: translateY(0) scale(.99) }
+    .date-btn:focus-visible{ outline:3px solid var(--focus); outline-offset:2px }
+    .date-btn span{ font-weight:900 }
+    .date-btn small{ color:var(--muted); font-weight:900; font-size:.82rem }
+
+    .date-input-wrapper{ position:absolute; inset:0; opacity:0; pointer-events:auto; }
+    .mobile-date-input{ position:absolute; inset:0; width:100%; height:100%; opacity:0; pointer-events:auto; font-size:16px; border:0; background:transparent; }
+
+    main{ flex:1; padding:0; display:flex; flex-direction:column; overflow:hidden; }
+    .full-width{ width:100%; }
+    .panel{ width:min(100%, 1200px); margin:14px auto 0; background:#fff; border:1px solid var(--border); border-radius:var(--radius-lg); padding:16px; box-shadow: var(--shadow-1); }
+
+    .state{ display:none }
+    .state.active{ display:block }
+    .loading{ display:grid; place-items:center; gap:12px; padding:24px }
+    .spinner{ width:40px; height:40px; border-radius:50%; border:4px solid rgba(3,60,84,.18); border-top-color:var(--primary); animation:spin 1s linear infinite; margin-inline:auto }
+    @keyframes spin{ to{ transform: rotate(360deg); } }
+    .msg{ font-size:.98rem; text-align:center }
+    .error{ color:#a11; background:#fde8e8; border:1px solid #f5c5c5; padding:12px; border-radius:14px }
+    .muted{ color:var(--muted) }
+
+    /* Table shell */
+    .table-shell{ width:100%; height: calc(100vh - var(--headerH) - 20px); background:#fff; border-top:1px solid var(--border); border-bottom:1px solid var(--border); overflow:hidden; }
+    .table-scroll{ width:100%; height:100%; overflow:auto; -webkit-overflow-scrolling:touch; position:relative; }
+    table{ width:100%; border-collapse:separate; border-spacing:0; min-width:940px; direction:rtl; table-layout:fixed; }
+    thead{ position:sticky; top:0; z-index:20; background:#fff; }
+    thead th{ position:relative; background:#fff; border-bottom:2px solid var(--primary); padding:16px 10px; text-align:center; font-weight:900; color:var(--primary); white-space:nowrap; overflow:visible; box-shadow: 0 4px 12px rgba(3,60,84,.08); }
+    .th-stack{ display:none; }
+
+    th.sticky-col, td.sticky-col{ position:sticky; right:0; background:#fff; border-left:2px solid var(--border); text-align:center; min-width:150px; padding:12px 10px; z-index:15; }
+    thead th.sticky-col{ z-index:25; box-shadow: 4px 0 12px rgba(3,60,84,.08); }
+
+    tbody td{ border-bottom:1px solid var(--border); padding:10px 10px; text-align:center; vertical-align:middle; background:#fff; }
+    tbody tr:hover td{ background:#fbfdff; }
+    tbody tr:hover td.sticky-col{ background:#fbfdff; }
+
+    .teacher-name{ font-weight:900; color:var(--text); font-size:0.95rem; line-height:1.2; display:flex; align-items:center; justify-content:center; min-height:38px; padding:0 4px; word-break: keep-all; overflow-wrap: break-word; }
+
+    /* Department separator — the "start of every department" marker */
+    tr.dept-row td{ padding:0; border-bottom:none; background:transparent; }
+    .dept-sep{
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      padding:11px 16px; margin:14px 0 8px;
+      background: linear-gradient(145deg, var(--primary-light), var(--primary));
+      color:#fff; border-radius:12px;
+      box-shadow: 0 10px 24px rgba(3,60,84,.20);
+    }
+    tbody tr:first-child .dept-sep{ margin-top:2px; }
+    .dept-sep-name{ font-weight:900; font-size:.98rem; }
+    .dept-sep-count{ font-weight:800; font-size:.8rem; opacity:.85; }
+
+    .cell-btn{
+      width:100%; min-width:56px; height:38px;
+      display:inline-flex; align-items:center; justify-content:center;
+      border-radius:12px; border:1px solid rgba(3,60,84,.16);
+      background: rgba(3,60,84,.06); color: var(--primary);
+      font-weight:900; cursor:pointer; transition: var(--transition);
+      font-family:inherit; padding:0 4px; font-size:.86rem;
+      overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    }
+    .cell-btn:hover{ transform: translateY(-1px); box-shadow: 0 10px 20px rgba(3,60,84,.14); border-color: rgba(3,60,84,.32); background: rgba(3,60,84,.10); }
+    .cell-btn:focus-visible{ outline:3px solid var(--focus); outline-offset:2px }
+
+    .cell-empty{ display:inline-flex; align-items:center; justify-content:center; width:100%; min-width:56px; height:38px; border-radius:12px; border:1px solid rgba(3,60,84,.10); background:#f8fafc; color: rgba(100,116,139,.7); font-weight:900; user-select:none; }
+
+    /* Popover */
+    .popover-backdrop{ position:fixed; inset:0; background: rgba(15,23,42,.30); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); display:none; z-index:999; }
+    .popover-backdrop.open{ display:block; }
+    .popover{
+      position:fixed; top:50%; left:50%; transform: translate(-50%, -50%); z-index:1000;
+      width:min(400px, 92vw); max-height:min(560px, 82vh); overflow:auto;
+      background:#fff; border:1px solid var(--border); border-radius:20px;
+      box-shadow: 0 24px 60px rgba(2,6,23,.22); display:none;
+    }
+    .popover.open{ display:block; }
+
+    .pop-head{
+      position:sticky; top:0; background: rgba(255,255,255,.97);
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      border-bottom:1px solid var(--border); padding:16px 16px;
+      display:flex; align-items:flex-start; justify-content:space-between; gap:10px;
+    }
+    .pop-title{ display:flex; flex-direction:column; gap:2px; }
+    .pop-title b{ color:var(--primary); font-size:1.05rem }
+    .pop-title span{ color:var(--muted); font-weight:900; font-size:.86rem }
+    .pop-close{
+      width:36px; height:36px; border-radius:50%; border:1px solid rgba(3,60,84,.14);
+      background:#f4f7fb; color:var(--primary); cursor:pointer;
+      display:grid; place-items:center; transition: var(--transition); flex-shrink:0;
+    }
+    .pop-close svg{ width:15px; height:15px; }
+    .pop-close:hover{ background: rgba(3,60,84,.12); transform: scale(1.06); }
+
+    .pop-body{ padding:16px; display:flex; flex-direction:column; gap:12px; }
+
+    /* Clean two-column info grid for lesson details — the whole point of
+       this popup, kept to exactly the four facts that matter. */
+    .info-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .info-cell{ border:1px solid var(--border); border-radius:14px; padding:11px 12px; background:#fbfdff; }
+    .info-cell-label{ color:var(--muted); font-weight:800; font-size:.74rem; margin-bottom:4px; }
+    .info-cell-value{ color:var(--text); font-weight:900; font-size:.92rem; line-height:1.3; }
+
+    .pop-actions{ display:flex; flex-direction:column; gap:10px; margin-top:2px; }
+    .pop-btn{
+      width:100%; min-height:50px; border-radius:14px; cursor:pointer; font-family:inherit;
+      font-weight:900; font-size:.95rem; display:flex; align-items:center; justify-content:center;
+      gap:8px; transition: var(--transition); border:none;
+    }
+    .pop-btn.solid{ background: linear-gradient(145deg, var(--primary-light), var(--primary)); color:#fff; box-shadow: 0 14px 30px rgba(3,60,84,.26); }
+    .pop-btn.solid:hover{ transform: translateY(-1px); }
+    .pop-btn.outline{ background:#fff; color:var(--primary); border:1px solid rgba(3,60,84,.22); }
+    .pop-btn.outline:hover{ background:#f4f7fb; transform: translateY(-1px); }
+    .pop-btn:disabled{ opacity:.55; cursor:not-allowed; transform:none !important; }
+
+    .back-row{
+      display:flex; align-items:center; gap:8px; color:var(--primary); font-weight:900;
+      font-size:.9rem; cursor:pointer; padding:4px 2px; margin-bottom:2px; width:fit-content;
+    }
+    .back-row svg{ width:16px; height:16px; }
+    .back-row:hover{ opacity:.75; }
+
+    .form-field{ display:flex; flex-direction:column; gap:6px; }
+    .form-field label{ font-weight:800; font-size:.82rem; color:var(--muted); }
+    .form-field select, .form-field input{
+      width:100%; height:46px; border-radius:12px; border:1px solid var(--border);
+      background:#fff; padding:0 12px; font-family:inherit; font-weight:800; color:var(--text);
+      font-size:.9rem; transition: var(--transition);
+    }
+    .form-field select:disabled, .form-field input:disabled{ background:#f6f8fb; color:var(--muted); cursor:not-allowed; }
+    .form-field select:focus, .form-field input:focus{ outline:none; border-color:var(--primary); box-shadow:0 0 0 3px rgba(3,60,84,.10); }
+    .form-hint{ font-size:.78rem; color:var(--muted); font-weight:700; margin-top:-2px; }
+
+    .req-hint{
+      display:flex; align-items:flex-start; gap:8px; padding:11px 12px; border-radius:14px;
+      background: rgba(3,60,84,.06); border:1px solid rgba(3,60,84,.10); color:var(--primary);
+      font-weight:800; font-size:.84rem; line-height:1.5;
+    }
+    .req-hint.err{ background: rgba(239,68,68,.10); border-color: rgba(239,68,68,.22); color:#991b1b; }
+    .req-hint svg{ width:16px; height:16px; flex-shrink:0; margin-top:2px; }
+
+    .toast-wrap{ position:fixed; inset-inline:0; bottom:20px; display:flex; justify-content:center; pointer-events:none; z-index:1200; }
+    .toast{ pointer-events:auto; background:#fff; border:1px solid var(--border); border-radius:16px; box-shadow:0 20px 50px rgba(3,60,84,.25); padding:13px 18px; min-width:min(420px,92vw); display:flex; align-items:center; gap:10px; transform:translateY(120%); opacity:0; transition: transform .25s ease, opacity .25s ease; }
+    .toast.show{ transform:translateY(0); opacity:1; }
+    .toast-text{ font-weight:800; color:var(--text); font-size:.9rem; }
+
+    @media (max-width: 860px){
+      .th-full{ display:none; }
+      .th-stack{ display:flex; flex-direction:column; align-items:center; gap:1px; }
+      .th-word{ font-size:.68rem; font-weight:800; color:var(--muted); }
+      .th-ordinal{ font-size:1rem; font-weight:900; color:var(--primary); white-space:nowrap; }
+      table{ min-width: 760px; }
+      th.sticky-col, td.sticky-col{ min-width: 120px; }
+      .table-shell{ height: calc(100vh - var(--headerH) - 10px); }
+      thead th{ padding:10px 4px; }
+      .teacher-name{ font-size: 0.85rem; padding: 0 2px; }
+      .date-btn{ padding: 12px 16px; min-height: 48px; }
+      .info-grid{ grid-template-columns:1fr; }
+    }
+
+    @supports (-webkit-touch-callout: none) {
+      .mobile-date-input { font-size: 16px !important; }
+    }
+  </style>
+</head>
+
+<body>
+  <header class="site-header" id="siteHeader">
+    <div class="header-inner">
+      <button class="icon-btn" id="backBtn" title="رجوع" aria-label="رجوع">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+      </button>
+      <div class="header-center">
+        <h1 class="site-title">جدول المعلّمين</h1>
+      </div>
+      <div></div>
+    </div>
+
+    <div class="date-chip">
+      <button class="date-btn" id="dateBtn" type="button" aria-label="اختيار تاريخ">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+        </svg>
+        <span id="dateLabel">—</span>
+        <small>اضغط لتغيير التاريخ</small>
+        <div class="date-input-wrapper" aria-hidden="true">
+          <input class="mobile-date-input" id="mobileDateInput" type="date" inputmode="none" />
+        </div>
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <div id="stateLoading" class="state active panel">
+      <div class="loading">
+        <div class="spinner"></div>
+        <div class="muted">جاري التحقق من تسجيل الدخول وجلب البيانات…</div>
+      </div>
+    </div>
+
+    <div id="stateNotLogged" class="state panel">
+      <div class="msg error">يرجى تسجيل الدخول قبل الاستخدام.</div>
+      <p class="muted" style="text-align:center; margin:8px 0 0;">لا توجد جلسة نشطة. <a href="/index.html">اذهب لصفحة الدخول</a>.</p>
+    </div>
+
+    <div id="stateDenied" class="state panel">
+      <div class="msg error">تم رفض الوصول. يتطلّب هذا الجدول تسجيل بيانات معلّم.</div>
+    </div>
+
+    <section id="stateOk" class="state full-width" aria-label="جدول المعلّمين">
+      <div class="table-shell">
+        <div class="table-scroll" id="tableScroll">
+          <table aria-label="جدول المعلّمين">
+            <thead>
+              <tr>
+                <th class="sticky-col">المعلمين</th>
+                <th aria-label="الحصة الأولى"><span class="th-full">الحصة الأولى</span><span class="th-stack"><span class="th-word">الحصة</span><span class="th-ordinal">الأولى</span></span></th>
+                <th aria-label="الحصة الثانية"><span class="th-full">الحصة الثانية</span><span class="th-stack"><span class="th-word">الحصة</span><span class="th-ordinal">الثانية</span></span></th>
+                <th aria-label="الحصة الثالثة"><span class="th-full">الحصة الثالثة</span><span class="th-stack"><span class="th-word">الحصة</span><span class="th-ordinal">الثالثة</span></span></th>
+                <th aria-label="الحصة الرابعة"><span class="th-full">الحصة الرابعة</span><span class="th-stack"><span class="th-word">الحصة</span><span class="th-ordinal">الرابعة</span></span></th>
+                <th aria-label="الحصة الخامسة"><span class="th-full">الحصة الخامسة</span><span class="th-stack"><span class="th-word">الحصة</span><span class="th-ordinal">الخامسة</span></span></th>
+                <th aria-label="الحصة السادسة"><span class="th-full">الحصة السادسة</span><span class="th-stack"><span class="th-word">الحصة</span><span class="th-ordinal">السادسة</span></span></th>
+                <th aria-label="الحصة السابعة"><span class="th-full">الحصة السابعة</span><span class="th-stack"><span class="th-word">الحصة</span><span class="th-ordinal">السابعة</span></span></th>
+              </tr>
+            </thead>
+            <tbody id="gridBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Lesson popover: two internal views (info+actions, then the request
+       form) swapped in place so this stays one clean surface, never a
+       modal stacked over a modal. -->
+  <div id="popBackdrop" class="popover-backdrop"></div>
+  <div id="popover" class="popover" role="dialog" aria-modal="true" aria-labelledby="popTitleText">
+    <div class="pop-head">
+      <div class="pop-title">
+        <b id="popTitleText">—</b>
+        <span id="popSub">—</span>
+      </div>
+      <button class="pop-close" id="popClose" aria-label="إغلاق" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="pop-body" id="popBody"></div>
+  </div>
+
+  <div class="toast-wrap" id="toastWrap"></div>
+
+  <script type="module">
+    import { firebaseConfig } from "/shared/firebase.js";
+    import { initializeApp, getApp, getApps } from "/shared/firebase.js";
+    import { getAuth, onAuthStateChanged } from "/shared/firebase.js";
+    import {
+      initializeFirestore, persistentSingleTabManager, collection, getDocs, addDoc, query, where, limit,
+      doc, getDoc, serverTimestamp
+    } from "/shared/firebase.js";
+    import { resolveDepartmentName, getDepartmentSubjectFilters, DEPARTMENT_LIST } from "/shared/departments.js";
+    import { kuwaitTodayISO } from "/shared/kuwait-time.js";
+
+    const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+    let db;
+    try {
+      db = initializeFirestore(app, { localCache: persistentSingleTabManager(), experimentalAutoDetectLongPolling: true, useFetchStreams: false });
+    } catch (e) {
+      db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true, useFetchStreams: false });
+    }
+    const auth = getAuth(app);
+
+    const sLoading = document.getElementById('stateLoading');
+    const sNotLog  = document.getElementById('stateNotLogged');
+    const sDenied  = document.getElementById('stateDenied');
+    const sOk      = document.getElementById('stateOk');
+
+    const backBtn = document.getElementById('backBtn');
+    const gridBody = document.getElementById('gridBody');
+
+    const dateBtn = document.getElementById('dateBtn');
+    const dateLabel = document.getElementById('dateLabel');
+    const mobileDateInput = document.getElementById('mobileDateInput');
+
+    const popBackdrop = document.getElementById('popBackdrop');
+    const popover = document.getElementById('popover');
+    const popClose = document.getElementById('popClose');
+    const popTitleText = document.getElementById('popTitleText');
+    const popSub = document.getElementById('popSub');
+    const popBody = document.getElementById('popBody');
+
+    const siteHeader = document.getElementById('siteHeader');
+    const toastWrap = document.getElementById('toastWrap');
+
+    const show = (el) => {
+      [sLoading, sNotLog, sDenied, sOk].forEach(x => x.classList.remove('active'));
+      el.classList.add('active');
+      syncHeaderH();
+    };
+
+    function syncHeaderH(){
+      const headerHeight = siteHeader.getBoundingClientRect().height || 122;
+      document.documentElement.style.setProperty('--headerH', headerHeight + 'px');
+    }
+
+    function toast(text, isError = false){
+      const el = document.createElement('div');
+      el.className = 'toast';
+      el.innerHTML = `<span class="toast-text" style="${isError ? 'color:#991b1b' : ''}">${escapeHtml(text)}</span>`;
+      toastWrap.appendChild(el);
+      requestAnimationFrame(() => el.classList.add('show'));
+      setTimeout(() => {
+        el.classList.remove('show');
+        setTimeout(() => el.remove(), 300);
+      }, 3200);
+    }
+
+    const toArabicDigits = (str) => (str || "").toString().replace(/\d/g, d => '٠١٢٣٤٥٦٧٨٩'[d]);
+    const arabicSort = (a, b) => (a || "").toString().localeCompare((b || "").toString(), 'ar', { sensitivity: 'base' });
+    function escapeHtml(s){
+      return (s ?? '').toString().replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+
+    function fmtDateLong(d){
+      return new Intl.DateTimeFormat('ar-KW', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'Asia/Kuwait' }).format(d);
+    }
+    function toInputDate(d) {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const da = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${da}`;
+    }
+    function dayIndexFromISO(iso){
+      const [y, m, d] = iso.split('-').map(Number);
+      return new Date(y, (m || 1) - 1, d || 1).getDay();
+    }
+    function isPastISO(iso){ return !!iso && iso < kuwaitTodayISO(); }
+    function isSchoolDayISO(iso){
+      if (!iso) return false;
+      const day = dayIndexFromISO(iso);
+      return day >= 0 && day <= 4;
+    }
+
+    const LESSONS_AR = ["الحصة الأولى","الحصة الثانية","الحصة الثالثة","الحصة الرابعة","الحصة الخامسة","الحصة السادسة","الحصة السابعة"];
+    const DEFAULT_LESSON_TIMES_FALLBACK = [
+      { start: "07:55", end: "08:40" }, { start: "08:45", end: "09:30" },
+      { start: "09:35", end: "10:20" }, { start: "10:35", end: "11:20" },
+      { start: "11:25", end: "12:10" }, { start: "12:25", end: "13:10" },
+      { start: "13:15", end: "13:55" },
+    ];
+    let cachedLessonTimes = null;
+    async function ensureLessonTimesLoaded(){
+      if (cachedLessonTimes) return cachedLessonTimes;
+      try {
+        const snap = await getDoc(doc(db, 'settings', 'lessonTimes'));
+        const times = snap.exists() && Array.isArray(snap.data()?.times) ? snap.data().times : null;
+        cachedLessonTimes = (times && times.length) ? times : DEFAULT_LESSON_TIMES_FALLBACK;
+      } catch (e) {
+        console.error('[schoolschedule] lessonTimes fetch failed:', e);
+        cachedLessonTimes = DEFAULT_LESSON_TIMES_FALLBACK;
+      }
+      return cachedLessonTimes;
+    }
+    function lessonTimeLabel(lessonIndex){
+      const times = cachedLessonTimes || DEFAULT_LESSON_TIMES_FALLBACK;
+      const t = times[lessonIndex - 1];
+      if (!t || !t.start || !t.end) return '—';
+      return `${toArabicDigits(t.start)} – ${toArabicDigits(t.end)}`;
+    }
+
+    let selectedDate = new Date();
+    let allTeachers = [];            // every teacher, role user/admin/head — {uid,name,subject,department,normalizedDepartment,role}
+    let teachersByDept = new Map();  // normalizedDepartment -> [teacher,...], sorted for the grid
+    let scheduleMap = Object.create(null); // teacherUid -> {lesson: {classKey, subject}}
+    let currentUser = null;
+    let myProfile = null;            // this viewer's own teachers/{uid} doc
+    let myDepartment = '';
+
+    /* ========= Teachers, grouped by department ========= */
+    function displayTeacherNameFromDoc(data){
+      const d = data || {};
+      return (d.name || d.fullName || d.teacherName || d.displayName || d.username || d.email || d.phone || 'معلم').toString();
+    }
+
+    async function loadAllTeachers(){
+      const list = [];
+      try {
+        const snap = await getDocs(collection(db, 'teachers'));
+        snap.forEach(d => {
+          const data = d.data() || {};
+          const role = (data.role || '').toString().toLowerCase();
+          if (role !== 'user' && role !== 'admin' && role !== 'head') return;
+          const subject = (data.subject || '').toString().trim();
+          const department = (data.department || data.dept || '').toString().trim();
+          const normalizedDepartment = resolveDepartmentName(department || subject);
+          list.push({
+            uid: d.id,
+            name: displayTeacherNameFromDoc(data),
+            role: data.role || '',
+            subject,
+            department,
+            normalizedDepartment,
+          });
+        });
+      } catch (e) {
+        console.error('[schoolschedule] loadAllTeachers:', e);
+      }
+      list.sort((a, b) => arabicSort(a.name, b.name));
+      return list;
+    }
+
+    function groupTeachersByDepartment(teachers){
+      const map = new Map();
+      teachers.forEach(t => {
+        const key = t.normalizedDepartment || 'غير محدد';
+        if (!map.has(key)) map.set(key, []);
+        map.get(key).push(t);
+      });
+      map.forEach(list => list.sort((a, b) => arabicSort(a.name, b.name)));
+      // Stable order: the app's canonical department list first, then any
+      // department name outside it (shouldn't normally happen) alphabetically,
+      // then the unassigned bucket last.
+      const ordered = new Map();
+      DEPARTMENT_LIST.forEach(dep => { if (map.has(dep)) { ordered.set(dep, map.get(dep)); map.delete(dep); } });
+      Array.from(map.keys()).filter(k => k !== 'غير محدد').sort((a, b) => arabicSort(a, b))
+        .forEach(k => { ordered.set(k, map.get(k)); map.delete(k); });
+      if (map.has('غير محدد')) ordered.set('غير محدد', map.get('غير محدد'));
+      return ordered;
+    }
+
+    /* ========= Schedule for one weekday (recurring — same convention as
+       depHead/dptschedual.html: matched by dayIndex, not the exact date). ========= */
+    async function loadScheduleForDate(dateObj){
+      scheduleMap = Object.create(null);
+      const dayIndex = dateObj.getDay();
+      try {
+        const snap = await getDocs(query(collection(db, 'schedules'), where('dayIndex', '==', dayIndex)));
+        snap.forEach(docSnap => {
+          const data = docSnap.data();
+          const lesson = Number(data.lesson);
+          const teacherUid = data.teacherUid;
+          const classKey = data.classKey;
+          if (!teacherUid || !lesson || lesson < 1 || lesson > 7 || !classKey) return;
+          if (!scheduleMap[teacherUid]) scheduleMap[teacherUid] = {};
+          scheduleMap[teacherUid][lesson] = {
+            classKey: classKey.toString().trim(),
+            subject: data.subject || '',
+          };
+        });
+      } catch (e) {
+        console.error('[schoolschedule] loadScheduleForDate:', e);
+      }
+    }
+
+    // For the request form's "the other teacher's slots on date X" lookup —
+    // a fresh single-day, single-teacher query rather than reusing the
+    // whole-school scheduleMap, since X is usually a different date than
+    // the one currently on screen.
+    async function getTeacherSlotsForDate(uid, dateISO){
+      if (!uid || !dateISO) return [];
+      const dayIndex = dayIndexFromISO(dateISO);
+      const slots = [];
+      try {
+        const snap = await getDocs(query(
+          collection(db, 'schedules'),
+          where('dayIndex', '==', dayIndex),
+          where('teacherUid', '==', uid)
+        ));
+        snap.forEach(docSnap => {
+          const data = docSnap.data();
+          const lesson = Number(data.lesson);
+          if (!lesson || lesson < 1 || lesson > 7 || !data.classKey) return;
+          slots.push({ date: dateISO, lesson, classKey: data.classKey.toString().trim(), subject: data.subject || '', teacherUid: uid });
+        });
+      } catch (e) {
+        console.error('[schoolschedule] getTeacherSlotsForDate:', e);
+      }
+      slots.sort((a, b) => a.lesson - b.lesson);
+      return slots;
+    }
+
+    function findHeadOfDepartment(department){
+      const normalized = resolveDepartmentName(department);
+      if (!normalized) return null;
+      return allTeachers.find(t => (t.role || '').toLowerCase() === 'head' && t.normalizedDepartment === normalized) || null;
+    }
+
+    function teachersInDepartment(department, excludeUid){
+      if (!department) return allTeachers.filter(t => t.uid !== excludeUid);
+      const eligibleSubjects = getDepartmentSubjectFilters(department) || [];
+      return allTeachers.filter(t => {
+        if (t.uid === excludeUid) return false;
+        if (t.subject && eligibleSubjects.includes(t.subject)) return true;
+        return t.normalizedDepartment === department;
+      });
+    }
+
+    /* ========= Grid ========= */
+    function renderGrid(){
+      gridBody.innerHTML = '';
+      if (!teachersByDept.size){
+        const tr = document.createElement('tr');
+        const td = document.createElement('td');
+        td.colSpan = 8; td.className = 'muted'; td.style.textAlign = 'center'; td.style.padding = '20px';
+        td.textContent = 'لا يوجد معلمون.';
+        tr.appendChild(td); gridBody.appendChild(tr);
+        return;
+      }
+
+      teachersByDept.forEach((teachers, deptName) => {
+        const sepTr = document.createElement('tr');
+        sepTr.className = 'dept-row';
+        const sepTd = document.createElement('td');
+        sepTd.colSpan = 8;
+        sepTd.innerHTML = `
+          <div class="dept-sep">
+            <span class="dept-sep-name">${escapeHtml(deptName)}</span>
+            <span class="dept-sep-count">${toArabicDigits(teachers.length)} ${teachers.length === 1 ? 'معلّم' : 'معلمين'}</span>
+          </div>`;
+        sepTr.appendChild(sepTd);
+        gridBody.appendChild(sepTr);
+
+        teachers.forEach(teacher => {
+          const tr = document.createElement('tr');
+          const tdTeacher = document.createElement('td');
+          tdTeacher.className = 'sticky-col';
+          tdTeacher.innerHTML = `<div class="teacher-name">${escapeHtml(teacher.name)}</div>`;
+          tr.appendChild(tdTeacher);
+
+          for (let lesson = 1; lesson <= 7; lesson++){
+            const td = document.createElement('td');
+            const cell = scheduleMap[teacher.uid]?.[lesson];
+            if (!cell || !cell.classKey){
+              const empty = document.createElement('div');
+              empty.className = 'cell-empty';
+              empty.textContent = '';
+              td.appendChild(empty);
+            } else {
+              const btn = document.createElement('button');
+              btn.type = 'button';
+              btn.className = 'cell-btn';
+              btn.textContent = toArabicDigits(cell.classKey);
+              btn.title = `${teacher.name} — ${LESSONS_AR[lesson-1]} — ${cell.classKey}`;
+              btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                openLessonPopover(teacher, lesson, cell);
+              });
+              td.appendChild(btn);
+            }
+            tr.appendChild(td);
+          }
+          gridBody.appendChild(tr);
+        });
+      });
+    }
+
+    async function loadGridForDate(dateObj){
+      show(sLoading);
+      dateLabel.textContent = toArabicDigits(fmtDateLong(dateObj));
+      mobileDateInput.value = toInputDate(dateObj);
+      try {
+        await Promise.all([loadScheduleForDate(dateObj), ensureLessonTimesLoaded()]);
+        renderGrid();
+        show(sOk);
+      } catch (e) {
+        console.error('[schoolschedule] loadGridForDate:', e);
+        show(sDenied);
+      }
+      requestAnimationFrame(syncHeaderH);
+    }
+
+    /* ========= Lesson popover — info view, then (on demand) the request
+       form view, swapped in place within the same popover. ========= */
+    let currentLessonMeta = null;
+
+    function closePopover(){
+      popBackdrop.classList.remove('open');
+      popover.classList.remove('open');
+    }
+    popBackdrop.addEventListener('click', closePopover);
+    popClose.addEventListener('click', closePopover);
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closePopover(); });
+
+    function openLessonPopover(teacher, lesson, cell){
+      currentLessonMeta = {
+        date: toInputDate(selectedDate),
+        lesson,
+        classKey: cell.classKey,
+        subject: cell.subject || '',
+        teacherUid: teacher.uid,
+        teacherName: teacher.name,
+        department: teacher.normalizedDepartment || '',
+      };
+      renderLessonInfoView();
+      popBackdrop.classList.add('open');
+      popover.classList.add('open');
+      popClose.focus({ preventScroll: true });
+    }
+
+    function renderLessonInfoView(){
+      const meta = currentLessonMeta;
+      popTitleText.textContent = meta.teacherName;
+      popSub.textContent = `${toArabicDigits(fmtDateLong(selectedDate))}`;
+      popBody.innerHTML = `
+        <div class="info-grid">
+          <div class="info-cell">
+            <div class="info-cell-label">الحصة</div>
+            <div class="info-cell-value">${escapeHtml(LESSONS_AR[meta.lesson-1] || `الحصة #${meta.lesson}`)}</div>
+          </div>
+          <div class="info-cell">
+            <div class="info-cell-label">الوقت</div>
+            <div class="info-cell-value">${lessonTimeLabel(meta.lesson)}</div>
+          </div>
+          <div class="info-cell">
+            <div class="info-cell-label">الصف</div>
+            <div class="info-cell-value">${escapeHtml(toArabicDigits(meta.classKey))}</div>
+          </div>
+          <div class="info-cell">
+            <div class="info-cell-label">المادة</div>
+            <div class="info-cell-value">${escapeHtml(meta.subject || '—')}</div>
+          </div>
+        </div>
+        <div class="pop-actions">
+          <button type="button" class="pop-btn outline" id="actCover">طلب تغطية</button>
+          <button type="button" class="pop-btn solid" id="actSwap">طلب تبديل</button>
+        </div>
+      `;
+      document.getElementById('actCover').addEventListener('click', () => openRequestForm('cover'));
+      document.getElementById('actSwap').addEventListener('click', () => openRequestForm('swap'));
+    }
+
+    /* ========= Request form (طلب تبديل / طلب تغطية) =========
+       Adapted from Teachers/teacherschedule.html's own request flow: the
+       "from" lesson is already fixed by the clicked cell (no date/lesson
+       picker needed for it), so this only asks for what the original form
+       calls steps 3-6 — the other side of the request. Written to the same
+       swapRequests collection in the same shape, so it shows up in the
+       existing طلبات القسم review flow unchanged. fromTeacherUid names the
+       teacher whose lesson this actually is (the clicked row) — which may
+       not be the signed-in viewer — with requestedByUid recording who
+       actually filed it; firestore.rules only allows this when the two
+       share a department. */
+    function backRow(){
+      const row = document.createElement('div');
+      row.className = 'back-row';
+      row.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg><span>رجوع</span>`;
+      row.addEventListener('click', renderLessonInfoView);
+      return row;
+    }
+
+    async function openRequestForm(type){
+      const meta = currentLessonMeta;
+      const isSwap = type === 'swap';
+
+      if (!currentUser){ toast('يرجى تسجيل الدخول أولاً.', true); return; }
+      if (!meta.department){
+        toast('لا يمكن تحديد قسم هذا المعلّم. يرجى تحديث بيانات المعلّم أولاً.', true);
+        return;
+      }
+      const fromHead = findHeadOfDepartment(meta.department);
+      if (!fromHead){
+        toast('لا يمكن العثور على رئيس قسم هذا المعلّم. تأكد من أن القسم له رئيس معيّن.', true);
+        return;
+      }
+
+      popTitleText.textContent = isSwap ? 'طلب تبديل' : 'طلب تغطية';
+      popSub.textContent = `${meta.teacherName} — ${LESSONS_AR[meta.lesson-1]}`;
+
+      const departmentOptions = DEPARTMENT_LIST
+        .map(dep => `<option value="${escapeHtml(dep)}">${escapeHtml(dep)}</option>`).join('');
+
+      popBody.innerHTML = '';
+      popBody.appendChild(backRow());
+
+      const form = document.createElement('div');
+      form.style.display = 'flex';
+      form.style.flexDirection = 'column';
+      form.style.gap = '12px';
+      form.innerHTML = `
+        <div class="info-grid">
+          <div class="info-cell">
+            <div class="info-cell-label">الحصة الأصلية</div>
+            <div class="info-cell-value">${escapeHtml(LESSONS_AR[meta.lesson-1])}</div>
+          </div>
+          <div class="info-cell">
+            <div class="info-cell-label">الصف</div>
+            <div class="info-cell-value">${escapeHtml(toArabicDigits(meta.classKey))}</div>
+          </div>
+        </div>
+        <div class="form-field">
+          <label for="reqDepartment">القسم</label>
+          <select id="reqDepartment">
+            <option value="">${isSwap ? 'اختر القسم...' : 'كل الأقسام'}</option>
+            ${departmentOptions}
+          </select>
+        </div>
+        <div class="form-field">
+          <label for="reqTeacherUid">${isSwap ? 'اختر المعلّم للتبديل معه' : 'اختر المعلّم للتغطية'}</label>
+          <select id="reqTeacherUid" ${isSwap ? 'disabled' : ''}>
+            <option value="">${isSwap ? 'اختر القسم أولاً' : 'اختر المعلّم...'}</option>
+            ${isSwap ? '' : teachersInDepartment('', meta.teacherUid).map(t => `<option value="${escapeHtml(t.uid)}">${escapeHtml(t.name)}${t.normalizedDepartment ? ' - ' + escapeHtml(t.normalizedDepartment) : ''}</option>`).join('')}
+          </select>
+          <div class="form-hint" id="teacherHint">${isSwap ? '' : 'يمكن اختيار أي معلّم حتى لو لم يكن لديه حصة في هذا الوقت.'}</div>
+        </div>
+        ${isSwap ? `
+        <div class="form-field">
+          <label for="reqToDate">تاريخ حصة المعلّم الآخر</label>
+          <input id="reqToDate" type="date" min="${kuwaitTodayISO()}" value="${escapeHtml(meta.date)}" />
+        </div>
+        <div class="form-field">
+          <label for="reqToLesson">حصة المعلّم الآخر</label>
+          <select id="reqToLesson" disabled>
+            <option value="">اختر المعلّم أولاً</option>
+          </select>
+          <div class="form-hint" id="toSlotPreview">—</div>
+        </div>
+        ` : ''}
+        <div class="form-field">
+          <label for="reqMessage">ملاحظة (اختياري)</label>
+          <input id="reqMessage" maxlength="160" placeholder="مثال: عندي ظرف، هل يناسبك؟" />
+        </div>
+        <div id="reqHint" class="req-hint">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+          <div>حدد المعلّم لإكمال الطلب.</div>
+        </div>
+        <button type="button" class="pop-btn solid" id="sendReq" disabled>إرسال الطلب</button>
+      `;
+      popBody.appendChild(form);
+
+      const departmentSelect = document.getElementById('reqDepartment');
+      const teacherSelect = document.getElementById('reqTeacherUid');
+      const teacherHint = document.getElementById('teacherHint');
+      const toDateInput = isSwap ? document.getElementById('reqToDate') : null;
+      const toLessonSelect = isSwap ? document.getElementById('reqToLesson') : null;
+      const toSlotPreview = isSwap ? document.getElementById('toSlotPreview') : null;
+      const reqHintEl = document.getElementById('reqHint');
+      const sendBtn = document.getElementById('sendReq');
+
+      const state = { toUid: '', toSlot: null, toSlots: [] };
+
+      function setHint(text, isError){
+        reqHintEl.classList.toggle('err', !!isError);
+        reqHintEl.querySelector('div').textContent = text;
+      }
+
+      function syncSendState(){
+        if (!state.toUid){ sendBtn.disabled = true; setHint('اختر المعلّم أولاً.', false); return; }
+        if (state.toUid === meta.teacherUid){ sendBtn.disabled = true; setHint('هذا هو نفس المعلّم.', true); return; }
+        if (isSwap){
+          const dateErr = !toDateInput.value ? 'اختر التاريخ.' : isPastISO(toDateInput.value) ? 'لا يمكن اختيار تاريخ ماضٍ.' : !isSchoolDayISO(toDateInput.value) ? 'اختر يومًا دراسيًا من الأحد إلى الخميس.' : '';
+          if (dateErr){ sendBtn.disabled = true; setHint(dateErr, true); return; }
+          if (!state.toSlot){ sendBtn.disabled = true; setHint('اختر حصة المعلّم الآخر لإتمام التبديل.', true); return; }
+          sendBtn.disabled = false;
+          setHint(`سيتم التبديل مع: ${escapeHtml(toDateInput.value)} — ${LESSONS_AR[state.toSlot.lesson-1]} — ${escapeHtml(toArabicDigits(state.toSlot.classKey))}`, false);
+          return;
+        }
+        sendBtn.disabled = false;
+        setHint('جاهز لإرسال طلب التغطية.', false);
+      }
+
+      async function refreshTargetSlots(){
+        if (!isSwap) return;
+        state.toSlots = []; state.toSlot = null;
+        toLessonSelect.innerHTML = '<option value="">اختر الحصة...</option>';
+        toLessonSelect.disabled = true;
+        toSlotPreview.textContent = 'اختر المعلّم والتاريخ.';
+        const uid = teacherSelect.value;
+        const dateISO = toDateInput.value;
+        if (!uid || !dateISO || isPastISO(dateISO) || !isSchoolDayISO(dateISO)){ syncSendState(); return; }
+        const slots = await getTeacherSlotsForDate(uid, dateISO);
+        state.toSlots = slots;
+        if (!slots.length){
+          toSlotPreview.textContent = 'لا توجد حصص لهذا المعلّم في هذا التاريخ.';
+          syncSendState();
+          return;
+        }
+        toLessonSelect.disabled = false;
+        toLessonSelect.innerHTML = '<option value="">اختر الحصة...</option>' + slots.map(s =>
+          `<option value="${s.lesson}">${escapeHtml(LESSONS_AR[s.lesson-1])} — ${escapeHtml(toArabicDigits(s.classKey))}</option>`
+        ).join('');
+        if (slots.length === 1) toLessonSelect.value = String(slots[0].lesson);
+        state.toSlot = slots.find(s => String(s.lesson) === toLessonSelect.value) || null;
+        toSlotPreview.textContent = state.toSlot ? `${LESSONS_AR[state.toSlot.lesson-1]} — ${toArabicDigits(state.toSlot.classKey)}` : 'اختر الحصة.';
+        syncSendState();
+      }
+
+      if (isSwap){
+        departmentSelect.addEventListener('change', () => {
+          const dep = resolveDepartmentName(departmentSelect.value);
+          teacherSelect.innerHTML = '<option value="">اختر المعلّم...</option>';
+          teacherSelect.disabled = true;
+          state.toUid = '';
+          if (!dep){ teacherHint.textContent = 'اختر القسم أولاً.'; refreshTargetSlots(); return; }
+          const list = teachersInDepartment(dep, meta.teacherUid);
+          if (!list.length){ teacherHint.textContent = 'لا يوجد معلمون في هذا القسم.'; refreshTargetSlots(); return; }
+          teacherSelect.disabled = false;
+          teacherHint.textContent = 'اختر المعلّم.';
+          list.forEach(t => {
+            const opt = document.createElement('option');
+            opt.value = t.uid; opt.textContent = t.name;
+            teacherSelect.appendChild(opt);
+          });
+          refreshTargetSlots();
+        });
+        teacherSelect.addEventListener('change', () => { state.toUid = teacherSelect.value; refreshTargetSlots(); });
+        toDateInput.addEventListener('change', refreshTargetSlots);
+        toLessonSelect.addEventListener('change', () => {
+          state.toSlot = state.toSlots.find(s => String(s.lesson) === toLessonSelect.value) || null;
+          toSlotPreview.textContent = state.toSlot ? `${LESSONS_AR[state.toSlot.lesson-1]} — ${toArabicDigits(state.toSlot.classKey)}` : 'اختر الحصة.';
+          syncSendState();
+        });
+      } else {
+        departmentSelect.addEventListener('change', () => {
+          const dep = resolveDepartmentName(departmentSelect.value);
+          const list = teachersInDepartment(dep, meta.teacherUid);
+          teacherSelect.innerHTML = '<option value="">اختر المعلّم...</option>' +
+            list.map(t => `<option value="${escapeHtml(t.uid)}">${escapeHtml(t.name)}</option>`).join('');
+          state.toUid = '';
+          teacherHint.textContent = dep
+            ? (list.length ? 'اختر المعلّم من هذا القسم.' : 'لا يوجد معلمون في هذا القسم.')
+            : 'يمكن اختيار أي معلّم حتى لو لم يكن لديه حصة في هذا الوقت.';
+          syncSendState();
+        });
+        teacherSelect.addEventListener('change', () => { state.toUid = teacherSelect.value; syncSendState(); });
+      }
+
+      syncSendState();
+
+      sendBtn.addEventListener('click', async () => {
+        if (!state.toUid || state.toUid === meta.teacherUid) return;
+        const targetTeacher = allTeachers.find(t => t.uid === state.toUid) || null;
+        const toName = targetTeacher?.name || 'معلم';
+        let toDepartment = isSwap
+          ? resolveDepartmentName(departmentSelect.value)
+          : resolveDepartmentName(targetTeacher?.normalizedDepartment || targetTeacher?.department || targetTeacher?.subject || '');
+        if (!toDepartment){ toast('قسم المعلّم المطلوب غير محدد.', true); return; }
+
+        let targetSlot = null;
+        if (isSwap){
+          targetSlot = state.toSlot;
+          if (!targetSlot){ toast('اختر حصة المعلّم الآخر.', true); return; }
+        }
+
+        let toHead = toDepartment === meta.department ? fromHead : findHeadOfDepartment(toDepartment);
+        if (!toHead){ toast('لا يمكن العثور على رئيس قسم المعلّم المطلوب.', true); return; }
+
+        sendBtn.disabled = true;
+        try {
+          const dup = await getDocs(query(
+            collection(db, 'swapRequests'),
+            where('fromTeacherUid', '==', meta.teacherUid),
+            where('date', '==', meta.date),
+            where('lesson', '==', meta.lesson),
+            where('status', 'in', ['pending_head_from', 'pending_head_to', 'pending_head']),
+            limit(1)
+          ));
+          if (!dup.empty){ toast('يوجد طلب معلّق لهذه الحصة بالفعل.', true); closePopover(); return; }
+        } catch (e) { console.warn('[schoolschedule] dup check skipped', e); }
+
+        try {
+          const msg = (document.getElementById('reqMessage').value || '').trim();
+          const filedOnBehalf = meta.teacherUid !== currentUser.uid;
+          const payload = {
+            date: meta.date, lesson: meta.lesson,
+            fromDate: meta.date, fromLesson: meta.lesson, fromClassKey: meta.classKey,
+            toDate: isSwap ? targetSlot.date : null,
+            toLesson: isSwap ? targetSlot.lesson : null,
+            toClassKey: isSwap ? targetSlot.classKey : null,
+            type, requestVersion: 2,
+
+            fromTeacherUid: meta.teacherUid,
+            fromTeacherName: meta.teacherName,
+            fromDepartment: meta.department,
+            fromSubject: meta.subject || '',
+
+            toTeacherUid: state.toUid,
+            toTeacherName: toName,
+            toDepartment,
+            toSubject: targetTeacher?.subject || '',
+
+            fromHeadUid: fromHead.uid, fromHeadName: fromHead.name,
+            toHeadUid: toHead.uid, toHeadName: toHead.name,
+
+            status: 'pending_head_from', stage: 'head_from',
+            message: msg || null, createdAt: serverTimestamp(),
+
+            headUid: fromHead.uid, headName: fromHead.name,
+            headStatus: 'pending', headRespondedAt: null, headNote: null, respondedAt: null,
+          };
+          if (filedOnBehalf) {
+            payload.requestedByUid = currentUser.uid;
+            payload.requestedByName = myProfile?.name || '';
+          }
+          const newRequestRef = await addDoc(collection(db, 'swapRequests'), payload);
+          toast('تم إرسال الطلب.');
+          notifySwapRequest(newRequestRef.id);
+          closePopover();
+        } catch (e) {
+          console.error('[schoolschedule] send request failed:', e);
+          toast('فشل إرسال الطلب.', true);
+        } finally {
+          sendBtn.disabled = false;
+        }
+      });
+    }
+
+    /* ========= Telegram notification (best-effort — the request is already
+       saved in Firestore either way) ========= */
+    const TELEGRAM_BACKEND_BASE_URL = (() => {
+      const fromWindow = String(window.__TELEGRAM_BACKEND_BASE_URL || '').trim();
+      if (fromWindow) return fromWindow.replace(/\/+$/, '');
+      const fromStorage = String(localStorage.getItem('telegramBackendBaseUrl') || '').trim();
+      if (fromStorage) return fromStorage.replace(/\/+$/, '');
+      return 'https://abrschool-bot.onrender.com';
+    })();
+    async function notifySwapRequest(requestId){
+      if (!requestId || !auth.currentUser) return;
+      try {
+        const idToken = await auth.currentUser.getIdToken();
+        await fetch(`${TELEGRAM_BACKEND_BASE_URL}/api/telegram/notify-swap-request`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+          body: JSON.stringify({ requestId }),
+        });
+      } catch (e) {
+        console.warn('[telegram] notify-swap-request failed:', e?.message || e);
+      }
+    }
+
+    /* ========= Date navigation ========= */
+    dateBtn.addEventListener('click', () => {
+      try {
+        if (typeof mobileDateInput.showPicker === 'function') { mobileDateInput.showPicker(); return; }
+      } catch {}
+      mobileDateInput.focus({ preventScroll: true });
+      mobileDateInput.click();
+    });
+    mobileDateInput.addEventListener('change', async () => {
+      if (!mobileDateInput.value) return;
+      const [yy, mm, dd] = mobileDateInput.value.split('-').map(Number);
+      const d = new Date(yy, (mm || 1) - 1, dd || 1);
+      if (Number.isNaN(d.getTime())) return;
+      selectedDate = d;
+      closePopover();
+      await loadGridForDate(selectedDate);
+    });
+
+    /* ========= Auth gate ========= */
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) { show(sNotLog); return; }
+      currentUser = user;
+      try {
+        const tRef = doc(db, 'teachers', user.uid);
+        const snap = await getDoc(tRef);
+        if (!snap.exists()) { show(sDenied); return; }
+        myProfile = snap.data() || {};
+        myDepartment = resolveDepartmentName(myProfile.department || myProfile.dept || myProfile.subject || '');
+
+        allTeachers = await loadAllTeachers();
+        teachersByDept = groupTeachersByDepartment(allTeachers);
+
+        selectedDate = new Date();
+        await loadGridForDate(selectedDate);
+      } catch (e) {
+        console.error('[schoolschedule] auth error:', e);
+        show(sDenied);
+      }
+    });
+
+    backBtn.addEventListener('click', () => {
+      let returnTo = null;
+      try { returnTo = sessionStorage.getItem('allTeachersScheduleReturnTo'); sessionStorage.removeItem('allTeachersScheduleReturnTo'); } catch {}
+      window.location.href = returnTo || '/Teachers/user.html';
+    });
+
+    window.addEventListener('resize', () => { if (sOk.classList.contains('active')) syncHeaderH(); });
+    window.addEventListener('load', () => { syncHeaderH(); setTimeout(syncHeaderH, 250); });
+  </script>
+  <script src="/shared/hub-title-link.js" defer></script>
+  <script src="/shared/prefetch-nav.js" defer></script>
+  <script src="/name-glow.js" defer></script>
+</body>
+</html>

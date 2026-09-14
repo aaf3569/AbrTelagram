@@ -857,6 +857,11 @@ service cloud.firestore {
           || (resource.data.fromHeadUid    is string && resource.data.fromHeadUid    == request.auth.uid)
           || (resource.data.toHeadUid      is string && resource.data.toHeadUid      == request.auth.uid)
           || (resource.data.headUid        is string && resource.data.headUid        == request.auth.uid)
+          // Teachers/schoolschedule.html: a teacher filing this on behalf
+          // of a same-department colleague (fromTeacherUid names the
+          // colleague, not the filer) must still be able to see/track the
+          // request they just created.
+          || (resource.data.requestedByUid is string && resource.data.requestedByUid == request.auth.uid)
         );
       }
 
@@ -885,7 +890,25 @@ service cloud.firestore {
           && isPendingSwapStatus(request.resource.data.status)
           && isISODate(request.resource.data.date)
           && isValidLessonIndex(request.resource.data.lesson)
-          && request.resource.data.fromTeacherUid == request.auth.uid
+          && (
+            request.resource.data.fromTeacherUid == request.auth.uid
+            || (
+              // Teachers/schoolschedule.html: any teacher may file a
+              // swap/cover request naming a same-department colleague's
+              // lesson as the "from" side, without that colleague having
+              // filed it themselves — mirrors attendanceSessions' own
+              // department-peer create branch exactly (same
+              // teacherInHeadDepartment check, same reasoning). The actual
+              // filer must be recorded in requestedByUid, both for the
+              // audit trail and so isParticipant() lets them see/track
+              // what they just created.
+              teacherInHeadDepartment(
+                get(/databases/$(database)/documents/teachers/$(request.resource.data.fromTeacherUid)).data
+              )
+              && nonEmptyString(request.resource.data.requestedByUid)
+              && request.resource.data.requestedByUid == request.auth.uid
+            )
+          )
           && (request.resource.data.toTeacherUid is string && request.resource.data.toTeacherUid.size() > 0)
           && (request.resource.data.fromHeadUid is string && request.resource.data.fromHeadUid.size() > 0)
           && (request.resource.data.toHeadUid is string && request.resource.data.toHeadUid.size() > 0)
@@ -929,6 +952,14 @@ service cloud.firestore {
           && (
             !('toHeadName' in request.resource.data)
             || request.resource.data.toHeadName is string
+          )
+          && (
+            !('requestedByUid' in request.resource.data)
+            || nonEmptyString(request.resource.data.requestedByUid)
+          )
+          && (
+            !('requestedByName' in request.resource.data)
+            || request.resource.data.requestedByName is string
           );
       }
 

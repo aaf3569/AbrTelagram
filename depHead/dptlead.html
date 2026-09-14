@@ -124,7 +124,7 @@
             position: relative;
             animation: modalAppear 0.25s ease-out;
         }
-        
+
         @keyframes modalAppear {
             from {
                 opacity: 0;
@@ -135,78 +135,80 @@
                 transform: scale(1) translateY(0);
             }
         }
-        
-        .schedule-modal .close-modal-btn {
+
+        /* Schedule-choice popup — deliberately titleless: three
+           self-explanatory rows are the whole UI. The close button reads
+           clearly on its own (crisp stroked X, real contrast, big enough
+           tap target) instead of needing a heading for context. */
+        .schedule-choice-card { padding-top: 44px; }
+        .schedule-choice-close {
             position: absolute;
             top: 12px;
             left: 12px;
-            width: 36px;
-            height: 36px;
+            width: 38px;
+            height: 38px;
             border-radius: 50%;
-            border: 1px solid var(--border);
-            background: #fff;
-            color: var(--muted);
-            font-size: 1.5rem;
+            border: 1px solid rgba(3, 60, 84, 0.14);
+            background: #f4f7fb;
+            color: var(--primary);
             display: grid;
             place-items: center;
             cursor: pointer;
             transition: var(--transition);
             z-index: 2;
         }
-        
-        .schedule-modal .close-modal-btn:hover {
-            background: var(--primary-extra-light);
-            color: var(--primary);
+        .schedule-choice-close svg { width: 16px; height: 16px; }
+        .schedule-choice-close:hover {
+            background: rgba(3, 60, 84, 0.12);
+            transform: scale(1.06);
         }
-        
-        .schedule-modal h3 {
-            margin: 0 0 20px;
-            font-size: 1.3rem;
-            color: var(--primary);
-            font-weight: 900;
-            text-align: center;
-        }
-        
-        .schedule-modal .modal-buttons {
+
+        .schedule-choice-options {
             display: flex;
             flex-direction: column;
-            gap: 12px;
-            margin-top: 16px;
+            gap: 10px;
         }
-        
-        .schedule-modal .modal-btn {
+
+        .schedule-choice-option {
             width: 100%;
-            min-height: 60px;
-            border-radius: 14px;
-            border: 1px solid rgba(3, 60, 84, 0.25);
-            background: #fff;
-            color: var(--primary);
-            font-weight: 800;
-            font-size: 1.05rem;
-            cursor: pointer;
-            transition: var(--transition);
             display: flex;
             align-items: center;
-            justify-content: center;
-            gap: 10px;
-            padding: 16px;
+            gap: 14px;
+            padding: 14px 16px;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            background: #fff;
+            cursor: pointer;
+            text-align: right;
+            transition: var(--transition);
         }
-        
-        .schedule-modal .modal-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 12px 30px rgba(3, 60, 84, 0.15);
-            border-color: rgba(3, 60, 84, 0.4);
+        .schedule-choice-option:hover {
+            border-color: rgba(3, 60, 84, 0.3);
+            background: #f8fafc;
+            transform: translateY(-1px);
+            box-shadow: 0 12px 26px rgba(3, 60, 84, 0.10);
         }
-        
+        .schedule-choice-option .opt-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 13px;
+            display: grid;
+            place-items: center;
+            flex-shrink: 0;
+        }
+        .schedule-choice-option .opt-icon svg { width: 21px; height: 21px; }
+        .schedule-choice-option.opt-mine .opt-icon { background: rgba(6, 83, 114, .10); color: var(--primary); }
+        .schedule-choice-option.opt-dept .opt-icon { background: rgba(16, 185, 129, .12); color: #0f9d70; }
+        .schedule-choice-option.opt-all  .opt-icon { background: rgba(160, 109, 0, .12); color: #a06d00; }
+        .schedule-choice-option .opt-label { flex: 1; font-weight: 800; font-size: 1rem; color: var(--text); }
+        .schedule-choice-option .opt-chevron { width: 18px; height: 18px; color: var(--muted); flex-shrink: 0; }
+
         @media (max-width: 480px) {
             .schedule-modal .card {
                 padding: 20px 16px;
             }
-            
-            .schedule-modal .modal-btn {
-                min-height: 56px;
-                font-size: 1rem;
-            }
+            .schedule-choice-card { padding-top: 40px; }
+            .schedule-choice-option { min-height: 56px; padding: 12px 14px; }
         }
 
         /* Header */
@@ -814,21 +816,31 @@
     <!-- SCHEDULE MODAL -->
     <div id="scheduleModal" class="modal schedule-modal" aria-hidden="true">
         <div class="overlay"></div>
-        <div class="card" role="dialog" aria-modal="true" aria-labelledby="scheduleModalTitle">
-            <button id="closeScheduleModal" class="close-modal-btn" aria-label="إغلاق">×</button>
-            <h3 id="scheduleModalTitle">اختر الجدول</h3>
-            <div class="modal-buttons">
-                <button id="myScheduleBtn" class="modal-btn" type="button">
-                    <span>جدولي</span>
-                    <span class="icon" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16M12 4v16"/></svg>
+        <div class="card schedule-choice-card" role="dialog" aria-modal="true" aria-label="اختيار الجدول">
+            <button id="closeScheduleModal" class="schedule-choice-close" aria-label="إغلاق" type="button">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+            </button>
+            <div class="schedule-choice-options">
+                <button id="myScheduleBtn" class="schedule-choice-option opt-mine" type="button">
+                    <span class="opt-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M8 15h2M14 15h2M8 18h2M14 18h2"/></svg>
                     </span>
+                    <span class="opt-label">جدولي</span>
+                    <svg class="opt-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
                 </button>
-                <button id="deptScheduleBtn" class="modal-btn" type="button">
-                    <span>جدول القسم</span>
-                    <span class="icon" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16M12 4v16"/></svg>
+                <button id="deptScheduleBtn" class="schedule-choice-option opt-dept" type="button">
+                    <span class="opt-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                     </span>
+                    <span class="opt-label">جدول القسم</span>
+                    <svg class="opt-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+                </button>
+                <button id="allTeachersScheduleOption" class="schedule-choice-option opt-all" type="button">
+                    <span class="opt-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V8l7-4 7 4v13"/><path d="M9 21v-5h6v5"/><path d="M9 10h1M14 10h1M9 14h1M14 14h1"/></svg>
+                    </span>
+                    <span class="opt-label">جدول المعلمين</span>
+                    <svg class="opt-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
                 </button>
             </div>
         </div>
@@ -1435,6 +1447,7 @@
         const closeScheduleModal = document.getElementById('closeScheduleModal');
         const myScheduleBtn = document.getElementById('myScheduleBtn');
         const deptScheduleBtn = document.getElementById('deptScheduleBtn');
+        const allTeachersScheduleOption = document.getElementById('allTeachersScheduleOption');
         const classSheet = document.getElementById('classSheet');
         const closeClass = document.getElementById('closeClass');
         const classHeroName = document.getElementById('classHeroName');
@@ -2435,6 +2448,11 @@
         deptScheduleBtn.addEventListener('click', () => {
             try { sessionStorage.setItem('deptScheduleReturnTo', '/dephead/dptlead.html'); } catch {}
             window.location.href = 'dptschedual.html';
+        });
+
+        allTeachersScheduleOption.addEventListener('click', () => {
+            try { sessionStorage.setItem('allTeachersScheduleReturnTo', '/dephead/dptlead.html'); } catch {}
+            window.location.href = '/teachers/schoolschedule.html';
         });
 
         /* ========= Class View ========= */
