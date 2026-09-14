@@ -205,22 +205,29 @@
        title is always perfectly centered regardless of which side button
        is shown. */
     .pop-head{
-      flex-shrink:0;
+      flex-shrink:0; width:100%; box-sizing:border-box;
       background:#fff;
       border-bottom:1px solid var(--border); padding:14px 16px;
       display:grid; grid-template-columns:36px 1fr 36px; align-items:center; gap:8px;
     }
-    .pop-title{ min-width:0; text-align:center; display:flex; flex-direction:column; gap:1px; }
-    .pop-title b{ color:var(--primary); font-size:1.05rem; display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .pop-title span{ color:var(--muted); font-weight:900; font-size:.82rem; display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    /* Plain block stacking, not flex — <b>/<span> are block-level so they
+       already stack on their own; width:100% + text-align:center is the
+       whole trick, nothing left to go ambiguous. */
+    .pop-title{ width:100%; min-width:0; text-align:center; }
+    .pop-title b{ color:var(--primary); font-size:1.05rem; display:block; width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .pop-title span{ color:var(--muted); font-weight:900; font-size:.82rem; display:block; width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-top:1px; }
     .pop-back, .pop-close{
       width:36px; height:36px; border-radius:50%; border:1px solid rgba(3,60,84,.14);
       background:#f4f7fb; color:var(--primary); cursor:pointer;
-      display:grid; place-items:center; transition: var(--transition); flex-shrink:0;
+      display:grid; place-items:center; transition: var(--transition);
     }
     .pop-back svg, .pop-close svg{ width:15px; height:15px; }
     .pop-back:hover, .pop-close:hover{ background: rgba(3,60,84,.12); transform: scale(1.06); }
-    .pop-back[hidden]{ display:none; }
+    /* visibility (not display:none) — the 36px grid column this button
+       sits in must stay reserved either way so the title never re-centers
+       into asymmetric space, but toggling display on a grid item is one
+       more thing that could go wrong; visibility can't get that wrong. */
+    .pop-back.pop-back-hidden{ visibility:hidden; pointer-events:none; }
 
     .pop-body{ padding:18px; display:flex; flex-direction:column; gap:14px; overflow-y:auto; }
 
@@ -382,7 +389,7 @@
   <div id="popBackdrop" class="popover-backdrop"></div>
   <div id="popover" class="popover" role="dialog" aria-modal="true" aria-labelledby="popTitleText">
     <div class="pop-head">
-      <button class="pop-back" id="popBack" aria-label="رجوع" type="button" hidden>
+      <button class="pop-back pop-back-hidden" id="popBack" aria-label="رجوع" type="button">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
       </button>
       <div class="pop-title">
@@ -751,7 +758,7 @@
       const meta = currentLessonMeta;
       const isOwnLesson = !!currentUser && meta.teacherUid === currentUser.uid;
       popover.classList.remove('popover-wide');
-      popBack.hidden = true;
+      popBack.classList.add('pop-back-hidden');
       popTitleText.textContent = meta.teacherName;
       popSub.textContent = `${toArabicDigits(fmtDateLong(selectedDate))}`;
       popBody.innerHTML = `
@@ -825,7 +832,7 @@
       }
 
       popover.classList.add('popover-wide');
-      popBack.hidden = false;
+      popBack.classList.remove('pop-back-hidden');
       popTitleText.textContent = isSwap ? 'طلب تبديل' : 'طلب تغطية';
       popSub.textContent = `${meta.teacherName} — ${LESSONS_AR[meta.lesson-1]}`;
 
