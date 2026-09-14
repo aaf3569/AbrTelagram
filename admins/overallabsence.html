@@ -599,6 +599,8 @@
       margin-inline:auto;
       display:flex;
       justify-content:center;
+      gap:10px;
+      flex-wrap:wrap;
       position:relative;
     }
     .date-btn{
@@ -1272,6 +1274,9 @@
           <input class="mobile-date-input" id="mobileDateInput" type="date" inputmode="none" />
         </div>
       </button>
+      <button class="date-btn" id="fixSessionCollisionsBtn" type="button" title="ينقل كل سجلّ غياب مخزَّن تحت معرّف قديم متعارض إلى معرّفه الصحيح">
+        🔧 إصلاح تعارضات معرّفات الحضور
+      </button>
     </div>
   </header>
 
@@ -1458,11 +1463,11 @@
     import { getAuth, onAuthStateChanged } from "/shared/firebase.js";
     import {
       initializeFirestore, persistentSingleTabManager, collection, collectionGroup, getDocs, query, where,
-      doc, getDoc, Timestamp
+      doc, getDoc, writeBatch, Timestamp
     } from "/shared/firebase.js";
     import { kuwaitTodayISO, getCurrentKuwaitMinutes } from "/shared/kuwait-time.js";
     import { fetchClassList, sortClassList, primeClassList } from "/shared/class-registry.js";
-    import { mountAttendanceSheet } from "/shared/attendance.js";
+    import { mountAttendanceSheet, createAttendanceSessionId } from "/shared/attendance.js";
 
 
 
@@ -1499,6 +1504,7 @@
 
     const backBtn = document.getElementById('backBtn');
     const downloadBtn = document.getElementById('downloadBtn');
+    const fixSessionCollisionsBtn = document.getElementById('fixSessionCollisionsBtn');
     const gridBody = document.getElementById('gridBody');
 
     const dateBtn = document.getElementById('dateBtn');
@@ -3026,6 +3032,93 @@
       downloadBackdrop.classList.remove('open');
       downloadModal.classList.remove('open');
     }
+
+    // Migrates every attendanceSessions doc still sitting under the old,
+    // collision-prone ID scheme (see shared/attendance.js's
+    // legacyAttendanceSessionId — \w is ASCII-only, so a class's track
+    // letter ع/د was silently dropped when building the doc ID, meaning
+    // e.g. "12 / 2 ع" and "12 / 2 د" computed the exact same ID; whichever
+    // teacher submitted first for a given date+lesson "won" that document,
+    // and every other class's sibling-track teacher got a false "already
+    // taken" from then on). The new code only ever WRITES the safe,
+    // collision-free ID going forward, but an already-existing legacy
+    // document keeps blocking its sibling class until it's moved off that
+    // shared ID — this does exactly that, using each doc's own (never
+    // corrupted) date/lesson/classKey fields as the source of truth for
+    // where it truly belongs. No attendance data is changed, only moved —
+    // including each session's attendanceRecords subcollection.
+    async function fixSessionCollisions(){
+      if (fixSessionCollisionsBtn.disabled) return;
+      const confirmed = window.confirm(
+        'سيفحص هذا كل سجلّات الحضور المخزَّنة، وينقل أيّ سجلّ محفوظ تحت معرّف قديم متعارض (بسبب حرف الشعبة ع/د) ' +
+        'إلى معرّفه الصحيح الحالي. لا تُحذف أو تُغيَّر أي بيانات فعليّة — فقط يُعاد نقل مكانها. ' +
+        'قد يستغرق هذا بعض الوقت حسب عدد السجلّات. متابعة؟'
+      );
+      if (!confirmed) return;
+
+      fixSessionCollisionsBtn.disabled = true;
+      const originalLabel = fixSessionCollisionsBtn.textContent;
+      fixSessionCollisionsBtn.textContent = 'جاري الفحص...';
+      try {
+        const snap = await getDocs(collection(db, 'attendanceSessions'));
+        const sessions = [];
+        snap.forEach(d => sessions.push({ id: d.id, data: d.data() || {} }));
+
+        const toMigrate = sessions.filter(({ id, data }) => {
+          if (!data.date || !data.lesson || !data.classKey) return false;
+          return createAttendanceSessionId(data.date, data.lesson, data.classKey) !== id;
+        });
+
+        let migrated = 0;
+        const occupiedList = [];
+        const failures = [];
+
+        for (const { id: oldId, data } of toMigrate) {
+          const correctId = createAttendanceSessionId(data.date, data.lesson, data.classKey);
+          try {
+            // Never overwrite a session that's already legitimately there
+            // under its correct ID — flag it for manual review instead.
+            const targetSnap = await getDoc(doc(db, 'attendanceSessions', correctId));
+            if (targetSnap.exists()) {
+              occupiedList.push(`${data.classKey} — الحصة ${data.lesson} (${data.date})`);
+              continue;
+            }
+
+            const recordsSnap = await getDocs(collection(db, 'attendanceSessions', oldId, 'attendanceRecords'));
+            const batch = writeBatch(db);
+            batch.set(doc(db, 'attendanceSessions', correctId), data);
+            recordsSnap.forEach(r => batch.set(doc(db, 'attendanceSessions', correctId, 'attendanceRecords', r.id), r.data()));
+            batch.delete(doc(db, 'attendanceSessions', oldId));
+            recordsSnap.forEach(r => batch.delete(doc(db, 'attendanceSessions', oldId, 'attendanceRecords', r.id)));
+            await batch.commit();
+            migrated++;
+          } catch (e) {
+            console.error('[fixSessionCollisions]', oldId, e);
+            failures.push(`${data.classKey || '—'} — الحصة ${data.lesson || '—'} (${data.date || '—'}): ${e?.message || e}`);
+          }
+        }
+
+        const parts = [
+          `تم فحص ${sessions.length} سجلّ حضور. ${toMigrate.length} منها كانت تحت معرّف قديم.`,
+          `تم نقل ${migrated} سجلًّا بنجاح إلى معرّفه الصحيح.`,
+        ];
+        if (occupiedList.length) {
+          parts.push(`تعذّر نقل ${occupiedList.length} سجلًّا لأن معرّفها الصحيح محجوز بالفعل بسجلّ آخر — يحتاج مراجعة يدويّة:\n` + occupiedList.join('\n'));
+        }
+        if (failures.length) {
+          parts.push(`فشل ${failures.length}:\n` + failures.join('\n'));
+        }
+        alert(parts.join('\n\n'));
+        if (typeof requestGridLoad === 'function' && selectedDate) await requestGridLoad(selectedDate);
+      } catch (e) {
+        console.error('[fixSessionCollisions]', e);
+        alert('تعذّر تنفيذ العملية: ' + (e?.message || e));
+      } finally {
+        fixSessionCollisionsBtn.disabled = false;
+        fixSessionCollisionsBtn.textContent = originalLabel;
+      }
+    }
+    fixSessionCollisionsBtn.addEventListener('click', fixSessionCollisions);
 
     downloadBtn.addEventListener('click', openDownloadModal);
     downloadClose.addEventListener('click', closeDownloadModal);

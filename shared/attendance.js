@@ -326,8 +326,27 @@ function sortStudentsByStudentNumberOnly(students) {
   });
 }
 
-function createAttendanceSessionId(dateISO, lesson, classKey) {
-  const k = classKey.replace(/\s+/g, "_").replace(/\//g, "-").replace(/[^\w\-]/g, "");
+// Firestore document IDs may contain any UTF-8 character except "/" — a
+// class's track letter (ع/د) never needed stripping at all. index.js (the
+// Telegram bot) already carries the same fix under the name
+// normalizeForSafeSessionId; kept consistent with it here.
+export function createAttendanceSessionId(dateISO, lesson, classKey) {
+  const k = String(classKey || "")
+    .replace(/[\/\\#?[\]\s]+/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/^_|_$/g, "");
+  return `${dateISO}_${lesson}_${k}`;
+}
+
+// The old scheme — kept ONLY so a session already created under it (before
+// this fix shipped) is still found and not double-submitted. \w is
+// ASCII-only, so it silently dropped a class's track letter entirely —
+// e.g. "12 / 2 ع" and "12 / 2 د" (two different classes) collided into the
+// exact same ID, so whichever teacher submitted first for a given
+// date+lesson blocked every other class's sibling-track teacher with a
+// false "already taken." Never used to create a new session.
+export function legacyAttendanceSessionId(dateISO, lesson, classKey) {
+  const k = String(classKey || "").replace(/\s+/g, "_").replace(/\//g, "-").replace(/[^\w-]/g, "");
   return `${dateISO}_${lesson}_${k}`;
 }
 
@@ -901,18 +920,31 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
     return null;
   }
 
-  // A cheap direct-document lookup (no query) so "already taken" can be
-  // caught before the sheet even opens, instead of only at final save time.
-  async function hasExistingAttendanceSession(dateISO, lesson, classKey) {
-    if (!classKey) return false;
+  // Checks the current (safe) session ID first, then the old buggy one if
+  // it differs, so a session already recorded under the legacy scheme
+  // before this fix shipped is still found. Returns the existing
+  // snapshot+id, or null. A cheap direct-document lookup (no query), so
+  // "already taken" can be caught before the sheet even opens, instead of
+  // only at final save time.
+  async function findExistingAttendanceSession(dateISO, lesson, classKey) {
+    if (!classKey) return null;
+    const safeId = createAttendanceSessionId(dateISO, lesson, classKey);
+    const legacyId = legacyAttendanceSessionId(dateISO, lesson, classKey);
+    const ids = legacyId !== safeId ? [safeId, legacyId] : [safeId];
     try {
-      const sessionId = createAttendanceSessionId(dateISO, lesson, classKey);
-      const snap = await getDoc(doc(db, ATTENDANCE_SESSIONS_COLLECTION, sessionId));
-      return snap.exists();
+      for (const id of ids) {
+        const snap = await getDoc(doc(db, ATTENDANCE_SESSIONS_COLLECTION, id));
+        if (snap.exists()) return { id, snap };
+      }
+      return null;
     } catch (e) {
-      console.error("[attendance] hasExistingAttendanceSession:", e);
-      return false; // fail open — a transient read error shouldn't block a legit submission
+      console.error("[attendance] findExistingAttendanceSession:", e);
+      return null; // fail open — a transient read error shouldn't block a legit submission
     }
+  }
+
+  async function hasExistingAttendanceSession(dateISO, lesson, classKey) {
+    return !!(await findExistingAttendanceSession(dateISO, lesson, classKey));
   }
 
   async function getMyActiveLessonMetaForNow() {
@@ -1484,9 +1516,8 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
     const lessonIndex = Number(lesson);
     if (!date || !classKey || !lessonIndex || !teacherUid) return;
     await withSkeletonOpen(async () => {
-      const sessionId = createAttendanceSessionId(date, lessonIndex, classKey);
-      const existing = await getDoc(doc(db, ATTENDANCE_SESSIONS_COLLECTION, sessionId));
-      if (existing.exists()) {
+      const existing = await findExistingAttendanceSession(date, lessonIndex, classKey);
+      if (existing) {
         showError("تم تسجيله بالفعل", "تم تسجيل غياب هذه الحصّة مسبقًا.");
         return false;
       }
@@ -1664,8 +1695,8 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
       const sessionRef = doc(db, ATTENDANCE_SESSIONS_COLLECTION, newSessionId);
       let activeMeta = {};
       if (mode === "admin") {
-        const existing = await getDoc(sessionRef);
-        if (existing.exists()) {
+        const existing = await findExistingAttendanceSession(dateKW, lessonIndex, classKey);
+        if (existing) {
           closeModal(els.confirmModal);
           showError("تعذّر الحفظ", "تم تسجيل غياب هذه الحصّة مسبقًا.");
           pendingSave = null;
@@ -1683,8 +1714,8 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
           return;
         }
         activeMeta = currentMeta || {};
-        const existing = await getDoc(sessionRef);
-        if (existing.exists()) {
+        const existing = await findExistingAttendanceSession(dateKW, lessonIndex, classKey);
+        if (existing) {
           closeModal(els.confirmModal);
           showError("تعذّر الحفظ", "تم تسجيل غياب هذه الحصّة مسبقًا.");
           pendingSave = null;
@@ -1695,7 +1726,7 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
         // opened — in parallel with the duplicate-session check.
         const [myLessons, existing] = await Promise.all([
           getMyScheduledLessonsForClass(uid, classKey, dateKW),
-          getDoc(sessionRef),
+          findExistingAttendanceSession(dateKW, lessonIndex, classKey),
         ]);
         if (!myLessons.has(lessonIndex)) {
           closeModal(els.confirmModal);
@@ -1705,7 +1736,7 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
         // Re-fetched hit may carry a custom schedule's own activeStart/End —
         // falls back to the picker-time snapshot from openForClass() if not.
         activeMeta = myLessons.get(lessonIndex) || manualLessonMeta.get(lessonIndex) || {};
-        if (existing.exists()) {
+        if (existing) {
           closeModal(els.confirmModal);
           showError("تعذّر الحفظ", "تم تسجيل غياب هذه الحصّة مسبقًا.");
           pendingSave = null;
@@ -1839,9 +1870,8 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
     try {
       const dateISO = currentMeta?.date || kuwaitTodayISO();
       const classKey = currentMeta?.classKey || "";
-      const sessionId = createAttendanceSessionId(dateISO, lessonIndex, classKey);
-      const sessSnap = await getDoc(doc(db, ATTENDANCE_SESSIONS_COLLECTION, sessionId));
-      const sessData = sessSnap.exists() ? sessSnap.data() : {};
+      const existingSession = await findExistingAttendanceSession(dateISO, lessonIndex, classKey);
+      const sessData = existingSession ? existingSession.snap.data() : {};
       let recordedBy = "—";
       if (sessData.teacherUid) {
         try {

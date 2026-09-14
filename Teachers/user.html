@@ -2212,15 +2212,48 @@
             });
         }
 
-        // NEW HELPER: Create attendance session ID
+        // Firestore document IDs may contain any UTF-8 character except "/"
+        // — a class's track letter (ع/د) never needed stripping at all.
+        // The old version below used \w, which is ASCII-only, so it
+        // silently dropped the track letter entirely — e.g. "12 / 2 ع" and
+        // "12 / 2 د" (two different classes) collided into the exact same
+        // session ID, so whichever teacher submitted first for a given
+        // date+lesson blocked every other class's sibling-track teacher
+        // with a false "already taken." Matches shared/attendance.js and
+        // index.js's normalizeForSafeSessionId.
         function createAttendanceSessionId(dateISO, lesson, classKey) {
-            // Normalize classKey for use in ID
-            const normalizedClassKey = classKey
+            const normalizedClassKey = (classKey || '')
+                .replace(/[\/\\#?[\]\s]+/g, '_')
+                .replace(/_+/g, '_')
+                .replace(/^_|_$/g, '');
+
+            return `${dateISO}_${lesson}_${normalizedClassKey}`;
+        }
+
+        // The old scheme — kept ONLY so a session already created under it
+        // (before this fix shipped) is still found and not double-submitted.
+        // Never used to create a new session.
+        function legacyAttendanceSessionId(dateISO, lesson, classKey) {
+            const normalizedClassKey = (classKey || '')
                 .replace(/\s+/g, '_')
                 .replace(/\//g, '-')
                 .replace(/[^\w\-]/g, '');
-            
+
             return `${dateISO}_${lesson}_${normalizedClassKey}`;
+        }
+
+        // Checks the current (safe) session ID first, then the old buggy
+        // one if it differs. Returns the existing snapshot+id, or null.
+        async function findExistingAttendanceSession(dateISO, lesson, classKey) {
+            if (!classKey) return null;
+            const safeId = createAttendanceSessionId(dateISO, lesson, classKey);
+            const legacyId = legacyAttendanceSessionId(dateISO, lesson, classKey);
+            const ids = legacyId !== safeId ? [safeId, legacyId] : [safeId];
+            for (const id of ids) {
+                const snap = await getDoc(doc(db, ATTENDANCE_SESSIONS_COLLECTION, id));
+                if (snap.exists()) return { id, snap };
+            }
+            return null;
         }
 
         // NEW HELPER: Check if attendance is allowed for current context
@@ -3497,18 +3530,19 @@
                 const { present, late, absent, dateKW, lessonIndex, lessonLabel } = pendingSave;
                 const total = present.length + late.length + absent.length;
 
-                // NEW: Create session ID
-                const sessionId = createAttendanceSessionId(dateKW, lessonIndex, currentClass);
-                const sessionRef = doc(db, ATTENDANCE_SESSIONS_COLLECTION, sessionId);
-
-                // NEW: Check if session already exists
-                const existing = await getDoc(sessionRef);
-                if (existing.exists()) {
+                // Check both the current and legacy session IDs so an
+                // already-existing session (under either scheme) is found.
+                const existing = await findExistingAttendanceSession(dateKW, lessonIndex, currentClass);
+                if (existing) {
                     closeModal(confirmModal);
                     openError('تعذّر الحفظ', 'تم تسجيل غياب هذه الحصّة مسبقًا.');
                     pendingSave = null;
                     return;
                 }
+
+                // New sessions always use the current (safe) ID scheme.
+                const sessionId = createAttendanceSessionId(dateKW, lessonIndex, currentClass);
+                const sessionRef = doc(db, ATTENDANCE_SESSIONS_COLLECTION, sessionId);
 
                 // NEW: Calculate timestamps for security rules
                 const lessonTime = LESSON_TIMES.find(l => l.index === lessonIndex);
