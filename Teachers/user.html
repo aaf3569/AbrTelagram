@@ -2266,13 +2266,33 @@
             const legacyId = legacyAttendanceSessionId(dateISO, lesson, classKey);
             const ids = legacyId !== safeId ? [safeId, legacyId] : [safeId];
             const wanted = normalizeForCompare(classKey);
+            const probed = [];
             for (const id of ids) {
                 const snap = await getDoc(doc(db, ATTENDANCE_SESSIONS_COLLECTION, id));
-                if (!snap.exists()) continue;
-                const found = normalizeForCompare((snap.data() || {}).classKey);
+                if (!snap.exists()) { probed.push({ id, exists: false, verdict: 'no such document' }); continue; }
+                const d = snap.data() || {};
+                const found = normalizeForCompare(d.classKey);
+                const info = {
+                    id, exists: true,
+                    classKey: d.classKey ?? null, date: d.date ?? null, lesson: d.lesson ?? null,
+                    teacherUid: d.teacherUid ?? null, teacherName: d.teacherName ?? null,
+                };
                 // A doc with no classKey at all predates that field; it can
                 // only have come from this class's own ID, so accept it.
-                if (found && found !== wanted) continue;
+                if (found && found !== wanted) {
+                    probed.push({ ...info, verdict: `REJECTED — different class ("${found}" != "${wanted}")` });
+                    continue;
+                }
+                probed.push({ ...info, verdict: 'MATCH — treated as already taken' });
+                // Says exactly which document is blocking this save, so the
+                // "تم تسجيل غياب هذه الحصّة مسبقًا" error can be traced to
+                // real data rather than guessed at.
+                console.group('⛔ [Teachers/user.html] attendance already recorded');
+                console.log('Asked about:', { dateISO, lesson, classKey, normalized: wanted });
+                console.table(probed);
+                console.log('The attendance was recorded HERE:', info);
+                console.log(`Firestore path: ${ATTENDANCE_SESSIONS_COLLECTION}/${id}`);
+                console.groupEnd();
                 return { id, snap };
             }
             return null;

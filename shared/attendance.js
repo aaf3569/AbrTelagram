@@ -551,6 +551,84 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
     }
     els.blockedBody.textContent = m;
     openModal(els.blockedModal);
+    if (reason === "already_taken") logAlreadyTakenDiagnostics();
+  }
+
+  // Prints exactly which attendance document caused the "لقد سجّلت الغياب
+  // لهذه الحصة مسبقًا" dialog, so a teacher reporting it can be answered
+  // from real data instead of a guess: which class the code thought it was
+  // asking about, which document IDs it probed, what each one contained,
+  // and which one it accepted as the block.
+  function logAlreadyTakenDiagnostics() {
+    const probe = lastSessionProbe;
+    const header = "⛔ [attendance] BLOCKED: لقد سجّلت الغياب لهذه الحصة مسبقًا";
+    if (!probe) {
+      console.warn(`${header}\n  No lookup was recorded — the block did NOT come from ` +
+        `shared/attendance.js's session check. Look for another implementation on this page.`);
+      return;
+    }
+    console.group(header);
+    console.log("Asked about:", probe.askedFor);
+    console.log("Document IDs probed:", probe.ids);
+    if (probe.error) console.log("Read error (check failed open):", probe.error);
+    console.log(`Probed ${probe.probed.length} document(s):`);
+    console.table(probe.probed);
+    if (probe.blockedBy) {
+      console.log("%cThe attendance was recorded HERE:", "font-weight:bold");
+      console.log(probe.blockedBy);
+      console.log(
+        `Firestore path: ${ATTENDANCE_SESSIONS_COLLECTION}/${probe.blockedBy.matchedId}`
+      );
+      const t = probe.blockedBy.teacherName || probe.blockedBy.teacherUid || "unknown";
+      console.log(
+        `Recorded by: ${t}  |  class: ${probe.blockedBy.classKey ?? "(no classKey field)"}  ` +
+        `|  date: ${probe.blockedBy.date ?? "?"}  |  lesson: ${probe.blockedBy.lesson ?? "?"}`
+      );
+      // Fire-and-forget: names the teacher and says whether the session
+      // actually holds any student records. A session doc with zero
+      // records is a phantom — it blocks the lesson without anyone's
+      // attendance really having been taken.
+      resolveBlockingSessionDetails(probe.blockedBy);
+    } else {
+      console.log("%cNo document matched — so this dialog did NOT come from this check.",
+        "font-weight:bold");
+      console.log("The block was produced somewhere else on this page.");
+    }
+    console.groupEnd();
+  }
+
+  // Follow-up detail for the block above: who the recording teacher
+  // actually is, and how many student records the blocking session holds.
+  async function resolveBlockingSessionDetails(blockedBy) {
+    try {
+      const out = { sessionId: blockedBy.matchedId };
+      if (blockedBy.teacherUid) {
+        try {
+          const tSnap = await getDoc(doc(db, "teachers", blockedBy.teacherUid));
+          out.recordingTeacher = tSnap.exists()
+            ? ((tSnap.data() || {}).name || blockedBy.teacherUid)
+            : `${blockedBy.teacherUid} (no teachers/ document)`;
+        } catch (e) {
+          out.recordingTeacher = `lookup failed: ${e?.message || e}`;
+        }
+      } else {
+        out.recordingTeacher = "(session has no teacherUid field)";
+      }
+      try {
+        const recs = await getDocs(collection(
+          db, ATTENDANCE_SESSIONS_COLLECTION, blockedBy.matchedId, ATTENDANCE_RECORDS_SUBCOLLECTION
+        ));
+        out.studentRecordCount = recs.size;
+        out.verdict = recs.size === 0
+          ? "PHANTOM SESSION — the document exists but holds no student records"
+          : "real attendance data is present";
+      } catch (e) {
+        out.studentRecordCount = `unreadable: ${e?.message || e}`;
+      }
+      console.log("⛔ [attendance] blocking session details:", out);
+    } catch (e) {
+      console.warn("[attendance] could not resolve blocking session details:", e);
+    }
   }
 
   // Looping green checkmark celebration. Stays open — no auto-dismiss —
@@ -935,24 +1013,83 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
   // class nobody has touched — the false "لقد سجّلت الغياب لهذه الحصة
   // مسبقًا" teachers hit. The stored classKey field was never affected by
   // the ID bug, so it's the authority on who a session really belongs to.
+  // Flattens a session document into something readable in the console.
+  function describeSessionDoc(id, snap) {
+    if (!snap || !snap.exists()) return { id, exists: false };
+    const d = snap.data() || {};
+    const ts = (v) => {
+      try {
+        if (!v) return null;
+        if (typeof v.toDate === "function") return v.toDate().toISOString();
+        if (typeof v.seconds === "number") return new Date(v.seconds * 1000).toISOString();
+        return String(v);
+      } catch { return null; }
+    };
+    return {
+      id,
+      exists: true,
+      classKey: d.classKey ?? null,
+      date: d.date ?? null,
+      lesson: d.lesson ?? null,
+      subject: d.subject ?? null,
+      teacherUid: d.teacherUid ?? null,
+      teacherName: d.teacherName ?? null,
+      recordedByAdminUid: d.recordedByAdminUid ?? null,
+      createdAt: ts(d.createdAt),
+      updatedAt: ts(d.updatedAt),
+    };
+  }
+
+  // Set by findExistingAttendanceSession on every check, read by
+  // showBlocked("already_taken") so the dialog can point at the exact
+  // document that caused it instead of leaving it to guesswork.
+  let lastSessionProbe = null;
+
   async function findExistingAttendanceSession(dateISO, lesson, classKey) {
     if (!classKey) return null;
     const safeId = createAttendanceSessionId(dateISO, lesson, classKey);
     const legacyId = legacyAttendanceSessionId(dateISO, lesson, classKey);
     const ids = legacyId !== safeId ? [safeId, legacyId] : [safeId];
     const wanted = normalizeClassKeyForCompare(classKey);
+    const probe = {
+      source: "shared/attendance.js",
+      askedFor: { dateISO, lesson, classKey, normalized: wanted },
+      ids: { safeId, legacyId, legacyDiffers: legacyId !== safeId },
+      probed: [],
+      blockedBy: null,
+      error: null,
+    };
+    lastSessionProbe = probe;
     try {
       for (const id of ids) {
         const snap = await getDoc(doc(db, ATTENDANCE_SESSIONS_COLLECTION, id));
-        if (!snap.exists()) continue;
+        const info = describeSessionDoc(id, snap);
+        if (!snap.exists()) {
+          probe.probed.push({ ...info, verdict: "no such document" });
+          continue;
+        }
         const found = normalizeClassKeyForCompare((snap.data() || {}).classKey);
         // A doc with no classKey at all predates that field; it can only
         // have come from this class's own ID, so accept it.
-        if (found && found !== wanted) continue;
+        if (found && found !== wanted) {
+          probe.probed.push({
+            ...info,
+            verdict: `REJECTED — belongs to a different class ("${found}" != "${wanted}")`,
+          });
+          continue;
+        }
+        probe.probed.push({
+          ...info,
+          verdict: found
+            ? "MATCH — classKey matches, treated as already taken"
+            : "MATCH — document has no classKey field, accepted as this class's own",
+        });
+        probe.blockedBy = { ...info, matchedId: id };
         return { id, snap };
       }
       return null;
     } catch (e) {
+      probe.error = e?.message || String(e);
       console.error("[attendance] findExistingAttendanceSession:", e);
       return null; // fail open — a transient read error shouldn't block a legit submission
     }
