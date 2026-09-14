@@ -13,7 +13,7 @@
   <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js" crossorigin>
   <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js" crossorigin>
   <link rel="modulepreload" href="/shared/firebase.js">
-  <title>جدول المعلّمين - ثانوية أحمد البشر الرومي</title>
+  <title>جدول المدرسة - ثانوية أحمد البشر الرومي</title>
 
   <link href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="/shared/base.css" />
@@ -184,43 +184,61 @@
     /* Popover */
     .popover-backdrop{ position:fixed; inset:0; background: rgba(15,23,42,.30); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); display:none; z-index:999; }
     .popover-backdrop.open{ display:block; }
+    /* A fixed-height flex column, not a scrolling box — only .pop-body
+       scrolls, and only if its content genuinely can't fit. The header
+       (title, close, back) always stays reachable, never scrolled away. */
     .popover{
       position:fixed; top:50%; left:50%; transform: translate(-50%, -50%); z-index:1000;
-      width:min(400px, 92vw); max-height:min(560px, 82vh); overflow:auto;
+      width:min(380px, 92vw); max-height:min(520px, 80vh);
       background:#fff; border:1px solid var(--border); border-radius:20px;
       box-shadow: 0 24px 60px rgba(2,6,23,.22); display:none;
+      flex-direction:column; overflow:hidden;
       transition: width .18s ease;
     }
-    .popover.open{ display:block; }
-    /* The request form (طلب تغطية / طلب تبديل) gets more breathing room —
+    .popover.open{ display:flex; }
+    /* The request form (طلب تغطية / طلب تبديل) gets a touch more room —
        the plain info view stays compact. */
-    .popover.popover-wide{ width:min(460px, 94vw); max-height:min(640px, 86vh); }
+    .popover.popover-wide{ width:min(420px, 94vw); max-height:min(560px, 84vh); }
 
+    /* 3-column grid (back-arrow | centered title | close) — same layout
+       the page's own site-header already uses for backBtn/title, so the
+       title is always perfectly centered regardless of which side button
+       is shown. */
     .pop-head{
-      position:sticky; top:0; background: rgba(255,255,255,.97);
-      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-      border-bottom:1px solid var(--border); padding:18px 20px;
-      display:flex; align-items:flex-start; justify-content:space-between; gap:10px;
+      flex-shrink:0;
+      background:#fff;
+      border-bottom:1px solid var(--border); padding:14px 16px;
+      display:grid; grid-template-columns:36px 1fr 36px; align-items:center; gap:8px;
     }
-    .pop-title{ display:flex; flex-direction:column; gap:2px; }
-    .pop-title b{ color:var(--primary); font-size:1.05rem }
-    .pop-title span{ color:var(--muted); font-weight:900; font-size:.86rem }
-    .pop-close{
+    .pop-title{ min-width:0; text-align:center; display:flex; flex-direction:column; gap:1px; }
+    .pop-title b{ color:var(--primary); font-size:1.05rem; display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .pop-title span{ color:var(--muted); font-weight:900; font-size:.82rem; display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .pop-back, .pop-close{
       width:36px; height:36px; border-radius:50%; border:1px solid rgba(3,60,84,.14);
       background:#f4f7fb; color:var(--primary); cursor:pointer;
       display:grid; place-items:center; transition: var(--transition); flex-shrink:0;
     }
-    .pop-close svg{ width:15px; height:15px; }
-    .pop-close:hover{ background: rgba(3,60,84,.12); transform: scale(1.06); }
+    .pop-back svg, .pop-close svg{ width:15px; height:15px; }
+    .pop-back:hover, .pop-close:hover{ background: rgba(3,60,84,.12); transform: scale(1.06); }
+    .pop-back[hidden]{ display:none; }
 
-    .pop-body{ padding:20px; display:flex; flex-direction:column; gap:16px; }
+    .pop-body{ padding:18px; display:flex; flex-direction:column; gap:14px; overflow-y:auto; }
 
     /* Clean two-column info grid for lesson details — the whole point of
        this popup, kept to exactly the four facts that matter. */
-    .info-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-    .info-cell{ border:1px solid var(--border); border-radius:14px; padding:13px 14px; background:#fbfdff; }
-    .info-cell-label{ color:var(--muted); font-weight:800; font-size:.75rem; margin-bottom:5px; }
-    .info-cell-value{ color:var(--text); font-weight:900; font-size:.94rem; line-height:1.35; }
+    .info-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .info-cell{ border:1px solid var(--border); border-radius:14px; padding:12px 13px; background:#fbfdff; }
+    .info-cell-label{ color:var(--muted); font-weight:800; font-size:.74rem; margin-bottom:4px; }
+    .info-cell-value{ color:var(--text); font-weight:900; font-size:.92rem; line-height:1.3; }
+
+    /* Compact one-line context strip used inside the request form, instead
+       of repeating the full info-grid again once the header already names
+       the teacher and lesson. */
+    .req-context{
+      display:flex; align-items:center; justify-content:center; gap:8px;
+      padding:9px 12px; border-radius:12px; background:#fbfdff; border:1px solid var(--border);
+      color:var(--muted); font-weight:800; font-size:.82rem; text-align:center;
+    }
 
     .pop-actions{ display:flex; flex-direction:column; gap:10px; margin-top:2px; }
     .pop-btn{
@@ -233,13 +251,6 @@
     .pop-btn.outline{ background:#fff; color:var(--primary); border:1px solid rgba(3,60,84,.22); }
     .pop-btn.outline:hover{ background:#f4f7fb; transform: translateY(-1px); }
     .pop-btn:disabled{ opacity:.55; cursor:not-allowed; transform:none !important; }
-
-    .back-row{
-      display:flex; align-items:center; gap:8px; color:var(--primary); font-weight:900;
-      font-size:.9rem; cursor:pointer; padding:4px 2px; margin-bottom:2px; width:fit-content;
-    }
-    .back-row svg{ width:16px; height:16px; }
-    .back-row:hover{ opacity:.75; }
 
     .form-field{ display:flex; flex-direction:column; gap:6px; }
     .form-field label{ font-weight:800; font-size:.82rem; color:var(--muted); }
@@ -292,7 +303,7 @@
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
       </button>
       <div class="header-center">
-        <h1 class="site-title">جدول المعلّمين</h1>
+        <h1 class="site-title">جدول المدرسة</h1>
       </div>
       <div></div>
     </div>
@@ -328,10 +339,10 @@
       <div class="msg error">تم رفض الوصول. يتطلّب هذا الجدول تسجيل بيانات معلّم.</div>
     </div>
 
-    <section id="stateOk" class="state full-width" aria-label="جدول المعلّمين">
+    <section id="stateOk" class="state full-width" aria-label="جدول المدرسة">
       <div class="table-shell">
         <div class="table-scroll" id="tableScroll">
-          <table aria-label="جدول المعلّمين">
+          <table aria-label="جدول المدرسة">
             <thead>
               <tr>
                 <th class="sticky-col">المعلمين</th>
@@ -357,6 +368,9 @@
   <div id="popBackdrop" class="popover-backdrop"></div>
   <div id="popover" class="popover" role="dialog" aria-modal="true" aria-labelledby="popTitleText">
     <div class="pop-head">
+      <button class="pop-back" id="popBack" aria-label="رجوع" type="button" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+      </button>
       <div class="pop-title">
         <b id="popTitleText">—</b>
         <span id="popSub">—</span>
@@ -404,6 +418,7 @@
 
     const popBackdrop = document.getElementById('popBackdrop');
     const popover = document.getElementById('popover');
+    const popBack = document.getElementById('popBack');
     const popClose = document.getElementById('popClose');
     const popTitleText = document.getElementById('popTitleText');
     const popSub = document.getElementById('popSub');
@@ -699,6 +714,7 @@
     }
     popBackdrop.addEventListener('click', closePopover);
     popClose.addEventListener('click', closePopover);
+    popBack.addEventListener('click', renderLessonInfoView);
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closePopover(); });
 
     function openLessonPopover(teacher, lesson, cell){
@@ -721,6 +737,7 @@
       const meta = currentLessonMeta;
       const isOwnLesson = !!currentUser && meta.teacherUid === currentUser.uid;
       popover.classList.remove('popover-wide');
+      popBack.hidden = true;
       popTitleText.textContent = meta.teacherName;
       popSub.textContent = `${toArabicDigits(fmtDateLong(selectedDate))}`;
       popBody.innerHTML = `
@@ -769,14 +786,6 @@
        unchanged; firestore.rules only allows fromTeacherUid to be someone
        other than the caller when toTeacherUid is the caller themselves —
        exactly this case. */
-    function backRow(){
-      const row = document.createElement('div');
-      row.className = 'back-row';
-      row.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg><span>رجوع</span>`;
-      row.addEventListener('click', renderLessonInfoView);
-      return row;
-    }
-
     async function openRequestForm(type){
       const meta = currentLessonMeta;
       const isSwap = type === 'swap';
@@ -802,35 +811,18 @@
       }
 
       popover.classList.add('popover-wide');
+      popBack.hidden = false;
       popTitleText.textContent = isSwap ? 'طلب تبديل' : 'طلب تغطية';
       popSub.textContent = `${meta.teacherName} — ${LESSONS_AR[meta.lesson-1]}`;
 
       popBody.innerHTML = '';
-      popBody.appendChild(backRow());
 
       const form = document.createElement('div');
       form.style.display = 'flex';
       form.style.flexDirection = 'column';
       form.style.gap = '14px';
       form.innerHTML = `
-        <div class="info-grid">
-          <div class="info-cell">
-            <div class="info-cell-label">المعلّم</div>
-            <div class="info-cell-value">${escapeHtml(meta.teacherName)}</div>
-          </div>
-          <div class="info-cell">
-            <div class="info-cell-label">الحصة</div>
-            <div class="info-cell-value">${escapeHtml(LESSONS_AR[meta.lesson-1])}</div>
-          </div>
-          <div class="info-cell">
-            <div class="info-cell-label">الصف</div>
-            <div class="info-cell-value">${escapeHtml(toArabicDigits(meta.classKey))}</div>
-          </div>
-          <div class="info-cell">
-            <div class="info-cell-label">التاريخ</div>
-            <div class="info-cell-value">${escapeHtml(toArabicDigits(meta.date))}</div>
-          </div>
-        </div>
+        <div class="req-context">${escapeHtml(toArabicDigits(meta.classKey))} — ${escapeHtml(toArabicDigits(fmtDateLong(selectedDate)))}</div>
         ${isSwap ? `
         <div class="form-field">
           <label for="reqMyDate">اختر حصتك — التاريخ</label>
