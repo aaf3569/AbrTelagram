@@ -201,6 +201,12 @@
         .action-row,.att-row{display:flex;gap:12px;flex-wrap:wrap}
         .btn.attend,.btn.submit{background:linear-gradient(145deg,var(--primary-light),var(--primary));color:#fff;border:none;box-shadow:0 14px 32px rgba(3,60,84,.3)}
         .btn.attend:hover,.btn.submit:hover{transform:translateY(-2px)}
+        /* Distinct color for "تعديل الغياب" — attendance already exists for
+           this exact live lesson, so the button's color itself tells the
+           teacher what will happen before they tap it, instead of them
+           discovering it only after clicking and hitting a dialog. */
+        .btn.attend-edit{background:linear-gradient(145deg,#c98a1f,var(--yellow));color:#fff;border:none;box-shadow:0 14px 32px rgba(160,109,0,.32)}
+        .btn.attend-edit:hover{transform:translateY(-2px)}
         .input-wrap{display:flex;align-items:center;gap:12px;min-height:58px;padding:0 18px;background:#fff;border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-1);transition:var(--transition)}
         .input-wrap:focus-within{border-color:rgba(3,60,84,.4);box-shadow:0 0 0 3px rgba(3,60,84,.1)}
         .input{flex:1;height:56px;border:none;outline:none;background:transparent;font-size:16px;color:var(--text);font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif}
@@ -391,14 +397,6 @@
         .mini-ghost:hover { transform: translateY(-2px); box-shadow: 0 18px 40px rgba(3,60,84,.16); border-color: rgba(3,60,84,.35); }
         .mini-ghost:disabled { opacity: .6; cursor: not-allowed; transform: none; box-shadow: none; }
 
-        /* Log */
-        .log-list{display:flex;flex-direction:column;gap:16px}
-        .log-item{padding:18px 20px;border:1px solid var(--border);border-radius:16px;background:#fff;box-shadow:var(--shadow-1);cursor:pointer;transition:var(--transition)}
-        .log-item:hover{transform:translateY(-2px);box-shadow:0 12px 25px rgba(3,60,84,.15)}
-        .log-title{font-weight:900;color:var(--primary);margin:0 0 8px}
-        .log-sub{color:var(--muted);font-weight:800;font-size:.96rem}
-        .warn{color:var(--yellow);font-weight:800;font-size:.94rem}
-        .ok{color:var(--green);font-weight:800;font-size:.94rem}
 
         /* Select */
         .select-wrap{position:relative;max-width:380px;width:100%}
@@ -711,12 +709,11 @@
                 <div class="stack wide" style="margin-top:10px;">
                     <div class="btn ghost skel-fill"></div>
                 </div>
-                <!-- moreBtn, teacherScheduleBtn, logBtn, the Telegram-settings
-                     button (mounted into #telegramSettingsSlot), suggestBtn,
-                     logoutBtn — 6 buttons visible by default (the permission-
+                <!-- moreBtn, teacherScheduleBtn, the Telegram-settings button
+                     (mounted into #telegramSettingsSlot), suggestBtn,
+                     logoutBtn — 5 buttons visible by default (the permission-
                      gated ones stay hidden for most teachers). -->
                 <div class="stack wide">
-                    <div class="btn ghost skel-fill"></div>
                     <div class="btn ghost skel-fill"></div>
                     <div class="btn ghost skel-fill"></div>
                     <div class="btn ghost skel-fill"></div>
@@ -775,12 +772,6 @@
                     </button>
                     <!-- /NEW BUTTON -->
 
-                    <button id="logBtn" class="btn ghost" type="button">
-                        <span>سجل الغيابات</span>
-                        <span class="icon" aria-hidden="true">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
-                        </span>
-                    </button>
                     <div id="telegramSettingsSlot"></div>
                     <button id="suggestBtn" class="btn ghost" type="button">
                         <span>اقتراح / بلاغ</span>
@@ -902,20 +893,6 @@
                     <button id="submitAtt" class="btn submit" type="button">حفظ التقرير</button>
                 </div>
             </div>
-        </div>
-    </section>
-
-    <!-- Attendance LOG Sheet -->
-    <section id="logSheet" class="sheet" aria-hidden="true">
-        <div class="sheet-header">
-            <button id="closeLog" class="back-btn" aria-label="رجوع">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-                رجوع
-            </button>
-        <h3 class="sheet-title">تقارير الغياب</h3>
-        </div>
-        <div class="sheet-body">
-            <div id="logList" class="log-list"></div>
         </div>
     </section>
 
@@ -1089,16 +1066,13 @@
         setPermissionBtnVisibility(morningLateBtn, false);
         setPermissionBtnVisibility(supervisorStudentsBtn, false);
 
-        const logBtn = document.getElementById('logBtn');
-        const logSheet = document.getElementById('logSheet');
-        const closeLog = document.getElementById('closeLog');
-        const logList = document.getElementById('logList');
         const classSheet = document.getElementById('classSheet');
         const closeClass = document.getElementById('closeClass');
         const classHeroName = document.getElementById('classHeroName');
         const classSheetTitle = document.getElementById('classSheetTitle');
         const studentSearch = document.getElementById('studentSearch');
         const studentsList = document.getElementById('studentsList');
+        const attendBtn = document.getElementById('attendBtn');
 
         const attSheet = document.getElementById('attSheet');
         const closeAtt = document.getElementById('closeAtt');
@@ -2852,6 +2826,13 @@
             if (classHighlightTimer) clearInterval(classHighlightTimer);
             classHighlightTimer = setInterval(() => {
                 updateCurrentClassButtonHighlight();
+                // Keeps attendBtn's "تسجيل الغياب"/"تعديل الغياب" state current
+                // for a class sheet a teacher leaves open across a lesson
+                // boundary — e.g. opened just before the bell, or attendance
+                // for this lesson gets recorded from another device meanwhile.
+                if (classSheet.classList.contains('open') && currentClass) {
+                    refreshAttendButtonState(currentClass);
+                }
             }, CLASS_HIGHLIGHT_REFRESH_MS);
             updateCurrentClassButtonHighlight();
         }
@@ -3063,17 +3044,91 @@
         let currentClass = null;
         let cachedStudents = [];
 
+        // Holds the session id to reopen for editing, or null when
+        // attendBtn should take fresh attendance instead. Set only by
+        // refreshAttendButtonState, and only after it has verified this
+        // teacher owns that session and its edit window is still open —
+        // the click handler below trusts it without re-checking.
+        let attendEditSessionId = null;
+
+        function setAttendButtonMode(mode){
+            if (mode === 'edit') {
+                attendBtn.textContent = 'تعديل الغياب';
+                attendBtn.classList.remove('attend');
+                attendBtn.classList.add('attend-edit');
+            } else {
+                attendBtn.textContent = 'تسجيل الغياب';
+                attendBtn.classList.remove('attend-edit');
+                attendBtn.classList.add('attend');
+            }
+        }
+
+        // Figures out, BEFORE the teacher taps the button, whether attendance
+        // already exists for this exact class's current live lesson — so the
+        // button itself says "تعديل الغياب" instead of the teacher tapping
+        // "تسجيل الغياب" and only then discovering it was already taken.
+        //
+        // A token guards against a stale response landing after the teacher
+        // has since opened a different class (or closed the sheet).
+        let attendButtonToken = 0;
+        async function refreshAttendButtonState(cls){
+            const token = ++attendButtonToken;
+            attendEditSessionId = null;
+            setAttendButtonMode('take');
+            if (!auth.currentUser) return;
+            try {
+                // Resolves this teacher's live current lesson (active now, or
+                // still in its just-ended grace period) using the shared
+                // attendance module's own bell-time-aware schedule logic —
+                // the exact same resolution attendance.start() itself uses,
+                // so this can never disagree with what tapping the button
+                // actually does. checkExisting:false means it won't itself
+                // block on an existing session — this function decides that.
+                const current = await attendance.getCurrentLessonClass(false);
+                if (token !== attendButtonToken) return; // a newer class was opened meanwhile
+                if (!current.ok || normalizeClassKey(current.classKey) !== normalizeClassKey(cls)) return;
+
+                // Look up any existing session by its actual stored fields,
+                // not by guessing a document ID — immune to the legacy/safe
+                // ID scheme entirely, so two same-numbered classes can never
+                // be confused here.
+                const snap = await getDocs(query(
+                    collection(db, ATTENDANCE_SESSIONS_COLLECTION),
+                    where('classKey', '==', current.classKey),
+                    where('teacherUid', '==', auth.currentUser.uid),
+                    where('date', '==', current.date),
+                    where('lesson', '==', current.lesson)
+                ));
+                if (token !== attendButtonToken) return;
+                if (snap.empty) return;
+
+                const sessionDoc = snap.docs[0];
+                if (!attendance.canEditSession(sessionDoc.data())) return;
+
+                attendEditSessionId = sessionDoc.id;
+                setAttendButtonMode('edit');
+            } catch (error) {
+                console.error('[user] refreshAttendButtonState:', error);
+                if (token === attendButtonToken) setAttendButtonMode('take');
+            }
+        }
+
         async function openClassView(cls){
             currentClass = cls;
             classHeroName.textContent = formatClassLabel(cls);
             classSheetTitle.textContent = `طلاب ${formatClassLabel(cls)}`;
             studentsList.innerHTML = '';
             studentSearch.value = '';
+            refreshAttendButtonState(cls); // not awaited — never delays opening the sheet
             openSheet(classSheet);
             await loadStudentsForClass(cls);
         }
 
-        closeClass.addEventListener('click', ()=> closeSheet(classSheet));
+        closeClass.addEventListener('click', ()=> {
+            closeSheet(classSheet);
+            attendButtonToken++; // invalidate any in-flight refresh
+            attendEditSessionId = null;
+        });
 
         // FIX 3: Arabic search with normalization
         studentSearch.addEventListener('input', ()=>{
@@ -3226,7 +3281,14 @@
         }
 
         /* ========= Attendance (Create) - UPDATED WITH STRICT RULES ========= */
-        document.getElementById('attendBtn').addEventListener('click', () => attendance.start());
+        // attendEditSessionId (set by refreshAttendButtonState, above) tells
+        // this apart: reopen the already-recorded session for editing when
+        // the button is showing "تعديل الغياب", otherwise take attendance
+        // fresh exactly as before.
+        attendBtn.addEventListener('click', () => {
+            if (attendEditSessionId) attendance.openForEdit(attendEditSessionId);
+            else attendance.start();
+        });
         
         closeAtt.addEventListener('click', ()=> closeSheet(attSheet));
 
@@ -3735,126 +3797,6 @@
             errorBody.textContent = body || 'حدث خطأ غير متوقع.';
             openModal(errorModal);
         }
-
-        /* ========= Attendance LOG - UPDATED WITH STRICT RULES ========= */
-        logBtn.addEventListener('click', async ()=>{
-            // NEW: Check if we're in a lesson time
-            const L = getActiveLessonIndex();
-            if (L === null) {
-                showArabicToast('outside_lessons');
-                return;
-            }
-            
-            // NEW: Get today's schedule to know which class we can view logs for
-            const user = auth.currentUser;
-            if (!user) return;
-            
-            const todayISO = kuwaitTodayISO();
-            const map = await buildTodayMapWithOverrides(user.uid, todayISO);
-            const hit = map.get(String(L));
-            
-            if (!hit || hit._coveredAway) {
-                showArabicToast('not_my_lesson');
-                return;
-            }
-            
-            // Set current class to the class we have now
-            let classKey = '';
-            if (hit.classKey) {
-                classKey = hit.classKey;
-            } else if (hit.grade && hit.section) {
-                classKey = `${hit.grade} / ${hit.section}`;
-                if (hit.track) {
-                    classKey += ` ${hit.track}`;
-                }
-            }
-            
-            if (!classKey) {
-                showArabicToast('not_my_lesson');
-                return;
-            }
-            
-            currentClass = classKey;
-            await loadMyAttendanceLog();
-            openSheet(logSheet);
-        });
-        
-        closeLog.addEventListener('click', ()=> closeSheet(logSheet));
-
-        async function loadMyAttendanceLog(){
-            logList.innerHTML = '';
-            if(!auth.currentUser){
-                return;
-            }
-            if(!currentClass){
-                const m = document.createElement('div');
-                m.className = 'error';
-                m.textContent = 'اختر فصلاً من اللوحة أو من "أُخرى" لعرض سجلك.';
-                logList.appendChild(m);
-                return;
-            }
-
-            const loadingEl = document.createElement('div');
-            loadingEl.className = 'loading';
-            loadingEl.innerHTML = '<div class="spinner"></div><div class="muted">جاري تحميل سجل الغيابات...</div>';
-            logList.appendChild(loadingEl);
-
-            // NEW: Query attendance sessions for current teacher and class
-            const todayISO = kuwaitTodayISO();
-            const qRef = query(
-                collection(db, ATTENDANCE_SESSIONS_COLLECTION),
-                where('classKey', '==', currentClass),
-                where('teacherUid', '==', auth.currentUser.uid),
-                where('date', '==', todayISO)
-            );
-
-            const snap = await getDocs(qRef);
-            if(snap.empty){
-                logList.innerHTML = '';
-                const empty = document.createElement('div');
-                empty.className = 'error';
-                empty.textContent = 'لا توجد تقارير مسجلة لك لهذا اليوم.';
-                logList.appendChild(empty);
-                return;
-            }
-            
-            const items = [];
-            snap.forEach(d=>{
-                const data = d.data() || {};
-                items.push({ id: d.id, ...data });
-            });
-            
-            // Sort by lesson number
-            items.sort((a,b)=> (b.lesson||0) - (a.lesson||0));
-            
-            logList.innerHTML = '';
-            items.forEach(item=>{
-                const div = document.createElement('div');
-                const classLabel = item.classKey ? formatClassLabel(item.classKey) : '—';
-                
-                // Check if still within edit window (the lesson's own time slot plus
-                // a short grace period — same check attendance.openForEdit itself
-                // enforces, see attendance.canEditSession)
-                const lessonTime = LESSON_TIMES.find(l => l.index === item.lesson);
-                const canEdit = attendance.canEditSession(item);
-                
-                div.className = 'log-item';
-                div.innerHTML = `
-                    <h4 class="log-title">${classLabel}</h4>
-                    <div class="log-sub">التاريخ: ${item.date || '—'} — ${lessonTime ? lessonTime.label : ('حصة '+(item.lesson||''))}</div>
-                    <div class="${canEdit ? 'ok':'warn'}">${canEdit ? 'متاح للتعديل' : 'انتهت مهلة التعديل'}</div>
-                `;
-                div.addEventListener('click', ()=> {
-                    closeSheet(logSheet);
-                    attendance.openForEdit(item.id);
-                });
-                logList.appendChild(div);
-            });
-        }
-
-        /* ========= Attendance log editing now goes through the shared
-           attendance module (attendance.openForEdit) instead of a separate
-           local editor, so it always matches the attendance-taking UI. ========= */
 
         /* ========= Suggest / Report ========= */
         suggestBtn.addEventListener('click', ()=> feedback.open());
