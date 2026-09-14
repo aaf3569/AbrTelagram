@@ -893,18 +893,17 @@ service cloud.firestore {
           && (
             request.resource.data.fromTeacherUid == request.auth.uid
             || (
-              // Teachers/schoolschedule.html: any teacher may file a
-              // swap/cover request naming a same-department colleague's
-              // lesson as the "from" side, without that colleague having
-              // filed it themselves — mirrors attendanceSessions' own
-              // department-peer create branch exactly (same
-              // teacherInHeadDepartment check, same reasoning). The actual
-              // filer must be recorded in requestedByUid, both for the
-              // audit trail and so isParticipant() lets them see/track
-              // what they just created.
-              teacherInHeadDepartment(
-                get(/databases/$(database)/documents/teachers/$(request.resource.data.fromTeacherUid)).data
-              )
+              // Teachers/schoolschedule.html: browsing the whole-school
+              // grid and clicking a lesson that isn't your own, you are
+              // personally volunteering as the counterpart (toTeacherUid)
+              // for THAT lesson (fromTeacherUid) — never naming two other
+              // people who never asked for this. requestedByUid records
+              // the filer for the audit trail and so isParticipant() lets
+              // them see/track what they just created; here it is always
+              // the same person as toTeacherUid, but kept as its own field
+              // for symmetry with the (unused in this branch) case where
+              // the two could differ.
+              request.resource.data.toTeacherUid == request.auth.uid
               && nonEmptyString(request.resource.data.requestedByUid)
               && request.resource.data.requestedByUid == request.auth.uid
             )
