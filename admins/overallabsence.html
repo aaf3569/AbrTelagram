@@ -1297,9 +1297,6 @@
           <input class="mobile-date-input" id="mobileDateInput" type="date" inputmode="none" />
         </div>
       </button>
-      <button class="date-btn" id="fixSessionCollisionsBtn" type="button" title="ينقل كل سجلّ غياب مخزَّن تحت معرّف قديم متعارض إلى معرّفه الصحيح">
-        🔧 إصلاح تعارضات معرّفات الحضور
-      </button>
     </div>
   </header>
 
@@ -1486,11 +1483,11 @@
     import { getAuth, onAuthStateChanged } from "/shared/firebase.js";
     import {
       initializeFirestore, persistentSingleTabManager, collection, collectionGroup, getDocs, query, where,
-      doc, getDoc, writeBatch, Timestamp
+      doc, getDoc, Timestamp
     } from "/shared/firebase.js";
     import { kuwaitTodayISO, getCurrentKuwaitMinutes } from "/shared/kuwait-time.js";
     import { fetchClassList, sortClassList, primeClassList } from "/shared/class-registry.js";
-    import { mountAttendanceSheet, createAttendanceSessionId, legacyAttendanceSessionId } from "/shared/attendance.js";
+    import { mountAttendanceSheet } from "/shared/attendance.js";
 
 
 
@@ -1527,7 +1524,6 @@
 
     const backBtn = document.getElementById('backBtn');
     const downloadBtn = document.getElementById('downloadBtn');
-    const fixSessionCollisionsBtn = document.getElementById('fixSessionCollisionsBtn');
     const gridBody = document.getElementById('gridBody');
 
     const dateBtn = document.getElementById('dateBtn');
@@ -3123,132 +3119,6 @@
       downloadBackdrop.classList.remove('open');
       downloadModal.classList.remove('open');
     }
-
-    // Moves attendanceSessions docs OFF a shared/colliding legacy ID (see
-    // shared/attendance.js's legacyAttendanceSessionId — \w is ASCII-only,
-    // so a class's track letter ع/د was silently dropped when building the
-    // doc ID, meaning e.g. "12 / 2 ع" and "12 / 2 د" computed the exact
-    // same ID; whichever teacher submitted first for a given date+lesson
-    // "won" that document, and every other class's sibling-track teacher
-    // got a false "already taken" from then on).
-    //
-    // Deliberately narrow: only touches sessions for classes that actually
-    // share a legacy-ID segment with another class in the CURRENT class
-    // list right now (computed from classKey alone — date/lesson don't
-    // affect whether two classes collide). Every other class's sessions —
-    // the overwhelming majority, including every grade-10 class, which
-    // never had a track letter to strip in the first place — are never
-    // even inspected, let alone touched. Data safety: for each session it
-    // does move, it copies the session doc and every one of its
-    // attendanceRecords first, and only deletes the original after that
-    // copy succeeds; if the destination ID is already occupied by another
-    // document, it's left alone and reported instead of overwritten.
-    async function findCollisionProneClassKeys(){
-      const classList = await fetchClassList(db);
-      const bySegment = new Map(); // legacy classKey segment -> [classKey, ...]
-      classList.forEach(classKey => {
-        const segment = legacyAttendanceSessionId('', '', classKey);
-        if (!bySegment.has(segment)) bySegment.set(segment, []);
-        bySegment.get(segment).push(classKey);
-      });
-      const atRisk = new Set();
-      bySegment.forEach(keys => { if (keys.length > 1) keys.forEach(k => atRisk.add(k)); });
-      return atRisk;
-    }
-
-    async function fixSessionCollisions(){
-      if (fixSessionCollisionsBtn.disabled) return;
-
-      fixSessionCollisionsBtn.disabled = true;
-      const originalLabel = fixSessionCollisionsBtn.textContent;
-      fixSessionCollisionsBtn.textContent = 'جاري الفحص...';
-      try {
-        const atRiskClassKeys = await findCollisionProneClassKeys();
-        if (atRiskClassKeys.size === 0) {
-          alert('لا يوجد أي فصلين في قائمة الفصول الحاليّة يتشاركان نفس المعرّف — لا حاجة لأي إصلاح.');
-          return;
-        }
-
-        const confirmed = window.confirm(
-          `سيُنقل سجلّ الحضور المتعارض للفصول التالية فقط إلى معرّفه الصحيح — بقيّة الفصول لن تُفحص أو تُلمَس إطلاقًا:\n` +
-          [...atRiskClassKeys].join(' ، ') +
-          `\n\nلا تُحذف أو تُغيَّر أي بيانات فعليّة — يُنسخ كل سجلّ ويُتحقّق من نجاح النسخ قبل حذف نسخته القديمة. متابعة؟`
-        );
-        if (!confirmed) return;
-        fixSessionCollisionsBtn.textContent = 'جاري النقل...';
-
-        const snap = await getDocs(collection(db, 'attendanceSessions'));
-        const toMigrate = [];
-        snap.forEach(d => {
-          const data = d.data() || {};
-          const classKey = (data.classKey || '').toString().trim();
-          if (!atRiskClassKeys.has(classKey) || !data.date || !data.lesson) return;
-          const correctId = createAttendanceSessionId(data.date, data.lesson, data.classKey);
-          if (correctId !== d.id) toMigrate.push({ id: d.id, data });
-        });
-
-        let migrated = 0;
-        const occupiedList = [];
-        const failures = [];
-
-        for (const { id: oldId, data } of toMigrate) {
-          const correctId = createAttendanceSessionId(data.date, data.lesson, data.classKey);
-          try {
-            // Never overwrite a session that's already legitimately there
-            // under its correct ID — flag it for manual review instead.
-            const targetSnap = await getDoc(doc(db, 'attendanceSessions', correctId));
-            if (targetSnap.exists()) {
-              occupiedList.push(`${data.classKey} — الحصة ${data.lesson} (${data.date})`);
-              continue;
-            }
-
-            const recordsSnap = await getDocs(collection(db, 'attendanceSessions', oldId, 'attendanceRecords'));
-            const batch = writeBatch(db);
-            batch.set(doc(db, 'attendanceSessions', correctId), data);
-            // attendanceRecords' write rule requires updatedBy (when present)
-            // to equal whoever is actually performing THIS write — copying
-            // the original teacher's uid verbatim gets rejected since it's
-            // this admin doing the migration, not them. originalUpdatedBy
-            // keeps that history without tripping the rule.
-            recordsSnap.forEach(r => {
-              const recordData = r.data() || {};
-              const migratedRecord = { ...recordData, updatedBy: auth.currentUser.uid };
-              if (recordData.updatedBy && recordData.updatedBy !== auth.currentUser.uid) {
-                migratedRecord.originalUpdatedBy = recordData.updatedBy;
-              }
-              batch.set(doc(db, 'attendanceSessions', correctId, 'attendanceRecords', r.id), migratedRecord);
-            });
-            batch.delete(doc(db, 'attendanceSessions', oldId));
-            recordsSnap.forEach(r => batch.delete(doc(db, 'attendanceSessions', oldId, 'attendanceRecords', r.id)));
-            await batch.commit();
-            migrated++;
-          } catch (e) {
-            console.error('[fixSessionCollisions]', oldId, e);
-            failures.push(`${data.classKey || '—'} — الحصة ${data.lesson || '—'} (${data.date || '—'}): ${e?.message || e}`);
-          }
-        }
-
-        const parts = [
-          `الفصول المتأثرة: ${[...atRiskClassKeys].join(' ، ')}.`,
-          `تم فحص ${toMigrate.length} سجلًّا متعارضًا لهذه الفصول فقط. تم نقل ${migrated} منها بنجاح إلى معرّفه الصحيح.`,
-        ];
-        if (occupiedList.length) {
-          parts.push(`تعذّر نقل ${occupiedList.length} سجلًّا لأن معرّفها الصحيح محجوز بالفعل بسجلّ آخر — يحتاج مراجعة يدويّة:\n` + occupiedList.join('\n'));
-        }
-        if (failures.length) {
-          parts.push(`فشل ${failures.length}:\n` + failures.join('\n'));
-        }
-        alert(parts.join('\n\n'));
-        if (typeof requestGridLoad === 'function' && selectedDate) await requestGridLoad(selectedDate);
-      } catch (e) {
-        console.error('[fixSessionCollisions]', e);
-        alert('تعذّر تنفيذ العملية: ' + (e?.message || e));
-      } finally {
-        fixSessionCollisionsBtn.disabled = false;
-        fixSessionCollisionsBtn.textContent = originalLabel;
-      }
-    }
-    fixSessionCollisionsBtn.addEventListener('click', fixSessionCollisions);
 
     downloadBtn.addEventListener('click', openDownloadModal);
     downloadClose.addEventListener('click', closeDownloadModal);
