@@ -3114,7 +3114,19 @@
             const recordsSnap = await getDocs(collection(db, 'attendanceSessions', oldId, 'attendanceRecords'));
             const batch = writeBatch(db);
             batch.set(doc(db, 'attendanceSessions', correctId), data);
-            recordsSnap.forEach(r => batch.set(doc(db, 'attendanceSessions', correctId, 'attendanceRecords', r.id), r.data()));
+            // attendanceRecords' write rule requires updatedBy (when present)
+            // to equal whoever is actually performing THIS write — copying
+            // the original teacher's uid verbatim gets rejected since it's
+            // this admin doing the migration, not them. originalUpdatedBy
+            // keeps that history without tripping the rule.
+            recordsSnap.forEach(r => {
+              const recordData = r.data() || {};
+              const migratedRecord = { ...recordData, updatedBy: auth.currentUser.uid };
+              if (recordData.updatedBy && recordData.updatedBy !== auth.currentUser.uid) {
+                migratedRecord.originalUpdatedBy = recordData.updatedBy;
+              }
+              batch.set(doc(db, 'attendanceSessions', correctId, 'attendanceRecords', r.id), migratedRecord);
+            });
             batch.delete(doc(db, 'attendanceSessions', oldId));
             recordsSnap.forEach(r => batch.delete(doc(db, 'attendanceSessions', oldId, 'attendanceRecords', r.id)));
             await batch.commit();
