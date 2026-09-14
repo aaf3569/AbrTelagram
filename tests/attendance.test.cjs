@@ -349,19 +349,54 @@ test('reopened legacy attendance saves in place and preserves attribution, times
   assert.deepEqual(harness.errors, []);
 });
 
-test('moving lesson 6 bells later does not reopen an earlier expired legacy session or offer editing', async () => {
+test('moving lesson 6 bells later still allows editing while the new live window is active', async () => {
+  // The session's own recorded cutoff (from sessionData(): ~13:09) is long
+  // past by 14:30 — editability must follow the CURRENT schedule (an admin
+  // moved lesson 6 to 14:20-16:05 after the session was recorded), not the
+  // window that was in effect when it was first saved.
   const bells = BELLS.map((bell, index) => index === 5 ? { start: '14:20', end: '16:05' }
     : index === 6 ? { start: '16:10', end: '18:55' } : bell);
   const original = sessionData();
   const harness = await fixture({ now: '14:30', bells, session: original });
   await harness.start();
+  assertOpen(harness, { edit: true });
+  assert.equal(harness.el('attBlockedModal').classList.contains('open'), false);
+  assert.equal(harness.sheet.canEditSession(original), true);
+  assert.equal(harness.writes.length, 0, 'reopening for edit never creates or overwrites anything by itself');
+});
+
+test('openForEdit still refuses once neither the live schedule nor the stored cutoff covers "now"', async () => {
+  // A direct openForEdit call (e.g. from the class-view "تعديل الغياب"
+  // button, or an old link) isn't gated on this lesson being the teacher's
+  // current one the way start() is — so this is the path that actually
+  // reaches a session whose lesson the live schedule no longer places at
+  // "now" at all. Lesson 6 was moved to 09:00-09:45 (long over by 14:30)
+  // and the session's own stored cutoff (~13:09) has also passed: neither
+  // window is open, so this must still refuse.
+  const bells = BELLS.map((bell, index) => index === 5 ? { start: '09:00', end: '09:45' } : bell);
+  const original = sessionData();
+  const harness = await fixture({ now: '14:30', bells, session: original });
+  await harness.sheet.openForEdit(LEGACY_ID);
+  await harness.settle();
   assert.equal(harness.el('attendanceSheet').classList.contains('open'), false);
-  assert.ok(harness.el('attBlockedModal').classList.contains('open'));
-  assert.equal(harness.el('attBlockedEdit').hidden, true, 'expired saved cutoff cannot advertise editing');
-  assert.doesNotMatch(harness.el('attBlockedBody').textContent, /يمكنك تعديل/);
+  assert.ok(harness.el('attErrorModal').classList.contains('open'));
+  assert.match(harness.el('attErrorBody').textContent, /انتهت مهلة/);
   assert.equal(harness.sheet.canEditSession(original), false);
   assert.equal(harness.writes.length, 0);
   assert.equal(harness.documents.get(`attendanceSessions/${LEGACY_ID}`), original);
+});
+
+test('openForEdit succeeds while the live (moved) schedule window is active, even with an expired stored cutoff', async () => {
+  // Mirrors the start()-reopen test above but through the direct openForEdit
+  // entry point, confirming the same live-window OR-logic applies there too.
+  const bells = BELLS.map((bell, index) => index === 5 ? { start: '14:20', end: '16:05' } : bell);
+  const original = sessionData();
+  const harness = await fixture({ now: '14:30', bells, session: original });
+  await harness.sheet.openForEdit(LEGACY_ID);
+  await harness.settle();
+  assertOpen(harness, { edit: true });
+  assert.equal(harness.sheet.canEditSession(original), true);
+  assert.equal(harness.writes.length, 0);
 });
 
 test('another teacher\'s attendance stays blocked and identifies who recorded it', async () => {

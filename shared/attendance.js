@@ -889,25 +889,37 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
   // in the first place. Admin callers pass isPrivilegedEdit to mount() and
   // bypass this entirely.
   //
-  // storedCutoffTs (a Firestore Timestamp), when given, is the exact cutoff
-  // already stored on the session at creation (settings/lessonTimes, or a
-  // custom schedule's own per-lesson time — see the save handler) and is
-  // used directly instead of recomputing from the generic site-wide
-  // settings/lessonTimes, which would be wrong for a custom-schedule
-  // session. Falls back to the generic calc for older sessions saved before
-  // this was stored.
+  // Checks the LIVE current schedule first: LESSON_TIMES reflects
+  // settings/lessonTimes as edited from admins/adminschedule.html or
+  // Teachers/teacherschedule.html, kept fresh by ensureLessonTimes. A
+  // teacher must be able to edit for as long as the CURRENT schedule says
+  // this lesson number is happening — not only the window that was in
+  // effect at the moment the session was first recorded, which is what
+  // storedCutoffTs alone would freeze it to. If bell times are edited
+  // after a session was saved, the live check is what lets that session
+  // stay editable through its new, real window.
+  //
+  // storedCutoffTs (a Firestore Timestamp on the session, set at creation
+  // — settings/lessonTimes at the time, or a custom schedule's own
+  // per-lesson time, see the save handler) is then checked as a second,
+  // independent path — this only ever WIDENS eligibility beyond the live
+  // check above, never narrows it. It is the only path available at all
+  // for a custom/extra schedule's session, since a custom lesson's own
+  // time slot does not appear in the generic LESSON_TIMES.
   function isWithinAttendanceEditWindow(dateISO, lessonIndex, storedCutoffTs) {
     if (privilegedEdit) return true;
     if (dateISO && dateISO !== kuwaitTodayISO()) return false;
+    const l = LESSON_TIMES.find(x => x.index === Number(lessonIndex));
+    if (l) {
+      const now = getCurrentKuwaitMinutes();
+      const s = parseTimeToMinutes(l.start);
+      const e = parseTimeToMinutes(l.end);
+      if (now >= s && now <= e + LESSON_END_GRACE_MINUTES) return true;
+    }
     if (storedCutoffTs && typeof storedCutoffTs.toDate === "function") {
       return Date.now() <= storedCutoffTs.toDate().getTime();
     }
-    const l = LESSON_TIMES.find(x => x.index === Number(lessonIndex));
-    if (!l) return false;
-    const now = getCurrentKuwaitMinutes();
-    const s = parseTimeToMinutes(l.start);
-    const e = parseTimeToMinutes(l.end);
-    return now >= s && now <= e + LESSON_END_GRACE_MINUTES;
+    return false;
   }
 
   // Has this lesson's time slot already ended? Used to tell a genuinely
