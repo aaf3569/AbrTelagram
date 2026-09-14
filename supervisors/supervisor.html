@@ -331,13 +331,9 @@
         .card.error h3{color:var(--red)}
         .card.error .row .btn.primary{background:linear-gradient(145deg,#a93a33,#b42318)}
 
-        /* جدول المعلم popup — kept small and plain on purpose: a title and
-           two options, nothing else. */
-        /* Schedule-choice popup — deliberately titleless: the rows are
-           self-explanatory. The close button reads clearly on its own
-           (crisp stroked X, real contrast, big tap target). */
-        .schedule-choice-card{width:min(320px,92vw);padding-top:58px}
-        .schedule-choice-close{position:absolute;top:14px;left:14px;width:36px;height:36px;border-radius:50%;border:1px solid rgba(3,60,84,.22);background:#fff;color:var(--primary);display:grid;place-items:center;cursor:pointer;transition:var(--transition);z-index:2;box-shadow:0 6px 16px rgba(3,60,84,.14)}
+        /* Place the close control on the card's outer corner, clear of the options. */
+        .modal .schedule-choice-card{width:min(320px,92vw);padding:20px}
+        .schedule-choice-close{position:absolute;top:-20px;left:0;width:40px;height:40px;border-radius:50%;border:1px solid rgba(3,60,84,.22);background:#fff;color:var(--primary);display:grid;place-items:center;cursor:pointer;transition:var(--transition);z-index:2;box-shadow:0 6px 16px rgba(3,60,84,.14)}
         .schedule-choice-close svg{width:16px;height:16px}
         .schedule-choice-close:hover{background:rgba(3,60,84,.10);transform:scale(1.08);box-shadow:0 8px 20px rgba(3,60,84,.20)}
         .schedule-choice-options{display:flex;flex-direction:column;gap:10px}
@@ -351,7 +347,6 @@
         .schedule-choice-option .opt-label{flex:1;font-weight:800;font-size:1rem;color:var(--text)}
         .schedule-choice-option .opt-chevron{width:18px;height:18px;color:var(--muted);flex-shrink:0}
         @media (max-width:480px){
-            .schedule-choice-card{padding-top:54px}
             .schedule-choice-option{min-height:56px;padding:12px 14px}
         }
         /* Toast */
@@ -3130,7 +3125,6 @@
 <script src="/name-glow.js" defer></script>
 </body>
 </html>
-
 
 
 

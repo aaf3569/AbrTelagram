@@ -136,17 +136,14 @@
             }
         }
 
-        /* Schedule-choice popup — deliberately titleless: three
-           self-explanatory rows are the whole UI. The close button reads
-           clearly on its own (crisp stroked X, real contrast, big enough
-           tap target) instead of needing a heading for context. */
-        .schedule-choice-card { width: min(320px, 92vw); padding-top: 58px; }
+        /* Place the close control on the card's outer corner, clear of the options. */
+        .modal .schedule-choice-card { width: min(320px, 92vw); padding: 20px; }
         .schedule-choice-close {
             position: absolute;
-            top: 14px;
-            left: 14px;
-            width: 36px;
-            height: 36px;
+            top: -20px;
+            left: 0;
+            width: 40px;
+            height: 40px;
             border-radius: 50%;
             border: 1px solid rgba(3, 60, 84, 0.22);
             background: #fff;
@@ -209,7 +206,6 @@
             .schedule-modal .card {
                 padding: 20px 16px;
             }
-            .schedule-choice-card { padding-top: 54px; }
             .schedule-choice-option { min-height: 56px; padding: 12px 14px; }
         }
 
@@ -3115,7 +3111,6 @@
 <script src="/name-glow.js" defer></script>
 </body>
 </html>
-
 
 
 

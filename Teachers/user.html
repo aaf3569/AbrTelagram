@@ -444,13 +444,9 @@
         .card.error h3{color:var(--red)}
         .card.error .row .btn.primary{background:linear-gradient(145deg,#a93a33,#b42318)}
 
-        /* جدول المعلم popup — kept small and plain on purpose: a title and
-           two options, nothing else. */
-        /* Schedule-choice popup — deliberately titleless: the rows are
-           self-explanatory. The close button reads clearly on its own
-           (crisp stroked X, real contrast, big tap target). */
-        .schedule-choice-card{width:min(320px,92vw);padding-top:58px}
-        .schedule-choice-close{position:absolute;top:14px;left:14px;width:36px;height:36px;border-radius:50%;border:1px solid rgba(3,60,84,.22);background:#fff;color:var(--primary);display:grid;place-items:center;cursor:pointer;transition:var(--transition);z-index:2;box-shadow:0 6px 16px rgba(3,60,84,.14)}
+        /* Place the close control on the card's outer corner, clear of the options. */
+        .modal .schedule-choice-card{width:min(320px,92vw);padding:20px}
+        .schedule-choice-close{position:absolute;top:-20px;left:0;width:40px;height:40px;border-radius:50%;border:1px solid rgba(3,60,84,.22);background:#fff;color:var(--primary);display:grid;place-items:center;cursor:pointer;transition:var(--transition);z-index:2;box-shadow:0 6px 16px rgba(3,60,84,.14)}
         .schedule-choice-close svg{width:16px;height:16px}
         .schedule-choice-close:hover{background:rgba(3,60,84,.10);transform:scale(1.08);box-shadow:0 8px 20px rgba(3,60,84,.20)}
         .schedule-choice-options{display:flex;flex-direction:column;gap:10px}
@@ -464,7 +460,6 @@
         .schedule-choice-option .opt-label{flex:1;font-weight:800;font-size:1rem;color:var(--text)}
         .schedule-choice-option .opt-chevron{width:18px;height:18px;color:var(--muted);flex-shrink:0}
         @media (max-width:480px){
-            .schedule-choice-card{padding-top:54px}
             .schedule-choice-option{min-height:56px;padding:12px 14px}
         }
 
@@ -762,18 +757,16 @@
                 <!-- Classes -->
                 <div id="classesButtons" class="stack wide" style="margin-top:10px;"></div>
                 <div class="stack wide">
-                    <button id="moreBtn" class="btn ghost" type="button">
-                        <span>أُخرى</span>
-                        <span class="icon" aria-hidden="true">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
-                        </span>
-                    </button>
-
-                    <!-- NEW BUTTON (directly below "أُخرى") -->
                     <button id="teacherScheduleBtn" class="btn ghost" type="button">
                         <span>جدول المعلم</span>
                         <span class="icon" aria-hidden="true">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M8 15h2M14 15h2M8 18h2M14 18h2"/></svg>
+                        </span>
+                    </button>
+                    <button id="moreBtn" class="btn ghost" type="button">
+                        <span>أُخرى</span>
+                        <span class="icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
                         </span>
                     </button>
                     <button id="adminScheduleEditBtn" class="btn ghost" type="button" hidden>
@@ -794,8 +787,6 @@
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                         </span>
                     </button>
-                    <!-- /NEW BUTTON -->
-
                     <div id="telegramSettingsSlot"></div>
                     <button id="suggestBtn" class="btn ghost" type="button">
                         <span>اقتراح / بلاغ</span>
@@ -3930,8 +3921,6 @@
 <script src="/name-glow.js" defer></script>
 </body>
 </html>
-
-
 
 
 

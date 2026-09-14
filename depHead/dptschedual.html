@@ -62,7 +62,7 @@
       background: var(--page);
       color:var(--text);
       font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-      display:flex; flex-direction:column; min-height:100vh;
+      display:flex; flex-direction:column; height:100vh; height:100svh; min-height:0; overflow:hidden;
       -webkit-tap-highlight-color: transparent;
     }
 
@@ -182,6 +182,7 @@
     /* Main */
     main{
       flex:1;
+      min-height:0;
       padding:0;
       display:flex;
       flex-direction:column;
@@ -202,9 +203,24 @@
 
     .state{ display:none }
     .state.active{ display:block }
+    #stateOk{ height:100%; min-height:0; }
     .loading{ display:grid; place-items:center; gap:12px; padding:24px }
     .spinner{ width:40px; height:40px; border-radius:50%; border:4px solid rgba(3,60,84,.18); border-top-color:var(--primary); animation:spin 1s linear infinite; margin-inline:auto }
     @keyframes spin{ to{ transform: rotate(360deg); } }
+    .schedule-skeleton{ width:100%; overflow:hidden; background:#fff; border-block:1px solid var(--border); }
+    .skeleton-toolbar{ display:flex; justify-content:center; padding:14px; border-bottom:1px solid var(--border); }
+    .skeleton-grid{ min-width:760px; width:100%; }
+    .skeleton-row{ display:grid; grid-template-columns: minmax(120px, 1.4fr) repeat(7, minmax(80px, 1fr)); gap:12px; padding:12px; border-bottom:1px solid var(--border); }
+    .skeleton-row:first-child{ padding-block:17px; }
+    .skeleton-block{ display:block; height:36px; border-radius:10px; background:#e9eff5; position:relative; overflow:hidden; }
+    .skeleton-row:first-child .skeleton-block{ height:20px; }
+    .skeleton-block::after{ content:""; position:absolute; inset:0; transform:translateX(100%); background:linear-gradient(90deg, transparent, rgba(255,255,255,.7), transparent); animation:skeletonShimmer 1.4s ease-in-out infinite; }
+    @keyframes skeletonShimmer{ to{ transform:translateX(-100%); } }
+    @media (prefers-reduced-motion: reduce){ .skeleton-block::after{ animation:none; } }
+    .loading-status{ text-align:center; padding:16px; color:var(--muted); font-weight:800; }
+    .loading-help{ display:none; text-align:center; padding:0 16px 20px; }
+    .loading-help.visible{ display:block; }
+    .loading-retry{ margin-top:10px; border:1px solid var(--border); border-radius:12px; padding:9px 18px; background:#fff; color:var(--primary); font:inherit; font-weight:900; cursor:pointer; }
     .msg{ font-size:.98rem; text-align:center }
     .error{ color:#a11; background:#fde8e8; border:1px solid #f5c5c5; padding:12px; border-radius:14px }
     .muted{ color:var(--muted) }
@@ -212,7 +228,7 @@
     /* Table shell */
     .table-shell{
       width:100%;
-      height: calc(100vh - var(--headerH) - 20px);
+      height:100%;
       background:#fff;
       border-top:1px solid var(--border);
       border-bottom:1px solid var(--border);
@@ -228,6 +244,8 @@
       height:100%;
       overflow:auto;
       -webkit-overflow-scrolling:touch;
+      overscroll-behavior:contain;
+      padding-bottom:max(12px, env(safe-area-inset-bottom, 0px));
       position:relative;
     }
 
@@ -580,7 +598,6 @@
 
       table{ min-width: 760px; }
       th.sticky-col, td.sticky-col{ min-width: 120px; }
-      .table-shell{ height: calc(100vh - var(--headerH) - 10px); }
 
       thead th{
         padding:10px 4px;
@@ -706,11 +723,19 @@
   </header>
 
   <main>
-    <div id="stateLoading" class="state active panel">
-      <div class="loading">
-        <div class="spinner"></div>
-        <div class="muted">جاري التحقق من تسجيل الدخول وجلب البيانات…</div>
+    <div id="stateLoading" class="state active full-width" role="status" aria-live="polite">
+      <div class="schedule-skeleton" aria-hidden="true">
+        <div class="skeleton-toolbar"><span class="skeleton-block" style="width:220px; max-width:70%;"></span></div>
+        <div class="skeleton-grid">
+          <div class="skeleton-row"><span class="skeleton-block"></span><span class="skeleton-block"></span><span class="skeleton-block"></span><span class="skeleton-block"></span><span class="skeleton-block"></span><span class="skeleton-block"></span><span class="skeleton-block"></span><span class="skeleton-block"></span></div>
+          <div class="skeleton-row"><span class="skeleton-block"></span><span class="skeleton-block"></span><span class="skeleton-block"></span><span class="skeleton-block"></span><span class="skeleton-block"></span><span class="skeleton-block"></span><span class="skeleton-block"></span><span class="skeleton-block"></span></div>
+          <div class="skeleton-row"><span class="skeleton-block"></span><span class="skeleton-block"></span><span class="skeleton-block"></span><span class="skeleton-block"></span><span class="skeleton-block"></span><span class="skeleton-block"></span><span class="skeleton-block"></span><span class="skeleton-block"></span></div>
+          <div class="skeleton-row"><span class="skeleton-block"></span><span class="skeleton-block"></span><span class="skeleton-block"></span><span class="skeleton-block"></span><span class="skeleton-block"></span><span class="skeleton-block"></span><span class="skeleton-block"></span><span class="skeleton-block"></span></div>
+          <div class="skeleton-row"><span class="skeleton-block"></span><span class="skeleton-block"></span><span class="skeleton-block"></span><span class="skeleton-block"></span><span class="skeleton-block"></span><span class="skeleton-block"></span><span class="skeleton-block"></span><span class="skeleton-block"></span></div>
+        </div>
       </div>
+      <div class="loading-status">جاري تحميل جدول القسم…</div>
+      <div id="loadingHelp" class="loading-help">استغرق تحميل الجدول وقتًا أطول من المعتاد.<br><button id="loadingRetry" class="loading-retry" type="button">إعادة المحاولة</button></div>
     </div>
 
     <div id="stateNotLogged" class="state panel">
@@ -720,6 +745,11 @@
 
     <div id="stateDenied" class="state panel">
       <div class="msg error">تم رفض الوصول. يتطلّب هذا الجدول تسجيل بيانات معلّم مع تحديد القسم.</div>
+    </div>
+
+    <div id="stateLoadError" class="state panel">
+      <div class="msg error">تعذّر تحميل جدول القسم. تحقق من الاتصال بالإنترنت ثم أعد المحاولة.</div>
+      <button id="loadErrorRetry" class="loading-retry" type="button">إعادة المحاولة</button>
     </div>
 
     <section id="stateOk" class="state full-width" aria-label="جدول المعلّمين">
@@ -758,6 +788,15 @@
     <div class="pop-body" id="popBody"></div>
   </div>
 
+  <script>
+    document.getElementById('loadingRetry').addEventListener('click', () => location.reload());
+    document.getElementById('loadErrorRetry').addEventListener('click', () => location.reload());
+    setTimeout(() => {
+      if (document.getElementById('stateLoading').classList.contains('active')) {
+        document.getElementById('loadingHelp').classList.add('visible');
+      }
+    }, 18000);
+  </script>
   <script type="module">
     import { firebaseConfig } from "/shared/firebase.js";
     import { initializeApp, getApp, getApps } from "/shared/firebase.js";
@@ -784,6 +823,7 @@
     const sLoading = document.getElementById('stateLoading');
     const sNotLog  = document.getElementById('stateNotLogged');
     const sDenied  = document.getElementById('stateDenied');
+    const sLoadError = document.getElementById('stateLoadError');
     const sOk      = document.getElementById('stateOk');
 
     const backBtn = document.getElementById('backBtn');
@@ -801,10 +841,17 @@
     const popBody = document.getElementById('popBody');
 
     const siteHeader = document.getElementById('siteHeader');
+    let loadingHelpTimer = null;
 
     const show = (el) => {
-      [sLoading, sNotLog, sDenied, sOk].forEach(x => x.classList.remove('active'));
+      clearTimeout(loadingHelpTimer);
+      [sLoading, sNotLog, sDenied, sLoadError, sOk].forEach(x => x.classList.remove('active'));
       el.classList.add('active');
+      if (el === sLoading) {
+        loadingHelpTimer = setTimeout(() => {
+          if (sLoading.classList.contains('active')) document.getElementById('loadingHelp').classList.add('visible');
+        }, 18000);
+      }
       syncHeaderH();
     };
 
@@ -916,24 +963,6 @@
       return toInputDate(selectedDate) === toInputDate(new Date());
     }
 
-    // Performance safety: limit concurrency
-    async function promisePool(items, worker, concurrency = 12){
-      const results = [];
-      let i = 0;
-      const runners = new Array(Math.min(concurrency, items.length)).fill(0).map(async () => {
-        while (i < items.length){
-          const idx = i++;
-          try { results[idx] = await worker(items[idx], idx); }
-          catch (e) { 
-            console.warn('Worker error:', e);
-            results[idx] = undefined; 
-          }
-        }
-      });
-      await Promise.all(runners);
-      return results;
-    }
-
     // Load teachers in department
     async function loadDepartmentTeachers(department){
       try {
@@ -962,7 +991,7 @@
         return teachers;
       } catch (e) {
         console.error('Error loading teachers:', e);
-        return [];
+        throw e;
       }
     }
 
@@ -994,42 +1023,7 @@
         });
       } catch (e) {
         console.error('Error loading schedule:', e);
-      }
-    }
-
-    // Check attendance for a specific teacher's class on a date and lesson
-    // Queries attendanceSessions directly — the source of truth every
-    // other page (admins/overallabsence.html, Teachers/user.html, ...)
-    // already uses — instead of walking every student's legacy
-    // students/{id}/attendance mirror and matching its createdBy/updatedBy
-    // against teacherUid. That mirror match was wrong two ways: (1) it
-    // silently returned "not taken" for a whole class whenever the
-    // students collection's own classKey spelling didn't exactly match
-    // this page's — the same class-key drift bug fixed elsewhere in
-    // shared/attendance.js and admins/overallabsence.html this session —
-    // and (2) createdBy/updatedBy on that mirror is always the ACTUAL
-    // SUBMITTER, not the lesson's assigned teacher — so any session
-    // recorded on someone's behalf (an admin backfill, or a department
-    // colleague via this very page's own تسجيل الغياب) never matched at
-    // all. attendanceSessions' own teacherUid field is always the
-    // assigned teacher regardless of who actually submitted it, so
-    // filtering on that directly is both simpler and correct either way.
-    async function checkAttendanceTaken(teacherUid, classKey, dateObj, lesson){
-      try {
-        const dateISO = toInputDate(dateObj);
-        const snap = await getDocs(query(
-          collection(db, 'attendanceSessions'),
-          where('classKey', '==', classKey),
-          where('teacherUid', '==', teacherUid),
-          where('date', '==', dateISO),
-          where('lesson', '==', lesson)
-        ));
-        if (snap.empty) return { taken: false, time: null };
-        const data = snap.docs[0].data() || {};
-        return { taken: true, time: data.createdAt || data.sessionStartTs || null };
-      } catch (e) {
-        console.error('Error checking attendance:', e);
-        return { taken: false, time: null };
+        throw e;
       }
     }
 
@@ -1052,6 +1046,7 @@
     // Load all attendance data for the grid
     async function loadAttendanceData(dateObj){
       initGrid();
+      let scheduledCellCount = 0;
       
       // First, fill with schedule data
       for (const teacher of teachersList){
@@ -1063,31 +1058,26 @@
           if (schedule && schedule.classKey){
             attendanceMap[teacher.uid][lesson].hasClass = true;
             attendanceMap[teacher.uid][lesson].classKey = schedule.classKey;
+            scheduledCellCount++;
           }
         }
       }
+      if (scheduledCellCount === 0) return;
       
-      // Now check attendance for each scheduled class with concurrency limit
-      const checks = [];
-      for (const teacher of teachersList){
-        for (let lesson=1; lesson<=7; lesson++){
-          const cell = attendanceMap[teacher.uid][lesson];
-          if (cell.hasClass && cell.classKey){
-            checks.push({ teacherUid: teacher.uid, lesson, classKey: cell.classKey });
-          }
-        }
-      }
-      
-      await promisePool(checks, async (check) => {
-        const result = await checkAttendanceTaken(
-          check.teacherUid,
-          check.classKey,
-          selectedDate,
-          check.lesson
-        );
-        attendanceMap[check.teacherUid][check.lesson].taken = result.taken;
-        attendanceMap[check.teacherUid][check.lesson].time = result.time;
-      }, 6);
+      // Fetch the day's sessions once, then match them to the department's
+      // scheduled cells locally. This avoids a network round trip per lesson.
+      const snap = await getDocs(query(
+        collection(db, 'attendanceSessions'),
+        where('date', '==', toInputDate(dateObj))
+      ));
+      snap.forEach((sessionDoc) => {
+        const session = sessionDoc.data() || {};
+        const lesson = Number(session.lesson);
+        const cell = attendanceMap[session.teacherUid]?.[lesson];
+        if (!cell?.hasClass || cell.classKey !== session.classKey) return;
+        cell.taken = true;
+        cell.time = session.createdAt || session.sessionStartTs || null;
+      });
     }
 
     // Render the grid
@@ -1369,15 +1359,19 @@
 
     popover.addEventListener('click', (e) => e.stopPropagation());
 
-    async function loadGridForDate(dateObj){
+    async function loadGridForDate(dateObj, teachersPromise = null){
       show(sLoading);
+      document.getElementById('loadingHelp').classList.remove('visible');
       
       dateLabel.textContent = toArabicDigits(fmtDateLong(dateObj));
       mobileDateInput.value = toInputDate(dateObj);
       
       try {
-        // Load schedule
-        await loadScheduleForDate(dateObj);
+        // The initial teacher list and the date's schedule are independent.
+        await Promise.all([
+          loadScheduleForDate(dateObj),
+          teachersPromise?.then((teachers) => { teachersList = teachers; })
+        ]);
         
         // Load attendance data
         await loadAttendanceData(dateObj);
@@ -1387,7 +1381,7 @@
         show(sOk);
       } catch (e) {
         console.error('Error loading grid:', e);
-        show(sDenied);
+        show(sLoadError);
       }
       
       requestAnimationFrame(syncHeaderH);
@@ -1440,16 +1434,13 @@
           return;
         }
 
-        // Load teachers in department
-        teachersList = await loadDepartmentTeachers(headDept);
-
-        // Load initial grid
+        // Start the teacher and schedule requests together on first load.
         selectedDate = new Date();
         ensureLessonTimesLoaded(); // not awaited — best-effort, see isLessonLiveNow
-        await loadGridForDate(selectedDate);
+        await loadGridForDate(selectedDate, loadDepartmentTeachers(headDept));
       } catch (e) {
         console.error('Auth error:', e);
-        show(sDenied);
+        show(sLoadError);
       }
     });
 

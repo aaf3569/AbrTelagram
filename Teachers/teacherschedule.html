@@ -627,6 +627,14 @@
        which beats the browser's [hidden]{display:none} UA rule regardless of
        specificity — so without this, the button would show for everyone. */
     #btnRequests[hidden]{ display:none; }
+    #btnRequests .request-count{
+      position:absolute; top:-7px; left:-7px; min-width:21px; height:21px;
+      padding:0 4px; border-radius:999px; display:inline-flex;
+      align-items:center; justify-content:center; background:var(--danger);
+      color:#fff; border:2px solid #fff; font-size:.7rem; font-weight:900;
+      line-height:1; box-shadow:0 2px 7px rgba(185,28,28,.3);
+    }
+    #btnRequests .request-count[hidden]{display:none;}
 
     /* Current/past tabs at the top of طلبات القسم */
     .requests-tabs {
@@ -999,6 +1007,9 @@
     @media (max-width: 480px) {
       .top-info .filter-btn span { display: none; }
       .top-info .filter-btn { width: 44px; height: 44px; justify-content: center; padding: 0; }
+      .top-info #btnRequests { flex:0 0 100%; order:1; width:100%; min-width:0; height:44px; padding:0 14px; }
+      .top-info #btnRequests .request-label { display:inline; white-space:nowrap; }
+      .top-info #btnRequests .request-count:not([hidden]) { display:inline-flex; }
       .badge { padding: 6px 10px; }
       .sheet-header { padding: 14px 16px; }
       .back-btn { right: 16px; padding: 0 14px; }
@@ -1090,7 +1101,8 @@
 
         <button id="btnRequests" class="filter-btn btn-ghost" type="button" hidden>
           <i class="fas fa-inbox"></i>
-          <span>طلبات القسم</span>
+          <span class="request-label">طلبات القسم</span>
+          <span id="requestsPendingBadge" class="request-count" hidden aria-hidden="true"></span>
         </button>
 
         <button id="btnDownloadPdf" class="filter-btn btn-solid" type="button">
@@ -1495,6 +1507,7 @@
     const btnMore  = document.getElementById('btnMore');
 
     const btnRequests = document.getElementById('btnRequests');
+    const requestsPendingBadge = document.getElementById('requestsPendingBadge');
     const requestsSheet = document.getElementById('requestsSheet');
     const closeRequests = document.getElementById('closeRequests');
     const requestsContainer = document.getElementById('requestsContainer');
@@ -4491,6 +4504,8 @@
     let headUid = '';
     let unsubRequestsFrom = null;
     let unsubRequestsTo = null;
+    let requestsFromMap = new Map();
+    let requestsToMap = new Map();
     let requestsMap = new Map();
     let requestsTab = 'current'; // 'current' = still pending on someone | 'past' = accepted/denied
     const PAST_REQUEST_STATUSES = new Set(['accepted', 'denied']);
@@ -4504,15 +4519,25 @@
       tabCurrentRequests.setAttribute('aria-selected','true');
       tabPastRequests.classList.remove('active');
       tabPastRequests.setAttribute('aria-selected','false');
-      loadRequests();
+      renderAllRequests();
     }
 
     function closeRequestsSheet(){
       requestsSheet.classList.remove('open');
       requestsSheet.setAttribute('aria-hidden','true');
       document.body.style.overflow = '';
+    }
+
+    function stopRequestsListeners(){
       if(unsubRequestsFrom) unsubRequestsFrom();
       if(unsubRequestsTo) unsubRequestsTo();
+      unsubRequestsFrom = null;
+      unsubRequestsTo = null;
+      requestsFromMap.clear();
+      requestsToMap.clear();
+      requestsMap.clear();
+      requestsPendingBadge.hidden = true;
+      btnRequests.setAttribute('aria-label', 'طلبات القسم');
     }
 
     function setRequestsTab(tab){
@@ -4535,6 +4560,15 @@
 
       const currentCount = all.filter(({request}) => !PAST_REQUEST_STATUSES.has(request.status)).length;
       const pastCount = all.length - currentCount;
+      const pendingForHead = all.filter(({request}) =>
+        (request.status === 'pending_head_from' && request.fromHeadUid === headUid) ||
+        (request.status === 'pending_head_to' && request.toHeadUid === headUid)
+      ).length;
+      requestsPendingBadge.hidden = pendingForHead === 0;
+      requestsPendingBadge.textContent = pendingForHead > 99 ? '٩٩+' : toArabicDigits(pendingForHead);
+      btnRequests.setAttribute('aria-label', pendingForHead
+        ? `طلبات القسم، ${toArabicDigits(pendingForHead)} بانتظار موافقتك`
+        : 'طلبات القسم');
       countCurrentRequests.hidden = currentCount === 0;
       countCurrentRequests.textContent = String(currentCount);
       countPastRequests.hidden = pastCount === 0;
@@ -4676,11 +4710,9 @@
       return card;
     }
 
-    async function loadRequests(){
+    function loadRequests(){
       requestsContainer.innerHTML = '<div style="text-align:center; padding:20px; color:var(--muted);">جاري التحميل...</div>';
-
-      if(unsubRequestsFrom) unsubRequestsFrom();
-      if(unsubRequestsTo) unsubRequestsTo();
+      stopRequestsListeners();
 
       const qFrom = query(
         collection(db,'swapRequests'),
@@ -4694,18 +4726,10 @@
         orderBy('createdAt','desc')
       );
 
-      requestsMap = new Map();
-
       unsubRequestsFrom = onSnapshot(qFrom, (snap) => {
-        snap.docChanges().forEach(change => {
-          const id = change.doc.id;
-          const request = change.doc.data();
-          if(change.type === 'added' || change.type === 'modified') {
-            requestsMap.set(id, { id, request });
-          } else if(change.type === 'removed') {
-            requestsMap.delete(id);
-          }
-        });
+        requestsFromMap = new Map(snap.docs.map((requestDoc) =>
+          [requestDoc.id, { id: requestDoc.id, request: requestDoc.data() }]));
+        requestsMap = new Map([...requestsFromMap, ...requestsToMap]);
         renderAllRequests();
       }, (error) => {
         console.error('Error loading fromHeadUid requests:', error);
@@ -4713,31 +4737,15 @@
       });
 
       unsubRequestsTo = onSnapshot(qTo, (snap) => {
-        snap.docChanges().forEach(change => {
-          const id = change.doc.id;
-          const request = change.doc.data();
-          if(change.type === 'added' || change.type === 'modified') {
-            requestsMap.set(id, { id, request });
-          } else if(change.type === 'removed') {
-            requestsMap.delete(id);
-          }
-        });
+        requestsToMap = new Map(snap.docs.map((requestDoc) =>
+          [requestDoc.id, { id: requestDoc.id, request: requestDoc.data() }]));
+        requestsMap = new Map([...requestsFromMap, ...requestsToMap]);
         renderAllRequests();
       }, (error) => {
         console.error('Error loading toHeadUid requests:', error);
         toast({ title: 'خطأ', text: 'حدث خطأ في تحميل بعض الطلبات.', icon: 'fa-triangle-exclamation' });
       });
 
-      try {
-        const [fromSnap, toSnap] = await Promise.all([getDocs(qFrom), getDocs(qTo)]);
-        requestsMap.clear();
-        fromSnap.forEach(docSnap => { requestsMap.set(docSnap.id, { id: docSnap.id, request: docSnap.data() }); });
-        toSnap.forEach(docSnap => { requestsMap.set(docSnap.id, { id: docSnap.id, request: docSnap.data() }); });
-        renderAllRequests();
-      } catch (error) {
-        console.error('Error loading initial requests:', error);
-        requestsContainer.innerHTML = '<div style="text-align:center; padding:20px; color:var(--danger); font-weight:700;">حدث خطأ في تحميل الطلبات.</div>';
-      }
     }
 
     async function handleRequestApprove(requestId){
@@ -5233,6 +5241,9 @@
     setPersistence(auth, browserLocalPersistence).catch(()=>{});
 
     onAuthStateChanged(auth, async (user)=>{
+      stopRequestsListeners();
+      headUid = '';
+      btnRequests.hidden = true;
       if(!user){
         currentUser = null;
         showStatus('الرجاء تسجيل الدخول أولاً.', true);
@@ -5240,6 +5251,7 @@
       }
 
       currentUser = user;
+      currentRole = '';
 
       await setupLessonTimesListener();
       startCurrentLessonTimer();
@@ -5265,6 +5277,7 @@
       if(currentRole === 'head'){
         headUid = user.uid;
         btnRequests.hidden = false;
+        loadRequests();
       }
 
       startPendingRequestsListener();
