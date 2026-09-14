@@ -1756,6 +1756,12 @@
             }
 
             const bySlot = new Map();
+            // A teacher should only ever have one class for a given lesson —
+            // keyed by lesson alone (not lesson+classKey) so a genuine
+            // conflict between two schedules rows actually collides here
+            // instead of both silently surviving as separate entries for
+            // .find(l => l.lesson === ...) to pick between arbitrarily.
+            const bySlotMs = new Map();
             try{
                 const qRef = query(collection(db, 'schedules'), where('teacherUid', '==', teacherUid));
                 const snap = await getDocs(qRef);
@@ -1775,8 +1781,17 @@
                     const interval = intervalByIndex.get(lesson);
                     if(!interval) return;
 
-                    const slotKey = `${lesson}|${normalizeClassKey(classKey)}`;
-                    if (bySlot.has(slotKey)) return;
+                    // This query has no classKey filter (teacherUid only), so
+                    // two rows genuinely competing for the same lesson here is
+                    // a leftover/orphaned doc, not two valid classes at once —
+                    // prefer whichever was most recently saved/updated rather
+                    // than whichever Firestore's query happened to return
+                    // first.
+                    const slotKey = String(lesson);
+                    const t = data.updatedAt || data.createdAt;
+                    const ms = (t && typeof t.toMillis === 'function') ? t.toMillis() : 0;
+                    if (bySlotMs.has(slotKey) && bySlotMs.get(slotKey) > ms) return;
+                    bySlotMs.set(slotKey, ms);
 
                     bySlot.set(slotKey, {
                         lesson,
@@ -1835,7 +1850,11 @@
                         if(!classKey) return;
                         const interval = intervalByIndex.get(lesson);
                         if(!interval) return;
-                        const slotKey = `${lesson}|${normalizeClassKey(classKey)}`;
+                        // Same lesson-only key as the base schedule above, so
+                        // an override actually replaces that lesson's entry
+                        // instead of coexisting as a second, differently-keyed
+                        // one for .find() to pick between arbitrarily.
+                        const slotKey = String(lesson);
                         bySlot.set(slotKey, {
                             lesson,
                             classKey,
@@ -1877,7 +1896,12 @@
                             const startMin = slot.start ? parseHHMMtoMin(slot.start) : interval?.start;
                             const endMin = slot.end ? parseHHMMtoMin(slot.end) : interval?.end;
                             if (startMin == null || endMin == null) continue;
-                            const slotKey = `${lesson}|${normalizeClassKey(classKey)}`;
+                            // Same lesson-only key as above, so this collides
+                            // with (and, per the existing skip-if-present rule
+                            // below, yields to) whatever the base schedule or
+                            // an override already set for this lesson, instead
+                            // of coexisting as a separately-keyed entry.
+                            const slotKey = String(lesson);
                             if (bySlot.has(slotKey)) continue;
                             bySlot.set(slotKey, {
                                 lesson,

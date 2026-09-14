@@ -2546,6 +2546,18 @@
       // computed per weekday since each day can have different overrides.
       const overriddenClassKeysByDay = weekDates.map((iso, dayIdx) => getOverriddenClassKeys(customRowsByDay[dayIdx]));
 
+      // A teacher should only ever have one class for a given lesson — this
+      // query has no classKey filter (teacherUid only), so two rows
+      // genuinely competing for the same (iso, lesson) slot here is a
+      // leftover/orphaned doc, not two valid classes at once. Tracked
+      // separately from `map` since its values are already-formatted
+      // display strings, not the raw docs a timestamp could be read back
+      // off of.
+      const weekSlotMs = new Map();
+      const scheduleRowMsForWeek = (row) => {
+        const t = row?.updatedAt || row?.createdAt;
+        return (t && typeof t.toMillis === 'function') ? t.toMillis() : 0;
+      };
       snap.forEach(d => {
         const x = d.data();
         // Standing schedule entries recur by weekday — resolve to *this* week's
@@ -2556,8 +2568,21 @@
         if (iso === undefined) return;
         if (isClassOverriddenForToday(x, overriddenClassKeysByDay[dayIdx] || new Set())) return;
         if (!map.has(iso)) map.set(iso, new Map());
+        const lessonNum = Number(x.lesson);
+        const slotKey = `${iso}|${lessonNum}`;
+        const ms = scheduleRowMsForWeek(x);
+        if (weekSlotMs.has(slotKey)) {
+          console.warn(
+            `[teacherschedule] two schedules docs both claim lesson ${lessonNum} on ${iso} for this teacher — `
+            + `keeping whichever is newer, but this is very likely a stale/leftover doc that should be deleted:`,
+            { classKey: map.get(iso).get(lessonNum), ms: weekSlotMs.get(slotKey) },
+            { classKey: x.classKey, ms }
+          );
+          if (weekSlotMs.get(slotKey) > ms) return;
+        }
+        weekSlotMs.set(slotKey, ms);
         const classText = x.classKey || `${x.grade} / ${x.section}${x.track ? ' '+x.track : ''}`;
-        map.get(iso).set(Number(x.lesson), classText);
+        map.get(iso).set(lessonNum, classText);
       });
 
       const mapByDate = cache.overridesByTeacher.get(uid) || new Map();

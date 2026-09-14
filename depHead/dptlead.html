@@ -1247,6 +1247,23 @@
                         }
                     }
                     
+                    // A teacher should only ever have one class for a given
+                    // lesson — this query has no classKey filter (teacherUid +
+                    // dayIndex only), so two rows genuinely competing for the
+                    // same lessonKey here is a leftover/orphaned doc (e.g. from
+                    // an old reassignment), not two valid classes at once.
+                    // Unconditionally overwriting let whichever row Firestore's
+                    // query happened to return last silently win. Preferring
+                    // whichever was most recently saved/updated instead means
+                    // the latest scheduling decision wins, matching the
+                    // override tie-break just below.
+                    const existingEntry = scheduleMap.get(lessonKey);
+                    const rowMs = (row) => {
+                        const t = row?.updatedAt || row?.createdAt;
+                        return (t && typeof t.toMillis === 'function') ? t.toMillis() : 0;
+                    };
+                    if (existingEntry && rowMs(existingEntry) > rowMs(data)) return;
+
                     scheduleMap.set(lessonKey, {
                         ...data,
                         classKey,

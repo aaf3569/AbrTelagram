@@ -1014,6 +1014,16 @@
                     where('teacherUid', '==', teacherUid),
                     where('dayIndex', '==', dayIndex)
                 ));
+                // A teacher should only ever have one class for a given lesson
+                // — this query has no classKey filter (teacherUid + dayIndex
+                // only), so two rows genuinely competing for the same lesson
+                // here is a leftover/orphaned doc, not two valid classes at
+                // once. Unconditionally overwriting let whichever row
+                // Firestore's query happened to return last silently win;
+                // tracked separately since scheduleMap's stored value only
+                // keeps classKey, not the raw doc a timestamp could be read
+                // back off of.
+                const lessonMs = new Map();
                 snap.forEach(ds => {
                     const data = ds.data() || {};
                     const lesson = Number(data.lesson);
@@ -1021,7 +1031,12 @@
                     const classKey = classKeyFromRow(data);
                     if (!classKey) return;
                     if (overriddenClassKeys.has(normalizeClassKey(classKey))) return;
-                    scheduleMap.set(String(lesson), { classKey });
+                    const lessonKey = String(lesson);
+                    const t = data.updatedAt || data.createdAt;
+                    const ms = (t && typeof t.toMillis === 'function') ? t.toMillis() : 0;
+                    if (lessonMs.has(lessonKey) && lessonMs.get(lessonKey) > ms) return;
+                    lessonMs.set(lessonKey, ms);
+                    scheduleMap.set(lessonKey, { classKey });
                 });
             }
 

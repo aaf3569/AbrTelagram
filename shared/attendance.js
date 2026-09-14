@@ -787,6 +787,22 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
         // saved/updated row instead means the admin's latest scheduling
         // decision wins, not query order.
         const existing = map.get(key);
+        if (existing) {
+          // Surfaces the exact competing docs in the console instead of
+          // silently picking one — the timestamp tie-break is a best-effort
+          // guess (saveAll() in admins/adminschedule.html re-stamps
+          // updatedAt on every filled cell of a class on every save, not
+          // just the ones that actually changed, so "most recent" isn't
+          // always "most correct"). If this fires, the real fix is
+          // removing the stale schedule doc from Firestore, not a better
+          // heuristic.
+          console.warn(
+            `[attendance] two schedules docs both claim lesson ${key} for teacher ${teacherUid} on ${dateISO} — `
+            + `keeping whichever is newer, but this is very likely a stale/leftover doc that should be deleted:`,
+            { classKey: classKeyFromRow(existing), updatedAt: existing.updatedAt, createdAt: existing.createdAt },
+            { classKey: classKeyFromRow(data), updatedAt: data.updatedAt, createdAt: data.createdAt }
+          );
+        }
         if (!existing || scheduleRowTimestampMs(data) > scheduleRowTimestampMs(existing)) {
           map.set(key, { ...data, _source: "normal", _coveredAway: false });
         }

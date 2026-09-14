@@ -1472,9 +1472,24 @@
         where('dayIndex','==', dayIndexForISO(dateISO))
       );
       const snap = await getDocs(q1);
+      // A teacher should only ever have one class for a given lesson — this
+      // query has no classKey filter (teacherUid + dayIndex only), so two
+      // rows genuinely competing for the same lesson key here is a
+      // leftover/orphaned doc, not two valid classes at once. Unconditionally
+      // overwriting let whichever row Firestore's query happened to return
+      // last silently win; preferring whichever was most recently
+      // saved/updated instead means the latest scheduling decision wins.
+      const scheduleRowMs = (row) => {
+        const t = row?.updatedAt || row?.createdAt;
+        return (t && typeof t.toMillis === 'function') ? t.toMillis() : 0;
+      };
       snap.forEach(d=>{
         const x=d.data();
-        byLesson.set(String(x.lesson), x);
+        const key = String(x.lesson);
+        const existing = byLesson.get(key);
+        if(!existing || scheduleRowMs(x) > scheduleRowMs(existing)){
+          byLesson.set(key, x);
+        }
       });
 
       await loadOverridesForHeadInDates(uid, [dateISO]);
@@ -1777,6 +1792,18 @@
       try{
         const snap = await fetchWeekDocsForHead(headUid);
         for(const iso of weekDates){ map.set(iso, new Map()); }
+        // A teacher should only ever have one class for a given lesson —
+        // fetchWeekDocsForHead queries by teacherUid alone (no classKey
+        // filter), so two rows genuinely competing for the same
+        // (iso, lesson) slot here is a leftover/orphaned doc, not two valid
+        // classes at once. Tracked separately from `map` since its values
+        // are already-formatted display strings, not the raw docs a
+        // timestamp could be read back off of.
+        const slotMs = new Map();
+        const scheduleRowMs = (row) => {
+          const t = row?.updatedAt || row?.createdAt;
+          return (t && typeof t.toMillis === 'function') ? t.toMillis() : 0;
+        };
         snap.forEach(d=>{
           const x = d.data();
           // Standing schedule entries recur by weekday — resolve to *this* week's
@@ -1785,8 +1812,13 @@
           const iso = weekDates[Number(x.dayIndex)];
           if (iso === undefined) return;
           if (!map.has(iso)) map.set(iso, new Map());
+          const lessonNum = Number(x.lesson);
+          const slotKey = `${iso}|${lessonNum}`;
+          const ms = scheduleRowMs(x);
+          if (slotMs.has(slotKey) && slotMs.get(slotKey) > ms) return;
+          slotMs.set(slotKey, ms);
           const classText = x.classKey || `${x.grade} / ${x.section}${x.track ? ' '+x.track : ''}`;
-          map.get(iso).set(Number(x.lesson), classText);
+          map.get(iso).set(lessonNum, classText);
           hasData = true;
         });
 
