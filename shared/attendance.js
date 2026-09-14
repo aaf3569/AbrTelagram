@@ -926,15 +926,30 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
   // snapshot+id, or null. A cheap direct-document lookup (no query), so
   // "already taken" can be caught before the sheet even opens, instead of
   // only at final save time.
+  //
+  // Every hit is verified against the document's OWN classKey field before
+  // being accepted. That matters entirely for the legacy ID, which is
+  // ambiguous by construction: it dropped the track letter, so "12 / 2 ع"
+  // and "12 / 2 د" compute the same one. Without this check, a legacy hit
+  // for the sibling class reads as "you already took this lesson" for a
+  // class nobody has touched — the false "لقد سجّلت الغياب لهذه الحصة
+  // مسبقًا" teachers hit. The stored classKey field was never affected by
+  // the ID bug, so it's the authority on who a session really belongs to.
   async function findExistingAttendanceSession(dateISO, lesson, classKey) {
     if (!classKey) return null;
     const safeId = createAttendanceSessionId(dateISO, lesson, classKey);
     const legacyId = legacyAttendanceSessionId(dateISO, lesson, classKey);
     const ids = legacyId !== safeId ? [safeId, legacyId] : [safeId];
+    const wanted = normalizeClassKeyForCompare(classKey);
     try {
       for (const id of ids) {
         const snap = await getDoc(doc(db, ATTENDANCE_SESSIONS_COLLECTION, id));
-        if (snap.exists()) return { id, snap };
+        if (!snap.exists()) continue;
+        const found = normalizeClassKeyForCompare((snap.data() || {}).classKey);
+        // A doc with no classKey at all predates that field; it can only
+        // have come from this class's own ID, so accept it.
+        if (found && found !== wanted) continue;
+        return { id, snap };
       }
       return null;
     } catch (e) {

@@ -2387,27 +2387,6 @@
         const t = row?.updatedAt || row?.createdAt;
         return (t && typeof t.toMillis === 'function') ? t.toMillis() : 0;
       };
-      // TEMP DIAGNOSTIC — remove once the day-view-vs-week-view mismatch is
-      // root-caused. Dumps every raw doc this query returned for "today",
-      // so a reported mismatch against admins/adminschedule.html can be
-      // checked against real data instead of guessed at.
-      if (typeof console !== 'undefined' && console.groupCollapsed) {
-        console.groupCollapsed(`[teacherschedule] buildTodayMapWithOverrides(${uid}, ${dateISO}) — computed dayIndex=${dayIndex}`);
-        const rows = [];
-        snap.forEach(d => {
-          const x = d.data();
-          rows.push({
-            docId: d.id, lesson: x.lesson, dayIndex: x.dayIndex, date: x.date || null,
-            classKey: x.classKey || `${x.grade}/${x.section}${x.track ? ' ' + x.track : ''}`,
-            subject: x.subject, teacherUid: x.teacherUid,
-            updatedAt: x.updatedAt?.toDate?.()?.toISOString?.() || null,
-            createdAt: x.createdAt?.toDate?.()?.toISOString?.() || null,
-          });
-        });
-        console.table(rows);
-        console.groupEnd();
-      }
-
       snap.forEach(d=>{
         const x=d.data();
         if(isClassOverriddenForToday(x, overriddenClassKeys)) return;
@@ -2579,25 +2558,6 @@
         const t = row?.updatedAt || row?.createdAt;
         return (t && typeof t.toMillis === 'function') ? t.toMillis() : 0;
       };
-      // TEMP DIAGNOSTIC — same as buildTodayMapWithOverrides's, so the two
-      // raw document sets can be compared side by side for the reported
-      // day-view-vs-week-view mismatch.
-      if (typeof console !== 'undefined' && console.groupCollapsed) {
-        console.groupCollapsed(`[teacherschedule] getWeekMapForTeacher(${uid}) — weekDates=${JSON.stringify(weekDates)}`);
-        const rows = [];
-        snap.forEach(d => {
-          const x = d.data();
-          rows.push({
-            docId: d.id, lesson: x.lesson, dayIndex: x.dayIndex, date: x.date || null,
-            classKey: x.classKey || `${x.grade}/${x.section}${x.track ? ' ' + x.track : ''}`,
-            subject: x.subject, teacherUid: x.teacherUid,
-            updatedAt: x.updatedAt?.toDate?.()?.toISOString?.() || null,
-            createdAt: x.createdAt?.toDate?.()?.toISOString?.() || null,
-          });
-        });
-        console.table(rows);
-        console.groupEnd();
-      }
       snap.forEach(d => {
         const x = d.data();
         // Standing schedule entries recur by weekday — resolve to *this* week's

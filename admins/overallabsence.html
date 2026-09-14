@@ -1810,10 +1810,27 @@
 
       snap.forEach(ds => {
         const x = ds.data() || {};
-        const classKey = (x.classKey || '').toString().trim();
         const li = Number((x.lesson || '').toString());
-        if (!classKey || !Number.isFinite(li) || li < 1 || li > 7) return;
-        if (!ALL_CLASSES.includes(classKey)) return;
+        if (!Number.isFinite(li) || li < 1 || li > 7) return;
+        // normalizeClassName, not a raw ALL_CLASSES.includes() — a schedule
+        // row whose classKey spacing differs even slightly from the class
+        // list ("12/2 ع" vs "12 / 2 ع") was silently dropped here, leaving
+        // scheduleMap empty for that class. Every consumer then reads
+        // "no lesson scheduled", so the missed-attendance "!" could never
+        // render for it no matter what. Same tolerant matching the rest of
+        // this file already uses for attendance rows.
+        const classKey = normalizeClassName(x.classKey || x.class || '');
+        if (!classKey) {
+          // Loud on purpose. A schedule row we can't tie to a class is
+          // invisible everywhere downstream — it silently costs that class
+          // its "!" — so it must never be dropped quietly again.
+          console.warn(
+            '[overallabsence] schedule row dropped — classKey does not resolve ' +
+            'to any class in the current class list:',
+            JSON.stringify(x.classKey ?? x.class ?? null), 'doc:', ds.id
+          );
+          return;
+        }
 
         if (!scheduleMap[classKey]) scheduleMap[classKey] = {};
         scheduleMap[classKey][li] = {
@@ -1833,8 +1850,8 @@
           const x = ds.data() || {};
           if (x.deletedAt || x.enabled !== true) return;
 
-          const classKey = (x.classKey || '').toString().trim();
-          if (!classKey || !ALL_CLASSES.includes(classKey)) return;
+          const classKey = normalizeClassName(x.classKey || x.class || '');
+          if (!classKey) return;
 
           const lessons = Array.isArray(x.lessons) ? x.lessons : [];
           if (!scheduleMap[classKey]) scheduleMap[classKey] = {};
@@ -1863,6 +1880,24 @@
     dateLabel.textContent = toArabicDigits(fmtDateLong(selectedDate));
     mobileDateInput.value = toInputDate(selectedDate);
 
+    // Resolves any stored class spelling to the canonical entry in
+    // ALL_CLASSES, or '' when it can't be resolved *unambiguously*.
+    //
+    // Stored classKeys drift from the current class list in two ways:
+    //   1. spacing — "12/2 ع" vs "12 / 2 ع"
+    //   2. a missing track letter — a doc written as "12 / 2" back when the
+    //      class had no track, now listed as "12 / 2 ع"
+    // Both used to resolve to '' here, which silently dropped the document.
+    // For schedule rows that meant scheduleMap had no entry for the class,
+    // so scheduleExists was false and the missed-attendance "!" could never
+    // render for it regardless of whether anyone actually took attendance.
+    //
+    // The track fallback deliberately refuses to guess: it only fills in a
+    // track when exactly ONE class in the list shares that grade/section.
+    // Where both tracks exist (e.g. "12 / 2 ع" and "12 / 2 د") a trackless
+    // key is genuinely ambiguous, and merging the two classes would be far
+    // worse than dropping the row — that is the exact class-collision bug
+    // this whole fix exists to undo.
     function normalizeClassName(value) {
       const raw = (value || '').toString().replace(/\s+/g, ' ').trim();
       if (!raw) return '';
@@ -1875,7 +1910,16 @@
       const section = Number(m[2]);
       const track = (m[3] || '').trim();
       const normalized = `${grade} / ${section}${track ? ` ${track}` : ''}`;
-      return ALL_CLASSES.includes(normalized) ? normalized : '';
+      if (ALL_CLASSES.includes(normalized)) return normalized;
+
+      if (!track) {
+        const prefix = `${grade} / ${section}`;
+        const candidates = ALL_CLASSES.filter(
+          c => c === prefix || c.startsWith(`${prefix} `)
+        );
+        if (candidates.length === 1) return candidates[0];
+      }
+      return '';
     }
 
     function parseLessonIndex(...values) {
@@ -1922,10 +1966,10 @@
         
         snapshot.forEach(docSnap => {
           const data = docSnap.data();
-          const classKey = data.classKey;
-          
-          if (!ALL_CLASSES.includes(classKey)) return;
-          
+          const classKey = normalizeClassName(data.classKey || data.class || '');
+
+          if (!classKey) return;
+
           if (!morningLatesMap[classKey]) {
             morningLatesMap[classKey] = {
               count: 0,
@@ -3194,10 +3238,10 @@
         const snap = await getDocs(query(collection(db, 'schedules'), where('dayIndex', '==', dayIndex)));
         snap.forEach(ds => {
           const x = ds.data() || {};
-          const classKey = (x.classKey || '').toString().trim();
           const li = Number((x.lesson || '').toString());
-          if (!classKey || !Number.isFinite(li) || li < 1 || li > 7) return;
-          if (!ALL_CLASSES.includes(classKey)) return;
+          if (!Number.isFinite(li) || li < 1 || li > 7) return;
+          const classKey = normalizeClassName(x.classKey || x.class || '');
+          if (!classKey) return;
           if (!map[classKey]) map[classKey] = {};
           map[classKey][li] = { subject: (x.subject || '').toString() };
         });
@@ -3207,8 +3251,8 @@
         customSnap.forEach(ds => {
           const x = ds.data() || {};
           if (x.deletedAt || x.enabled !== true) return;
-          const classKey = (x.classKey || '').toString().trim();
-          if (!classKey || !ALL_CLASSES.includes(classKey)) return;
+          const classKey = normalizeClassName(x.classKey || x.class || '');
+          if (!classKey) return;
           const lessons = Array.isArray(x.lessons) ? x.lessons : [];
           if (!map[classKey]) map[classKey] = {};
           const maxLessons = Math.min(7, Number(x.lessonCount) || lessons.length || 7);

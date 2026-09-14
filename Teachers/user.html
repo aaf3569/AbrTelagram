@@ -2244,14 +2244,29 @@
 
         // Checks the current (safe) session ID first, then the old buggy
         // one if it differs. Returns the existing snapshot+id, or null.
+        //
+        // Every hit is verified against the document's OWN classKey field.
+        // That matters entirely for the legacy ID, which is ambiguous by
+        // construction: it dropped the track letter, so "12 / 2 ع" and
+        // "12 / 2 د" compute the same one. Without this check, a legacy hit
+        // for the sibling class reads as "already taken" for a class nobody
+        // has touched. The stored classKey was never affected by the ID
+        // bug, so it's the authority on who a session really belongs to.
         async function findExistingAttendanceSession(dateISO, lesson, classKey) {
             if (!classKey) return null;
+            const normalizeForCompare = (s) => String(s || '').replace(/\s+/g, ' ').trim().toLowerCase();
             const safeId = createAttendanceSessionId(dateISO, lesson, classKey);
             const legacyId = legacyAttendanceSessionId(dateISO, lesson, classKey);
             const ids = legacyId !== safeId ? [safeId, legacyId] : [safeId];
+            const wanted = normalizeForCompare(classKey);
             for (const id of ids) {
                 const snap = await getDoc(doc(db, ATTENDANCE_SESSIONS_COLLECTION, id));
-                if (snap.exists()) return { id, snap };
+                if (!snap.exists()) continue;
+                const found = normalizeForCompare((snap.data() || {}).classKey);
+                // A doc with no classKey at all predates that field; it can
+                // only have come from this class's own ID, so accept it.
+                if (found && found !== wanted) continue;
+                return { id, snap };
             }
             return null;
         }
