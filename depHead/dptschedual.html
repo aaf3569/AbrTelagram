@@ -627,6 +627,26 @@
       .mobile-date-input { font-size: 16px !important; }
     }
 
+    /* Keep the shared attendance sheet's status colors aligned with the
+       teacher page without changing this schedule grid's brighter palette. */
+    #attendanceSheet,
+    #attConfirmModal,
+    #attErrorModal,
+    #attCriticalErrorModal,
+    #attBlockedModal,
+    #attSuccessModal,
+    #attLessonDetailModal{
+      --primary-extra-light:#eef5fb;
+      --green:#1a7f37;
+      --yellow:#a06d00;
+      --red:#b42318;
+      --greenBg:rgba(26,127,55,.08);
+      --yellowBg:rgba(160,109,0,.10);
+      --redBg:rgba(180,35,24,.10);
+      --chip:#eef5fb;
+      --shadow-1:0 8px 22px rgba(3,60,84,.14);
+    }
+
     /* Base chrome shared/attendance.js relies on the host page to provide
        (.sheet, .modal, .btn, .btn.primary, .btn.cancel — its own bundled
        STYLES only adds the #attendanceSheet-scoped refinements on top of
