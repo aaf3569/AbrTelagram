@@ -1858,7 +1858,7 @@ html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%;
         </div>
         <div class="stats-grid" style="align-items:stretch;">
           <div class="stat-card stat-present"> <div class="stat-title">إجمالي الحضور</div> <div id="totPresent" class="stat-value">—</div> </div>
-          <div class="stat-card stat-absent"> <div class="stat-title">إجمالي الغياب</div> <div id="totAbsent" class="stat-value">—</div> </div>
+          <div class="stat-card stat-absent"> <div class="stat-title">أيام الغياب بدون عذر</div> <div id="totAbsent" class="stat-value">—</div> </div>
           <div class="stat-card stat-late"> <div class="stat-title">إجمالي التأخير</div> <div id="totLate" class="stat-value">—</div> </div>
         </div>
       </div>
@@ -1870,7 +1870,7 @@ html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%;
         </div>
         <div class="warning-count-row">
           <span id="warningAbsenceCount" class="warning-count-value">0</span>
-          <span class="warning-count-label">غياب بدون عذر</span>
+          <span class="warning-count-label">أيام غياب بدون عذر</span>
         </div>
         <div class="warning-progress-track">
           <div id="warningProgressFill" class="warning-progress-fill"></div>
@@ -1888,7 +1888,7 @@ html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%;
         </div>
         <div class="warning-count-row">
           <span id="warningExcusedCount" class="warning-count-value excused">0</span>
-          <span class="warning-count-label">غياب بعذر</span>
+          <span class="warning-count-label">أيام غياب بعذر</span>
         </div>
         <div class="warning-progress-track">
           <div id="warningProgressFillExcused" class="warning-progress-fill"></div>
@@ -1901,7 +1901,7 @@ html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%;
 
       <div id="absencesBlock" class="analytics-card">
         <div class="row" style="justify-content:space-between; align-items:center;">
-          <div class="label" style="margin:0;">الغيابات</div> <span id="absentCountPill" class="pill r">غياب: 0</span>
+          <div class="label" style="margin:0;">الغيابات</div> <span id="absentCountPill" class="pill r">أيام غياب: ٠</span>
         </div>
         <div id="absencesList" class="att-group"></div>
       </div>
@@ -1989,6 +1989,25 @@ html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%;
           <div id="noteList" class="list"></div> <div id="noteEmpty" class="empty" style="display:none;">لا توجد ملاحظات.</div>
         </div>
       </div>
+    </div>
+  </div>
+</section>
+
+<!-- ABSENCE DAY DETAIL SHEET -->
+<section id="absenceDaySheet" class="sheet small" aria-hidden="true">
+  <div class="sheet-header">
+    <button id="closeAbsenceDay" class="back-btn" type="button">رجوع</button>
+    <h3 class="sheet-title">تفاصيل يوم الغياب</h3>
+  </div>
+  <div class="sheet-body">
+    <div class="section">
+      <div class="row"><span class="label">التاريخ:</span><span id="absenceDayDate">—</span></div>
+      <div class="row"><span class="label">حصص الغياب:</span><span id="absenceDayLessonCount">—</span></div>
+      <div class="row"><span class="label">الحالة:</span><span id="absenceDayBadge" class="badge">—</span></div>
+      <div id="absenceDayReasonRow" class="row" style="display:none;"><span class="label">سبب العذر:</span><span id="absenceDayReason">—</span></div>
+      <button id="excuseAbsenceDayBtn" class="btn excused-btn" type="button">غياب بعذر لهذا اليوم</button>
+      <div class="label">الحصص الغائبة (اضغط لتعديل الحصة)</div>
+      <div id="absenceDayLessons" class="att-group"></div>
     </div>
   </div>
 </section>
@@ -2196,7 +2215,7 @@ import { initializeApp, getApp, getApps } from "/shared/firebase.js";
 import { getAuth, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from "/shared/firebase.js";
 import { initializeFirestore, persistentSingleTabManager, collection, collectionGroup, getDocs, query, where, orderBy, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp, writeBatch, arrayUnion, arrayRemove } from "/shared/firebase.js";
 import { mountAttendanceSheet } from "/shared/attendance.js";
-import { fetchStudentAttendanceData, makeAttTile, makeMorningLateTile } from "/shared/attendance-tiles.js";
+import { fetchStudentAttendanceData, makeAttTile, makeMorningLateTile, makeAbsenceDayTile } from "/shared/attendance-tiles.js";
 import { renderWarningState, renderExcusedWarningState } from "/shared/warning-system.js";
 import { DEFAULT_CLASS_LIST, fetchClassList, groupByGrade, availableNumbersToAdd, buildClassKey, primeClassList, parseClassKey } from "/shared/class-registry.js";
 import { getDisplaySubjectForClass, getDisplaySubjectForTeacherClass } from "/shared/departments.js";
@@ -2492,6 +2511,9 @@ const warningNextHintExcused = document.getElementById('warningNextHintExcused')
 const excusedAttBtn = document.getElementById('excusedAttBtn');
 const excusedReasonRow = document.getElementById('excusedReasonRow');
 const dExcusedReason = document.getElementById('dExcusedReason');
+const absenceDaySheet = document.getElementById('absenceDaySheet');
+const absenceDayLessons = document.getElementById('absenceDayLessons');
+let currentAbsenceDay = null;
 
 // NEW: Modal references
 const specialCaseModal = document.getElementById('specialCaseModal');
@@ -2928,7 +2950,7 @@ const LONG_PRESS_DURATION = 500; // 0.5 seconds
 
 // NEW: Variables for modal state
 let specialCaseModalContext = { studentId: null, isEdit: false, originalChecked: false };
-let excusedModalContext = { studentId: null, attendanceId: null };
+let excusedModalContext = { studentId: null, date: null };
 let requestStudentsCache = [];
 let requestSelectedStudentIds = new Set();
 let requestLiveContext = null;
@@ -3067,17 +3089,20 @@ saveSpecialCase.addEventListener('click', async () => {
 });
 
 /* ========= Excused Absence Modal Handlers ========= */
-excusedAttBtn.addEventListener('click', () => {
-  if (!currentAttendanceRecord || !currentStudent.id) return;
-  
-  excusedModalContext = {
-    studentId: currentStudent.id,
-    attendanceId: currentAttendanceRecord.id,
-    existingReason: currentAttendanceRecord.reasonText || ''
-  };
-  
-  excusedReasonInput.value = currentAttendanceRecord.reasonText || '';
+function openDayExcuseModal(date, existingReason = '') {
+  if (!currentStudent.id || !date) return;
+  excusedModalContext = { studentId: currentStudent.id, date };
+  excusedReasonInput.value = existingReason;
   openModal(excusedAbsenceModal);
+}
+
+excusedAttBtn.addEventListener('click', () => {
+  if (currentAttendanceRecord?.status === 'absent') {
+    openDayExcuseModal(currentAttendanceRecord.date, currentAttendanceRecord.reasonText || '');
+  }
+});
+document.getElementById('excuseAbsenceDayBtn').addEventListener('click', () => {
+  if (currentAbsenceDay) openDayExcuseModal(currentAbsenceDay.date, currentAbsenceDay.reasonText);
 });
 
 closeExcusedModal.addEventListener('click', () => {
@@ -3101,25 +3126,39 @@ saveExcused.addEventListener('click', async () => {
   excusedReasonError.classList.remove('show');
   
   try {
-    await updateDoc(doc(db, 'students', excusedModalContext.studentId, 'attendance', excusedModalContext.attendanceId), {
-      hasReason: true,
-      reasonText: reason,
-      excusedAt: serverTimestamp(),
-      excusedBy: auth.currentUser.uid
+    const { studentId, date } = excusedModalContext;
+    const latest = await getDocs(collection(db, 'students', studentId, 'attendance'));
+    const dayRecords = latest.docs.filter((snapshot) => {
+      const row = snapshot.data();
+      return row.status === 'absent' && String(row.date || '').slice(0, 10) === date;
     });
-    
-    // Update local record
-    currentAttendanceRecord.hasReason = true;
-    currentAttendanceRecord.reasonText = reason;
+    if (!dayRecords.length) throw new Error('No absent lessons remain on this date');
+    const batch = writeBatch(db);
+    dayRecords.forEach((snapshot) => {
+      batch.update(snapshot.ref, {
+        hasReason: true,
+        reasonText: reason,
+        excusedAt: serverTimestamp(),
+        excusedBy: auth.currentUser.uid
+      });
+    });
+    await batch.commit();
     
     // Refresh attendance data and warning system
-    await loadStudentAttendance(excusedModalContext.studentId);
+    await loadStudentAttendance(studentId);
     
-    // Update detail view
-    dExcusedReason.textContent = reason;
-    excusedReasonRow.style.display = 'flex';
-    dBadge.className = 'badge b-excused';
-    dBadge.textContent = 'غياب بعذر';
+    if (attDetailSheet.classList.contains('open') && currentAttendanceRecord?.date === date) {
+      currentAttendanceRecord.hasReason = true;
+      currentAttendanceRecord.reasonText = reason;
+      dExcusedReason.textContent = reason;
+      excusedReasonRow.style.display = 'flex';
+      dBadge.className = 'badge b-excused';
+      dBadge.textContent = 'غياب بعذر';
+    }
+    if (absenceDaySheet.classList.contains('open') && currentAbsenceDay?.date === date) {
+      const refreshed = currentStudentAttendance.filter((r) => r.status === 'absent' && String(r.date || '').slice(0, 10) === date);
+      openAbsenceDay({ date, records: refreshed, excused: true, reasonText: reason });
+    }
     
     closeModal(excusedAbsenceModal);
     resetModalInputs();
@@ -3129,7 +3168,7 @@ saveExcused.addEventListener('click', async () => {
     successMsg.className = 'ok';
     successMsg.textContent = 'تم حفظ الغياب بعذر بنجاح';
     successMsg.style.display = 'block';
-    attDetailBody.appendChild(successMsg);
+    (absenceDaySheet.classList.contains('open') ? absenceDaySheet.querySelector('.section') : attDetailBody).appendChild(successMsg);
     setTimeout(() => { successMsg.style.display = 'none'; }, 3000);
     
   } catch (error) {
@@ -4978,7 +5017,7 @@ async function loadStudentAttendance(studentId){
   absencesList.innerHTML = '<div class="loading"><div class="spinner"></div><div class="muted">جاري تحميل بيانات الحضور...</div></div>';
   latesList.innerHTML = '';
   totPresent.textContent = '—'; totAbsent.textContent = '—'; totLate.textContent = '—';
-  absentCountPill.textContent = 'غياب: 0'; lateCountPill.textContent = 'تأخير: 0';
+  absentCountPill.textContent = 'أيام غياب: ٠'; lateCountPill.textContent = 'تأخير: 0';
   warningAbsenceCount.textContent = '0';
   warningLevelBadge.textContent = 'لا يوجد';
   warningLevelBadge.className = 'warning-level-badge warning-level-0';
@@ -4993,13 +5032,13 @@ async function loadStudentAttendance(studentId){
   warningNextHintExcused.textContent = '—';
 
   try{
-    const { rows, allAbsences, combinedLates, present, late, absent, excused } = await fetchStudentAttendanceData(db, studentId);
+    const { rows, absenceDays, combinedLates, present, late, absent, excused } = await fetchStudentAttendanceData(db, studentId);
     currentStudentAttendance = rows;
 
     totPresent.textContent = toArabicDigits(present);
     totLate.textContent = toArabicDigits(late);
     totAbsent.textContent = toArabicDigits(absent);
-    absentCountPill.textContent = `غياب: ${toArabicDigits(allAbsences.length)}`;
+    absentCountPill.textContent = `أيام غياب: ${toArabicDigits(absenceDays.length)}`;
     lateCountPill.textContent = `تأخير: ${toArabicDigits(late)}`;
 
     renderWarningState(absent, {
@@ -5019,15 +5058,14 @@ async function loadStudentAttendance(studentId){
     const absencesFragment = document.createDocumentFragment();
     const latesFragment = document.createDocumentFragment();
 
-    // Create attendance tiles for all absences (both excused and non-excused)
-    allAbsences.forEach(r=> absencesFragment.appendChild(makeAttTile(r, openAttDetail)));
+    absenceDays.forEach(day=> absencesFragment.appendChild(makeAbsenceDayTile(day, openAbsenceDay)));
     // Lesson lates and morning lates share one list, newest first (already merged by fetchStudentAttendanceData).
     combinedLates.forEach(r=> latesFragment.appendChild(r.source==='morningLate' ? makeMorningLateTile(r, openMorningLateDetail) : makeAttTile(r, openAttDetail)));
 
     absencesList.innerHTML = ''; latesList.innerHTML = '';
     absencesList.appendChild(absencesFragment); latesList.appendChild(latesFragment);
 
-    if(allAbsences.length===0){
+    if(absenceDays.length===0){
       const empty=document.createElement('div'); empty.className='muted'; empty.textContent='لا توجد حالات غياب.'; absencesList.appendChild(empty);
     }
     if(combinedLates.length===0){
@@ -5040,6 +5078,27 @@ async function loadStudentAttendance(studentId){
 }
 
 // makeAttTile/makeMorningLateTile now come from shared/attendance-tiles.js.
+
+function openAbsenceDay(day) {
+  currentAbsenceDay = day;
+  document.getElementById('absenceDayDate').textContent = toArabicDigits(day.date || '—');
+  document.getElementById('absenceDayLessonCount').textContent = toArabicDigits(day.records.length);
+  const badge = document.getElementById('absenceDayBadge');
+  badge.className = `badge ${day.excused ? 'b-excused' : 'b-absent'}`;
+  badge.textContent = day.excused ? 'غياب بعذر' : 'غياب بدون عذر';
+  document.getElementById('absenceDayReasonRow').style.display = day.excused && day.reasonText ? 'flex' : 'none';
+  document.getElementById('absenceDayReason').textContent = day.reasonText || '—';
+  absenceDayLessons.replaceChildren(...day.records.map((record) => makeAttTile(record, (selected) => {
+    closeSheet(absenceDaySheet);
+    currentAbsenceDay = null;
+    openAttDetail(selected);
+  })));
+  openSheet(absenceDaySheet);
+}
+document.getElementById('closeAbsenceDay').addEventListener('click', () => {
+  closeSheet(absenceDaySheet);
+  currentAbsenceDay = null;
+});
 
 let currentMorningLateRecord = null;
 function openMorningLateDetail(r){
@@ -5216,6 +5275,12 @@ saveStatusBtn.addEventListener('click', async () => {
     }
     
     const uAt = new Date(); dUpdatedAt.textContent = fmtDT(uAt);
+    currentAttendanceRecord.status = newStatus;
+    if (newStatus !== 'absent') {
+      currentAttendanceRecord.hasReason = false;
+      currentAttendanceRecord.reasonText = null;
+      excusedAttBtn.style.display = 'none';
+    }
     
     await loadStudentAttendance(currentStudent.id);
     statusEditForm.classList.remove('active');

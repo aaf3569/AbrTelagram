@@ -38,10 +38,11 @@ export async function fetchStudentAttendanceData(db, studentId) {
   const present = rows.filter((r) => r.status === "present").length;
   const late = rows.filter((r) => r.status === "late").length + morningLateRows.length;
   const allAbsences = rows.filter((r) => r.status === "absent");
-  const absencesWithoutReason = rows.filter((r) => r.status === "absent" && r.hasReason !== true);
-  const absencesWithReason = rows.filter((r) => r.status === "absent" && r.hasReason === true);
-  const absent = absencesWithoutReason.length;
-  const excused = absencesWithReason.length;
+  const absenceDays = groupAbsencesByDay(allAbsences);
+  // A day with any unexcused lesson is unexcused. One date can enter only
+  // one warning ladder, even when its lessons have mixed excuse states.
+  const absent = absenceDays.filter((day) => !day.excused).length;
+  const excused = absenceDays.filter((day) => day.excused).length;
 
   const combinedLates = [
     ...rows.filter((r) => r.status === "late"),
@@ -51,7 +52,48 @@ export async function fetchStudentAttendanceData(db, studentId) {
     return a.date < b.date ? 1 : -1;
   });
 
-  return { rows, morningLateRows, present, late, absent, excused, allAbsences, combinedLates };
+  return { rows, morningLateRows, present, late, absent, excused, allAbsences, absenceDays, combinedLates };
+}
+
+export function groupAbsencesByDay(rows) {
+  const days = new Map();
+  for (const row of rows) {
+    const date = String(row.date || "").slice(0, 10);
+    if (!days.has(date)) days.set(date, { date, records: [], excused: false, reasonText: "" });
+    days.get(date).records.push(row);
+  }
+  return [...days.values()].map((day) => {
+    day.excused = day.records.every((row) => row.hasReason === true);
+    day.reasonText = day.excused ? (day.records.find((row) => row.reasonText)?.reasonText || "") : "";
+    return day;
+  }).sort((a, b) => b.date.localeCompare(a.date));
+}
+
+export function makeAbsenceDayTile(day, onClick) {
+  const div = document.createElement("div");
+  div.className = "att-tile will-change";
+  div.tabIndex = 0;
+  div.setAttribute("role", "button");
+  const left = document.createElement("div");
+  left.className = "att-left";
+  const title = document.createElement("div");
+  title.className = "att-title";
+  title.textContent = `غياب يوم ${toArabicDigits(day.date || "—")}`;
+  const sub = document.createElement("div");
+  sub.className = "att-sub";
+  sub.textContent = `${toArabicDigits(day.records.length)} ${day.records.length === 1 ? "حصة غياب" : "حصص غياب"} • ${day.records.map((r) => r.lessonLabel || `حصة ${toArabicDigits(r.lessonIndex || "—")}`).join("، ")}`;
+  const badge = document.createElement("span");
+  badge.className = `badge ${day.excused ? "b-excused" : "b-absent"}`;
+  badge.textContent = day.excused ? "غياب بعذر" : "غياب بدون عذر";
+  left.append(title, sub);
+  div.append(left, badge);
+  if (typeof onClick === "function") {
+    div.addEventListener("click", () => onClick(day));
+    div.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onClick(day); }
+    });
+  }
+  return div;
 }
 
 export function makeAttTile(r, onClick) {

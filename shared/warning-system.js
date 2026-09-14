@@ -3,7 +3,7 @@ function toArabicDigits(value) {
   return String(value ?? "").replace(/\d/g, (d) => ar[parseInt(d, 10)]);
 }
 
-// Two independent ladders: plain (unexcused) absences escalate faster
+// Two independent ladders: unexcused absence days escalate faster
 // since they're the more serious case, غياب بعذر (hasReason === true) gets
 // its own more lenient ladder. Kept as plain arrays (rather than duplicating
 // the whole compute function) so admins/students.html and
@@ -41,7 +41,7 @@ function buildWarningState(rawCount, thresholds, emptyHint, classPrefix) {
   } else if (count === 0) {
     nextHint = emptyHint;
   } else {
-    nextHint = `متبقّي ${toArabicDigits(nextThreshold - count)} غياب حتى تحذير ${toArabicDigits(level + 1)}`;
+    nextHint = `متبقّي ${toArabicDigits(nextThreshold - count)} يوم غياب حتى تحذير ${toArabicDigits(level + 1)}`;
   }
 
   return {
@@ -57,16 +57,12 @@ function buildWarningState(rawCount, thresholds, emptyHint, classPrefix) {
   };
 }
 
-// Absences without an excuse (hasReason !== true) — the caller is
-// responsible for deriving that count correctly (see
-// shared/attendance-tiles.js's fetchStudentAttendanceData, whose `absent`
-// field already does this).
+// Unexcused absence days — the caller derives this count from grouped dates.
 export function computeWarningState(absentCount) {
   return buildWarningState(absentCount, NORMAL_THRESHOLDS, "لا توجد غيابات بدون عذر بعد.", "");
 }
 
-// Absences marked غياب بعذر (hasReason === true) — see
-// fetchStudentAttendanceData's `excused` field.
+// Excused absence days — see fetchStudentAttendanceData's `excused` field.
 export function computeExcusedWarningState(excusedCount) {
   return buildWarningState(excusedCount, EXCUSED_THRESHOLDS, "لا توجد غيابات بعذر بعد.", "excused-");
 }

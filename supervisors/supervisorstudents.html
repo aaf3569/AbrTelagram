@@ -1068,7 +1068,7 @@ textarea.input{ height:100px; padding-block:14px; resize:vertical }
         <div class="analytics-head"><h4 class="analytics-title">بيانات</h4></div>
         <div class="stats-grid" style="align-items:stretch;">
           <div class="stat-card stat-present"> <div class="stat-title">إجمالي الحضور</div> <div id="totPresent" class="stat-value">—</div> </div>
-          <div class="stat-card stat-absent"> <div class="stat-title">إجمالي الغياب</div> <div id="totAbsent" class="stat-value">—</div> </div>
+          <div class="stat-card stat-absent"> <div class="stat-title">أيام الغياب بدون عذر</div> <div id="totAbsent" class="stat-value">—</div> </div>
           <div class="stat-card stat-late"> <div class="stat-title">إجمالي التأخير</div> <div id="totLate" class="stat-value">—</div> </div>
         </div>
       </div>
@@ -1080,7 +1080,7 @@ textarea.input{ height:100px; padding-block:14px; resize:vertical }
         </div>
         <div class="warning-count-row">
           <span id="warningAbsenceCount" class="warning-count-value">0</span>
-          <span class="warning-count-label">غياب بدون عذر</span>
+          <span class="warning-count-label">أيام غياب بدون عذر</span>
         </div>
         <div class="warning-progress-track">
           <div id="warningProgressFill" class="warning-progress-fill"></div>
@@ -1098,7 +1098,7 @@ textarea.input{ height:100px; padding-block:14px; resize:vertical }
         </div>
         <div class="warning-count-row">
           <span id="warningExcusedCount" class="warning-count-value excused">0</span>
-          <span class="warning-count-label">غياب بعذر</span>
+          <span class="warning-count-label">أيام غياب بعذر</span>
         </div>
         <div class="warning-progress-track">
           <div id="warningProgressFillExcused" class="warning-progress-fill"></div>
@@ -1111,7 +1111,7 @@ textarea.input{ height:100px; padding-block:14px; resize:vertical }
 
       <div class="analytics-card">
         <div class="row" style="justify-content:space-between; align-items:center;">
-          <div class="label" style="margin:0;">الغيابات</div> <span id="absentCountPill" class="pill r">غياب: 0</span>
+          <div class="label" style="margin:0;">الغيابات</div> <span id="absentCountPill" class="pill r">أيام غياب: ٠</span>
         </div>
         <div id="absencesList" class="att-group"></div>
       </div>
@@ -1948,7 +1948,7 @@ async function loadStudentAttendance(studentId){
   absencesList.innerHTML = '<div class="loading"><div class="spinner"></div><div class="muted">جاري تحميل بيانات الحضور...</div></div>';
   latesList.innerHTML = '';
   totPresent.textContent = '—'; totAbsent.textContent = '—'; totLate.textContent = '—';
-  absentCountPill.textContent = 'غياب: 0'; lateCountPill.textContent = 'تأخير: 0';
+  absentCountPill.textContent = 'أيام غياب: ٠'; lateCountPill.textContent = 'تأخير: 0';
   warningAbsenceCount.textContent = '0';
   warningLevelBadge.textContent = 'لا يوجد';
   warningLevelBadge.className = 'warning-level-badge warning-level-0';
@@ -1962,13 +1962,13 @@ async function loadStudentAttendance(studentId){
   warningProgressFillExcused.className = 'warning-progress-fill';
   warningNextHintExcused.textContent = '—';
   try{
-    const { rows, allAbsences, combinedLates, present, late, absent, excused } = await fetchStudentAttendanceData(db, studentId);
+    const { rows, allAbsences, absenceDays, combinedLates, present, late, absent, excused } = await fetchStudentAttendanceData(db, studentId);
     currentStudentAttendance = rows;
 
     totPresent.textContent = toArabicDigits(present);
     totLate.textContent = toArabicDigits(late);
     totAbsent.textContent = toArabicDigits(absent);
-    absentCountPill.textContent = `غياب: ${toArabicDigits(allAbsences.length)}`;
+    absentCountPill.textContent = `أيام غياب: ${toArabicDigits(absenceDays.length)}`;
     lateCountPill.textContent = `تأخير: ${toArabicDigits(late)}`;
 
     renderWarningState(absent, {

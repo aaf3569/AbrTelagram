@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "test": "node --experimental-vm-modules --test tests/attendance.test.cjs"
+    "test": "node --experimental-vm-modules --test tests/*.test.cjs"
   },
   "dependencies": {
     "express": "^4.21.2",
