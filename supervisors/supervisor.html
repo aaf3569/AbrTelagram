@@ -2688,9 +2688,36 @@
             const d = parts.find(p=>p.type==='day').value;
             return `${y}-${m}-${d}`;
         }
-        function sanitizeId(s){
+        // JS \w is ASCII-only, so this silently deletes Arabic characters —
+        // including a class's track letter. "12 / 2 ع" and "12 / 2 د" both
+        // collapse to "12_-_2_", giving two different classes one shared
+        // attendance document ID. Kept ONLY to look up documents already
+        // written under the old scheme; never used to build a new ID.
+        function legacySanitizeId(s){
             return String(s).replace(/[^\w\-]+/g,'_');
         }
+
+        // Strips only what Firestore actually forbids in a document ID
+        // (path separators and wildcards), so Arabic survives and every
+        // class keeps its own distinct ID.
+        function sanitizeId(s){
+            return String(s ?? '')
+                .replace(/[\/\\#?[\]\s]+/g, '_')
+                .replace(/_+/g, '_')
+                .replace(/^_|_$/g, '');
+        }
+
+        // Compares two class keys ignoring formatting only. Spacing around
+        // the slash varies between stored documents ("12/2 ع" vs
+        // "12 / 2 ع") and must not count as a different class, but the
+        // track letter is significant and is never normalised away.
+        const classCompareKey = (s) =>
+            String(s ?? '')
+                .replace(/\s*\/\s*/g, '/')
+                .replace(/\s+/g, ' ')
+                .trim()
+                .toLowerCase();
+        const sameClass = (a, b) => classCompareKey(a) === classCompareKey(b);
 
         // NEW: Filter button functionality
         filterAbsent.addEventListener('click', () => {
@@ -2825,9 +2852,29 @@
                 const total = present.length + late.length + absent.length;
                 const sessionId = `${dateKW}__${sanitizeId(currentClass)}__L${lessonIndex}`;
                 const sessionRef = doc(db, 'attendance', sessionId);
-                // Pre-check if the session already exists (avoid duplicate lesson attendance)
-                const existing = await getDoc(sessionRef);
-                if (existing.exists()) {
+
+                // Pre-check if the session already exists (avoid duplicate
+                // lesson attendance). Checks the legacy ID too, so a session
+                // saved before the ID fix is still recognised — but only
+                // counts a hit whose own `class` field is actually this
+                // class. Without that check the shared legacy ID would hand
+                // back the sibling track's session and falsely block this
+                // class with "تم تسجيل غياب هذه الحصّة مسبقًا" when nobody
+                // had recorded anything for it.
+                const legacyId = `${dateKW}__${legacySanitizeId(currentClass)}__L${lessonIndex}`;
+                const idsToCheck = legacyId !== sessionId ? [sessionId, legacyId] : [sessionId];
+                let alreadyTaken = false;
+                for (const id of idsToCheck) {
+                    const snap = await getDoc(doc(db, 'attendance', id));
+                    if (!snap.exists()) continue;
+                    const storedClass = (snap.data() || {}).class;
+                    // No `class` field at all predates that field, so it can
+                    // only have come from this class's own ID — accept it.
+                    if (storedClass && !sameClass(storedClass, currentClass)) continue;
+                    alreadyTaken = true;
+                    break;
+                }
+                if (alreadyTaken) {
                     closeModal(confirmModal);
                     openError('تعذّر الحفظ', 'تم تسجيل غياب هذه الحصّة مسبقًا.');
                     pendingSave = null;

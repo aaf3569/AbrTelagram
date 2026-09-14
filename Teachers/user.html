@@ -2254,7 +2254,14 @@
         // bug, so it's the authority on who a session really belongs to.
         async function findExistingAttendanceSession(dateISO, lesson, classKey) {
             if (!classKey) return null;
-            const normalizeForCompare = (s) => String(s || '').replace(/\s+/g, ' ').trim().toLowerCase();
+            // Ignores formatting only — spacing around the slash varies
+            // between stored documents ("12/2 ع" vs "12 / 2 ع"). The track
+            // letter is significant and is never normalised away.
+            const normalizeForCompare = (s) => String(s || '')
+                .replace(/\s*\/\s*/g, '/')
+                .replace(/\s+/g, ' ')
+                .trim()
+                .toLowerCase();
             const safeId = createAttendanceSessionId(dateISO, lesson, classKey);
             const legacyId = legacyAttendanceSessionId(dateISO, lesson, classKey);
             const ids = legacyId !== safeId ? [safeId, legacyId] : [safeId];

@@ -1151,8 +1151,21 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
     setControlsEnabled(true);
   }
 
+  // Compares two class keys ignoring formatting only.
+  //
+  // Spacing around the slash varies between stored documents ("12/2 ع" vs
+  // "12 / 2 ع") and must not read as a different class — this gates both
+  // the session-ownership check and getMyScheduledLessonsForClass, so a
+  // purely cosmetic difference here would tell a teacher the lesson in
+  // front of them isn't theirs. The track letter is significant and is
+  // never normalised away: collapsing ع and د is precisely the class
+  // collision this whole fix exists to undo.
   function normalizeClassKeyForCompare(s) {
-    return String(s || "").replace(/\s+/g, " ").trim().toLowerCase();
+    return String(s || "")
+      .replace(/\s*\/\s*/g, "/")
+      .replace(/\s+/g, " ")
+      .trim()
+      .toLowerCase();
   }
 
   function classKeyFromScheduleRow(row) {
