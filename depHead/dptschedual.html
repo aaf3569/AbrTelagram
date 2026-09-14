@@ -361,6 +361,8 @@
 
     .popover{
       position:fixed;
+      top:50%; left:50%;
+      transform: translate(-50%, -50%);
       z-index:1000;
       width:min(520px, 92vw);
       max-height:min(520px, 70vh);
@@ -458,6 +460,60 @@
       box-shadow: 0 0 0 6px rgba(16,185,129,.12);
       flex:0 0 auto;
     }
+
+    .btn-cover{
+      width:100%;
+      height:46px;
+      border-radius:12px;
+      border:1px solid var(--primary);
+      background:#fff;
+      color:var(--primary);
+      font-weight:900;
+      font-size:.95rem;
+      cursor:pointer;
+      transition: transform .12s ease, box-shadow .12s ease, background .12s ease;
+    }
+    .btn-cover:hover{ background: var(--chip); transform: translateY(-1px); }
+
+    .cover-list{ display:flex; flex-direction:column; gap:8px; margin:10px 0; max-height:220px; overflow:auto; }
+    .cover-option{
+      display:flex; align-items:center; justify-content:space-between;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      background:#fff;
+      color:var(--text);
+      font-weight:800;
+      cursor:pointer;
+      text-align:right;
+      transition: border-color .12s ease, background .12s ease;
+    }
+    .cover-option:hover{ background: var(--chip); }
+    .cover-option.selected{
+      border-color: var(--primary);
+      background: rgba(59,130,246,.08);
+      color: var(--primary);
+    }
+
+    .btn-assign{
+      width:100%;
+      height:46px;
+      border-radius:12px;
+      border:none;
+      background: var(--border);
+      color: var(--muted);
+      font-weight:900;
+      font-size:.95rem;
+      cursor:not-allowed;
+      transition: background .15s ease, color .15s ease, box-shadow .15s ease, transform .12s ease;
+    }
+    .btn-assign:not(:disabled){
+      background: linear-gradient(180deg, #065372, #033C54);
+      color:#fff;
+      cursor:pointer;
+      box-shadow: 0 14px 30px rgba(3,60,84,.26);
+    }
+    .btn-assign:not(:disabled):hover{ transform: translateY(-1px); }
 
     .list{ display:flex; flex-direction:column; gap:8px; }
     .li{
@@ -624,7 +680,7 @@
     import { getAuth, onAuthStateChanged } from "/shared/firebase.js";
     import {
       initializeFirestore, persistentSingleTabManager, collection, getDocs, query, where,
-      doc, getDoc, Timestamp
+      doc, getDoc, setDoc, updateDoc, serverTimestamp, Timestamp
     } from "/shared/firebase.js";
     import { resolveDepartmentName, getDepartmentSubjectFilters } from "/shared/departments.js";
 
@@ -974,7 +1030,7 @@
             btn.title = cell.taken ? 'تم تسليم الغياب' : 'لم يتم تسليم الغياب';
             btn.addEventListener('click', (e) => {
               e.stopPropagation();
-              openPopoverForCell(btn, teacher, lesson, cell);
+              openPopoverForCell(teacher, lesson, cell);
             });
             td.appendChild(btn);
           }
@@ -986,17 +1042,15 @@
       }
     }
 
-    function clamp(n, min, max){ return Math.max(min, Math.min(max, n)); }
-
-    async function openPopoverForCell(anchorEl, teacher, lesson, cellData){
+    async function openPopoverForCell(teacher, lesson, cellData){
       const niceLesson = toArabicDigits(lesson);
       const niceDate = toArabicDigits(fmtDateLong(selectedDate));
       const niceClass = toArabicDigits(cellData.classKey);
       const niceTime = cellData.taken && cellData.time ? toArabicDigits(formatTime(cellData.time)) : '—';
-      
+
       popTitle.textContent = `${teacher.name}`;
       popSub.textContent = `الحصة ${niceLesson} • ${niceDate}`;
-      
+
       popBody.innerHTML = `
         <div class="section">
           <div class="sec-title">
@@ -1008,12 +1062,12 @@
             <span class="chip">التاريخ: ${niceDate}</span>
           </div>
         </div>
-        
+
         <div class="${cellData.taken ? 'success' : 'alert'}">
           <span class="dot"></span>
           <span>${cellData.taken ? 'تم تسليم الغياب' : 'لم يتم تسليم الغياب'}</span>
         </div>
-        
+
         ${cellData.taken ? `
         <div class="section">
           <div class="sec-title">
@@ -1025,34 +1079,135 @@
           </div>
         </div>
         ` : ''}
+
+        <button type="button" class="btn-cover" id="btnOpenCover">تغطية</button>
+        <div class="section" id="coverSection" hidden>
+          <div class="sec-title"><span>إسناد تغطية لهذه الحصة</span></div>
+          <div class="muted" style="font-size:.85rem; margin-bottom:4px;">
+            معلمو القسم المتفرغون في هذه الحصة (${niceDate}):
+          </div>
+          <div class="cover-list" id="coverTeacherList"></div>
+          <button type="button" class="btn-assign" id="btnAssignCover" disabled>تعيين</button>
+          <div class="muted" id="coverStatus" style="font-size:.85rem; margin-top:6px;"></div>
+        </div>
       `;
-      
-      const r = anchorEl.getBoundingClientRect();
+
       const popW = Math.min(520, Math.floor(window.innerWidth * 0.92));
       const popH = Math.min(520, Math.floor(window.innerHeight * 0.70));
-      
       popover.style.width = popW + 'px';
       popover.style.maxHeight = popH + 'px';
-      
-      const margin = 12;
-      let top = r.bottom + 10;
-      let left = r.left + (r.width / 2) - (popW / 2);
-      
-      if (top + popH + margin > window.innerHeight){
-        top = r.top - popH - 10;
-      }
-      top = clamp(top, margin, window.innerHeight - popH - margin);
-      left = clamp(left, margin, window.innerWidth - popW - margin);
-      
-      popover.style.top = top + 'px';
-      popover.style.left = left + 'px';
-      
+
       popBackdrop.classList.add('open');
       popBackdrop.setAttribute('aria-hidden', 'false');
       popover.classList.add('open');
       popover.setAttribute('aria-hidden', 'false');
-      
+
       popClose.focus({ preventScroll: true });
+
+      wireCoverUI(teacher, lesson, cellData);
+    }
+
+    // Every department teacher (teachersList is already scoped to the
+    // head's own department) who has no class of their own at this lesson
+    // on this weekday, per the already-loaded scheduleMap — excludes the
+    // teacher whose lesson is being covered.
+    function getFreeDeptTeachersForLesson(lesson, excludeUid){
+      return teachersList.filter(t => {
+        if (t.uid === excludeUid) return false;
+        const sched = scheduleMap[t.uid];
+        return !sched || !sched[lesson];
+      });
+    }
+
+    function wireCoverUI(teacher, lesson, cellData){
+      const btnOpenCover = document.getElementById('btnOpenCover');
+      const coverSection = document.getElementById('coverSection');
+      const coverTeacherList = document.getElementById('coverTeacherList');
+      const btnAssignCover = document.getElementById('btnAssignCover');
+      const coverStatus = document.getElementById('coverStatus');
+      let selectedTeacherUid = null;
+
+      function renderFreeTeachers(){
+        const free = getFreeDeptTeachersForLesson(lesson, teacher.uid);
+        coverTeacherList.innerHTML = '';
+        if (!free.length){
+          const empty = document.createElement('div');
+          empty.className = 'muted';
+          empty.textContent = 'لا يوجد معلمون متفرغون في هذا القسم لهذه الحصة.';
+          coverTeacherList.appendChild(empty);
+          return;
+        }
+        free.forEach(t => {
+          const opt = document.createElement('button');
+          opt.type = 'button';
+          opt.className = 'cover-option';
+          opt.textContent = t.name;
+          opt.addEventListener('click', () => {
+            selectedTeacherUid = t.uid;
+            coverTeacherList.querySelectorAll('.cover-option').forEach(el => el.classList.remove('selected'));
+            opt.classList.add('selected');
+            btnAssignCover.disabled = false;
+          });
+          coverTeacherList.appendChild(opt);
+        });
+      }
+
+      btnOpenCover.addEventListener('click', () => {
+        const opening = coverSection.hidden;
+        coverSection.hidden = !coverSection.hidden;
+        if (opening) renderFreeTeachers();
+      });
+
+      btnAssignCover.addEventListener('click', async () => {
+        if (!selectedTeacherUid || btnAssignCover.disabled) return;
+        btnAssignCover.disabled = true;
+        coverStatus.style.color = '';
+        coverStatus.textContent = 'جارٍ إسناد التغطية...';
+        try{
+          await assignCover(teacher.uid, selectedTeacherUid, lesson, cellData.classKey);
+          coverStatus.style.color = 'var(--green)';
+          coverStatus.textContent = 'تم إسناد التغطية بنجاح.';
+        }catch(e){
+          console.error('assignCover failed:', e);
+          coverStatus.style.color = 'var(--red)';
+          coverStatus.textContent = 'تعذّر إسناد التغطية. حاول مرة أخرى.';
+          btnAssignCover.disabled = false;
+        }
+      });
+    }
+
+    // Writes a scheduleOverrides doc naming newTeacherUid as the covering
+    // teacher for this one date/lesson — the same mechanism (and doc-ID
+    // convention) depHead/schedual.html's accepted-swap flow uses, except
+    // here a department head assigns it directly with no approval step
+    // (firestore.rules already allows isHead() to create/update these).
+    // Any existing active cover for this exact slot is marked inactive
+    // first — a head can't delete a scheduleOverrides doc, only
+    // create/update, and leaving a stale one active would leave two
+    // overrides answering for the same original teacher/date/lesson.
+    async function assignCover(originalTeacherUid, newTeacherUid, lesson, classKey){
+      const dateISO = toInputDate(selectedDate);
+
+      const existingSnap = await getDocs(query(
+        collection(db, 'scheduleOverrides'),
+        where('date', '==', dateISO),
+        where('lesson', '==', lesson),
+        where('originalTeacherUid', '==', originalTeacherUid),
+        where('active', '==', true)
+      ));
+      await Promise.all(existingSnap.docs.map(d => updateDoc(d.ref, { active: false })));
+
+      const overrideId = `cover_${dateISO}_${lesson}_${originalTeacherUid}_${newTeacherUid}`;
+      await setDoc(doc(db, 'scheduleOverrides', overrideId), {
+        date: dateISO,
+        lesson,
+        classKey,
+        originalTeacherUid,
+        newTeacherUid,
+        active: true,
+        createdAt: serverTimestamp(),
+        type: 'cover'
+      }, { merge: true });
     }
 
     function closePopover(){
