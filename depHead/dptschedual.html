@@ -24,6 +24,7 @@
     :root{
       --primary:#033C54;
       --primary-2:#065372;
+      --primary-light:#065372;
 
       --page:#f6f8fb;
       --text:#0f172a;
@@ -49,6 +50,8 @@
 
       /* Header offset for sticky table head */
       --headerH: 122px;
+
+      --transition: transform .12s ease, box-shadow .12s ease, background-color .12s ease, border-color .12s ease, color .12s ease, opacity .12s ease;
     }
 
     *{ box-sizing:border-box; margin:0; padding:0 }
@@ -482,6 +485,24 @@
     }
     .btn-cover:hover{ background: var(--chip); transform: translateY(-1px); }
 
+    /* تسجيل الغياب — the primary, solid action (vs. تغطية's outline
+       style below it), matching the "attend" filled-button convention
+       used for attendance-taking everywhere else in the app. */
+    .btn-take-attendance{
+      width:100%;
+      height:48px;
+      border-radius:12px;
+      border:none;
+      background: linear-gradient(145deg, var(--primary-light), var(--primary));
+      color:#fff;
+      font-weight:900;
+      font-size:.95rem;
+      cursor:pointer;
+      box-shadow: 0 14px 30px rgba(3,60,84,.26);
+      transition: transform .12s ease, box-shadow .12s ease;
+    }
+    .btn-take-attendance:hover{ transform: translateY(-1px); }
+
     .cover-list{ display:flex; flex-direction:column; gap:8px; margin:10px 0; max-height:220px; overflow:auto; }
     .cover-option{
       display:flex; align-items:center; justify-content:space-between;
@@ -588,6 +609,40 @@
     @supports (-webkit-touch-callout: none) {
       .mobile-date-input { font-size: 16px !important; }
     }
+
+    /* Base chrome shared/attendance.js relies on the host page to provide
+       (.sheet, .modal, .btn, .btn.primary, .btn.cancel — its own bundled
+       STYLES only adds the #attendanceSheet-scoped refinements on top of
+       this). This page never hosted a sheet/modal before "تسجيل الغياب",
+       so these didn't exist here; copied from depHead/dptlead.html, the
+       page this feature is paired with, for a consistent look. */
+    .btn{font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;width:100%;min-height:68px;border:none;border-radius:18px;cursor:pointer;font-weight:800;font-size:1.1rem;letter-spacing:.2px;padding:18px 24px;transition:var(--transition);user-select:none;display:flex;align-items:center;justify-content:center;gap:12px;position:relative;overflow:hidden}
+    .btn::after{content:'';position:absolute;inset:0;background:rgba(255,255,255,.1);opacity:0;transition:var(--transition)}
+    .btn:hover::after{opacity:1}
+    .btn.cancel{background:#fff;color:var(--primary);border:1px solid rgba(3,60,84,.25)}
+    .btn.primary{background:linear-gradient(145deg,var(--primary-light),var(--primary));color:#fff;border:none}
+
+    .sheet{position:fixed;inset:0;z-index:1000;background:#fff;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .35s cubic-bezier(.22,.7,.25,1);overflow:hidden}
+    .sheet.open{transform:translateX(0)}
+    .sheet-header{background:#fff;border-bottom:1px solid var(--border);padding:18px 20px;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:10;box-shadow:0 2px 10px rgba(3,60,84,.06)}
+    .sheet-title{margin:0;font-size:1.2rem;font-weight:900;color:var(--primary);display:flex;align-items:center;gap:10px}
+    .sheet-body{padding:20px;overflow-y:auto;flex:1}
+    .back-btn{height:48px;padding:0 20px;border-radius:14px;border:1px solid rgba(3,60,84,.2);background:#fff;color:var(--primary);font-weight:800;cursor:pointer;box-shadow:var(--shadow-1);transition:var(--transition);display:flex;align-items:center;gap:8px}
+    .back-btn:hover{border-color:rgba(3,60,84,.4);transform:translateX(-2px)}
+
+    .modal{position:fixed;inset:0;z-index:1100;display:none}
+    .modal.open{display:grid;place-items:center}
+    .modal .overlay{position:absolute;inset:0;background:rgba(15,23,42,.35);backdrop-filter:blur(4px)}
+    .modal .card{position:relative;z-index:1;width:min(92vw,420px);background:#fff;border-radius:var(--radius-lg);box-shadow:var(--shadow-2);padding:22px;margin:16px}
+    .modal h3{margin:0 0 8px;font-size:1.15rem;color:var(--primary);font-weight:900}
+    .modal p{margin:0 0 12px;color:var(--muted);font-weight:800}
+    .modal .row{display:flex;gap:10px;justify-content:flex-start;margin-top:16px;flex-wrap:wrap}
+
+    @media (min-width: 860px){
+      .sheet-header{padding:22px 36px;gap:14px}
+      .sheet-title{font-size:1.25rem}
+      .modal .card{width:min(50vw,620px);padding:28px}
+    }
   </style>
 
   <!-- iOS home screen icon -->
@@ -664,7 +719,7 @@
     </div>
 
     <div id="stateDenied" class="state panel">
-      <div class="msg error">تم رفض الوصول. هذه الصفحة مخصّصة لرؤساء الأقسام فقط.</div>
+      <div class="msg error">تم رفض الوصول. يتطلّب هذا الجدول تسجيل بيانات معلّم مع تحديد القسم.</div>
     </div>
 
     <section id="stateOk" class="state full-width" aria-label="جدول المعلّمين">
@@ -712,6 +767,8 @@
       doc, getDoc, setDoc, updateDoc, serverTimestamp, Timestamp
     } from "/shared/firebase.js";
     import { resolveDepartmentName, getDepartmentSubjectFilters } from "/shared/departments.js";
+    import { mountAttendanceSheet, LESSON_END_GRACE_MINUTES } from "/shared/attendance.js";
+    import { kuwaitTodayISO, getCurrentKuwaitMinutes, parseTimeToMinutes } from "/shared/kuwait-time.js";
 
 
 
@@ -809,6 +866,65 @@
     let scheduleMap = Object.create(null);
     let attendanceMap = Object.create(null);
     let selectedDate = new Date();
+    // True only for the actual department head — regular teachers reach
+    // this page too now (Teachers/user.html's جدول القسم), scoped to their
+    // own department, but only a head may assign تغطية.
+    let isHeadViewer = false;
+
+    // "تسجيل الغياب" — lets any teacher in the department record
+    // attendance for a colleague's lesson directly from this grid, without
+    // needing to be signed into that lesson themselves. isPrivilegedEdit
+    // is just the early, friendlier client-side gate (per shared/
+    // attendance.js's own comment on openForAdminCreate) — the real
+    // authorization is firestore.rules' department-peer branch on
+    // attendanceSessions' create rule, which independently checks the
+    // caller and the named teacher share a department.
+    const attendance = mountAttendanceSheet({
+      db, auth, isPrivilegedEdit: true,
+      onSaved: () => { closePopover(); loadGridForDate(selectedDate); },
+    });
+
+    // Best-effort only — the real enforcement is firestore.rules'
+    // canWriteSessionTime, evaluated against whatever sessionStartTs/
+    // sessionCutoffTs shared/attendance.js itself computes at save time.
+    // This is purely so "تسجيل الغياب" isn't shown for a lesson that's
+    // obviously not live right now, instead of opening the sheet only to
+    // fail at save time.
+    let cachedLessonTimes = null;
+    const DEFAULT_LESSON_TIMES_FALLBACK = [
+      { start: "07:55", end: "08:40" }, { start: "08:45", end: "09:30" },
+      { start: "09:35", end: "10:20" }, { start: "10:35", end: "11:20" },
+      { start: "11:25", end: "12:10" }, { start: "12:25", end: "13:10" },
+      { start: "13:15", end: "13:55" },
+    ];
+    async function ensureLessonTimesLoaded(){
+      if (cachedLessonTimes) return cachedLessonTimes;
+      try {
+        const snap = await getDoc(doc(db, 'settings', 'lessonTimes'));
+        const times = snap.exists() && Array.isArray(snap.data()?.times) ? snap.data().times : null;
+        cachedLessonTimes = (times && times.length) ? times : DEFAULT_LESSON_TIMES_FALLBACK;
+      } catch (e) {
+        console.error('[dptschedual] lessonTimes fetch failed:', e);
+        cachedLessonTimes = DEFAULT_LESSON_TIMES_FALLBACK;
+      }
+      return cachedLessonTimes;
+    }
+    function isLessonLiveNow(lessonIndex){
+      const times = cachedLessonTimes || DEFAULT_LESSON_TIMES_FALLBACK;
+      const t = times[lessonIndex - 1];
+      if (!t || !t.start || !t.end) return false;
+      const now = getCurrentKuwaitMinutes();
+      const s = parseTimeToMinutes(t.start);
+      const e = parseTimeToMinutes(t.end);
+      return now >= s && now <= e + LESSON_END_GRACE_MINUTES;
+    }
+    // Local-time comparison, matching this file's own existing date
+    // handling (toInputDate/startOfDay/endOfDay are all local-browser-time,
+    // not Kuwait-specific) — "تسجيل الغياب" only ever appears for whatever
+    // day this file itself considers "today".
+    function isViewingToday(){
+      return toInputDate(selectedDate) === toInputDate(new Date());
+    }
 
     // Performance safety: limit concurrency
     async function promisePool(items, worker, concurrency = 12){
@@ -1109,6 +1225,11 @@
         </div>
         ` : ''}
 
+        ${canTakeAttendanceNow(cellData, lesson) ? `
+        <button type="button" class="btn-take-attendance" id="btnTakeAttendance">تسجيل الغياب</button>
+        ` : ''}
+
+        ${isHeadViewer ? `
         <button type="button" class="btn-cover" id="btnOpenCover">تغطية</button>
         <div class="section" id="coverSection" hidden>
           <div class="sec-title"><span>إسناد تغطية لهذه الحصة</span></div>
@@ -1119,6 +1240,7 @@
           <button type="button" class="btn-assign" id="btnAssignCover" disabled>تعيين</button>
           <div class="muted" id="coverStatus" style="font-size:.85rem; margin-top:6px;"></div>
         </div>
+        ` : ''}
       `;
 
       // The 520px cap reads fine on a desktop-sized viewport, but on a
@@ -1143,7 +1265,31 @@
 
       popClose.focus({ preventScroll: true });
 
-      wireCoverUI(teacher, lesson, cellData);
+      wireTakeAttendanceUI(teacher, lesson, cellData);
+      if (isHeadViewer) wireCoverUI(teacher, lesson, cellData);
+    }
+
+    // Governs both whether the button renders (openPopoverForCell) and
+    // whether the click handler does anything (wireTakeAttendanceUI) —
+    // kept as one function so the two can never disagree.
+    function canTakeAttendanceNow(cellData, lesson){
+      return !cellData.taken && isViewingToday() && isLessonLiveNow(lesson);
+    }
+
+    function wireTakeAttendanceUI(teacher, lesson, cellData){
+      const btn = document.getElementById('btnTakeAttendance');
+      if (!btn) return;
+      btn.addEventListener('click', () => {
+        if (!canTakeAttendanceNow(cellData, lesson)) return;
+        closePopover();
+        attendance.openForAdminCreate({
+          date: kuwaitTodayISO(),
+          classKey: cellData.classKey,
+          lesson,
+          teacherUid: teacher.uid,
+          teacherName: teacher.name,
+        });
+      });
     }
 
     // Every department teacher (teachersList is already scoped to the
@@ -1319,26 +1465,28 @@
       try {
         const tRef = doc(db, 'teachers', user.uid);
         const snap = await getDoc(tRef);
-        const data = snap.exists() ? snap.data() : {};
-        
+        if (!snap.exists()) { show(sDenied); return; }
+        const data = snap.data() || {};
+
+        // Any teacher may open this page now (Teachers/user.html's جدول
+        // القسم), scoped to their own department — تغطية stays exclusive
+        // to the actual department head, gated separately in
+        // openPopoverForCell/wireCoverUI via isHeadViewer.
         const role = (data?.role || '').toString().toLowerCase();
-        if (role !== 'head') {
-          show(sDenied);
-          return;
-        }
-        
-        // Get head's department
+        isHeadViewer = role === 'head';
+
         headDept = resolveDepartmentName(data.department || data.dept || data.subject || '');
         if (!headDept) {
           show(sDenied);
           return;
         }
-        
+
         // Load teachers in department
         teachersList = await loadDepartmentTeachers(headDept);
-        
+
         // Load initial grid
         selectedDate = new Date();
+        ensureLessonTimesLoaded(); // not awaited — best-effort, see isLessonLiveNow
         await loadGridForDate(selectedDate);
       } catch (e) {
         console.error('Auth error:', e);
@@ -1347,7 +1495,7 @@
     });
 
     backBtn.addEventListener('click', () => {
-      window.location.href = 'dptlead.html';
+      window.location.href = isHeadViewer ? 'dptlead.html' : '/Teachers/user.html';
     });
 
     document.addEventListener('click', (e) => {
