@@ -706,6 +706,15 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
     return (t && typeof t.toMillis === "function") ? t.toMillis() : 0;
   }
 
+  // admins/adminschedule.html stamps updatedAt on every save (createdAt only
+  // on the first one) — updatedAt is the more accurate "when was this cell
+  // last decided" signal, since an edit to an already-existing cell doesn't
+  // touch createdAt at all.
+  function scheduleRowTimestampMs(row) {
+    const t = row?.updatedAt || row?.createdAt;
+    return (t && typeof t.toMillis === "function") ? t.toMillis() : 0;
+  }
+
   // Merges "I'm the incoming teacher" and "I'm the outgoing teacher" query
   // results for a lesson into `map`, resolving a lesson touched by BOTH
   // (a swap later reversed by a second swapRequest — see the call site's
@@ -765,7 +774,20 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
         let applies = (todayDayIndex >= 0 && Number(data.dayIndex) === todayDayIndex) || data.date === dateISO;
         if (!applies) return;
         if (overriddenClassKeys.has(normalizeClassKey(classKeyFromRow(data)))) return;
-        if (!map.has(key)) {
+        // A teacher should only ever have one class for a given lesson —
+        // this query is teacherUid-only (not scoped to a class), so two
+        // rows genuinely competing for the same key here is a scheduling
+        // conflict admins/adminschedule.html's own save-time check is
+        // meant to prevent, but not the only way one can end up on record
+        // (e.g. a leftover legacy date-keyed row from before the schedule
+        // moved to weekday-recurring). Reported case: a teacher assigned to
+        // two classes at the same lesson had "take attendance" resolve to
+        // the wrong one, because whichever row Firestore happened to
+        // return first silently won. Preferring the most recently
+        // saved/updated row instead means the admin's latest scheduling
+        // decision wins, not query order.
+        const existing = map.get(key);
+        if (!existing || scheduleRowTimestampMs(data) > scheduleRowTimestampMs(existing)) {
           map.set(key, { ...data, _source: "normal", _coveredAway: false });
         }
       });
