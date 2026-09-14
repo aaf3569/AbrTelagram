@@ -2372,10 +2372,29 @@
       // the custom schedule fully replaces it below.
       const overriddenClassKeys = getOverriddenClassKeys(customRows);
 
+      // A teacher should only ever have one class for a given lesson — this
+      // query has no classKey filter (teacherUid + dayIndex only), so two
+      // rows genuinely competing for the same lesson key here is a
+      // scheduling conflict admins/adminschedule.html's save-time check is
+      // meant to prevent, but not the only way one can end up on record
+      // (e.g. a leftover row from testing/reassignment). Unconditionally
+      // overwriting on every matching doc made this resolve to whichever
+      // row Firestore's query happened to return last — unspecified order
+      // for a plain equality query, not "whichever is actually correct."
+      // Preferring the most recently saved/updated row instead means the
+      // admin's latest scheduling decision wins, not query order.
+      const scheduleRowMs = (row) => {
+        const t = row?.updatedAt || row?.createdAt;
+        return (t && typeof t.toMillis === 'function') ? t.toMillis() : 0;
+      };
       snap.forEach(d=>{
         const x=d.data();
         if(isClassOverriddenForToday(x, overriddenClassKeys)) return;
-        byLesson.set(String(x.lesson), x);
+        const key = String(x.lesson);
+        const existing = byLesson.get(key);
+        if(!existing || scheduleRowMs(x) > scheduleRowMs(existing)){
+          byLesson.set(key, x);
+        }
       });
 
       const mapByDate = cache.overridesByTeacher.get(uid) || new Map();

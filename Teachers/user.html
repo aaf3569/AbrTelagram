@@ -1907,8 +1907,23 @@
                     }
 
                     if (appliesToday) {
-                        // Add to map, but don't overwrite if already exists (date-based takes precedence)
-                        if (!map.has(lessonKey)) {
+                        // A teacher should only ever have one class for a given
+                        // lesson — this query has no classKey filter (teacherUid
+                        // only), so two rows genuinely competing for the same
+                        // lessonKey here is exactly the "orphaned legacy doc from
+                        // an old teacher reassignment" scenario described above,
+                        // just via a matching dayIndex instead of a stray date/day
+                        // field. Keeping the first one seen (Firestore's query
+                        // order here is unspecified) let a leftover assignment
+                        // silently win over the admin's current one. Preferring
+                        // whichever row was most recently saved/updated instead
+                        // means the latest scheduling decision wins.
+                        const existing = map.get(lessonKey);
+                        const rowMs = (row) => {
+                            const t = row?.updatedAt || row?.createdAt;
+                            return (t && typeof t.toMillis === 'function') ? t.toMillis() : 0;
+                        };
+                        if (!existing || rowMs(data) > rowMs(existing)) {
                             map.set(lessonKey, {
                                 ...data,
                                 _source: 'normal',
