@@ -2956,6 +2956,26 @@
                     document.querySelectorAll('.lazy-load').forEach(el => el.classList.add('loaded'));
                 }, 100);
                 show(sDash);
+                const attendanceParams = new URLSearchParams(location.search);
+                const requestedDate = attendanceParams.get('attendanceDate');
+                const requestedLesson = Number(attendanceParams.get('attendanceLesson'));
+                const requestedClass = attendanceParams.get('attendanceClass');
+                if (requestedDate && requestedLesson && requestedClass) {
+                    // Consume the deep link once so a refresh cannot reopen the sheet.
+                    history.replaceState(null, '', location.pathname + location.hash);
+                    try {
+                        const live = await attendance.getCurrentLessonClass(false);
+                        if (live.ok && live.date === requestedDate && live.lesson === requestedLesson &&
+                            normalizeClassKey(live.classKey) === normalizeClassKey(requestedClass)) {
+                            await attendance.start();
+                        } else {
+                            showArabicToast(live.reason || 'not_my_lesson');
+                        }
+                    } catch (error) {
+                        console.error('Could not open attendance from schedule:', error);
+                        showArabicToast('not_my_lesson');
+                    }
+                }
                 initNotificationPopup(db, { uid: user.uid, name: data?.name || '' });
                 startClassHighlightTicker();
                 startPresenceHeartbeat(db, user.uid);
@@ -3921,8 +3941,6 @@
 <script src="/name-glow.js" defer></script>
 </body>
 </html>
-
-
 
 
 

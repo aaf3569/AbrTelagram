@@ -1246,6 +1246,7 @@
     } from "/shared/schedule-priority.js";
     import { fetchClassList, sortClassList, primeClassList } from "/shared/class-registry.js";
     import { DEPARTMENT_LIST, resolveDepartmentName, getDepartmentSubjectFilters } from "/shared/departments.js";
+    import { getDayScheduleHighlight } from "/shared/day-schedule-highlight.js";
 
 
 
@@ -1359,13 +1360,16 @@
       return labels;
     }
 
-    function renderOpportunityDivider(parentEl, lessonNumber){
+    function renderOpportunityDivider(parentEl, lessonNumber, highlight){
       if(!parentEl) return;
       const labels = getOpportunityLabelsForLesson(lessonNumber);
       if(!labels.length) return;
       const divider = document.createElement('div');
       divider.className = 'opportunity-divider';
       divider.dataset.lessonAfter = String(lessonNumber);
+      if (highlight?.type === 'break' && highlight.afterLesson === lessonNumber) {
+        divider.classList.add('current-lesson');
+      }
       divider.innerHTML = `<span class="opportunity-divider-label">${escapeHtml(labels.join(' • '))}</span>`;
       parentEl.appendChild(divider);
     }
@@ -1739,7 +1743,7 @@
     const INSTAGRAM_POST_WIDTH = 1080;
     const INSTAGRAM_POST_HEIGHT = 1350;
 
-    /* ========= NEW: time → current lesson index ========= */
+    /* ========= Local school time for the day-view highlight ========= */
     function getCurrentKuwaitMinutes() {
       const now = new Date();
       const fmt = new Intl.DateTimeFormat('en-GB', {
@@ -1754,36 +1758,13 @@
       return h * 60 + m;
     }
 
-    function parseTimeToMinutes(t) {
-      const [h, m] = t.split(':').map(Number);
-      return h * 60 + m;
-    }
-
-    // returns 1..7 or null if outside all lessons
-    function getActiveLessonIndex() {
-      const minutes = getCurrentKuwaitMinutes();
-      for (let i = 0; i < LESSON_TIMES.length; i++) {
-        const start = parseTimeToMinutes(LESSON_TIMES[i].start);
-        const end   = parseTimeToMinutes(LESSON_TIMES[i].end);
-        if (minutes >= start && minutes < end) {
-          return i + 1;
-        }
-      }
-      return null;
-    }
-
-    // A custom/extra-day lesson runs on its own bell time, not the site-wide
-    // one `activeLesson` (from getActiveLessonIndex) was computed against —
-    // check it independently instead of comparing against activeLesson.
-    function isLessonCurrentNow(dayISO, todayISO, lessonNumber, activeLesson, customTimes){
-      if (dayISO !== todayISO) return false;
-      if (customTimes) {
-        const minutes = getCurrentKuwaitMinutes();
-        const start = parseTimeToMinutes(customTimes.start);
-        const end = parseTimeToMinutes(customTimes.end);
-        return minutes >= start && minutes < end;
-      }
-      return activeLesson === lessonNumber;
+    function getTodayHighlight(entriesByLesson, dayCustomTimes){
+      const times = Array.from({ length: FIXED_LESSON_COUNT }, (_, index) => {
+        const lesson = index + 1;
+        const hit = entriesByLesson.get(String(lesson));
+        return resolveDisplayLessonTimes(hit, dayCustomTimes, lesson) || LESSON_TIMES[index];
+      });
+      return getDayScheduleHighlight(times, SCHOOL_BREAKS, getCurrentKuwaitMinutes());
     }
 
     /* ========= Modal helpers ========= */
@@ -2080,7 +2061,7 @@
       activeDayCustomTimes = dayCustomTimes ?? null;
 
       const todayISO = kuwaitTodayISO();
-      const activeLesson = (dayISO === todayISO) ? getActiveLessonIndex() : null;
+      const highlight = (dayISO === todayISO) ? getTodayHighlight(entriesByLesson, dayCustomTimes) : null;
 
       const wrap = document.createElement('div');
       wrap.className = 'table';
@@ -2146,14 +2127,14 @@
           });
         }
 
-        if (isLessonCurrentNow(dayISO, todayISO, i, activeLesson, customTimes)) {
+        if (highlight?.type === 'lesson' && highlight.lessonIndex === i) {
           cLesson.classList.add('current-lesson');
           cClass.classList.add('current-lesson');
         }
 
         wrap.appendChild(cLesson);
         wrap.appendChild(cClass);
-        renderOpportunityDivider(wrap, i);
+        renderOpportunityDivider(wrap, i, highlight);
       }
 
       const compactWrap = document.createElement('div');
@@ -2209,14 +2190,14 @@
         const compactRow = document.createElement('div');
         compactRow.className = 'compact-row';
         compactRow.dataset.lessonIndex = String(i);
-        if (isLessonCurrentNow(dayISO, todayISO, i, activeLesson, customTimes)) {
+        if (highlight?.type === 'lesson' && highlight.lessonIndex === i) {
           compactRow.classList.add('current-lesson');
         }
         compactRow.appendChild(compactLesson);
         compactRow.appendChild(compactClass);
 
         compactWrap.appendChild(compactRow);
-        renderOpportunityDivider(compactWrap, i);
+        renderOpportunityDivider(compactWrap, i, highlight);
       }
 
       containerMain.appendChild(wrap);
@@ -3887,14 +3868,21 @@
         <button id="actSwap" class="filter-btn btn-solid" type="button">
           <i class="fas fa-right-left"></i> طلب تبديل
         </button>
-        <button id="actClose" class="filter-btn btn-ghost" type="button">
-          <i class="fas fa-xmark"></i> إغلاق
+        <button id="actAttendance" class="filter-btn btn-ghost" type="button">
+          <i class="fas fa-clipboard-check"></i> تسجيل الغياب
         </button>
       `;
 
       openModal({ title: 'إدارة الحصة', bodyHtml: body, footerHtml: footer });
 
-      document.getElementById('actClose').addEventListener('click', closeModal);
+      document.getElementById('actAttendance').addEventListener('click', () => {
+        if (meta.date !== kuwaitTodayISO()) {
+          toast({ title: 'الحصة غير متاحة', text: 'يمكن تسجيل الغياب في يوم الحصة فقط.', icon: 'fa-clock' });
+          return;
+        }
+        const params = new URLSearchParams({ attendanceDate: meta.date, attendanceLesson: String(meta.lesson), attendanceClass: meta.classKey });
+        location.href = `user.html?${params}`;
+      });
       document.getElementById('actCover').addEventListener('click', ()=> openRequestModal('cover', meta));
       document.getElementById('actSwap').addEventListener('click', ()=> openRequestModal('swap', meta));
     }
@@ -5137,34 +5125,30 @@
     }
 
     /* ========= Current Lesson Highlight Update ========= */
-    // Re-evaluated on a timer (see startCurrentLessonTimer) independently of
-    // the render loop in renderTodayTable — must use the exact same
-    // per-lesson time resolution (isLessonCurrentNow/resolveDisplayLessonTimes)
-    // that render used, or it periodically stomps a correct custom-schedule
-    // highlight with one computed from the generic site-wide bell schedule.
+    // The timer uses the same effective bell times as renderTodayTable, so
+    // custom-day lessons and breaks stay in sync without a full rerender.
     function updateCurrentLessonHighlight() {
+      if (currentView !== 'today') return;
       const todayISO = kuwaitTodayISO();
+      containerMain.querySelectorAll('.cell.current-lesson, .compact-row.current-lesson, .opportunity-divider.current-lesson')
+        .forEach(el => el.classList.remove('current-lesson'));
+      if (activeTodayISO !== todayISO) return;
 
-      if (currentView === 'today' && activeTodayISO === todayISO) {
-        const activeLesson = getActiveLessonIndex();
-
-        containerMain.querySelectorAll('.cell.current-lesson').forEach(el => el.classList.remove('current-lesson'));
-        containerMain.querySelectorAll('.compact-row.current-lesson').forEach(el => el.classList.remove('current-lesson'));
-
-        for (let i = 1; i <= FIXED_LESSON_COUNT; i++) {
-          const hit = activeTodayByLesson.get(String(i));
-          const customTimes = resolveDisplayLessonTimes(hit, activeDayCustomTimes, i);
-          if (!isLessonCurrentNow(activeTodayISO, todayISO, i, activeLesson, customTimes)) continue;
-
-          const mainLessonCell = containerMain.querySelector(`.table .cell[data-row-role="lesson"][data-lesson-index="${i}"]`);
-          const mainClassCell = containerMain.querySelector(`.table .cell[data-row-role="class"][data-lesson-index="${i}"]`);
-          if (mainLessonCell) mainLessonCell.classList.add('current-lesson');
-          if (mainClassCell) mainClassCell.classList.add('current-lesson');
-
-          const compactRow = containerMain.querySelector(`.compact-table .compact-row[data-lesson-index="${i}"]`);
-          if (compactRow) compactRow.classList.add('current-lesson');
-        }
+      const highlight = getTodayHighlight(activeTodayByLesson, activeDayCustomTimes);
+      if (highlight?.type === 'break') {
+        containerMain.querySelectorAll(`.opportunity-divider[data-lesson-after="${highlight.afterLesson}"]`)
+          .forEach(el => el.classList.add('current-lesson'));
+        return;
       }
+      if (highlight?.type !== 'lesson') return;
+
+      const i = highlight.lessonIndex;
+      const mainLessonCell = containerMain.querySelector(`.table .cell[data-row-role="lesson"][data-lesson-index="${i}"]`);
+      const mainClassCell = containerMain.querySelector(`.table .cell[data-row-role="class"][data-lesson-index="${i}"]`);
+      if (mainLessonCell) mainLessonCell.classList.add('current-lesson');
+      if (mainClassCell) mainClassCell.classList.add('current-lesson');
+      const compactRow = containerMain.querySelector(`.compact-table .compact-row[data-lesson-index="${i}"]`);
+      if (compactRow) compactRow.classList.add('current-lesson');
     }
 
     /* ========= Init week ========= */
