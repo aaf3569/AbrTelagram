@@ -4365,28 +4365,51 @@
           });
         });
 
-        // 500 writes per batch is Firestore's hard limit — well under it.
-        const CHUNK = 400;
+        // A batch commit is all-or-nothing — one document whose stored
+        // fields no longer pass the current write rule (e.g. an older
+        // record from before a validation was tightened) would silently
+        // sink every other document sharing its batch, as "insufficient
+        // permissions" with no indication which doc caused it. Writing
+        // each document independently means the rest still get re-saved,
+        // and any real failures are reported by doc ID instead of
+        // aborting the whole operation.
+        const CONCURRENCY = 20;
         let written = 0;
-        for(let i=0; i<docs.length; i+=CHUNK){
-          const chunk = docs.slice(i, i+CHUNK);
-          const batch = writeBatch(db);
-          chunk.forEach(({ id }) => {
-            batch.set(doc(db,'schedules',id), { updatedAt: serverTimestamp() }, { merge:true });
-          });
-          await batch.commit();
-          written += chunk.length;
+        const failures = [];
+        let cursor = 0;
+        async function worker(){
+          while(cursor < docs.length){
+            const { id, data } = docs[cursor++];
+            try{
+              await setDoc(doc(db,'schedules',id), { updatedAt: serverTimestamp() }, { merge:true });
+              written++;
+            }catch(e){
+              failures.push({ id, classKey: data.classKey || '', lesson: data.lesson || '', message: e?.message || String(e) });
+            }
+          }
         }
+        await Promise.all(Array.from({ length: Math.min(CONCURRENCY, docs.length) }, worker));
 
-        if(conflicts.length){
-          addStatusLine("warn", `تمّت إعادة حفظ ${written} حصة. لكن تم العثور على ${conflicts.length} تعارض — معلّم مسند لأكثر من فصل في نفس اليوم/الحصة، يجب تصحيحه يدويًّا:`);
-          conflicts.forEach(c => {
-            addStatusLine("warn", `${c.teacherName}: ${c.classKeys.join(' ، ')} — ${DAYS_AR[c.dayIndex] || 'يوم غير معروف'}، الحصة ${c.lesson}`);
+        const parts = [];
+        if(failures.length){
+          parts.push(`<div class="warn">تعذّر إعادة حفظ ${failures.length} حصة (من أصل ${docs.length}) — على الأرجح بيانات قديمة لم تعد تطابق قواعد الحفظ الحالية:</div>`);
+          failures.forEach(f => {
+            parts.push(`<div class="warn">${f.classKey || '—'} — الحصة ${f.lesson || '—'} (${f.id})</div>`);
           });
-        } else {
-          setStatusHTML(`<div class="ok">تمّت إعادة حفظ ${written} حصة بنجاح في كل الجداول. لا يوجد أي تعارض.</div>`);
-          openSaveSuccessModal();
         }
+        if(conflicts.length){
+          parts.push(`<div class="warn">تم العثور على ${conflicts.length} تعارض — معلّم مسند لأكثر من فصل في نفس اليوم/الحصة، يجب تصحيحه يدويًّا:</div>`);
+          conflicts.forEach(c => {
+            parts.push(`<div class="warn">${c.teacherName}: ${c.classKeys.join(' ، ')} — ${DAYS_AR[c.dayIndex] || 'يوم غير معروف'}، الحصة ${c.lesson}</div>`);
+          });
+        }
+        if(!failures.length && !conflicts.length){
+          parts.push(`<div class="ok">تمّت إعادة حفظ ${written} حصة بنجاح في كل الجداول. لا يوجد أي تعارض.</div>`);
+        } else {
+          parts.unshift(`<div class="ok">تمّت إعادة حفظ ${written} حصة بنجاح.</div>`);
+        }
+        setStatusHTML(parts.join(''));
+        if(!failures.length && !conflicts.length) openSaveSuccessModal();
 
         if(selectedClassKey) await fetchExisting();
       }catch(e){
