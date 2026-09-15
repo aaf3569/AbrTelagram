@@ -788,6 +788,12 @@
                         </span>
                     </button>
                     <div id="telegramSettingsSlot"></div>
+                    <button id="userBetaBtn" class="btn ghost" type="button">
+                        <span>userbeta</span>
+                        <span class="icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6M10 3v5.5L4.5 18a2 2 0 0 0 1.8 3h11.4a2 2 0 0 0 1.8-3L14 8.5V3"/><path d="M7 15h10"/></svg>
+                        </span>
+                    </button>
                     <button id="suggestBtn" class="btn ghost" type="button">
                         <span>اقتراح / بلاغ</span>
                         <span class="icon" aria-hidden="true">
@@ -1098,6 +1104,7 @@
         const g12List = document.getElementById('g12List');
         const logoutBtn = document.getElementById('logoutBtn');
         const suggestBtn = document.getElementById('suggestBtn');
+        const userBetaBtn = document.getElementById('userBetaBtn');
         const teacherScheduleBtn = document.getElementById('teacherScheduleBtn');
         const adminScheduleEditBtn = document.getElementById('adminScheduleEditBtn');
         const morningLateBtn = document.getElementById('morningLateBtn');
@@ -3886,6 +3893,13 @@
             await signOut(auth);
             location.href='/index.html';
         });
+
+        if (userBetaBtn) {
+            userBetaBtn.addEventListener('click', ()=> {
+                try { sessionStorage.setItem('teacherScheduleReturnTo', '/teachers/user.html'); } catch {}
+                location.href = '/Teachers/userbeta.html';
+            });
+        }
 
         /* ========= جدول المعلم — choice popup (جدولي / جدول القسم) ========= */
         if (teacherScheduleBtn) {
