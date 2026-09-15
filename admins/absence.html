@@ -788,7 +788,11 @@
     // here to every student in scope. Per-lesson records are never counted
     // as separate absences/presences; they're kept on `records` so the UI
     // can still show exactly which lessons made up that day's status.
-    // Priority when a day mixes statuses: absent > late > present.
+    //
+    // The three flags below are independent, not a single exclusive status:
+    // a day can be both "late" (a تأخير lesson) and still count toward
+    // حضور — being late still means the student showed up. The only thing
+    // that zeroes out the present count for a day is an actual absence.
     function groupRowsByStudentDay(rows) {
       const days = new Map();
       for (const r of rows) {
@@ -802,7 +806,9 @@
       }
       return [...days.values()].map(day => {
         const statuses = new Set(day.records.map(r => r.status));
-        day.status = statuses.has('absent') ? 'absent' : statuses.has('late') ? 'late' : 'present';
+        day.hasAbsent = statuses.has('absent');
+        day.hasLate = statuses.has('late');
+        day.countsPresent = !day.hasAbsent && (statuses.has('present') || statuses.has('late'));
         return day;
       });
     }
@@ -810,10 +816,10 @@
     // ---------- Stats cards (home overview + per-grade) ----------
     function computeStats(students, rows) {
       const days = groupRowsByStudentDay(rows);
-      const present = days.filter(d => d.status === 'present').length;
-      const absent = days.filter(d => d.status === 'absent').length;
-      const late = days.filter(d => d.status === 'late').length;
-      const recorded = present + absent + late;
+      const present = days.filter(d => d.countsPresent).length;
+      const absent = days.filter(d => d.hasAbsent).length;
+      const late = days.filter(d => d.hasLate).length;
+      const recorded = days.length;
       const rate = recorded ? Math.round((present / recorded) * 100) : 0;
       return { total: students.length, present, absent, late, rate };
     }
@@ -1040,14 +1046,15 @@
     // cards — never a raw per-lesson-record count.
     function renderMiniStats() {
       const days = groupRowsByStudentDay(filteredRawRows());
-      miniPresent.textContent = toArabicDigits(days.filter(d => d.status === 'present').length);
-      miniAbsent.textContent = toArabicDigits(days.filter(d => d.status === 'absent').length);
-      miniLate.textContent = toArabicDigits(days.filter(d => d.status === 'late').length);
+      miniPresent.textContent = toArabicDigits(days.filter(d => d.countsPresent).length);
+      miniAbsent.textContent = toArabicDigits(days.filter(d => d.hasAbsent).length);
+      miniLate.textContent = toArabicDigits(days.filter(d => d.hasLate).length);
     }
 
     function renderFilteredList() {
       renderMiniStats();
-      const days = groupRowsByStudentDay(filteredRawRows()).filter(d => d.status === statusFilter);
+      const allDays = groupRowsByStudentDay(filteredRawRows());
+      const days = allDays.filter(d => statusFilter === 'absent' ? d.hasAbsent : statusFilter === 'late' ? d.hasLate : d.countsPresent);
 
       days.sort((a, b) => {
         if (a.date !== b.date) return b.date.localeCompare(a.date);
@@ -1251,8 +1258,8 @@
         // student per day, matching the on-screen stats); the itemized
         // tables below still list every individual lesson-level record.
         const dayGroups = groupRowsByStudentDay(rows);
-        const absentDaysCount = dayGroups.filter(d => d.status === 'absent').length;
-        const lateDaysCount = dayGroups.filter(d => d.status === 'late').length;
+        const absentDaysCount = dayGroups.filter(d => d.hasAbsent).length;
+        const lateDaysCount = dayGroups.filter(d => d.hasLate).length;
 
         // Resolve teacher names up front (small, deduped set — cheap even
         // unpooled since teacherNameCache collapses repeats).
