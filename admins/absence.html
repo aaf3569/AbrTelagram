@@ -1123,15 +1123,20 @@
 
         const expand = document.createElement('div');
         expand.className = 'expand';
-        const recordsHtml = recs.map((r, idx) => `
+        const recordsHtml = recs.map((r, idx) => {
+          const recWord = r.status === 'absent' ? 'غياب' : r.status === 'late' ? 'تأخير' : 'حضور';
+          const recBadgeClass = r.status === 'absent' ? 'b-absent' : r.status === 'late' ? 'b-late' : 'b-present';
+          const lessonLabel = r.lessonLabel || ('الحصة ' + toArabicDigits(r.lessonIndex || ''));
+          return `
           <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 0; ${idx > 0 ? 'border-top:1px solid var(--border);' : ''}">
             <div style="min-width:0;">
-              <div><b>${r.lessonLabel || ('حصة ' + toArabicDigits(r.lessonIndex || ''))}</b></div>
+              <div><b>${recWord} ${lessonLabel}</b></div>
               <div class="sub" id="who-${r.id}">جاري التحميل بيانات المسجّل…</div>
             </div>
-            <span class="badge ${r.status === 'absent' ? 'b-absent' : r.status === 'late' ? 'b-late' : 'b-present'}">${r.status === 'absent' ? 'غياب' : r.status === 'late' ? 'تأخير' : 'حضور'}</span>
+            <span class="badge ${recBadgeClass}">${recWord}</span>
           </div>
-        `).join('');
+        `;
+        }).join('');
         expand.innerHTML = `
           <div style="display:flex; flex-direction:column; gap:2px;">
             <div style="padding-bottom:6px;"><b>الطالب:</b> ${day._student?.name || '—'}</div>
