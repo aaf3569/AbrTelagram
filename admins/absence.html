@@ -408,6 +408,7 @@
           <div class="stats-header">
             <div class="stats-title">نظرة عامة على كل المدرسة</div>
           </div>
+          <div class="muted" id="homeStatsRange" style="font-size:.82rem; font-weight:700; margin-top:-6px;">—</div>
           <div class="filters-bar stats-filter-row" id="homeStatsFilterBar">
             <button class="filter-chip active" data-stats-filter="today" type="button">اليوم</button>
             <button class="filter-chip" data-stats-filter="thisWeek" type="button">هذا الأسبوع</button>
@@ -441,6 +442,7 @@
         <div class="stats-header">
           <div class="stats-title" id="gradeStatsTitle">إحصائيات الصف</div>
         </div>
+        <div class="muted" id="gradeStatsRange" style="font-size:.82rem; font-weight:700; margin-top:-6px;">—</div>
         <div class="filters-bar stats-filter-row" id="gradeStatsFilterBar">
           <button class="filter-chip active" data-stats-filter="today" type="button">اليوم</button>
           <button class="filter-chip" data-stats-filter="thisWeek" type="button">هذا الأسبوع</button>
@@ -570,8 +572,10 @@
     const classesFilterBar = document.getElementById('classesFilterBar');
     const homeStatsFilterBar = document.getElementById('homeStatsFilterBar');
     const homeStatsGrid = document.getElementById('homeStatsGrid');
+    const homeStatsRange = document.getElementById('homeStatsRange');
     const gradeStatsFilterBar = document.getElementById('gradeStatsFilterBar');
     const gradeStatsGrid = document.getElementById('gradeStatsGrid');
+    const gradeStatsRange = document.getElementById('gradeStatsRange');
     const gradeStatsTitle = document.getElementById('gradeStatsTitle');
     const miniPresent = document.getElementById('miniPresent');
     const miniAbsent = document.getElementById('miniAbsent');
@@ -844,11 +848,21 @@
       `;
     }
 
+    // Makes the exact period a stats card is summing unambiguous — a wide
+    // range legitimately adds up one حضور/غياب/تأخير per student per school
+    // day, so it can look "too big" next to the total student count unless
+    // it's clear how many days are actually being summed.
+    function describeRange(startISO, endISO) {
+      if (startISO === endISO) return `يوم واحد: ${toArabicDigits(startISO)}`;
+      return `من ${toArabicDigits(startISO)} إلى ${toArabicDigits(endISO)}`;
+    }
+
     async function loadHomeStats() {
       const myRequestId = ++statsRequestId;
       renderStatsLoading(homeStatsGrid);
+      const { startISO, endISO } = rangeForFilter(statsTimeFilter);
+      homeStatsRange.textContent = describeRange(startISO, endISO);
       try {
-        const { startISO, endISO } = rangeForFilter(statsTimeFilter);
         const { students, rows } = await fetchAttendanceForScope({ type: 'all' }, startISO, endISO);
         if (myRequestId !== statsRequestId) return; // a newer request/filter change superseded this one
         renderStatCards(homeStatsGrid, computeStats(students, rows));
@@ -863,8 +877,9 @@
       gradeStatsTitle.textContent = `إحصائيات ${titleMap[grade]}`;
       const myRequestId = ++statsRequestId;
       renderStatsLoading(gradeStatsGrid);
+      const { startISO, endISO } = rangeForFilter(statsTimeFilter);
+      gradeStatsRange.textContent = describeRange(startISO, endISO);
       try {
-        const { startISO, endISO } = rangeForFilter(statsTimeFilter);
         const { students, rows } = await fetchAttendanceForScope({ type: 'grade', grade }, startISO, endISO);
         if (myRequestId !== statsRequestId) return;
         renderStatCards(gradeStatsGrid, computeStats(students, rows));
