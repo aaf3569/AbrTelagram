@@ -818,6 +818,7 @@
         import { initNotificationPopup } from "/shared/notification-popup.js";
         import { mountAttendanceSheet } from "/shared/attendance.js";
         import { mountFeedbackSheet } from "/shared/feedback.js";
+        import { mountStudentNotesSheet } from "/shared/student-notes-sheet.js";
 
         const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
         // Optimized Firestore configuration: local cache for near-instant repeat
@@ -854,6 +855,8 @@
             auth,
             getUserName: () => currentUserData?.name || ''
         });
+
+        const studentNotes = mountStudentNotesSheet({ db, auth });
 
         /* ========= NEW: UI references for added elements ========= */
         const chaptersBtn = document.getElementById('chaptersBtn');
@@ -2447,15 +2450,13 @@
                 const stuId = s.uid || '';
                 const stuName = s.name || '';
                 const stuClass = (typeof currentClass === 'string' && currentClass) ? currentClass : (s.class || '');
-                const href = `/Teachers/studentprofile.html?id=${encodeURIComponent(stuId)}&name=${encodeURIComponent(stuName)}&class=${encodeURIComponent(stuClass)}`;
-                
-                // NEW: Use passive event listener for better scrolling performance
-                const clickHandler = () => { location.href = href; };
-                el.addEventListener('click', clickHandler, { passive: true });
-                el.addEventListener('keydown', (ev)=>{ 
-                    if(ev.key==='Enter'||ev.key===' '){ 
-                        ev.preventDefault(); 
-                        location.href=href; 
+                const openProfile = () => studentNotes.open(stuId, { name: stuName, className: stuClass });
+
+                el.addEventListener('click', openProfile);
+                el.addEventListener('keydown', (ev)=>{
+                    if(ev.key==='Enter'||ev.key===' '){
+                        ev.preventDefault();
+                        openProfile();
                     }
                 });
                 

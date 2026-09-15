@@ -958,6 +958,7 @@
         import { initNotificationPopup } from "/shared/notification-popup.js";
         import { mountAttendanceSheet } from "/shared/attendance.js";
         import { mountFeedbackSheet } from "/shared/feedback.js";
+        import { mountStudentNotesSheet } from "/shared/student-notes-sheet.js";
 
 
 
@@ -987,6 +988,8 @@
             auth,
             getUserName: () => currentUserData?.name || ''
         });
+
+        const studentNotes = mountStudentNotesSheet({ db, auth });
 
         /* ========= Class Options ========= */
         // Fetched from settings/classes (see /shared/class-registry.js)
@@ -2672,13 +2675,13 @@
                 const stuId = student.uid || '';
                 const stuName = student.name || '';
                 const stuClass = student.class || currentClass || '';
-                const href = `studentprofile.html?id=${encodeURIComponent(stuId)}&name=${encodeURIComponent(stuName)}&class=${encodeURIComponent(stuClass)}`;
-                
-                el.addEventListener('click', ()=> { location.href = href; });
-                el.addEventListener('keydown', (ev)=> { 
-                    if(ev.key==='Enter'||ev.key===' '){ 
-                        ev.preventDefault(); 
-                        location.href=href; 
+                const openProfile = () => studentNotes.open(stuId, { name: stuName, className: stuClass });
+
+                el.addEventListener('click', openProfile);
+                el.addEventListener('keydown', (ev)=> {
+                    if(ev.key==='Enter'||ev.key===' '){
+                        ev.preventDefault();
+                        openProfile();
                     }
                 });
                 
