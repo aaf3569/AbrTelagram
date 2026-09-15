@@ -513,7 +513,7 @@
     import { initializeApp, getApp, getApps } from "/shared/firebase.js";
     import { getAuth, onAuthStateChanged } from "/shared/firebase.js";
     import {
-      initializeFirestore, persistentSingleTabManager, collection, getDocs, query, where,
+      initializeFirestore, persistentSingleTabManager, collection, collectionGroup, getDocs, query, where,
       doc, getDoc
     } from "/shared/firebase.js";
     import { kuwaitTodayISO } from "/shared/kuwait-time.js";
@@ -729,35 +729,90 @@
       return list;
     }
 
-    // Fetch attendance records for a scope, bounded to a date range. Every
-    // record written by shared/attendance.js's mirror into
-    // students/{uid}/attendance carries a plain 'date' string ('YYYY-MM-DD')
-    // — NOT a 'createdAt' Timestamp — so the range query below is what
-    // actually matches real data (the previous version of this page queried
-    // 'createdAt', which the mirror never writes, so every query always came
-    // back empty).
-    async function fetchAttendanceForScope(scope, startISO, endISO) {
-      const students = await fetchStudentsForScope(scope);
-      students.sort((a, b) => arabicSort(a.name, b.name));
+    // Fetch attendance records for a scope, bounded to a date range.
+    //
+    // This used to fire one students/{uid}/attendance query PER STUDENT
+    // (pooled 15 at a time) — for the whole-school scope that's 400+ round
+    // trips, which is what made this page "WAYYY too slow". Every mirror
+    // record already carries its own 'class', 'date' and 'studentName'
+    // fields (see shared/attendance.js's mirror writes), so a
+    // collectionGroup('attendance') query can answer the same question in
+    // one query (whole-school) or one query per class (class/grade scope)
+    // without ever joining back to the students collection. This relies on
+    // a composite index (class, date) on the 'attendance' collection group
+    // — see firestore.indexes.json.
+    async function fetchAttendanceRowsForScope(scope, startISO, endISO) {
+      const base = collectionGroup(db, 'attendance');
+      const dateRange = (q) => query(q, where('date', '>=', startISO), where('date', '<=', endISO));
       const rows = [];
-      await promisePool(students, async (st) => {
-        const ref = collection(db, 'students', st.id, 'attendance');
-        const q = query(ref, where('date', '>=', startISO), where('date', '<=', endISO));
-        const sub = await getDocs(q);
-        sub.forEach(docSnap => {
-          const r = { id: docSnap.id, ...docSnap.data(), _student: st };
-          if (!r.class) r.class = st.class;
+      const consume = (snap) => {
+        snap.forEach(docSnap => {
+          const data = docSnap.data();
+          const r = { id: docSnap.id, ...data };
+          r._studentId = docSnap.ref.parent.parent ? docSnap.ref.parent.parent.id : null;
+          r._student = { id: r._studentId, name: r.studentName || '—' };
           rows.push(r);
         });
-      }, 15);
+      };
+
+      if (scope.type === 'all') {
+        consume(await getDocs(dateRange(base)));
+        return rows;
+      }
+      if (scope.type === 'class') {
+        consume(await getDocs(dateRange(query(base, where('class', '==', scope.className)))));
+        return rows;
+      }
+      // Grade scope: 'in' supports at most 30 values, so chunk defensively.
+      const classes = groupForGrade(scope.grade);
+      const chunks = [];
+      for (let i = 0; i < classes.length; i += 30) chunks.push(classes.slice(i, i + 30));
+      await promisePool(chunks, async (chunk) => {
+        consume(await getDocs(dateRange(query(base, where('class', 'in', chunk)))));
+      }, 5);
+      return rows;
+    }
+
+    async function fetchAttendanceForScope(scope, startISO, endISO) {
+      const [students, rows] = await Promise.all([
+        fetchStudentsForScope(scope),
+        fetchAttendanceRowsForScope(scope, startISO, endISO),
+      ]);
+      students.sort((a, b) => arabicSort(a.name, b.name));
       return { students, rows };
+    }
+
+    // A student marked absent in ANY lesson on a given day is absent for
+    // that whole day — matching /admins/students.html's own absenceDays
+    // grouping (shared/attendance-tiles.js#groupAbsencesByDay), generalized
+    // here to every student in scope. Per-lesson records are never counted
+    // as separate absences/presences; they're kept on `records` so the UI
+    // can still show exactly which lessons made up that day's status.
+    // Priority when a day mixes statuses: absent > late > present.
+    function groupRowsByStudentDay(rows) {
+      const days = new Map();
+      for (const r of rows) {
+        const sid = r._studentId || '?';
+        const date = String(r.date || '').slice(0, 10);
+        const key = `${sid}__${date}`;
+        if (!days.has(key)) {
+          days.set(key, { studentId: sid, date, class: r.class, _student: r._student, records: [] });
+        }
+        days.get(key).records.push(r);
+      }
+      return [...days.values()].map(day => {
+        const statuses = new Set(day.records.map(r => r.status));
+        day.status = statuses.has('absent') ? 'absent' : statuses.has('late') ? 'late' : 'present';
+        return day;
+      });
     }
 
     // ---------- Stats cards (home overview + per-grade) ----------
     function computeStats(students, rows) {
-      const present = rows.filter(r => r.status === 'present').length;
-      const absent = rows.filter(r => r.status === 'absent').length;
-      const late = rows.filter(r => r.status === 'late').length;
+      const days = groupRowsByStudentDay(rows);
+      const present = days.filter(d => d.status === 'present').length;
+      const absent = days.filter(d => d.status === 'absent').length;
+      const late = days.filter(d => d.status === 'late').length;
       const recorded = present + absent + late;
       const rate = recorded ? Math.round((present / recorded) * 100) : 0;
       return { total: students.length, present, absent, late, rate };
@@ -965,36 +1020,37 @@
       absCount.textContent = `${toArabicDigits(n)} ${label}`;
     }
 
-    // Live counts across all three statuses at once, reflecting every filter
-    // except the status tab itself — reuses the already-fetched cachedRows,
-    // so it updates instantly as lesson/class/time filters change.
-    function renderMiniStats() {
-      const base = cachedRows.filter(r => {
+    // Rows matching the current lesson/class filters, before day-grouping.
+    // Filtering here (rather than after grouping) means picking a specific
+    // lesson naturally drills a grouped day back down to that one record.
+    function filteredRawRows() {
+      return cachedRows.filter(r => {
         const lessonOK = (lessonFilter === '__all') ? true : ((+r.lessonIndex || 0) === lessonFilter);
         const classOK = (currentScope?.type !== 'class')
           ? (classFilter === '__all' ? true : ((r.class || '') === classFilter))
           : true;
         return lessonOK && classOK;
       });
-      miniPresent.textContent = toArabicDigits(base.filter(r => r.status === 'present').length);
-      miniAbsent.textContent = toArabicDigits(base.filter(r => r.status === 'absent').length);
-      miniLate.textContent = toArabicDigits(base.filter(r => r.status === 'late').length);
+    }
+
+    // Live counts across all three statuses at once, reflecting every filter
+    // except the status tab itself — reuses the already-fetched cachedRows,
+    // so it updates instantly as lesson/class/time filters change. Counts
+    // are per (student, day), matching the grouped list below and the stats
+    // cards — never a raw per-lesson-record count.
+    function renderMiniStats() {
+      const days = groupRowsByStudentDay(filteredRawRows());
+      miniPresent.textContent = toArabicDigits(days.filter(d => d.status === 'present').length);
+      miniAbsent.textContent = toArabicDigits(days.filter(d => d.status === 'absent').length);
+      miniLate.textContent = toArabicDigits(days.filter(d => d.status === 'late').length);
     }
 
     function renderFilteredList() {
       renderMiniStats();
-      const filtered = cachedRows.filter(r => {
-        const statusOK = (r.status === statusFilter);
-        const lessonOK = (lessonFilter === '__all') ? true : ((+r.lessonIndex || 0) === lessonFilter);
-        const classOK = (currentScope?.type !== 'class')
-          ? (classFilter === '__all' ? true : ((r.class || '') === classFilter))
-          : true;
-        return statusOK && lessonOK && classOK;
-      });
+      const days = groupRowsByStudentDay(filteredRawRows()).filter(d => d.status === statusFilter);
 
-      filtered.sort((a, b) => {
-        const da = parseAttendanceDate(a), db_ = parseAttendanceDate(b);
-        if (da && db_ && da.getTime() !== db_.getTime()) return db_ - da;
+      days.sort((a, b) => {
+        if (a.date !== b.date) return b.date.localeCompare(a.date);
         if (currentScope?.type !== 'class') {
           const ca = (a.class || ''); const cb = (b.class || '');
           if (ca !== cb) return ca.localeCompare(cb, 'ar', { sensitivity: 'base' });
@@ -1003,11 +1059,12 @@
       });
 
       const studentsCount = new Set(cachedStudents.map(s => s.id)).size;
-      absMeta.textContent = `الطلاب: ${toArabicDigits(studentsCount)} • ${statusFilter === 'absent' ? 'الغياب' : statusFilter === 'late' ? 'التأخير' : 'الحضور'}: ${toArabicDigits(filtered.length)}`;
-      setCountBadge(filtered.length);
+      const statusLabel = statusFilter === 'absent' ? 'الغياب' : statusFilter === 'late' ? 'التأخير' : 'الحضور';
+      absMeta.textContent = `الطلاب: ${toArabicDigits(studentsCount)} • ${statusLabel}: ${toArabicDigits(days.length)}`;
+      setCountBadge(days.length);
 
       absencesList.innerHTML = '';
-      if (filtered.length === 0) {
+      if (days.length === 0) {
         const empty = document.createElement('div');
         empty.className = 'muted';
         empty.style.padding = '8px 2px';
@@ -1016,21 +1073,22 @@
         return;
       }
 
-      filtered.forEach(r => {
-        const d = parseAttendanceDate(r);
-        const dateStr = d ? fmtDate(d) : (r.date ? toArabicDigits(r.date) : '—');
-        const badge = (statusFilter === 'absent')
-          ? '<span class="badge b-absent">غياب</span>'
-          : (statusFilter === 'late')
-            ? '<span class="badge b-late">تأخير</span>'
-            : '<span class="badge b-present">حضور</span>';
+      const statusWord = statusFilter === 'absent' ? 'غياب' : statusFilter === 'late' ? 'تأخير' : 'حضور';
+      const badgeClass = statusFilter === 'absent' ? 'b-absent' : statusFilter === 'late' ? 'b-late' : 'b-present';
+
+      days.forEach(day => {
+        const d = parseAttendanceDate({ date: day.date });
+        const dateStr = d ? fmtDate(d) : (day.date ? toArabicDigits(day.date) : '—');
+        const classLabel = toArabicDigits(day.class || '—');
+        const recs = day.records.slice().sort((a, b) => (+a.lessonIndex || 0) - (+b.lessonIndex || 0));
+        const lessonsLabel = recs.length === 1
+          ? `الحصة ${toArabicDigits(recs[0].lessonIndex || '؟')}`
+          : `${toArabicDigits(recs.length)} حصص`;
 
         const tile = document.createElement('div');
         tile.className = 'att-tile';
 
-        const classLabel = toArabicDigits(r.class || '—');
-        const statusWord = statusFilter === 'absent' ? 'غياب' : statusFilter === 'late' ? 'تأخير' : 'حضور';
-        const title = `${r._student?.name || r.studentName || '—'} — ${statusWord} الحصة ${toArabicDigits(r.lessonIndex || '؟')}`;
+        const title = `${day._student?.name || '—'} — ${statusWord} ${lessonsLabel}`;
         const sub = `${classLabel} • ${toArabicDigits(dateStr)}`;
 
         tile.innerHTML = `
@@ -1038,30 +1096,39 @@
             <div class="att-title">${title}</div>
             <div class="att-sub">${sub}</div>
           </div>
-          ${badge}
+          <span class="badge ${badgeClass}">${statusWord}</span>
         `;
 
         const expand = document.createElement('div');
         expand.className = 'expand';
+        const recordsHtml = recs.map((r, idx) => `
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 0; ${idx > 0 ? 'border-top:1px solid var(--border);' : ''}">
+            <div style="min-width:0;">
+              <div><b>${r.lessonLabel || ('حصة ' + toArabicDigits(r.lessonIndex || ''))}</b></div>
+              <div class="sub" id="who-${r.id}">جاري التحميل بيانات المسجّل…</div>
+            </div>
+            <span class="badge ${r.status === 'absent' ? 'b-absent' : r.status === 'late' ? 'b-late' : 'b-present'}">${r.status === 'absent' ? 'غياب' : r.status === 'late' ? 'تأخير' : 'حضور'}</span>
+          </div>
+        `).join('');
         expand.innerHTML = `
-          <div style="display:flex; flex-direction:column; gap:6px;">
-            <div><b>الطالب:</b> ${r._student?.name || r.studentName || '—'}</div>
-            <div><b>التاريخ:</b> ${toArabicDigits(dateStr || '—')}</div>
-            <div><b>الحصة:</b> ${r.lessonLabel || ('حصة ' + toArabicDigits(r.lessonIndex || ''))}</div>
-            <div><b>الفصل:</b> ${classLabel}</div>
-            <div id="who-${r.id}"><b>أُضيفت/عُدلت بواسطة:</b> —</div>
-            <div><b>آخر تعديل:</b> ${r.updatedAt ? toArabicDigits(fmtDT(tsToDate(r.updatedAt))) : '—'}</div>
+          <div style="display:flex; flex-direction:column; gap:2px;">
+            <div style="padding-bottom:6px;"><b>الطالب:</b> ${day._student?.name || '—'}</div>
+            <div style="padding-bottom:6px;"><b>التاريخ:</b> ${toArabicDigits(dateStr || '—')}</div>
+            <div style="padding-bottom:6px;"><b>الفصل:</b> ${classLabel}</div>
+            ${recordsHtml}
           </div>
         `;
 
         tile.addEventListener('click', async () => {
           tile.classList.toggle('open');
-          if (tile.classList.contains('open')) {
+          if (!tile.classList.contains('open')) return;
+          await Promise.all(recs.map(async (r) => {
             const who = document.getElementById(`who-${r.id}`);
+            if (!who) return;
             const uid = r.updatedBy || r.createdBy;
             const name = await getTeacherName(uid);
-            who.innerHTML = `<b>أُضيفت/عُدلت بواسطة:</b> ${name}`;
-          }
+            who.textContent = `بواسطة: ${name}`;
+          }));
         });
 
         absencesList.appendChild(tile);
@@ -1180,6 +1247,12 @@
 
         const lateRecords = rows.filter(r => r.status === 'late');
         const absentRecords = rows.filter(r => r.status === 'absent');
+        // Summary card uses grouped per-day counts (one absence/lateness per
+        // student per day, matching the on-screen stats); the itemized
+        // tables below still list every individual lesson-level record.
+        const dayGroups = groupRowsByStudentDay(rows);
+        const absentDaysCount = dayGroups.filter(d => d.status === 'absent').length;
+        const lateDaysCount = dayGroups.filter(d => d.status === 'late').length;
 
         // Resolve teacher names up front (small, deduped set — cheap even
         // unpooled since teacherNameCache collapses repeats).
@@ -1216,9 +1289,9 @@
         docPdf.text('إجمالي الطلاب:', 30, 115);
         docPdf.text(toArabicDigits(students.length.toString()), 70, 115);
         docPdf.text('حالات الغياب:', 100, 115);
-        docPdf.text(toArabicDigits(absentRecords.length.toString()), 150, 115);
+        docPdf.text(toArabicDigits(absentDaysCount.toString()), 150, 115);
         docPdf.text('حالات التأخير:', 30, 130);
-        docPdf.text(toArabicDigits(lateRecords.length.toString()), 70, 130);
+        docPdf.text(toArabicDigits(lateDaysCount.toString()), 70, 130);
         docPdf.text('إجمالي السجلات:', 100, 130);
         docPdf.text(toArabicDigits(rows.length.toString()), 150, 130);
 
