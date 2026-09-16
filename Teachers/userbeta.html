@@ -223,30 +223,30 @@
       font-weight: 900; box-shadow: var(--shadow-1);
       display: flex; flex-direction: column; gap: 10px;
     }
-    .header-day-row { display: flex; align-items: center; justify-content: center; gap: 10px; }
+    .header-day-row { display: flex; align-items: center; justify-content: center; gap: calc(10px * var(--tf, 1)); }
     .header-day-icon {
-      width: 34px; height: 34px; flex-shrink: 0; border-radius: 10px;
+      width: calc(34px * var(--tf, 1)); height: calc(34px * var(--tf, 1)); flex-shrink: 0; border-radius: 10px;
       background: rgba(255, 255, 255, 0.16); border: 1px solid rgba(255, 255, 255, 0.22);
-      display: grid; place-items: center; font-size: 0.92rem;
+      display: grid; place-items: center; font-size: calc(0.92rem * var(--tf, 1));
     }
     .header-day-text { display: flex; flex-direction: column; align-items: center; gap: 1px; line-height: 1.3; }
-    .header-day-name { font-size: 1rem; font-weight: 900; }
-    .header-day-date { font-size: 0.74rem; font-weight: 700; opacity: 0.72; font-variant-numeric: tabular-nums; }
+    .header-day-name { font-size: calc(1rem * var(--tf, 1)); font-weight: 900; }
+    .header-day-date { font-size: calc(0.74rem * var(--tf, 1)); font-weight: 700; opacity: 0.72; font-variant-numeric: tabular-nums; }
     /* Live lesson/break countdown — a full-width sub-bar nested inside the
        day header, rather than a small centered pill, so both rows span the
        same width and the header reads as one even block. */
     .header-live {
-      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      display: flex; align-items: center; justify-content: space-between; gap: calc(10px * var(--tf, 1));
       background: rgba(255, 255, 255, 0.14);
       border: 1px solid rgba(255, 255, 255, 0.24);
       border-radius: var(--radius-sm);
-      padding: 10px 14px;
-      font-size: 0.85rem;
+      padding: calc(10px * var(--tf, 1)) calc(14px * var(--tf, 1));
+      font-size: calc(0.85rem * var(--tf, 1));
       font-weight: 800;
     }
     .header-live[hidden] { display: none; }
-    .header-live-left { display: flex; align-items: center; gap: 8px; }
-    .header-live-countdown { font-size: 0.98rem; font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
+    .header-live-left { display: flex; align-items: center; gap: calc(8px * var(--tf, 1)); }
+    .header-live-countdown { font-size: calc(0.98rem * var(--tf, 1)); font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
     .th {
       background: linear-gradient(135deg, var(--primary-2), var(--primary));
       color: var(--headerText); border-radius: var(--radius-sm);
@@ -281,7 +281,7 @@
       display: block;
     }
     .lesson-time-row {
-      font-size: 0.8rem;
+      font-size: calc(0.8rem * var(--tf, 1));
       color: var(--muted);
       font-weight: 700;
       line-height: 1.2;
@@ -295,13 +295,13 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      min-height: 30px;
-      padding: 5px 10px;
+      min-height: calc(30px * var(--tf, 1));
+      padding: calc(5px * var(--tf, 1)) calc(10px * var(--tf, 1));
       border-radius: 999px;
       border: 1px solid rgba(2, 43, 66, 0.18);
       background: rgba(2, 43, 66, 0.06);
       color: var(--primary);
-      font-size: 12px;
+      font-size: calc(12px * var(--tf, 1));
       font-weight: 900;
       line-height: 1.2;
       text-align: center;
@@ -514,24 +514,30 @@
       color: #7c2d12;
     }
 
-    /* Compact on mobile */
-    .compact-table { display: grid; grid-template-columns: 1fr 1fr; column-gap: 8px; row-gap: 6px; width: 100%; }
+    /* Compact on mobile. Sizes below route through --tf (set by
+       fitTodayToPhoneViewport()) instead of a fixed pixel value, so اليوم
+       can shrink to fit the screen height on phone by shrinking padding/
+       gaps/font-size/min-height proportionally — never the container's own
+       width, so it always stays edge-to-edge instead of shrinking sideways
+       and leaving empty margins. --tf defaults to 1 (unscaled) everywhere
+       this custom property isn't explicitly set, i.e. always on desktop. */
+    .compact-table { display: grid; grid-template-columns: 1fr 1fr; column-gap: calc(8px * var(--tf, 1)); row-gap: calc(6px * var(--tf, 1)); width: 100%; }
     .compact-header {
       grid-column: 1 / -1; background: linear-gradient(145deg, #033C54, #065372);
-      color: var(--headerText); border-radius: var(--radius-sm); padding: 12px; text-align: center;
-      font-weight: 900; display: flex; flex-direction: column; gap: 10px; margin-bottom: 8px;
+      color: var(--headerText); border-radius: var(--radius-sm); padding: calc(12px * var(--tf, 1)); text-align: center;
+      font-weight: 900; display: flex; flex-direction: column; gap: calc(10px * var(--tf, 1)); margin-bottom: calc(8px * var(--tf, 1));
     }
     .compact-th {
       background: var(--primary-light); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); padding: 10px 8px; text-align: center;
-      font-weight: 900; font-size: 0.9rem;
-      display: flex; align-items: center; justify-content: center; gap: 8px;
+      border-radius: var(--radius-sm); padding: calc(10px * var(--tf, 1)) calc(8px * var(--tf, 1)); text-align: center;
+      font-weight: 900; font-size: calc(0.9rem * var(--tf, 1));
+      display: flex; align-items: center; justify-content: center; gap: calc(8px * var(--tf, 1));
     }
     .compact-cell {
       background: transparent; border: none;
-      border-radius: var(--radius-sm); padding: 10px 8px; text-align: center;
-      min-height: 50px; display: flex; flex-direction: column; align-items: center; justify-content: center;
-      font-weight: 800; font-size: 0.9rem;
+      border-radius: var(--radius-sm); padding: calc(10px * var(--tf, 1)) calc(8px * var(--tf, 1)); text-align: center;
+      min-height: calc(50px * var(--tf, 1)); display: flex; flex-direction: column; align-items: center; justify-content: center;
+      font-weight: 800; font-size: calc(0.9rem * var(--tf, 1));
       position: relative;
       line-height: 1.25;
     }
@@ -556,9 +562,9 @@
       grid-column: 1 / -1;
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 8px;
+      gap: calc(8px * var(--tf, 1));
       border-bottom: 1px solid var(--border-light);
-      padding-bottom: 6px;
+      padding-bottom: calc(6px * var(--tf, 1));
     }
     .compact-row:last-child { border-bottom: none; padding-bottom: 0; }
     .compact-row.current-lesson {
@@ -566,7 +572,7 @@
       border: 2px solid var(--primary-2);
       box-shadow: 0 0 0 2px rgba(2, 43, 66, 0.22);
       border-radius: var(--radius-sm);
-      padding: 4px;
+      padding: calc(4px * var(--tf, 1));
     }
     /* Cells lose their own border/background inside the mother box (avoids a
        double-boxed look) and shrink their padding by roughly what the mother's
@@ -577,8 +583,8 @@
       font-weight: 900;
       background: transparent;
       border-color: transparent;
-      padding: 8px 6px;
-      min-height: 42px;
+      padding: calc(8px * var(--tf, 1)) calc(6px * var(--tf, 1));
+      min-height: calc(42px * var(--tf, 1));
     }
 
     /* Sidebar */
@@ -5487,12 +5493,21 @@
 
     /* ========= Today view: fit-to-screen on phone (no scroll, same design) =========
        On phone, اليوم must never scroll and must always show the whole day at
-       a glance — rather than reflowing the layout at small sizes (which
-       would make it look different device to device), the already-rendered
-       content is measured and uniformly scaled down to fit exactly between
-       the header and the floating toolbar, with a little clearance above the
-       toolbar. Desktop/tablet is untouched — only the same <=768px
-       breakpoint that switches on .compact-table gets this treatment.
+       a glance, edge to edge — the same full width it always has, just
+       shorter. That rules out visually scaling the whole block down
+       (transform/zoom shrink width too, leaving empty side margins, and
+       clipping happens in layout space *before* a transform is painted —
+       constraining height with overflow:hidden on the same element being
+       scaled crops the natural-sized content first and shrinks whatever
+       survived, which is what was cutting off الحصة السابعة).
+       Instead, every padding/gap/font-size/min-height in the compact-table
+       family routes through the --tf custom property (see its CSS) instead
+       of a fixed pixel value. Shrinking --tf shrinks the actual rendered
+       size of everything proportionally — never the container's own width —
+       so the whole day fits in less vertical space while staying full-width
+       and undistorted. --tf defaults to 1 wherever this never runs, i.e.
+       always on desktop/tablet (only the same <=768px breakpoint that
+       switches on .compact-table gets this treatment).
        A MutationObserver on #containerMain re-runs this after every render
        (today/skeleton swaps, and the current-lesson highlight timer toggling
        classes), so the fit never goes stale without manually hunting down
@@ -5504,8 +5519,7 @@
     }
 
     function clearTodayFit(){
-      containerMain.style.transform = '';
-      containerMain.style.transformOrigin = '';
+      containerMain.style.removeProperty('--tf');
       containerMain.style.height = '';
       containerMain.style.overflow = '';
       document.documentElement.classList.remove('today-locked');
@@ -5519,29 +5533,34 @@
 
       document.documentElement.classList.add('today-locked');
 
-      // Reset height/overflow before measuring — scrollHeight already
-      // ignores transform (it's paint-only), but a previously-pinned height
-      // would otherwise feed back into itself.
+      // Reset to natural (--tf:1) size before measuring, so a previous fit
+      // doesn't feed into itself.
+      containerMain.style.removeProperty('--tf');
       containerMain.style.height = '';
       containerMain.style.overflow = '';
 
-      const naturalHeight = containerMain.scrollHeight;
       const containerTop = containerMain.getBoundingClientRect().top;
       const toolbarTop = toolbar.getBoundingClientRect().top;
       const availableHeight = toolbarTop - TODAY_FIT_BOTTOM_GAP - containerTop;
+      if (availableHeight <= 0) return;
 
-      if (availableHeight <= 0 || naturalHeight <= 0) return;
+      const naturalHeight = containerMain.scrollHeight;
+      if (naturalHeight <= 0 || naturalHeight <= availableHeight) return; // already fits — leave --tf at its default 1
 
-      if (naturalHeight > availableHeight) {
-        const scale = availableHeight / naturalHeight;
-        containerMain.style.transformOrigin = 'top center';
-        containerMain.style.transform = `scale(${scale})`;
-        containerMain.style.height = `${availableHeight}px`;
-        containerMain.style.overflow = 'hidden';
-      } else {
-        containerMain.style.transform = '';
-        containerMain.style.transformOrigin = '';
+      let tf = availableHeight / naturalHeight;
+      containerMain.style.setProperty('--tf', tf);
+
+      // Borders/border-radii intentionally don't scale with --tf, so height
+      // isn't perfectly linear in tf — one corrective pass closes that gap
+      // instead of an unbounded loop.
+      const measured = containerMain.scrollHeight;
+      if (measured > 0 && Math.abs(measured - availableHeight) > 1) {
+        tf *= availableHeight / measured;
+        containerMain.style.setProperty('--tf', tf);
       }
+
+      containerMain.style.height = `${availableHeight}px`;
+      containerMain.style.overflow = 'hidden';
     }
 
     let todayFitRAF = null;
