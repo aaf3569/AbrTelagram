@@ -145,7 +145,7 @@
     }
 
     /* Dedicated return action at the RTL start of the navbar. */
-    .header-identity { display:flex; direction:rtl; flex-direction:column; align-items:center; gap:8px; flex-shrink:0; text-align:center; }
+    .header-identity { display:flex; direction:rtl; flex-direction:column; align-items:flex-start; gap:8px; flex-shrink:0; text-align:right; }
     .header-container, .top-info, .view-toggle { direction:rtl; }
     #btnDownloadPdf[hidden] { display:none !important; }
     .nav-back {
@@ -982,8 +982,8 @@
       .filter-btn { padding: 0 14px; font-size: 0.85rem; }
       .view-toggle-btn { height: 36px; padding: 0 10px; font-size: 0.82rem; }
       .top-info .view-toggle-btn i { display:none; }
-      .top-info #btnMore { width:44px; padding:0; justify-content:center; }
-      .top-info #btnMore span { display:none; }
+      .top-info #btnMore { width:auto; padding:0 10px; gap:6px; }
+      .top-info #btnMore span { display:inline; }
       .more-actions { flex-direction: column; }
       .all-schedules-actions { flex: initial; width: 100%; }
       .more-actions > .filter-btn { flex: initial; width: 100%; }
@@ -1117,8 +1117,8 @@
           <span>تنزيل PDF</span>
         </button>
 
-        <button id="btnMore" class="filter-btn btn-ghost" type="button" aria-label="المزيد">
-          <i class="fas fa-ellipsis-h" aria-hidden="true"></i>
+        <button id="btnMore" class="filter-btn btn-ghost" type="button">
+          <i class="fas fa-ellipsis-h"></i>
           <span>المزيد</span>
         </button>
       </div>
@@ -5291,6 +5291,8 @@
 <script src="/name-glow.js" defer></script>
 </body>
 </html>
+
+
 
 
 
