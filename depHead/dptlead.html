@@ -16,7 +16,6 @@
 <link rel="modulepreload" href="/shared/action-popup.js">
 <link rel="modulepreload" href="/shared/attendance.js">
 <link rel="modulepreload" href="/shared/class-registry.js">
-<link rel="modulepreload" href="/shared/feedback.js">
 <link rel="modulepreload" href="/shared/firebase.js">
 <link rel="modulepreload" href="/shared/notification-popup.js">
 <link rel="modulepreload" href="/shared/presence.js">
@@ -672,9 +671,8 @@
                 </div>
                 <!-- teacherScheduleBtn, moreBtn, deptBtn, the Telegram-
                      settings button (mounted into #telegramSettingsSlot),
-                     suggestBtn, logoutBtn — 6 buttons visible by default. -->
+                     logoutBtn — 5 buttons visible by default. -->
                 <div class="stack wide">
-                    <div class="btn ghost skel-fill"></div>
                     <div class="btn ghost skel-fill"></div>
                     <div class="btn ghost skel-fill"></div>
                     <div class="btn ghost skel-fill"></div>
@@ -740,13 +738,6 @@
                         <span class="dash-sub">تسجيل تأخر الطلاب صباحًا</span>
                     </button>
                     <div id="telegramSettingsSlot"></div>
-                    <button id="suggestBtn" class="btn ghost" type="button">
-                        <span>اقتراح / بلاغ</span>
-                        <span class="icon" aria-hidden="true">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                        </span>
-                        <span class="dash-sub">إرسال اقتراح أو بلاغ للإدارة</span>
-                    </button>
                     <button id="logoutBtn" class="btn ghost" type="button">تسجيل الخروج</button>
                 </div>
             </section>
@@ -957,7 +948,6 @@
         import { mountTelegramSettings } from "/shared/telegram-settings.js";
         import { initNotificationPopup } from "/shared/notification-popup.js";
         import { mountAttendanceSheet } from "/shared/attendance.js";
-        import { mountFeedbackSheet } from "/shared/feedback.js";
         import { mountStudentNotesSheet } from "/shared/student-notes-sheet.js";
 
 
@@ -981,12 +971,6 @@
             db,
             auth,
             onSaved: () => { show(sDash); }
-        });
-
-        const feedback = mountFeedbackSheet({
-            db,
-            auth,
-            getUserName: () => currentUserData?.name || ''
         });
 
         const studentNotes = mountStudentNotesSheet({ db, auth });
@@ -1408,7 +1392,6 @@
         const g11List = document.getElementById('g11List');
         const g12List = document.getElementById('g12List');
         const logoutBtn = document.getElementById('logoutBtn');
-        const suggestBtn = document.getElementById('suggestBtn');
         const deptBtn = document.getElementById('deptBtn');
         const teacherScheduleBtn = document.getElementById('teacherScheduleBtn');
         const adminScheduleEditBtn = document.getElementById('adminScheduleEditBtn');
@@ -3063,9 +3046,6 @@
         confirmModal.querySelector('.overlay').addEventListener('click', ()=> closeModal(confirmModal));
         errorModal.querySelector('.overlay').addEventListener('click', ()=> closeModal(errorModal));
         errorOk.addEventListener('click', ()=> closeModal(errorModal));
-
-        /* ========= Suggest / Report ========= */
-        suggestBtn.addEventListener('click', ()=> feedback.open());
 
         /* ========= Logout ========= */
         logoutBtn.addEventListener('click', async ()=>{

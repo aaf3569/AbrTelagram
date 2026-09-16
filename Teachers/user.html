@@ -16,7 +16,6 @@
 <link rel="modulepreload" href="/shared/action-popup.js">
 <link rel="modulepreload" href="/shared/attendance.js">
 <link rel="modulepreload" href="/shared/class-registry.js">
-<link rel="modulepreload" href="/shared/feedback.js">
 <link rel="modulepreload" href="/shared/firebase.js">
 <link rel="modulepreload" href="/shared/notification-popup.js">
 <link rel="modulepreload" href="/shared/presence.js">
@@ -729,11 +728,10 @@
                     <div class="btn ghost skel-fill"></div>
                 </div>
                 <!-- moreBtn, teacherScheduleBtn, the Telegram-settings button
-                     (mounted into #telegramSettingsSlot), suggestBtn,
-                     logoutBtn — 5 buttons visible by default (the permission-
-                     gated ones stay hidden for most teachers). -->
+                     (mounted into #telegramSettingsSlot), logoutBtn — 4
+                     buttons visible by default (the permission-gated ones
+                     stay hidden for most teachers). -->
                 <div class="stack wide">
-                    <div class="btn ghost skel-fill"></div>
                     <div class="btn ghost skel-fill"></div>
                     <div class="btn ghost skel-fill"></div>
                     <div class="btn ghost skel-fill"></div>
@@ -788,12 +786,6 @@
                         </span>
                     </button>
                     <div id="telegramSettingsSlot"></div>
-                    <button id="suggestBtn" class="btn ghost" type="button">
-                        <span>اقتراح / بلاغ</span>
-                        <span class="icon" aria-hidden="true">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                        </span>
-                    </button>
                     <button id="logoutBtn" class="btn ghost" type="button">تسجيل الخروج</button>
                 </div>
             </section>
@@ -1047,7 +1039,6 @@
         import { initNotificationPopup } from "/shared/notification-popup.js";
         import { mountAttendanceSheet } from "/shared/attendance.js";
         import { startPresenceHeartbeat } from "/shared/presence.js";
-        import { mountFeedbackSheet } from "/shared/feedback.js";
         import { mountStudentNotesSheet } from "/shared/student-notes-sheet.js";
 
 
@@ -1073,12 +1064,6 @@
             onSaved: () => { show(sDash); }
         });
 
-        const feedback = mountFeedbackSheet({
-            db,
-            auth,
-            getUserName: () => currentUserData?.name || ''
-        });
-
         const studentNotes = mountStudentNotesSheet({ db, auth });
 
         /* ========= Class Options ========= */
@@ -1100,7 +1085,6 @@
         const g11List = document.getElementById('g11List');
         const g12List = document.getElementById('g12List');
         const logoutBtn = document.getElementById('logoutBtn');
-        const suggestBtn = document.getElementById('suggestBtn');
         const teacherScheduleBtn = document.getElementById('teacherScheduleBtn');
         const adminScheduleEditBtn = document.getElementById('adminScheduleEditBtn');
         const morningLateBtn = document.getElementById('morningLateBtn');
@@ -3872,9 +3856,6 @@
             errorBody.textContent = body || 'حدث خطأ غير متوقع.';
             openModal(errorModal);
         }
-
-        /* ========= Suggest / Report ========= */
-        suggestBtn.addEventListener('click', ()=> feedback.open());
 
         /* ========= Logout ========= */
         logoutBtn.addEventListener('click', async ()=>{
