@@ -1210,6 +1210,161 @@
       .modal-card { max-height: 85vh; }
       .modal-body { max-height: 60vh; }
     }
+
+    /* ============================================================
+       جدول القسم (dsSheet) — an in-page copy of depHead/dptschedual.html's
+       grid + popover UI (that file itself is untouched; this is a parallel
+       implementation living inside this page instead of a navigation).
+       Sizes/padding/fonts below are copied verbatim from that page so it
+       displays identically, not a condensed reinterpretation — only the
+       class names are "ds-"-prefixed, since dptschedual.html's originals
+       (.table, .chip, .section, .list, .li, .popover, ...) are common
+       enough names that reusing them bare would be a real collision risk
+       in a file this size.
+       ============================================================ */
+    .ds-sheet-body { display: flex; flex-direction: column; gap: 14px; }
+    .ds-date-btn {
+      border: none; cursor: pointer; font-family: inherit; font-weight: 900; font-size: .95rem;
+      color: var(--primary); display: inline-flex; align-items: center; gap: 10px;
+      padding: 10px 14px; border-radius: 999px; background: #fff; border: 1px solid var(--border);
+      box-shadow: var(--shadow-1); transition: var(--transition); max-width: 100%; position: relative;
+      align-self: center;
+    }
+    .ds-date-btn:hover { transform: translateY(-1px); box-shadow: var(--shadow-2); }
+    .ds-date-btn small { color: var(--muted); font-weight: 900; font-size: .82rem; }
+    .ds-date-input-wrapper { position: absolute; inset: 0; opacity: 0; pointer-events: auto; }
+    .ds-mobile-date-input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; pointer-events: auto; font-size: 16px; border: 0; background: transparent; }
+
+    .ds-state { display: none; }
+    .ds-state.active { display: block; }
+    .ds-spinner { width: 40px; height: 40px; border-radius: 50%; border: 4px solid rgba(3,60,84,.18); border-top-color: var(--primary); animation: spin 1s linear infinite; margin: 24px auto; }
+    .ds-msg-error { color: #a11; background: #fde8e8; border: 1px solid #f5c5c5; padding: 12px; border-radius: 14px; text-align: center; font-weight: 800; }
+    .ds-retry-btn { display: block; margin: 12px auto 0; border: 1px solid var(--border); border-radius: 12px; padding: 9px 18px; background: #fff; color: var(--primary); font: inherit; font-weight: 900; cursor: pointer; }
+
+    .ds-table-shell { width: 100%; background: #fff; border: 1px solid var(--border); border-radius: 0; overflow: hidden; }
+    .ds-table-scroll { width: 100%; max-height: 75vh; overflow: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; padding-bottom: max(12px, env(safe-area-inset-bottom, 0px)); position: relative; }
+    table.ds-table { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 940px; direction: rtl; table-layout: fixed; }
+    .ds-table thead { position: sticky; top: 0; z-index: 20; background: #fff; }
+    .ds-table thead th {
+      position: relative; background: #fff; border-bottom: 2px solid var(--primary); padding: 16px 10px;
+      text-align: center; font-weight: 900; color: var(--primary); white-space: nowrap; overflow: visible;
+      box-shadow: 0 4px 12px rgba(3,60,84,.08);
+    }
+    .ds-th-stack { display: none; }
+    .ds-table th.ds-sticky-col, .ds-table td.ds-sticky-col {
+      position: sticky; right: 0; background: #fff; border-left: 2px solid var(--border);
+      text-align: center; min-width: 140px; padding: 12px 10px; z-index: 15;
+    }
+    .ds-table thead th.ds-sticky-col { z-index: 25; box-shadow: 4px 0 12px rgba(3,60,84,.08); }
+    .ds-table tbody td { border-bottom: 1px solid var(--border); padding: 10px; text-align: center; vertical-align: middle; background: #fff; }
+    .ds-table tbody tr:hover td { background: #fbfdff; }
+    .ds-teacher-name {
+      font-weight: 900; color: var(--text); font-size: .95rem; line-height: 1.2;
+      display: flex; align-items: center; justify-content: center; min-height: 38px; padding: 0 4px;
+      word-break: keep-all; overflow-wrap: break-word;
+    }
+
+    .ds-cell-btn-taken, .ds-cell-btn-not-taken, .ds-cell-empty {
+      width: 56px; height: 38px; display: inline-flex; align-items: center; justify-content: center;
+      border-radius: 12px; font-weight: 900; font-family: inherit;
+    }
+    .ds-cell-btn-taken { border: 1px solid rgba(16,185,129,.25); background: rgba(16,185,129,.10); color: var(--success); cursor: pointer; transition: var(--transition); box-shadow: 0 10px 20px rgba(16,185,129,.10); }
+    .ds-cell-btn-not-taken { border: 1px solid rgba(239,68,68,.25); background: rgba(239,68,68,.10); color: var(--danger); cursor: pointer; transition: var(--transition); box-shadow: 0 10px 20px rgba(239,68,68,.10); }
+    .ds-cell-btn-taken:hover { transform: translateY(-1px); box-shadow: 0 14px 26px rgba(16,185,129,.14); border-color: rgba(16,185,129,.35); }
+    .ds-cell-btn-not-taken:hover { transform: translateY(-1px); box-shadow: 0 14px 26px rgba(239,68,68,.14); border-color: rgba(239,68,68,.35); }
+    .ds-cell-empty { border: 1px solid rgba(3,60,84,.12); background: #f8fafc; color: rgba(100,116,139,.8); user-select: none; }
+
+    .ds-popover-backdrop { position: fixed; inset: 0; background: rgba(2,6,23,.12); display: none; z-index: 999; }
+    .ds-popover-backdrop.open { display: block; }
+    .ds-popover {
+      position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;
+      width: min(520px, 92vw); max-height: min(520px, 70vh); overflow: auto;
+      background: #fff; border: 1px solid var(--border); border-radius: 18px;
+      box-shadow: 0 18px 44px rgba(2,6,23,.18); display: none;
+    }
+    .ds-popover.open { display: block; }
+    .ds-pop-head {
+      position: sticky; top: 0; background: rgba(255,255,255,.96); backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--border); padding: 14px; display: flex; align-items: flex-start;
+      justify-content: space-between; gap: 10px;
+    }
+    .ds-pop-title { display: flex; flex-direction: column; gap: 2px; }
+    .ds-pop-title b { color: var(--primary); font-size: 1.02rem; }
+    .ds-pop-title span { color: var(--muted); font-weight: 900; font-size: .9rem; }
+    .ds-pop-close {
+      width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--border); background: #fff;
+      color: var(--muted); cursor: pointer; font-size: 20px; line-height: 1; transition: var(--transition);
+      box-shadow: 0 10px 20px rgba(2,6,23,.05);
+    }
+    .ds-pop-close:hover { background: #f1f5f9; transform: translateY(-1px); box-shadow: 0 14px 26px rgba(2,6,23,.08); }
+    .ds-pop-body { padding: 14px 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+
+    .ds-section { border: 1px solid var(--border); background: #fff; border-radius: 14px; padding: 12px; box-shadow: 0 10px 22px rgba(2,6,23,.04); }
+    .ds-sec-title { font-weight: 900; color: var(--primary); display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--border); margin-bottom: 10px; }
+    .ds-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .ds-chip { display: inline-flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 999px; background: #f1f5f9; border: 1px solid var(--border); font-weight: 900; color: var(--text); font-size: .9rem; }
+
+    .ds-alert, .ds-success {
+      display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; font-weight: 900;
+    }
+    .ds-alert { border: 1px solid rgba(239,68,68,.28); background: linear-gradient(180deg, rgba(239,68,68,.12), #fff); color: #991b1b; }
+    .ds-success { border: 1px solid rgba(16,185,129,.28); background: linear-gradient(180deg, rgba(16,185,129,.12), #fff); color: #065f46; }
+    .ds-alert .ds-dot, .ds-success .ds-dot { width: 10px; height: 10px; border-radius: 999px; flex: 0 0 auto; }
+    .ds-alert .ds-dot { background: #ef4444; box-shadow: 0 0 0 6px rgba(239,68,68,.12); }
+    .ds-success .ds-dot { background: #10b981; box-shadow: 0 0 0 6px rgba(16,185,129,.12); }
+
+    .ds-btn-cover { width: 100%; height: 46px; border-radius: 12px; border: 1px solid var(--primary); background: #fff; color: var(--primary); font-weight: 900; font-size: .95rem; cursor: pointer; transition: var(--transition); font-family: inherit; }
+    .ds-btn-cover:hover { background: #f1f5f9; transform: translateY(-1px); }
+    .ds-btn-take-attendance { width: 100%; height: 48px; border-radius: 12px; border: none; background: linear-gradient(145deg, var(--primary-2), var(--primary)); color: #fff; font-weight: 900; font-size: .95rem; cursor: pointer; box-shadow: 0 14px 30px rgba(3,60,84,.26); transition: var(--transition); font-family: inherit; }
+    .ds-btn-take-attendance:hover { transform: translateY(-1px); }
+    .ds-btn-assign { width: 100%; height: 46px; border-radius: 12px; border: none; background: var(--border); color: var(--muted); font-weight: 900; font-size: .95rem; cursor: not-allowed; transition: var(--transition); font-family: inherit; }
+    .ds-btn-assign:not(:disabled) { background: linear-gradient(180deg, var(--primary-2), var(--primary)); color: #fff; cursor: pointer; box-shadow: 0 14px 30px rgba(3,60,84,.26); }
+    .ds-btn-assign:not(:disabled):hover { transform: translateY(-1px); }
+
+    .ds-cover-list { display: flex; flex-direction: column; gap: 8px; margin: 10px 0; max-height: 220px; overflow: auto; }
+    .ds-cover-option {
+      display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-radius: 12px;
+      border: 1px solid var(--border); background: #fff; color: var(--text); font-weight: 800; cursor: pointer;
+      text-align: right; transition: border-color .12s ease, background .12s ease; font-family: inherit;
+    }
+    .ds-cover-option:hover { background: #f1f5f9; }
+    .ds-cover-option.selected { border-color: var(--primary); background: rgba(59,130,246,.08); color: var(--primary); }
+
+    @media (max-width: 480px) {
+      .ds-th-full { display: none; }
+      .ds-th-stack { display: flex; flex-direction: column; align-items: center; gap: 2px; line-height: 1.15; }
+      .ds-th-word { font-size: .68rem; font-weight: 800; color: var(--muted); }
+      .ds-th-ordinal { font-size: 1rem; font-weight: 900; color: var(--primary); white-space: nowrap; }
+      table.ds-table { min-width: 760px; }
+      .ds-table th.ds-sticky-col, .ds-table td.ds-sticky-col { min-width: 120px; }
+      .ds-table thead th { padding: 10px 4px; }
+      .ds-teacher-name { font-size: .88rem; padding: 0 2px; }
+      .ds-date-btn { padding: 12px 16px; min-height: 48px; }
+      .ds-pop-head { padding: 12px; }
+      .ds-pop-body { padding: 12px 12px 14px; gap: 10px; }
+      .ds-chip { font-size: .85rem; padding: 7px 9px; }
+      .ds-cover-list { max-height: 32vh; }
+    }
+
+    /* Base chrome shared/attendance.js's injected modals rely on the host
+       page providing (.btn, .modal .overlay, .modal .card) — this page's
+       own .modal already toggles visibility via .modal.open the same way
+       (compatible), but has no .overlay/.card of its own to collide with,
+       so these are added fresh, copied from depHead/dptschedual.html. */
+    .btn { font-family: inherit; width: 100%; min-height: 56px; border: none; border-radius: 14px; cursor: pointer; font-weight: 800; font-size: 1rem; padding: 14px 20px; transition: var(--transition); display: flex; align-items: center; justify-content: center; gap: 10px; }
+    .btn.cancel { background: #fff; color: var(--primary); border: 1px solid rgba(2,43,66,.25); }
+    .btn.primary { background: linear-gradient(145deg, var(--primary-2), var(--primary)); color: #fff; }
+    .modal .overlay { position: absolute; inset: 0; background: rgba(15,23,42,.35); backdrop-filter: blur(4px); }
+    .modal .card { position: relative; z-index: 1; width: min(92vw, 420px); background: #fff; border-radius: 18px; box-shadow: var(--shadow-2); padding: 22px; margin: 16px; }
+    .modal .card h3 { margin: 0 0 8px; font-size: 1.1rem; color: var(--primary); font-weight: 900; }
+    .modal .card p { margin: 0 0 12px; color: var(--muted); font-weight: 700; }
+    .modal .card .row { display: flex; gap: 10px; justify-content: flex-start; margin-top: 16px; flex-wrap: wrap; }
+    #attConfirmModal, #attErrorModal, #attCriticalErrorModal, #attBlockedModal, #attSuccessModal, #attLessonDetailModal {
+      --primary-extra-light: var(--primary-light);
+      --green: #1a7f37; --yellow: #a06d00; --red: #b42318;
+      --greenBg: rgba(26,127,55,.08); --yellowBg: rgba(160,109,0,.10); --redBg: rgba(180,35,24,.10);
+      --chip: var(--primary-light); --shadow-1: var(--shadow-1);
+    }
   </style>
 
   <!-- iOS home screen icon -->
@@ -1267,18 +1422,15 @@
         <i class="fas fa-house"></i>
         <span>الرئيسية</span>
       </button>
-      <button id="sidebarMore" class="sidebar-link" type="button">
-        <i class="fas fa-chalkboard"></i>
-        <span>عرض جدول فصل آخر</span>
+      <button id="sidebarDeptSchedule" class="sidebar-link" type="button" hidden>
+        <i class="fas fa-users-rectangle"></i>
+        <span>جدول القسم</span>
       </button>
       <button id="sidebarRequests" class="sidebar-link" type="button" hidden>
         <i class="fas fa-inbox"></i>
         <span>طلبات القسم</span>
       </button>
-      <button id="sidebarDownloadPdf" class="sidebar-link" type="button">
-        <i class="fas fa-file-pdf"></i>
-        <span>تنزيل PDF</span>
-      </button>
+      <div id="telegramSettingsSlot"></div>
     </nav>
   </aside>
 
@@ -1391,6 +1543,78 @@
     </div>
   </section>
 
+  <!-- DEPARTMENT SCHEDULE SHEET (جدول القسم) — an in-page copy of
+       depHead/dptschedual.html's grid + popover UI; that file is never
+       navigated to or edited, this is a parallel implementation. -->
+  <section id="dsSheet" class="sheet" aria-hidden="true">
+    <div class="sheet-header">
+      <button id="dsClose" class="back-btn" type="button">
+        <i class="fas fa-arrow-right"></i>
+        <span>رجوع</span>
+      </button>
+      <h3 class="sheet-title">جدول القسم</h3>
+    </div>
+    <div class="sheet-body ds-sheet-body">
+      <button class="ds-date-btn" id="dsDateBtn" type="button" aria-label="اختيار تاريخ">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="4" width="18" height="18" rx="2"/>
+          <line x1="16" y1="2" x2="16" y2="6"/>
+          <line x1="8" y1="2" x2="8" y2="6"/>
+          <line x1="3" y1="10" x2="21" y2="10"/>
+        </svg>
+        <span id="dsDateLabel">—</span>
+        <small>اضغط لتغيير التاريخ</small>
+        <div class="ds-date-input-wrapper" aria-hidden="true">
+          <input class="ds-mobile-date-input" id="dsMobileDateInput" type="date" inputmode="none" />
+        </div>
+      </button>
+
+      <div id="dsStateLoading" class="ds-state active">
+        <div class="ds-spinner"></div>
+      </div>
+      <div id="dsStateDenied" class="ds-state">
+        <div class="ds-msg-error">تعذّر تحميل جدول القسم — تحقق من تحديد قسمك في بياناتك.</div>
+      </div>
+      <div id="dsStateLoadError" class="ds-state">
+        <div class="ds-msg-error">تعذّر تحميل جدول القسم. تحقق من الاتصال بالإنترنت ثم أعد المحاولة.</div>
+        <button id="dsLoadErrorRetry" class="ds-retry-btn" type="button">إعادة المحاولة</button>
+      </div>
+      <div id="dsStateOk" class="ds-state">
+        <div class="ds-table-shell">
+          <div class="ds-table-scroll" id="dsTableScroll">
+            <table class="ds-table" aria-label="جدول القسم">
+              <thead>
+                <tr>
+                  <th class="ds-sticky-col">المعلمين</th>
+                  <th aria-label="الحصة الأولى"><span class="ds-th-full">الحصة الأولى</span><span class="ds-th-stack"><span class="ds-th-word">الحصة</span><span class="ds-th-ordinal">الأولى</span></span></th>
+                  <th aria-label="الحصة الثانية"><span class="ds-th-full">الحصة الثانية</span><span class="ds-th-stack"><span class="ds-th-word">الحصة</span><span class="ds-th-ordinal">الثانية</span></span></th>
+                  <th aria-label="الحصة الثالثة"><span class="ds-th-full">الحصة الثالثة</span><span class="ds-th-stack"><span class="ds-th-word">الحصة</span><span class="ds-th-ordinal">الثالثة</span></span></th>
+                  <th aria-label="الحصة الرابعة"><span class="ds-th-full">الحصة الرابعة</span><span class="ds-th-stack"><span class="ds-th-word">الحصة</span><span class="ds-th-ordinal">الرابعة</span></span></th>
+                  <th aria-label="الحصة الخامسة"><span class="ds-th-full">الحصة الخامسة</span><span class="ds-th-stack"><span class="ds-th-word">الحصة</span><span class="ds-th-ordinal">الخامسة</span></span></th>
+                  <th aria-label="الحصة السادسة"><span class="ds-th-full">الحصة السادسة</span><span class="ds-th-stack"><span class="ds-th-word">الحصة</span><span class="ds-th-ordinal">السادسة</span></span></th>
+                  <th aria-label="الحصة السابعة"><span class="ds-th-full">الحصة السابعة</span><span class="ds-th-stack"><span class="ds-th-word">الحصة</span><span class="ds-th-ordinal">السابعة</span></span></th>
+                </tr>
+              </thead>
+              <tbody id="dsGridBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="ds-popover-backdrop" id="dsPopBackdrop" aria-hidden="true"></div>
+  <div class="ds-popover" id="dsPopover" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="ds-pop-head">
+      <div class="ds-pop-title">
+        <b id="dsPopTitle">—</b>
+        <span id="dsPopSub">—</span>
+      </div>
+      <button class="ds-pop-close" id="dsPopClose" aria-label="إغلاق" type="button">×</button>
+    </div>
+    <div class="ds-pop-body" id="dsPopBody"></div>
+  </div>
+
   <!-- MODAL -->
   <section id="modal" class="modal" aria-hidden="true">
     <div class="modal-backdrop" id="modalBackdrop"></div>
@@ -1429,7 +1653,7 @@
       initializeFirestore, persistentSingleTabManager,
       collection, getDocs, query, where, doc, getDoc,
       addDoc, serverTimestamp, updateDoc, runTransaction,
-      limit, orderBy, onSnapshot
+      limit, orderBy, onSnapshot, setDoc
     } from "/shared/firebase.js";
     import {
       getOverriddenClassKeys, mergeCustomIntoLessonMap, classKeyFromRow, normalizeClassKey
@@ -1437,6 +1661,9 @@
     import { fetchClassList, sortClassList, primeClassList } from "/shared/class-registry.js";
     import { DEPARTMENT_LIST, resolveDepartmentName, getDepartmentSubjectFilters } from "/shared/departments.js";
     import { getDayScheduleHighlight } from "/shared/day-schedule-highlight.js";
+    import { mountTelegramSettings } from "/shared/telegram-settings.js";
+    import { mountAttendanceSheet, LESSON_END_GRACE_MINUTES } from "/shared/attendance.js";
+    import { parseTimeToMinutes } from "/shared/kuwait-time.js";
 
 
 
@@ -1456,6 +1683,19 @@
     // whole extra Firestore round trip on every load. fetchClassList()
     // below picks up the result.
     primeClassList(db, auth);
+
+    mountTelegramSettings({ auth });
+
+    // "تسجيل الغياب" inside جدول القسم (see the dsSheet block near the
+    // bottom) — lets any teacher in the department record attendance for a
+    // colleague's lesson directly from that grid. isPrivilegedEdit is just
+    // the early, friendlier client-side gate; the real authorization is
+    // firestore.rules' department-peer branch on attendanceSessions' create
+    // rule. Reuses this page's own db/auth rather than re-initializing.
+    const dsAttendance = mountAttendanceSheet({
+      db, auth, isPrivilegedEdit: true,
+      onSaved: () => { closeDeptSchedPopover(); loadDeptSchedGridForDate(dsSelectedDate); },
+    });
 
     /* ========= Telegram backend (طلبات القسم notifications) ========= */
     const TELEGRAM_BACKEND_BASE_URL = (() => {
@@ -1706,9 +1946,8 @@
     const sidebarBackdrop = document.getElementById('sidebarBackdrop');
     const sidebarClose = document.getElementById('sidebarClose');
     const sidebarHome = document.getElementById('sidebarHome');
-    const sidebarMore = document.getElementById('sidebarMore');
+    const sidebarDeptSchedule = document.getElementById('sidebarDeptSchedule');
     const sidebarRequests = document.getElementById('sidebarRequests');
-    const sidebarDownloadPdf = document.getElementById('sidebarDownloadPdf');
     const sidebarAvatar = document.getElementById('sidebarAvatar');
     const sidebarTeacherName = document.getElementById('sidebarTeacherName');
     const sidebarTeacherMeta = document.getElementById('sidebarTeacherMeta');
@@ -1752,6 +1991,7 @@
     let currentUser = null;
     let currentRole = '';
     let currentTeacherProfile = null;
+    let myDeptSchedDepartment = ''; // resolved once the profile loads — gates sidebarDeptSchedule/جدول القسم
 
     let currentView = 'today'; // today | week
     let activeTodayISO = null; // what is rendered in day view
@@ -5646,6 +5886,453 @@
       document.body.style.overflow = '';
     }
 
+    /* ========= جدول القسم (dsSheet) =========
+       An in-page copy of depHead/dptschedual.html's grid + popover UI —
+       that file is never navigated to or edited (per instruction), this
+       reimplements it as a sheet inside this page instead, reusing this
+       page's own db/auth/currentUser/currentRole/myDeptSchedDepartment
+       rather than re-authenticating. Every identifier here is "ds"-prefixed
+       to stay clear of this page's own (today/week) schedule code. */
+    const dsSheetEl = document.getElementById('dsSheet');
+    const dsClose = document.getElementById('dsClose');
+    const dsDateBtn = document.getElementById('dsDateBtn');
+    const dsDateLabel = document.getElementById('dsDateLabel');
+    const dsMobileDateInput = document.getElementById('dsMobileDateInput');
+    const dsStateLoading = document.getElementById('dsStateLoading');
+    const dsStateDenied = document.getElementById('dsStateDenied');
+    const dsStateLoadError = document.getElementById('dsStateLoadError');
+    const dsStateOk = document.getElementById('dsStateOk');
+    const dsLoadErrorRetry = document.getElementById('dsLoadErrorRetry');
+    const dsGridBody = document.getElementById('dsGridBody');
+    const dsPopBackdrop = document.getElementById('dsPopBackdrop');
+    const dsPopoverEl = document.getElementById('dsPopover');
+    const dsPopClose = document.getElementById('dsPopClose');
+    const dsPopTitle = document.getElementById('dsPopTitle');
+    const dsPopSub = document.getElementById('dsPopSub');
+    const dsPopBody = document.getElementById('dsPopBody');
+
+    let dsInitialized = false;
+    let dsTeachersList = [];
+    let dsScheduleMap = Object.create(null);
+    let dsAttendanceMap = Object.create(null);
+    let dsSelectedDate = new Date();
+    let dsIsHeadViewer = false;
+
+    const dsArabicSort = (a, b) => (a || '').toString().localeCompare((b || '').toString(), 'ar', { sensitivity: 'base' });
+
+    function dsFmtDateLong(d){
+      return new Intl.DateTimeFormat('ar-KW', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'Asia/Kuwait' }).format(d);
+    }
+    function dsToInputDate(d){
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const da = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${da}`;
+    }
+    function dsFormatTime(timestamp){
+      if (!timestamp) return '—';
+      let date;
+      if (timestamp.toDate) date = timestamp.toDate();
+      else if (timestamp.seconds) date = new Date(timestamp.seconds * 1000);
+      else return '—';
+      return new Intl.DateTimeFormat('ar-KW', { hour: 'numeric', minute: 'numeric', timeZone: 'Asia/Kuwait', hour12: false }).format(date);
+    }
+
+    function dsShow(el){
+      [dsStateLoading, dsStateDenied, dsStateLoadError, dsStateOk].forEach(x => x.classList.remove('active'));
+      el.classList.add('active');
+    }
+
+    // Best-effort only — the real enforcement is firestore.rules'
+    // canWriteSessionTime. This is purely so تسجيل الغياب isn't shown for a
+    // lesson that's obviously not live right now.
+    let dsCachedLessonTimes = null;
+    const DS_DEFAULT_LESSON_TIMES_FALLBACK = [
+      { start: "07:55", end: "08:40" }, { start: "08:45", end: "09:30" },
+      { start: "09:35", end: "10:20" }, { start: "10:35", end: "11:20" },
+      { start: "11:25", end: "12:10" }, { start: "12:25", end: "13:10" },
+      { start: "13:15", end: "13:55" },
+    ];
+    async function dsEnsureLessonTimesLoaded(){
+      if (dsCachedLessonTimes) return dsCachedLessonTimes;
+      try {
+        const snap = await getDoc(doc(db, 'settings', 'lessonTimes'));
+        const times = snap.exists() && Array.isArray(snap.data()?.times) ? snap.data().times : null;
+        dsCachedLessonTimes = (times && times.length) ? times : DS_DEFAULT_LESSON_TIMES_FALLBACK;
+      } catch (e) {
+        console.error('[dsSheet] lessonTimes fetch failed:', e);
+        dsCachedLessonTimes = DS_DEFAULT_LESSON_TIMES_FALLBACK;
+      }
+      return dsCachedLessonTimes;
+    }
+    function dsIsLessonLiveNow(lessonIndex){
+      const times = dsCachedLessonTimes || DS_DEFAULT_LESSON_TIMES_FALLBACK;
+      const t = times[lessonIndex - 1];
+      if (!t || !t.start || !t.end) return false;
+      const now = getCurrentKuwaitMinutes();
+      const s = parseTimeToMinutes(t.start);
+      const e = parseTimeToMinutes(t.end);
+      return now >= s && now <= e + LESSON_END_GRACE_MINUTES;
+    }
+    function dsIsViewingToday(){
+      return dsToInputDate(dsSelectedDate) === dsToInputDate(new Date());
+    }
+
+    async function dsLoadDepartmentTeachers(department){
+      const normalizedDepartment = resolveDepartmentName(department);
+      const subjectFilters = [...new Set(getDepartmentSubjectFilters(normalizedDepartment))];
+      if (!subjectFilters.length) return [];
+      const q = subjectFilters.length === 1
+        ? query(collection(db, 'teachers'), where('subject', '==', subjectFilters[0]))
+        : query(collection(db, 'teachers'), where('subject', 'in', subjectFilters));
+      const snap = await getDocs(q);
+      const teachers = [];
+      snap.forEach(docSnap => {
+        const data = docSnap.data();
+        const rawSubject = (data?.department || data?.dept || data?.subject || '').toString().trim();
+        if (resolveDepartmentName(rawSubject) !== normalizedDepartment) return;
+        if (docSnap.id && data.name) teachers.push({ uid: docSnap.id, name: data.name, subject: data.subject || '' });
+      });
+      teachers.sort((a, b) => dsArabicSort(a.name, b.name));
+      return teachers;
+    }
+
+    // Schedule entries recur weekly (identified by weekday), so this
+    // matches by dayIndex (0=Sun..4=Thu), not by exact calendar date.
+    async function dsLoadScheduleForDate(dateObj){
+      dsScheduleMap = Object.create(null);
+      const dayIndex = dateObj.getDay();
+      const q = query(collection(db, 'schedules'), where('dayIndex', '==', dayIndex));
+      const snap = await getDocs(q);
+      snap.forEach(docSnap => {
+        const data = docSnap.data();
+        const lesson = Number(data.lesson);
+        const teacherUid = data.teacherUid;
+        const classKey = data.classKey;
+        if (!teacherUid || !lesson || lesson < 1 || lesson > 7 || !classKey) return;
+        if (!dsScheduleMap[teacherUid]) dsScheduleMap[teacherUid] = {};
+        dsScheduleMap[teacherUid][lesson] = { classKey: classKey.toString().trim(), teacherName: data.teacherName || '', subject: data.subject || '' };
+      });
+    }
+
+    function dsInitGrid(){
+      dsAttendanceMap = Object.create(null);
+      for (const teacher of dsTeachersList){
+        dsAttendanceMap[teacher.uid] = {};
+        for (let i = 1; i <= 7; i++) dsAttendanceMap[teacher.uid][i] = { classKey: null, taken: false, time: null, hasClass: false };
+      }
+    }
+
+    async function dsLoadAttendanceData(dateObj){
+      dsInitGrid();
+      let scheduledCellCount = 0;
+      for (const teacher of dsTeachersList){
+        const teacherSchedule = dsScheduleMap[teacher.uid];
+        if (!teacherSchedule) continue;
+        for (let lesson = 1; lesson <= 7; lesson++){
+          const schedule = teacherSchedule[lesson];
+          if (schedule && schedule.classKey){
+            dsAttendanceMap[teacher.uid][lesson].hasClass = true;
+            dsAttendanceMap[teacher.uid][lesson].classKey = schedule.classKey;
+            scheduledCellCount++;
+          }
+        }
+      }
+      if (scheduledCellCount === 0) return;
+
+      const snap = await getDocs(query(collection(db, 'attendanceSessions'), where('date', '==', dsToInputDate(dateObj))));
+      snap.forEach(sessionDoc => {
+        const session = sessionDoc.data() || {};
+        const lesson = Number(session.lesson);
+        const cell = dsAttendanceMap[session.teacherUid]?.[lesson];
+        if (!cell?.hasClass || cell.classKey !== session.classKey) return;
+        cell.taken = true;
+        cell.time = session.createdAt || session.sessionStartTs || null;
+      });
+    }
+
+    function dsRenderGrid(){
+      dsGridBody.innerHTML = '';
+      if (dsTeachersList.length === 0){
+        const tr = document.createElement('tr');
+        const td = document.createElement('td');
+        td.colSpan = 8;
+        td.className = 'muted';
+        td.style.textAlign = 'center';
+        td.style.padding = '20px';
+        td.textContent = 'لا يوجد معلمون في هذا القسم';
+        tr.appendChild(td);
+        dsGridBody.appendChild(tr);
+        return;
+      }
+      for (const teacher of dsTeachersList){
+        const tr = document.createElement('tr');
+        const tdTeacher = document.createElement('td');
+        tdTeacher.className = 'ds-sticky-col';
+        tdTeacher.innerHTML = `<div class="ds-teacher-name">${teacher.name}</div>`;
+        tr.appendChild(tdTeacher);
+        for (let lesson = 1; lesson <= 7; lesson++){
+          const td = document.createElement('td');
+          const cell = dsAttendanceMap[teacher.uid][lesson];
+          if (!cell || !cell.hasClass){
+            const empty = document.createElement('div');
+            empty.className = 'ds-cell-empty';
+            td.appendChild(empty);
+          } else {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = cell.taken ? 'ds-cell-btn-taken' : 'ds-cell-btn-not-taken';
+            btn.textContent = toArabicDigits(cell.classKey);
+            btn.title = cell.taken ? 'تم تسليم الغياب' : 'لم يتم تسليم الغياب';
+            btn.addEventListener('click', (e) => { e.stopPropagation(); dsOpenPopoverForCell(teacher, lesson, cell); });
+            td.appendChild(btn);
+          }
+          tr.appendChild(td);
+        }
+        dsGridBody.appendChild(tr);
+      }
+    }
+
+    function dsCanTakeAttendanceNow(cellData, lesson){
+      return !cellData.taken && dsIsViewingToday() && dsIsLessonLiveNow(lesson);
+    }
+
+    function dsWireTakeAttendanceUI(teacher, lesson, cellData){
+      const btn = document.getElementById('dsBtnTakeAttendance');
+      if (!btn) return;
+      btn.addEventListener('click', () => {
+        if (!dsCanTakeAttendanceNow(cellData, lesson)) return;
+        dsClosePopover();
+        dsAttendance.openForAdminCreate({
+          date: kuwaitTodayISO(), classKey: cellData.classKey, lesson,
+          teacherUid: teacher.uid, teacherName: teacher.name,
+        });
+      });
+    }
+
+    function dsGetFreeDeptTeachersForLesson(lesson, excludeUid){
+      return dsTeachersList.filter(t => {
+        if (t.uid === excludeUid) return false;
+        const sched = dsScheduleMap[t.uid];
+        return !sched || !sched[lesson];
+      });
+    }
+
+    function dsWireCoverUI(teacher, lesson, cellData){
+      const btnOpenCover = document.getElementById('dsBtnOpenCover');
+      const coverSection = document.getElementById('dsCoverSection');
+      const coverTeacherList = document.getElementById('dsCoverTeacherList');
+      const btnAssignCover = document.getElementById('dsBtnAssignCover');
+      const coverStatus = document.getElementById('dsCoverStatus');
+      let selectedTeacherUid = null;
+
+      function renderFreeTeachers(){
+        const free = dsGetFreeDeptTeachersForLesson(lesson, teacher.uid);
+        coverTeacherList.innerHTML = '';
+        if (!free.length){
+          const empty = document.createElement('div');
+          empty.className = 'muted';
+          empty.textContent = 'لا يوجد معلمون متفرغون في هذا القسم لهذه الحصة.';
+          coverTeacherList.appendChild(empty);
+          return;
+        }
+        free.forEach(t => {
+          const opt = document.createElement('button');
+          opt.type = 'button';
+          opt.className = 'ds-cover-option';
+          opt.textContent = t.name;
+          opt.addEventListener('click', () => {
+            selectedTeacherUid = t.uid;
+            coverTeacherList.querySelectorAll('.ds-cover-option').forEach(el => el.classList.remove('selected'));
+            opt.classList.add('selected');
+            btnAssignCover.disabled = false;
+          });
+          coverTeacherList.appendChild(opt);
+        });
+      }
+
+      btnOpenCover.addEventListener('click', () => {
+        const opening = coverSection.hidden;
+        coverSection.hidden = !coverSection.hidden;
+        if (opening) renderFreeTeachers();
+      });
+
+      btnAssignCover.addEventListener('click', async () => {
+        if (!selectedTeacherUid || btnAssignCover.disabled) return;
+        btnAssignCover.disabled = true;
+        coverStatus.style.color = '';
+        coverStatus.textContent = 'جارٍ إسناد التغطية...';
+        try {
+          await dsAssignCover(teacher.uid, selectedTeacherUid, lesson, cellData.classKey);
+          coverStatus.style.color = 'var(--success)';
+          coverStatus.textContent = 'تم إسناد التغطية بنجاح.';
+        } catch (e) {
+          console.error('[dsSheet] assignCover failed:', e);
+          coverStatus.style.color = 'var(--danger)';
+          coverStatus.textContent = 'تعذّر إسناد التغطية. حاول مرة أخرى.';
+          btnAssignCover.disabled = false;
+        }
+      });
+    }
+
+    // Writes a scheduleOverrides doc naming newTeacherUid as the covering
+    // teacher for this one date/lesson — same mechanism/doc-ID convention
+    // depHead/dptschedual.html's own assignCover uses.
+    async function dsAssignCover(originalTeacherUid, newTeacherUid, lesson, classKey){
+      const dateISO = dsToInputDate(dsSelectedDate);
+      const existingSnap = await getDocs(query(
+        collection(db, 'scheduleOverrides'),
+        where('date', '==', dateISO), where('lesson', '==', lesson),
+        where('originalTeacherUid', '==', originalTeacherUid), where('active', '==', true)
+      ));
+      await Promise.all(existingSnap.docs.map(d => updateDoc(d.ref, { active: false })));
+      const overrideId = `cover_${dateISO}_${lesson}_${originalTeacherUid}_${newTeacherUid}`;
+      await setDoc(doc(db, 'scheduleOverrides', overrideId), {
+        date: dateISO, lesson, classKey, originalTeacherUid, newTeacherUid,
+        active: true, createdAt: serverTimestamp(), type: 'cover',
+      }, { merge: true });
+    }
+
+    function dsOpenPopoverForCell(teacher, lesson, cellData){
+      const niceLesson = toArabicDigits(lesson);
+      const niceDate = toArabicDigits(dsFmtDateLong(dsSelectedDate));
+      const niceClass = toArabicDigits(cellData.classKey);
+      const niceTime = cellData.taken && cellData.time ? toArabicDigits(dsFormatTime(cellData.time)) : '—';
+
+      dsPopTitle.textContent = teacher.name;
+      dsPopSub.textContent = `الحصة ${niceLesson} • ${niceDate}`;
+
+      dsPopBody.innerHTML = `
+        <div class="ds-section">
+          <div class="ds-sec-title"><span>تفاصيل الحصة</span><span class="muted" style="font-weight:900">الحصة ${niceLesson}</span></div>
+          <div class="ds-chips"><span class="ds-chip">الصف: ${niceClass}</span><span class="ds-chip">التاريخ: ${niceDate}</span></div>
+        </div>
+        <div class="${cellData.taken ? 'ds-success' : 'ds-alert'}">
+          <span class="ds-dot"></span><span>${cellData.taken ? 'تم تسليم الغياب' : 'لم يتم تسليم الغياب'}</span>
+        </div>
+        ${cellData.taken ? `
+        <div class="ds-section">
+          <div class="ds-sec-title"><span>معلومات التسليم</span><span class="muted" style="font-weight:900">الوقت</span></div>
+          <div class="ds-chips"><span class="ds-chip">تم التسليم في: ${niceTime}</span></div>
+        </div>` : ''}
+        ${dsCanTakeAttendanceNow(cellData, lesson) ? `<button type="button" class="ds-btn-take-attendance" id="dsBtnTakeAttendance">تسجيل الغياب</button>` : ''}
+        ${dsIsHeadViewer ? `
+        <button type="button" class="ds-btn-cover" id="dsBtnOpenCover">تغطية</button>
+        <div class="ds-section" id="dsCoverSection" hidden>
+          <div class="ds-sec-title"><span>إسناد تغطية لهذه الحصة</span></div>
+          <div class="muted" style="font-size:.85rem; margin-bottom:4px;">معلمو القسم المتفرغون في هذه الحصة (${niceDate}):</div>
+          <div class="ds-cover-list" id="dsCoverTeacherList"></div>
+          <button type="button" class="ds-btn-assign" id="dsBtnAssignCover" disabled>تعيين</button>
+          <div class="muted" id="dsCoverStatus" style="font-size:.85rem; margin-top:6px;"></div>
+        </div>` : ''}
+      `;
+
+      dsPopBackdrop.classList.add('open');
+      dsPopBackdrop.setAttribute('aria-hidden', 'false');
+      dsPopoverEl.classList.add('open');
+      dsPopoverEl.setAttribute('aria-hidden', 'false');
+      dsPopClose.focus({ preventScroll: true });
+
+      dsWireTakeAttendanceUI(teacher, lesson, cellData);
+      if (dsIsHeadViewer) dsWireCoverUI(teacher, lesson, cellData);
+    }
+
+    function dsClosePopover(){
+      dsPopBackdrop.classList.remove('open');
+      dsPopBackdrop.setAttribute('aria-hidden', 'true');
+      dsPopoverEl.classList.remove('open');
+      dsPopoverEl.setAttribute('aria-hidden', 'true');
+    }
+
+    dsPopBackdrop.addEventListener('click', dsClosePopover);
+    dsPopClose.addEventListener('click', dsClosePopover);
+    dsPopoverEl.addEventListener('click', (e) => e.stopPropagation());
+
+    async function loadDeptSchedGridForDate(dateObj, teachersPromise = null){
+      dsShow(dsStateLoading);
+      dsDateLabel.textContent = toArabicDigits(dsFmtDateLong(dateObj));
+      dsMobileDateInput.value = dsToInputDate(dateObj);
+      try {
+        await Promise.all([
+          dsLoadScheduleForDate(dateObj),
+          teachersPromise?.then((teachers) => { dsTeachersList = teachers; }),
+        ]);
+        await dsLoadAttendanceData(dateObj);
+        dsRenderGrid();
+        dsShow(dsStateOk);
+      } catch (e) {
+        console.error('[dsSheet] load failed:', e);
+        dsShow(dsStateLoadError);
+      }
+    }
+
+    dsDateBtn.addEventListener('click', () => {
+      try {
+        if (typeof dsMobileDateInput.showPicker === 'function') { dsMobileDateInput.showPicker(); return; }
+      } catch {}
+      dsMobileDateInput.focus({ preventScroll: true });
+      dsMobileDateInput.click();
+    });
+    dsMobileDateInput.addEventListener('change', async () => {
+      if (!dsMobileDateInput.value) return;
+      const [yy, mm, dd] = dsMobileDateInput.value.split('-').map(Number);
+      const d = new Date(yy, (mm || 1) - 1, dd || 1);
+      if (Number.isNaN(d.getTime())) return;
+      dsSelectedDate = d;
+      dsClosePopover();
+      await loadDeptSchedGridForDate(dsSelectedDate);
+    });
+    dsLoadErrorRetry.addEventListener('click', () => loadDeptSchedGridForDate(dsSelectedDate, dsLoadDepartmentTeachers(myDeptSchedDepartment)));
+
+    document.addEventListener('click', (e) => {
+      if (!dsPopoverEl.classList.contains('open')) return;
+      if (dsPopoverEl.contains(e.target)) return;
+      dsClosePopover();
+    });
+
+    function dsOnEscape(e){
+      if (e.key !== 'Escape') return;
+      if (dsPopoverEl.classList.contains('open')) { dsClosePopover(); return; }
+      closeDeptSchedSheet();
+    }
+
+    // Opening pushes a history entry (#dptschedual) so the browser's own
+    // back button — not just this sheet's close button — closes it instead
+    // of leaving the page; popstate below just syncs the UI, it never
+    // pushes/pops on its own (that would loop).
+    async function openDeptSchedSheet(){
+      if (!myDeptSchedDepartment) return;
+      dsIsHeadViewer = currentRole === 'head';
+      dsSheetEl.classList.add('open');
+      dsSheetEl.setAttribute('aria-hidden', 'false');
+      try { history.pushState({ dsSheetOpen: true }, '', '#dptschedual'); } catch {}
+      document.addEventListener('keydown', dsOnEscape);
+      if (!dsInitialized){
+        dsInitialized = true;
+        dsSelectedDate = new Date();
+        dsEnsureLessonTimesLoaded();
+        await loadDeptSchedGridForDate(dsSelectedDate, dsLoadDepartmentTeachers(myDeptSchedDepartment));
+      }
+    }
+
+    function closeDeptSchedSheet(){
+      dsSheetEl.classList.remove('open');
+      dsSheetEl.setAttribute('aria-hidden', 'true');
+      document.removeEventListener('keydown', dsOnEscape);
+      dsClosePopover();
+      if (history.state?.dsSheetOpen) { try { history.back(); } catch {} }
+    }
+
+    window.addEventListener('popstate', () => {
+      if (!dsSheetEl.classList.contains('open')) return;
+      dsSheetEl.classList.remove('open');
+      dsSheetEl.setAttribute('aria-hidden', 'true');
+      document.removeEventListener('keydown', dsOnEscape);
+      dsClosePopover();
+    });
+
+    dsClose.addEventListener('click', closeDeptSchedSheet);
+
     // This page is reached from several different hubs depending on the
     // signed-in user's role (Teachers/user.html, depHead/dptlead.html,
     // supervisors/supervisor.html, admins/admin-late-attendance.html) —
@@ -5673,9 +6360,8 @@
     sidebarClose.addEventListener('click', closeSidebar);
     sidebarBackdrop.addEventListener('click', closeSidebar);
     sidebarHome.addEventListener('click', () => { closeSidebar(); goHome(); });
-    sidebarMore.addEventListener('click', () => { closeSidebar(); openMore(); });
+    sidebarDeptSchedule.addEventListener('click', () => { closeSidebar(); openDeptSchedSheet(); });
     sidebarRequests.addEventListener('click', () => { closeSidebar(); openRequestsSheet(); });
-    sidebarDownloadPdf.addEventListener('click', () => { closeSidebar(); downloadWeeklySchedulePdf(); });
 
     btnDownloadPdf.addEventListener('click', downloadWeeklySchedulePdf);
     btnDownloadAllClassesPdf.addEventListener('click', downloadAllClassSchedulesPdf);
@@ -5729,6 +6415,11 @@
         loadTodayForTeacher(user.uid)
       ]);
       renderSidebarProfile();
+
+      myDeptSchedDepartment = resolveDepartmentName(
+        currentTeacherProfile?.department || currentTeacherProfile?.dept || currentTeacherProfile?.subject || ''
+      );
+      sidebarDeptSchedule.hidden = !myDeptSchedDepartment;
 
       if(currentRole === 'head'){
         headUid = user.uid;
