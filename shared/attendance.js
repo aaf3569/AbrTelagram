@@ -80,16 +80,29 @@ const STYLES = `
   #attendanceSheet .select:focus{outline:none;box-shadow:0 0 0 3px rgba(3,60,84,.18), 0 18px 40px rgba(3,60,84,.32)}
   #attendanceSheet .select-wrap::after{content:"";position:absolute;top:50%;transform:translateY(-50%);inset-inline-start:14px;width:22px;height:22px;pointer-events:none;opacity:.95;background:url('data:image/svg+xml;utf8,<svg fill="%23ffffff" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>') no-repeat center / 20px 20px;filter:drop-shadow(0 1px 0 rgba(0,0,0,.15))}
   #attendanceSheet .hint{font-weight:800;color:var(--muted)}
-  #attConfirmModal .filter-buttons{display:flex;gap:10px;margin-bottom:16px;justify-content:center}
+  #attConfirmModal .filter-buttons{display:flex;gap:10px;margin-bottom:16px;justify-content:center;flex-shrink:0}
   #attConfirmModal .filter-btn{flex:1;min-height:50px;border-radius:12px;font-weight:800;border:2px solid var(--border);background:#fff;color:var(--primary);cursor:pointer;transition:var(--transition)}
   #attConfirmModal .filter-btn.active{background:var(--primary);color:#fff;border-color:var(--primary)}
   #attConfirmModal #attFilterAbsent{color:var(--red,#b42318);border-color:rgba(180,35,24,.35)}
   #attConfirmModal #attFilterAbsent.active{background:var(--red,#b42318);border-color:var(--red,#b42318);color:#fff}
   #attConfirmModal #attFilterLate{color:var(--yellow,#a06d00);border-color:rgba(160,109,0,.35)}
   #attConfirmModal #attFilterLate.active{background:var(--yellow,#a06d00);border-color:var(--yellow,#a06d00);color:#fff}
-  #attConfirmModal .names-list{border:1px dashed var(--border);border-radius:14px;background:#fafcff;padding:12px;max-height:320px;overflow:auto}
+  /* The card is a fixed-height flex column so a long absent/late list can
+     never push the save/cancel row off screen: names-list is the only part
+     that grows and scrolls (min-height:0 is what lets a flex child shrink
+     below its content size instead of overflowing its parent), while the
+     header and button row stay pinned. This also caps the card itself so it
+     can never stretch to fill the whole screen on phones where the host
+     page's own .modal/.card rules don't already constrain it. */
+  #attConfirmModal .card{width:min(480px,92vw);max-height:min(640px,88vh);display:flex;flex-direction:column;overflow:hidden}
+  #attConfirmModal .card > h3,#attConfirmModal .card > p{flex-shrink:0}
+  #attConfirmModal .names-list{border:1px dashed var(--border);border-radius:14px;background:#fafcff;padding:12px;flex:1 1 auto;min-height:0;max-height:none;overflow-y:auto;-webkit-overflow-scrolling:touch}
   #attConfirmModal .names-list ul{margin:0;padding-inline-start:18px}
   #attConfirmModal .names-list li{margin:6px 0;font-weight:800}
+  #attConfirmModal .card > .row{flex-shrink:0;margin-top:12px;padding-bottom:env(safe-area-inset-bottom,0px)}
+  @media (max-width:480px){
+    #attConfirmModal .card{width:min(94vw,480px);max-height:min(560px,84vh)}
+  }
   /* Module-owned blocked modal (red X animation) */
   #attBlockedModal.modal.blocked-modal .overlay{background:rgba(15,23,42,.45);backdrop-filter:blur(6px)}
   #attBlockedModal .blocked-card{position:relative;z-index:1;width:min(360px,92vw);background:linear-gradient(180deg,#ffffff 0%,#fff7f7 100%);border:1px solid rgba(185,28,28,.20);border-radius:18px;box-shadow:0 24px 60px rgba(185,28,28,.24);padding:18px;display:grid;justify-items:center;gap:12px;text-align:center}
