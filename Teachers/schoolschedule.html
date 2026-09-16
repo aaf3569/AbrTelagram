@@ -195,8 +195,8 @@
       transition: width .18s ease;
     }
     .popover.open{ display:flex; }
-    /* The request form (طلب تغطية / طلب تبديل) gets a touch more room —
-       the plain info view stays compact. */
+    /* The request form (طلب تبديل) gets a touch more room — the plain
+       info view stays compact. */
     .popover.popover-wide{ width:min(420px, 94vw); max-height:min(560px, 84vh); }
 
     /* 3-column grid (back-arrow | centered title | close) — same layout
@@ -268,8 +268,6 @@
     }
     .pop-btn.solid{ background: linear-gradient(145deg, var(--primary-light), var(--primary)); color:#fff; box-shadow: 0 14px 30px rgba(3,60,84,.26); }
     .pop-btn.solid:hover{ transform: translateY(-1px); }
-    .pop-btn.outline{ background:#fff; color:var(--primary); border:1px solid rgba(3,60,84,.22); }
-    .pop-btn.outline:hover{ background:#f4f7fb; transform: translateY(-1px); }
     .pop-btn:disabled{ opacity:.55; cursor:not-allowed; transform:none !important; }
 
     .form-field{ display:flex; flex-direction:column; gap:6px; }
@@ -793,34 +791,30 @@
         </div>
         ${isOwnLesson ? '' : `
         <div class="pop-actions">
-          <button type="button" class="pop-btn outline" id="actCover">طلب تغطية</button>
           <button type="button" class="pop-btn solid" id="actSwap">طلب تبديل</button>
         </div>
         `}
       `;
       if (!isOwnLesson) {
-        document.getElementById('actCover').addEventListener('click', () => openRequestForm('cover'));
-        document.getElementById('actSwap').addEventListener('click', () => openRequestForm('swap'));
+        document.getElementById('actSwap').addEventListener('click', () => openRequestForm());
       }
     }
 
-    /* ========= Request form (طلب تبديل / طلب تغطية) =========
+    /* ========= Request form (طلب تبديل) =========
        Clicking a cell already names everything about that lesson — no
        date/lesson/department/teacher picker is needed for it, and there is
        no third teacher to matchmake between: the signed-in viewer is
        always personally the other side of the request (toTeacherUid),
-       volunteering to cover or swap with the clicked lesson themselves.
-       طلب تغطية needs nothing further at all — confirm and send. طلب
-       تبديل needs exactly one more thing: which of the viewer's OWN
-       lessons to offer in exchange ("اختر حصتك"). Written to the same
-       swapRequests shape Teachers/teacherschedule.html's own self-service
-       flow uses, so it shows up in the existing طلبات القسم review
-       unchanged; firestore.rules only allows fromTeacherUid to be someone
-       other than the caller when toTeacherUid is the caller themselves —
-       exactly this case. */
-    async function openRequestForm(type){
+       volunteering to swap with the clicked lesson themselves. It needs
+       exactly one more thing: which of the viewer's OWN lessons to offer
+       in exchange ("اختر حصتك"). Written to the same swapRequests shape
+       Teachers/teacherschedule.html's own self-service flow uses, so it
+       shows up in the existing طلبات القسم review unchanged;
+       firestore.rules only allows fromTeacherUid to be someone other than
+       the caller when toTeacherUid is the caller themselves — exactly this
+       case. */
+    async function openRequestForm(){
       const meta = currentLessonMeta;
-      const isSwap = type === 'swap';
 
       if (!currentUser){ toast('يرجى تسجيل الدخول أولاً.', true); return; }
       if (!meta.department){
@@ -844,7 +838,7 @@
 
       popover.classList.add('popover-wide');
       popBack.classList.remove('pop-back-hidden');
-      popTitleText.textContent = isSwap ? 'طلب تبديل' : 'طلب تغطية';
+      popTitleText.textContent = 'طلب تبديل';
       popSub.textContent = `${meta.teacherName} — ${LESSONS_AR[meta.lesson-1]}`;
 
       popBody.innerHTML = '';
@@ -855,7 +849,6 @@
       form.style.gap = '14px';
       form.innerHTML = `
         <div class="req-context">${escapeHtml(toArabicDigits(meta.classKey))} — ${escapeHtml(toArabicDigits(fmtDateLong(selectedDate)))}</div>
-        ${isSwap ? `
         <div class="form-field">
           <label for="reqMyDate">اختر حصتك — التاريخ</label>
           <input id="reqMyDate" type="date" min="${kuwaitTodayISO()}" value="${escapeHtml(meta.date)}" />
@@ -867,20 +860,19 @@
           </select>
           <div class="form-hint" id="mySlotPreview">—</div>
         </div>
-        ` : ''}
         <div id="reqHint" class="req-hint">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
-          <div>${isSwap ? 'اختر حصتك لإكمال الطلب.' : 'جاهز لإرسال طلب التغطية.'}</div>
+          <div>اختر حصتك لإكمال الطلب.</div>
         </div>
-        <button type="button" class="pop-btn solid" id="sendReq" ${isSwap ? 'disabled' : ''}>إرسال الطلب</button>
+        <button type="button" class="pop-btn solid" id="sendReq" disabled>إرسال الطلب</button>
       `;
       popBody.appendChild(form);
 
       const reqHintEl = document.getElementById('reqHint');
       const sendBtn = document.getElementById('sendReq');
-      const myDateInput = isSwap ? document.getElementById('reqMyDate') : null;
-      const myLessonSelect = isSwap ? document.getElementById('reqMyLesson') : null;
-      const mySlotPreview = isSwap ? document.getElementById('mySlotPreview') : null;
+      const myDateInput = document.getElementById('reqMyDate');
+      const myLessonSelect = document.getElementById('reqMyLesson');
+      const mySlotPreview = document.getElementById('mySlotPreview');
 
       const state = { mySlot: null, mySlots: [] };
 
@@ -890,7 +882,6 @@
       }
 
       function syncSendState(){
-        if (!isSwap){ sendBtn.disabled = false; return; }
         const dateErr = !myDateInput.value ? 'اختر التاريخ.' : isPastISO(myDateInput.value) ? 'لا يمكن اختيار تاريخ ماضٍ.' : !isSchoolDayISO(myDateInput.value) ? 'اختر يومًا دراسيًا من الأحد إلى الخميس.' : '';
         if (dateErr){ sendBtn.disabled = true; setHint(dateErr, true); return; }
         if (!state.mySlot){ sendBtn.disabled = true; setHint('اختر حصتك لإتمام التبديل.', true); return; }
@@ -899,7 +890,6 @@
       }
 
       async function refreshMySlots(){
-        if (!isSwap) return;
         state.mySlots = []; state.mySlot = null;
         myLessonSelect.innerHTML = '<option value="">اختر الحصة...</option>';
         myLessonSelect.disabled = true;
@@ -923,24 +913,17 @@
         syncSendState();
       }
 
-      if (isSwap){
-        myDateInput.addEventListener('change', refreshMySlots);
-        myLessonSelect.addEventListener('change', () => {
-          state.mySlot = state.mySlots.find(s => String(s.lesson) === myLessonSelect.value) || null;
-          mySlotPreview.textContent = state.mySlot ? `${LESSONS_AR[state.mySlot.lesson-1]} — ${toArabicDigits(state.mySlot.classKey)}` : 'اختر الحصة.';
-          syncSendState();
-        });
-        refreshMySlots();
-      } else {
+      myDateInput.addEventListener('change', refreshMySlots);
+      myLessonSelect.addEventListener('change', () => {
+        state.mySlot = state.mySlots.find(s => String(s.lesson) === myLessonSelect.value) || null;
+        mySlotPreview.textContent = state.mySlot ? `${LESSONS_AR[state.mySlot.lesson-1]} — ${toArabicDigits(state.mySlot.classKey)}` : 'اختر الحصة.';
         syncSendState();
-      }
+      });
+      refreshMySlots();
 
       sendBtn.addEventListener('click', async () => {
-        let targetSlot = null;
-        if (isSwap){
-          targetSlot = state.mySlot;
-          if (!targetSlot){ toast('اختر حصتك أولاً.', true); return; }
-        }
+        const targetSlot = state.mySlot;
+        if (!targetSlot){ toast('اختر حصتك أولاً.', true); return; }
 
         sendBtn.disabled = true;
         try {
@@ -959,10 +942,10 @@
           const payload = {
             date: meta.date, lesson: meta.lesson,
             fromDate: meta.date, fromLesson: meta.lesson, fromClassKey: meta.classKey,
-            toDate: isSwap ? targetSlot.date : null,
-            toLesson: isSwap ? targetSlot.lesson : null,
-            toClassKey: isSwap ? targetSlot.classKey : null,
-            type, requestVersion: 2,
+            toDate: targetSlot.date,
+            toLesson: targetSlot.lesson,
+            toClassKey: targetSlot.classKey,
+            type: 'swap', requestVersion: 2,
 
             fromTeacherUid: meta.teacherUid,
             fromTeacherName: meta.teacherName,
