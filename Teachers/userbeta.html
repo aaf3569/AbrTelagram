@@ -60,6 +60,12 @@
     }
 
     body.modal-open { overflow: hidden; }
+    /* اليوم on phone: page scroll is locked while this view is active — see
+       fitTodayToPhoneViewport() below, which scales #containerMain down to
+       always fit above the toolbar instead of letting it overflow. Locking
+       <html> (not body) keeps this independent of the existing body-overflow
+       toggles used by modals/sidebar/more-sheet elsewhere in this file. */
+    html.today-locked { overflow: hidden; overscroll-behavior: none; }
 
     /* Header */
     .site-header {
@@ -613,6 +619,31 @@
       color: #fff; cursor: pointer; display: grid; place-items: center; transition: var(--transition);
     }
     .sidebar-close:hover { transform: rotate(90deg); background: rgba(255, 255, 255, 0.22); }
+
+    /* Profile card — who's signed in, front and center under the school
+       header, instead of the sidebar opening straight into a plain link
+       list with no sense of whose schedule this is. */
+    .sidebar-profile {
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px; margin: 14px 14px 2px;
+      background: linear-gradient(145deg, rgba(4, 69, 99, 0.07), rgba(2, 43, 66, 0.03));
+      border: 1px solid var(--border-light); border-radius: var(--radius-sm);
+    }
+    .sidebar-avatar {
+      width: 46px; height: 46px; border-radius: 50%; flex-shrink: 0;
+      background: linear-gradient(135deg, var(--primary-2), var(--primary));
+      color: #fff; display: grid; place-items: center;
+      font-weight: 900; font-size: 1.05rem; box-shadow: var(--shadow-1);
+    }
+    .sidebar-profile-info { min-width: 0; }
+    .sidebar-profile-name {
+      font-weight: 900; font-size: 0.98rem; color: var(--text);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .sidebar-profile-meta {
+      font-weight: 700; font-size: 0.78rem; color: var(--muted); margin-top: 2px;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
     .sidebar-nav { padding: 14px; display: flex; flex-direction: column; gap: 6px; overflow-y: auto; }
     .sidebar-link {
       display: flex; align-items: center; gap: 12px; padding: 13px 14px;
@@ -1218,6 +1249,13 @@
         <i class="fas fa-times"></i>
       </button>
     </div>
+    <div class="sidebar-profile">
+      <div class="sidebar-avatar" id="sidebarAvatar">م</div>
+      <div class="sidebar-profile-info">
+        <div class="sidebar-profile-name" id="sidebarTeacherName">—</div>
+        <div class="sidebar-profile-meta" id="sidebarTeacherMeta">—</div>
+      </div>
+    </div>
     <nav class="sidebar-nav">
       <button id="sidebarHome" class="sidebar-link" type="button">
         <i class="fas fa-house"></i>
@@ -1665,6 +1703,9 @@
     const sidebarMore = document.getElementById('sidebarMore');
     const sidebarRequests = document.getElementById('sidebarRequests');
     const sidebarDownloadPdf = document.getElementById('sidebarDownloadPdf');
+    const sidebarAvatar = document.getElementById('sidebarAvatar');
+    const sidebarTeacherName = document.getElementById('sidebarTeacherName');
+    const sidebarTeacherMeta = document.getElementById('sidebarTeacherMeta');
 
     const btnToday = document.getElementById('btnToday');
     const btnWeek  = document.getElementById('btnWeek');
@@ -5444,6 +5485,83 @@
       addAttendanceReadyBadge(compactClassCell);
     }
 
+    /* ========= Today view: fit-to-screen on phone (no scroll, same design) =========
+       On phone, اليوم must never scroll and must always show the whole day at
+       a glance — rather than reflowing the layout at small sizes (which
+       would make it look different device to device), the already-rendered
+       content is measured and uniformly scaled down to fit exactly between
+       the header and the floating toolbar, with a little clearance above the
+       toolbar. Desktop/tablet is untouched — only the same <=768px
+       breakpoint that switches on .compact-table gets this treatment.
+       A MutationObserver on #containerMain re-runs this after every render
+       (today/skeleton swaps, and the current-lesson highlight timer toggling
+       classes), so the fit never goes stale without manually hunting down
+       every call site that changes its content. */
+    const TODAY_FIT_BOTTOM_GAP = 16; // "a bit of space above the bottom bar"
+
+    function isPhoneViewport(){
+      return window.matchMedia('(max-width: 768px)').matches;
+    }
+
+    function clearTodayFit(){
+      containerMain.style.transform = '';
+      containerMain.style.transformOrigin = '';
+      containerMain.style.height = '';
+      containerMain.style.overflow = '';
+      document.documentElement.classList.remove('today-locked');
+    }
+
+    function fitTodayToPhoneViewport(){
+      if (currentView !== 'today' || !isPhoneViewport()) { clearTodayFit(); return; }
+
+      const toolbar = document.querySelector('.schedule-toolbar');
+      if (!toolbar || !containerMain.firstElementChild) { clearTodayFit(); return; }
+
+      document.documentElement.classList.add('today-locked');
+
+      // Reset height/overflow before measuring — scrollHeight already
+      // ignores transform (it's paint-only), but a previously-pinned height
+      // would otherwise feed back into itself.
+      containerMain.style.height = '';
+      containerMain.style.overflow = '';
+
+      const naturalHeight = containerMain.scrollHeight;
+      const containerTop = containerMain.getBoundingClientRect().top;
+      const toolbarTop = toolbar.getBoundingClientRect().top;
+      const availableHeight = toolbarTop - TODAY_FIT_BOTTOM_GAP - containerTop;
+
+      if (availableHeight <= 0 || naturalHeight <= 0) return;
+
+      if (naturalHeight > availableHeight) {
+        const scale = availableHeight / naturalHeight;
+        containerMain.style.transformOrigin = 'top center';
+        containerMain.style.transform = `scale(${scale})`;
+        containerMain.style.height = `${availableHeight}px`;
+        containerMain.style.overflow = 'hidden';
+      } else {
+        containerMain.style.transform = '';
+        containerMain.style.transformOrigin = '';
+      }
+    }
+
+    let todayFitRAF = null;
+    function scheduleTodayFit(){
+      if (todayFitRAF) cancelAnimationFrame(todayFitRAF);
+      todayFitRAF = requestAnimationFrame(() => { todayFitRAF = null; fitTodayToPhoneViewport(); });
+    }
+
+    const todayFitObserver = new MutationObserver(scheduleTodayFit);
+    todayFitObserver.observe(containerMain, {
+      childList: true, subtree: true, characterData: true,
+      attributes: true, attributeFilter: ['class'],
+    });
+
+    window.addEventListener('resize', scheduleTodayFit);
+    window.addEventListener('orientationchange', scheduleTodayFit);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', scheduleTodayFit);
+    }
+
     /* ========= Init week ========= */
     function initWeek(){
       const today = kuwaitTodayISO();
@@ -5479,7 +5597,21 @@
     }
 
     /* ========= Sidebar ========= */
+    // Role label kept short and Arabic-facing — رئيس قسم for heads, معلّم
+    // otherwise (this page is teacher-only, so admin/supervisor roles never
+    // land here).
+    function renderSidebarProfile(){
+      const name = currentTeacherProfile ? displayTeacherNameFromDoc(currentTeacherProfile) : (currentUser?.email || 'معلّم');
+      sidebarTeacherName.textContent = name;
+      sidebarAvatar.textContent = (name.trim().charAt(0) || 'م').toUpperCase();
+
+      const subject = (currentTeacherProfile?.subject || currentTeacherProfile?.department || '').toString().trim();
+      const roleLabel = currentRole === 'head' ? 'رئيس قسم' : 'معلّم';
+      sidebarTeacherMeta.textContent = subject ? `${subject} • ${roleLabel}` : roleLabel;
+    }
+
     function openSidebar(){
+      renderSidebarProfile();
       sidebarRequests.hidden = btnRequests.hidden;
       sidebar.classList.add('open');
       sidebar.setAttribute('aria-hidden','false');
@@ -5577,6 +5709,7 @@
         profilePromise,
         loadTodayForTeacher(user.uid)
       ]);
+      renderSidebarProfile();
 
       if(currentRole === 'head'){
         headUid = user.uid;
