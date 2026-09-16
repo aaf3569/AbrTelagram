@@ -21,9 +21,7 @@
   <!-- Noto Kufi Arabic -->
   <link href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
 
-  <!-- jsPDF (export) -->
-  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+  <!-- PDF libraries load on demand. -->
 
   <link rel="stylesheet" href="/shared/base.css" />
   <style>
@@ -295,6 +293,71 @@
       .mini-stats{ flex-wrap:wrap; }
       .mini-stat{ min-width:calc(33% - 6px); }
     }
+    /* Phone-first dashboard and compact, horizontally scrollable filters. */
+    [hidden]{ display:none !important; }
+    body{ background:linear-gradient(180deg,#eaf2f8 0,#f5f7fb 360px); }
+    .container{ max-width:960px; }
+    #stateHome{ background:transparent; border:0; box-shadow:none; padding:0; }
+    .stats-card{ padding:22px; box-shadow:0 8px 28px rgba(10,75,120,.06); border-radius:22px; }
+    .stats-title{ font-size:1.08rem; }
+    .stats-grid{ grid-template-columns:repeat(5,minmax(0,1fr)); }
+    .stat-card{ padding:20px 8px; border:0; background:#f1f5f9; }
+    .stat-card.present{ background:#ecfdf5; }
+    .stat-card.absent{ background:#fff1f2; }
+    .stat-card.late{ background:#fffbeb; }
+    .stat-card.rate{ background:#eff6ff; }
+    .stat-num{ font-size:1.65rem; line-height:1.4; }
+    .stat-card.absent .stat-num,.mini-stat.absent .mini-num{ color:#be123c; }
+    .stat-card.late .stat-num,.mini-stat.late .mini-num{ color:#a16207; }
+    #stateHome .stack{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
+    #stateHome .btn{ max-width:none; height:76px; border-radius:16px; }
+    #stateHome .btn.primary{ grid-column:1 / -1; height:60px; }
+    .sheet{ visibility:hidden; transition:transform .22s ease,visibility .22s; }
+    .sheet.open{ visibility:visible; }
+    .sheet-body{ width:min(900px,100%); min-height:0; padding:20px; overscroll-behavior:contain; }
+    .sheet-header{ padding-top:max(12px,env(safe-area-inset-top)); }
+    .filters-bar,.classes-filter,.lesson-filter{ flex-wrap:nowrap; overflow-x:auto; justify-content:flex-start; scrollbar-width:thin; box-shadow:none; flex-shrink:0; }
+    .filter-chip,.class-chip,.lesson-chip{ flex-shrink:0; min-height:44px; }
+    .status-toggle{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); box-shadow:none; }
+    .status-btn{ height:46px; padding:0 8px; }
+    .icon-btn{ width:44px; height:44px; }
+    .back-btn{ min-height:44px; height:auto; }
+    .att-tile{ width:100%; text-align:start; gap:12px; font:inherit; box-shadow:0 2px 6px rgba(10,75,120,.04); }
+    .att-title{ font-size:.92rem; overflow-wrap:anywhere; }
+    .att-sub{ font-size:.8rem; font-weight:500; }
+    .expand{ padding-bottom:12px; }
+    .date-input{ min-width:0; min-height:44px; font-size:16px; }
+    button:focus-visible,input:focus-visible{ outline:3px solid var(--focus); outline-offset:3px; }
+    #loadMore{ flex-shrink:0; margin:4px 0 16px; }
+    @media(max-width:600px){
+      main{ padding:16px 12px max(24px,env(safe-area-inset-bottom)); }
+      .site-header{ padding:10px 12px; gap:8px; backdrop-filter:none; background:#fff; }
+      .site-title{ font-size:.84rem; text-align:start; }
+      .header-actions{ gap:6px; }
+      .stats-card{ padding:16px; gap:14px; border-radius:18px; }
+      .stats-grid{ grid-template-columns:repeat(6,minmax(0,1fr)); gap:8px; }
+      .stat-card{ grid-column:span 2; padding:12px 4px; }
+      .stat-card:first-child,.stat-card.rate{ grid-column:span 3; }
+      .stat-card:first-child{ order:-2; }
+      .stat-card.rate{ order:-1; }
+      .stat-num{ font-size:1.5rem; }
+      .stat-label{ font-size:.72rem; }
+      #stateHome .stack{ gap:8px; }
+      #stateHome .btn{ height:70px; font-size:.8rem; padding:8px; }
+      #stateHome .btn.primary{ font-size:.96rem; }
+      .sheet-body{ padding:14px 12px max(24px,env(safe-area-inset-bottom)); gap:12px; }
+      .sheet-header{ padding-inline:12px; }
+      .sheet-title{ font-size:1rem; }
+      .filters-bar,.classes-filter,.lesson-filter{ justify-content:flex-start; padding:8px; }
+      .filter-chip,.class-chip,.lesson-chip{ font-size:.8rem; padding-inline:12px; }
+      .att-tile{ padding:14px 12px; }
+      .badge{ padding:5px 9px; font-size:.72rem; }
+      .date-range.open{ display:grid; grid-template-columns:auto minmax(0,1fr); align-items:center; }
+      .date-actions{ grid-column:1 / -1; }
+      .date-actions button{ flex:1; min-height:44px; }
+      .export-modal{ align-items:flex-end; }
+      .export-modal-content{ width:100%; max-width:none; margin:0; border-radius:24px 24px 0 0; max-height:90dvh; overflow:auto; padding-bottom:max(24px,env(safe-area-inset-bottom)); }
+    }
   </style>
 
   <!-- iOS home screen icon -->
@@ -413,7 +476,7 @@
             <button class="filter-chip active" data-stats-filter="today" type="button">اليوم</button>
             <button class="filter-chip" data-stats-filter="thisWeek" type="button">هذا الأسبوع</button>
             <button class="filter-chip" data-stats-filter="thisMonth" type="button">هذا الشهر</button>
-            <button class="filter-chip" data-stats-filter="thisYear" type="button">هذه السنة</button>
+            <button class="filter-chip" data-stats-filter="thisYear" type="button">السنة الدراسية</button>
           </div>
           <div class="stats-grid" id="homeStatsGrid"></div>
         </div>
@@ -432,7 +495,7 @@
   </main>
 
   <!-- CLASSES SHEET -->
-  <section id="classesSheet" class="sheet" aria-hidden="true">
+  <section id="classesSheet" class="sheet" aria-hidden="true" inert>
     <div class="sheet-header">
       <button id="closeClasses" class="back-btn" aria-label="رجوع">رجوع</button>
       <h3 id="classesTitle" class="sheet-title">—</h3>
@@ -447,7 +510,7 @@
           <button class="filter-chip active" data-stats-filter="today" type="button">اليوم</button>
           <button class="filter-chip" data-stats-filter="thisWeek" type="button">هذا الأسبوع</button>
           <button class="filter-chip" data-stats-filter="thisMonth" type="button">هذا الشهر</button>
-          <button class="filter-chip" data-stats-filter="thisYear" type="button">هذه السنة</button>
+          <button class="filter-chip" data-stats-filter="thisYear" type="button">السنة الدراسية</button>
         </div>
         <div class="stats-grid" id="gradeStatsGrid"></div>
       </div>
@@ -456,7 +519,7 @@
   </section>
 
   <!-- CLASS / GRADE / ALL ATTENDANCE SHEET -->
-  <section id="absencesSheet" class="sheet" aria-hidden="true">
+  <section id="absencesSheet" class="sheet" aria-hidden="true" inert>
     <div class="sheet-header">
       <button id="closeAbsences" class="back-btn" aria-label="رجوع">رجوع</button>
       <h3 id="absencesTitle" class="sheet-title">—</h3>
@@ -488,13 +551,13 @@
         <button class="filter-chip"        data-filter="lastWeek"   type="button">الأسبوع الماضي</button>
         <button class="filter-chip"        data-filter="thisMonth"  type="button">هذا الشهر</button>
         <button class="filter-chip"        data-filter="lastMonth"  type="button">الشهر الماضي</button>
-        <button class="filter-chip"        data-filter="thisYear"   type="button">هذه السنة</button>
+        <button class="filter-chip"        data-filter="thisYear"   type="button">السنة الدراسية</button>
         <button class="filter-chip"        data-filter="custom"     type="button">تاريخ مخصّص</button>
       </div>
       <div class="date-range" id="dateRange">
-        <span class="date-label">من:</span>
+        <label class="date-label" for="startDate">من:</label>
         <input type="date" id="startDate" class="date-input" />
-        <span class="date-label">إلى:</span>
+        <label class="date-label" for="endDate">إلى:</label>
         <input type="date" id="endDate" class="date-input" />
         <div class="date-actions">
           <button class="apply-btn primary" id="applyRange" type="button">تطبيق</button>
@@ -507,6 +570,7 @@
         <span id="absCount" class="badge b-absent">0 حالة</span>
       </div>
       <div id="absencesList" class="list"></div>
+      <button id="loadMore" class="back-btn" type="button" hidden>عرض المزيد من السجلات</button>
     </div>
   </section>
 
@@ -594,7 +658,8 @@
     let cachedStudents = [];
     let cachedRows = [];
     let statsTimeFilter = 'today'; // shared by the home + grade stats cards
-    let statsRequestId = 0; // guards against a slow fetch overwriting a newer one
+    let homeStatsRequestId = 0, gradeStatsRequestId = 0;
+    let recordsRequestId = 0, recordsLoading = false, visibleLimit = 40; // guards against a slow fetch overwriting a newer one
 
     // Helper functions
     const show = (el) => {
@@ -603,6 +668,7 @@
     };
     const openSheet = (el) => {
       el.classList.add('open');
+      el.inert = false;
       el.setAttribute('aria-hidden', 'false');
       document.body.style.overflow = 'hidden';
     };
@@ -613,9 +679,10 @@
       // element is invalid and Chrome refuses it, so release focus first.
       if (el && el.contains(document.activeElement)) document.activeElement.blur();
       el.setAttribute('aria-hidden', 'true');
-      document.body.style.overflow = '';
+      el.inert = true;
+      document.body.style.overflow = document.querySelector('.sheet.open') ? 'hidden' : '';
     };
-    const toArabicDigits = (str) => (str || "").toString().replace(/\d/g, d => '٠١٢٣٤٥٦٧٨٩'[d]);
+    const toArabicDigits = (str) => (str ?? "").toString().replace(/\d/g, d => '٠١٢٣٤٥٦٧٨٩'[d]);
     const arabicSort = (a, b) => (a || "").toString().localeCompare((b || "").toString(), 'ar', { sensitivity: 'base' });
     const fmtDate = (d) => new Intl.DateTimeFormat('ar-KW', { dateStyle: 'medium', timeZone: 'Asia/Kuwait' }).format(d);
     const fmtDT = (d) => new Intl.DateTimeFormat('ar-KW', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kuwait' }).format(d);
@@ -642,8 +709,7 @@
       const runners = new Array(Math.min(concurrency, items.length)).fill(0).map(async () => {
         while (i < items.length) {
           const idx = i++;
-          try { results[idx] = await worker(items[idx], idx); }
-          catch { results[idx] = undefined; }
+          results[idx] = await worker(items[idx], idx);
         }
       });
       await Promise.all(runners);
@@ -671,14 +737,14 @@
     function lastMonthRange(d) { const e = new Date(startOfMonth(d)); e.setDate(e.getDate() - 1); return { start: startOfMonth(e), end: e }; }
 
     function rangeForFilter(key) {
-      const now = new Date();
+      const now = new Date(kuwaitTodayISO() + 'T12:00:00');
       switch (key) {
         case 'today': { const s = toISODateStr(now); return { startISO: s, endISO: s }; }
         case 'thisWeek': return { startISO: toISODateStr(startOfWeek(now)), endISO: toISODateStr(endOfWeek(now)) };
         case 'lastWeek': { const r = lastWeekRange(now); return { startISO: toISODateStr(r.start), endISO: toISODateStr(r.end) }; }
         case 'thisMonth': return { startISO: toISODateStr(startOfMonth(now)), endISO: toISODateStr(endOfMonth(now)) };
         case 'lastMonth': { const r = lastMonthRange(now); return { startISO: toISODateStr(r.start), endISO: toISODateStr(r.end) }; }
-        case 'thisYear': return { startISO: toISODateStr(startOfYear(now)), endISO: toISODateStr(endOfYear(now)) };
+        case 'thisYear': return { startISO: '2026-09-14', endISO: '2027-01-13' };
         case 'custom': return { startISO: customStart || toISODateStr(now), endISO: customEnd || toISODateStr(now) };
         default: { const s = toISODateStr(now); return { startISO: s, endISO: s }; }
       }
@@ -777,13 +843,32 @@
       return rows;
     }
 
+    // Reuse in-flight reads and recent school results across views, in memory only.
+    const dataCache = new Map();
+    function cachedRead(key, read) {
+      const hit = dataCache.get(key);
+      if (hit && hit.expires > Date.now()) return hit.promise;
+      const entry = { expires: Date.now() + 60000 };
+      entry.promise = Promise.resolve().then(read).catch(error => {
+        if (dataCache.get(key) === entry) dataCache.delete(key);
+        throw error;
+      });
+      dataCache.set(key, entry);
+      if (dataCache.size > 16) dataCache.delete(dataCache.keys().next().value);
+      return entry.promise;
+    }
     async function fetchAttendanceForScope(scope, startISO, endISO) {
-      const [students, rows] = await Promise.all([
-        fetchStudentsForScope(scope),
-        fetchAttendanceRowsForScope(scope, startISO, endISO),
+      const schoolKey = 'rows:all:' + startISO + ':' + endISO;
+      const schoolRows = dataCache.get(schoolKey);
+      const useSchool = scope.type === 'all' || (schoolRows && schoolRows.expires > Date.now());
+      const [roster, records] = await Promise.all([
+        cachedRead('students', () => fetchStudentsForScope({ type: 'all' })),
+        cachedRead(useSchool ? schoolKey : JSON.stringify(scope) + startISO + endISO,
+          () => fetchAttendanceRowsForScope(useSchool ? { type: 'all' } : scope, startISO, endISO)),
       ]);
-      students.sort((a, b) => arabicSort(a.name, b.name));
-      return { students, rows };
+      const classes = new Set(classesForScope(scope));
+      const matches = item => scope.type === 'all' || classes.has(item.class);
+      return { students: roster.filter(matches).sort((a, b) => arabicSort(a.name, b.name)), rows: records.filter(matches) };
     }
 
     // A student marked absent in ANY lesson on a given day is absent for
@@ -858,34 +943,34 @@
     }
 
     async function loadHomeStats() {
-      const myRequestId = ++statsRequestId;
+      const myRequestId = ++homeStatsRequestId;
       renderStatsLoading(homeStatsGrid);
       const { startISO, endISO } = rangeForFilter(statsTimeFilter);
       homeStatsRange.textContent = describeRange(startISO, endISO);
       try {
         const { students, rows } = await fetchAttendanceForScope({ type: 'all' }, startISO, endISO);
-        if (myRequestId !== statsRequestId) return; // a newer request/filter change superseded this one
+        if (myRequestId !== homeStatsRequestId) return; // a newer request/filter change superseded this one
         renderStatCards(homeStatsGrid, computeStats(students, rows));
       } catch (e) {
         console.error('[absence] home stats failed', e);
-        if (myRequestId === statsRequestId) homeStatsGrid.innerHTML = `<div class="muted">تعذّر تحميل الإحصائيات.</div>`;
+        if (myRequestId === homeStatsRequestId) homeStatsGrid.innerHTML = `<div class="muted">تعذّر تحميل الإحصائيات.</div>`;
       }
     }
 
     async function loadGradeStats(grade) {
       const titleMap = { 10: 'الصف العاشر', 11: 'الصف الحادي عشر', 12: 'الصف الثاني عشر' };
       gradeStatsTitle.textContent = `إحصائيات ${titleMap[grade]}`;
-      const myRequestId = ++statsRequestId;
+      const myRequestId = ++gradeStatsRequestId;
       renderStatsLoading(gradeStatsGrid);
       const { startISO, endISO } = rangeForFilter(statsTimeFilter);
       gradeStatsRange.textContent = describeRange(startISO, endISO);
       try {
         const { students, rows } = await fetchAttendanceForScope({ type: 'grade', grade }, startISO, endISO);
-        if (myRequestId !== statsRequestId) return;
+        if (myRequestId !== gradeStatsRequestId) return;
         renderStatCards(gradeStatsGrid, computeStats(students, rows));
       } catch (e) {
         console.error('[absence] grade stats failed', e);
-        if (myRequestId === statsRequestId) gradeStatsGrid.innerHTML = `<div class="muted">تعذّر تحميل الإحصائيات.</div>`;
+        if (myRequestId === gradeStatsRequestId) gradeStatsGrid.innerHTML = `<div class="muted">تعذّر تحميل الإحصائيات.</div>`;
       }
     }
 
@@ -989,7 +1074,7 @@
       setActiveTime('today');
       hideCustomRange();
       const showClassChips = scope.type !== 'class';
-      classesFilterBar.classList.toggle('open', showClassChips);
+      classesFilterBar.hidden = !showClassChips;
       if (showClassChips) buildClassesFilterChips();
       openSheet(absencesSheet);
       refetchAndRender();
@@ -997,16 +1082,28 @@
 
     async function refetchAndRender() {
       if (!currentScope) return;
-      absMeta.textContent = 'جاري التحميل…';
+      const requestId = ++recordsRequestId;
+      recordsLoading = true;
+      cachedRows = []; cachedStudents = [];
+      absMeta.textContent = 'جاري تحميل السجلات…';
+      absencesList.innerHTML = '<div class="loading" role="status"><div class="spinner"></div><span>جاري تحميل السجلات…</span></div>';
+      document.getElementById('loadMore').hidden = true;
+      miniPresent.textContent = miniAbsent.textContent = miniLate.textContent = '?';
+      setCountBadge(0);
       try {
         const { startISO, endISO } = rangeForFilter(timeFilter);
         const { students, rows } = await fetchAttendanceForScope(currentScope, startISO, endISO);
-        cachedStudents = students;
-        cachedRows = rows;
+        if (requestId !== recordsRequestId) return;
+        cachedStudents = students; cachedRows = rows;
+        recordsLoading = false;
         renderFilteredList();
       } catch (e) {
+        if (requestId !== recordsRequestId) return;
+        recordsLoading = false;
         console.error('[absence] fetch failed', e);
         absMeta.textContent = 'تعذّر التحميل.';
+        absencesList.innerHTML = '<button type="button" class="back-btn">تعذّر تحميل السجلات. اضغط لإعادة المحاولة</button>';
+        absencesList.firstElementChild.addEventListener('click', () => refetchAndRender());
       }
     }
 
@@ -1059,16 +1156,17 @@
     // so it updates instantly as lesson/class/time filters change. Counts
     // are per (student, day), matching the grouped list below and the stats
     // cards — never a raw per-lesson-record count.
-    function renderMiniStats() {
-      const days = groupRowsByStudentDay(filteredRawRows());
+    function renderMiniStats(days) {
       miniPresent.textContent = toArabicDigits(days.filter(d => d.countsPresent).length);
       miniAbsent.textContent = toArabicDigits(days.filter(d => d.hasAbsent).length);
       miniLate.textContent = toArabicDigits(days.filter(d => d.hasLate).length);
     }
 
-    function renderFilteredList() {
-      renderMiniStats();
+    function renderFilteredList(keepLimit = false) {
+      if (recordsLoading) return;
+      if (!keepLimit) visibleLimit = 40;
       const allDays = groupRowsByStudentDay(filteredRawRows());
+      renderMiniStats(allDays);
       const days = allDays.filter(d => statusFilter === 'absent' ? d.hasAbsent : statusFilter === 'late' ? d.hasLate : d.countsPresent);
 
       days.sort((a, b) => {
@@ -1085,6 +1183,7 @@
       absMeta.textContent = `الطلاب: ${toArabicDigits(studentsCount)} • ${statusLabel}: ${toArabicDigits(days.length)}`;
       setCountBadge(days.length);
 
+      document.getElementById('loadMore').hidden = days.length <= visibleLimit;
       absencesList.innerHTML = '';
       if (days.length === 0) {
         const empty = document.createElement('div');
@@ -1098,7 +1197,7 @@
       const statusWord = statusFilter === 'absent' ? 'غياب' : statusFilter === 'late' ? 'تأخير' : 'حضور';
       const badgeClass = statusFilter === 'absent' ? 'b-absent' : statusFilter === 'late' ? 'b-late' : 'b-present';
 
-      days.forEach(day => {
+      days.slice(0, visibleLimit).forEach(day => {
         const d = parseAttendanceDate({ date: day.date });
         const dateStr = d ? fmtDate(d) : (day.date ? toArabicDigits(day.date) : '—');
         const classLabel = toArabicDigits(day.class || '—');
@@ -1107,7 +1206,9 @@
           ? `الحصة ${toArabicDigits(recs[0].lessonIndex || '؟')}`
           : `${toArabicDigits(recs.length)} حصص`;
 
-        const tile = document.createElement('div');
+        const tile = document.createElement('button');
+        tile.type = 'button';
+        tile.setAttribute('aria-expanded', 'false');
         tile.className = 'att-tile';
 
         const title = `${day._student?.name || '—'} — ${statusWord} ${lessonsLabel}`;
@@ -1148,6 +1249,7 @@
 
         tile.addEventListener('click', async () => {
           tile.classList.toggle('open');
+          tile.setAttribute('aria-expanded', String(tile.classList.contains('open')));
           if (!tile.classList.contains('open')) return;
           await Promise.all(recs.map(async (r) => {
             const who = document.getElementById(`who-${r.id}`);
@@ -1230,10 +1332,31 @@
       refetchAndRender();
     });
 
+    document.getElementById('loadMore').addEventListener('click', () => { visibleLimit += 40; renderFilteredList(true); });
     closeAbsences.addEventListener('click', () => closeSheet(absencesSheet));
-    refreshView.addEventListener('click', () => { if (currentScope) refetchAndRender(); });
+    refreshView.addEventListener('click', () => {
+      dataCache.clear();
+      if (absencesSheet.classList.contains('open')) refetchAndRender();
+      else if (classesSheet.classList.contains('open')) loadGradeStats(selectedGrade);
+      else loadHomeStats();
+    });
 
     // ---------- PDF export ----------
+    let pdfLibraries;
+    function loadPdfLibraries() {
+      if (!pdfLibraries) {
+        const load = src => new Promise((resolve, reject) => {
+          const script = document.createElement('script');
+          script.src = src; script.onload = resolve;
+          script.onerror = () => { script.remove(); reject(new Error('PDF download failed')); };
+          document.head.appendChild(script);
+        });
+        pdfLibraries = load('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js')
+          .then(() => load('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js'))
+          .catch(error => { pdfLibraries = null; throw error; });
+      }
+      return pdfLibraries;
+    }
     let logoImage = null;
     function loadLogo() {
       return new Promise((resolve) => {
@@ -1267,7 +1390,7 @@
         exportLoading.classList.add('active');
         generatePDF.disabled = true;
 
-        await loadLogo();
+        await Promise.all([loadLogo(), loadPdfLibraries()]);
         const { startISO, endISO } = rangeForFilter(period);
         const scope = gradeValue === 'all' ? { type: 'all' } : { type: 'grade', grade: +gradeValue };
         const { students, rows } = await fetchAttendanceForScope(scope, startISO, endISO);
