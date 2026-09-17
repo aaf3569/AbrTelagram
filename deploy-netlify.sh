@@ -21,7 +21,7 @@ set +a
 STAGING_DIR="$(mktemp -d)"
 trap 'rm -rf "$STAGING_DIR"' EXIT
 
-cp -r Teachers admins depHead images shared supervisors "$STAGING_DIR/"
+cp -r Teachers admins beta depHead images shared supervisors "$STAGING_DIR/"
 cp index.html manifest.webmanifest name-glow.js _headers "$STAGING_DIR/"
 
 netlify deploy --prod --dir="$STAGING_DIR" --site="$NETLIFY_SITE_ID"
