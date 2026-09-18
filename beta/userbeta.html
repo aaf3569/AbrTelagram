@@ -3515,9 +3515,19 @@
       const snapshots = await Promise.all(uids.map(id => getDocs(query(
         collection(db,'schedules'), where('teacherUid','==', id)
       ))));
-      return snapshots.flatMap(snap => snap.docs).filter(d => {
+      const loadedDocs = snapshots.flatMap(snap => snap.docs);
+      console.log('Teacher lessons loaded from Firestore:', loadedDocs.map(d => {
+        const row = d.data();
+        return { documentId: d.id, teacherUid: row.teacherUid, dayIndex: row.dayIndex,
+          day: row.day, lesson: row.lesson, classKey: row.classKey,
+          grade: row.grade, section: row.section, track: row.track, subject: row.subject };
+      }));
+      console.log('[teacher-schedule] Queried teacher IDs:', { uid, scheduleUids: uids });
+      return loadedDocs.filter(d => {
         const day = d.data().dayIndex;
-        return day !== null && day !== '' && Number.isInteger(Number(day)) && Number(day) >= 0 && Number(day) <= 4;
+        const included = day !== null && day !== '' && Number.isInteger(Number(day)) && Number(day) >= 0 && Number(day) <= 4;
+        if (!included) console.warn('[teacher-schedule] Excluded invalid weekday:', { documentId: d.id, dayIndex: day, lesson: d.data().lesson, classKey: d.data().classKey });
+        return included;
       });
     }
 
@@ -3776,6 +3786,7 @@
       // separately from `map` since its values are already-formatted
       // display strings, not the raw docs a timestamp could be read back
       // off of.
+      const decisions = [];
       const weekSlotMs = new Map();
       const scheduleRowMsForWeek = (row) => {
         const t = row?.updatedAt || row?.createdAt;
@@ -3788,13 +3799,26 @@
         // the entry happens to have last been saved with.
         const dayIdx = Number(x.dayIndex);
         const iso = weekDates[dayIdx];
-        if (iso === undefined) return;
-        if (isClassOverriddenForToday(x, overriddenClassKeysByDay[dayIdx] || new Set())) return;
+        if (iso === undefined) {
+          decisions.push({ reason: 'weekday-outside-displayed-week', documentId: d.id, dayIndex: x.dayIndex, lesson: x.lesson, classKey: x.classKey });
+          return;
+        }
+        if (isClassOverriddenForToday(x, overriddenClassKeysByDay[dayIdx] || new Set())) {
+          decisions.push({ reason: 'main-lesson-replaced-by-custom-schedule', documentId: d.id, date: iso, lesson: x.lesson, classKey: x.classKey });
+          return;
+        }
+        if (!Number.isInteger(Number(x.lesson)) || Number(x.lesson) < 1 || Number(x.lesson) > FIXED_LESSON_COUNT) {
+          decisions.push({ reason: 'lesson-outside-visible-columns', documentId: d.id, date: iso, lesson: x.lesson, classKey: x.classKey });
+        }
         if (!map.has(iso)) map.set(iso, new Map());
         const lessonNum = Number(x.lesson);
         const slotKey = `${iso}|${lessonNum}`;
         const ms = scheduleRowMsForWeek(x);
         if (weekSlotMs.has(slotKey)) {
+          decisions.push({ reason: 'multiple-classes-in-one-period', date: iso, lesson: lessonNum,
+            existingClass: map.get(iso).get(lessonNum), candidateClass: x.classKey, candidateDocumentId: d.id,
+            existingUpdatedMs: weekSlotMs.get(slotKey), candidateUpdatedMs: ms,
+            keptClass: weekSlotMs.get(slotKey) > ms ? map.get(iso).get(lessonNum) : x.classKey });
           console.warn(
             `[teacherschedule] two schedules docs both claim lesson ${lessonNum} on ${iso} for this teacher — `
             + `keeping whichever is newer, but this is very likely a stale/leftover doc that should be deleted:`,
@@ -3816,7 +3840,13 @@
         for (let i = 1; i <= FIXED_LESSON_COUNT; i++) {
           const o = dayOv.get(i);
           if (!o) continue;
-          if (isClassOverriddenForToday(o, overriddenClassKeys)) continue;
+          if (isClassOverriddenForToday(o, overriddenClassKeys)) {
+            decisions.push({ reason: 'override-suppressed-by-custom-schedule', date: iso, lesson: i, classKey: o.classKey, overrideId: o._id });
+            continue;
+          }
+          decisions.push({ reason: o._kind === 'original' ? 'lesson-covered-by-another-teacher' : 'incoming-cover-or-swap',
+            date: iso, lesson: i, previousClass: map.get(iso).get(i) || null, classKey: o.classKey,
+            overrideId: o._id, originalTeacherUid: o.originalTeacherUid, newTeacherUid: o.newTeacherUid });
           if (o._kind === 'new') {
             map.get(iso).set(i, (o.classKey || 'بديل'));
           } else if (o._kind === 'original') {
@@ -3838,11 +3868,34 @@
             const classKey = classKeyFromRow(row) || classKeyFromRow(lessonRow);
             if(!classKey) continue;
             // Custom always wins for this slot — overwrite, don't gap-fill.
+            decisions.push({ reason: 'custom-lesson-applied', date: iso, lesson: i + 1,
+              previousClass: dayMap.get(i + 1) || null, classKey, teacherUid: lessonRow.teacherUid });
             dayMap.set(i + 1, classKey);
           }
         });
       });
 
+      const displayedLessons = [];
+      weekDates.forEach((date, dayIndex) => {
+        for (let lesson = 1; lesson <= FIXED_LESSON_COUNT; lesson++) {
+          const classKey = map.get(date)?.get(lesson);
+          if (classKey && classKey !== '—') displayedLessons.push({ date, dayIndex,
+            day: ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس'][dayIndex], lesson, classKey });
+        }
+      });
+      console.log('Teacher weekly lessons displayed:', displayedLessons);
+      console.table(displayedLessons);
+      console.log('[teacher-schedule] Weekly lesson decisions:', decisions);
+      console.log('[teacher-schedule] Weekly lesson counts:', { loaded: snap.length, displayed: displayedLessons.length, uid, scheduleUids, weekDates: [...weekDates] });
+      // Serialize a stable snapshot that can be copied directly from the console.
+      console.log('[teacher-schedule] Copyable weekly diagnostic:', JSON.stringify({
+        uid, scheduleUids, weekDates, loadedCount: snap.length, displayedCount: displayedLessons.length,
+        loadedLessons: snap.map(d => {
+          const row = d.data();
+          return { documentId: d.id, teacherUid: row.teacherUid, dayIndex: row.dayIndex, lesson: row.lesson,
+            classKey: row.classKey, grade: row.grade, section: row.section, track: row.track, subject: row.subject };
+        }), decisions, displayedLessons
+      }, null, 2));
       cache.teacherWeek.set(cacheKey, map);
       return map;
     }
