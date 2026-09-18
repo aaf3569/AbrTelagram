@@ -69,7 +69,7 @@
 
     /* Header */
     .site-header {
-      position: sticky; top: 0; z-index: 20;
+      position: sticky; top: 0; z-index: 20; flex-shrink: 0;
       background: rgba(255, 255, 255, 0.85);
       backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
       border-bottom: 1px solid rgba(2, 43, 66, 0.08);
@@ -108,6 +108,7 @@
       color: var(--primary);
       text-align: center;
       padding: 0 60px;
+      white-space: nowrap;
     }
 
     .badge {
@@ -179,36 +180,38 @@
     @keyframes spin { to { transform: rotate(360deg); } }
 
     /* Main & cards */
-    main { flex: 1; padding: 20px; padding-bottom: 96px; }
+    main { flex: 1; padding: 20px; }
     .board { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
 
-    /* Bottom toolbar — a floating dock that hugs its buttons, pinned above
-       the bottom of the viewport rather than a full-width bar or scrolling
-       away with the schedule. */
-    .schedule-toolbar {
-      position: fixed;
-      left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); z-index: 30;
-      transform: translateX(-50%);
-      max-width: calc(100vw - 24px);
-      background: rgba(255, 255, 255, 0.94);
-      backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
-      border: 1px solid rgba(2, 43, 66, 0.10);
-      border-radius: 24px;
-      box-shadow: 0 16px 40px rgba(2, 43, 66, 0.22);
-      padding: 8px;
+    /* Schedule controls expand within the header and reserve their own space. */
+    .schedule-controls-toggle {
+      position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+      width: 44px; height: 44px; border: 1px solid rgba(255,255,255,.25);
+      border-radius: 14px; background: linear-gradient(145deg, var(--primary-2), var(--primary));
+      color: #fff; cursor: pointer; font-size: 1.1rem;
+      display: grid; place-items: center; box-shadow: 0 4px 12px rgba(2,43,66,.2);
+      transition: background .2s ease, box-shadow .2s ease;
     }
+    .schedule-controls-toggle[aria-expanded="true"] { box-shadow: 0 0 0 3px rgba(4,69,99,.15); }
+    .schedule-controls-toggle:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+    .schedule-controls-panel {
+      display: grid; grid-template-rows: 0fr; opacity: 0;
+      max-width: 1200px; margin: 0 auto;
+      transition: grid-template-rows .36s cubic-bezier(.22,1,.36,1), opacity .24s ease;
+    }
+    .schedule-controls-panel.is-open { grid-template-rows: 1fr; opacity: 1; }
+    .schedule-controls-clip { min-height: 0; overflow: hidden; }
+    .schedule-toolbar { padding: 14px 4px 4px; }
     .schedule-toolbar-inner {
-      display: flex; gap: 8px; align-items: center; justify-content: center; flex-wrap: nowrap;
-      /* width:max-content makes this report its full unwrapped content width
-         for the fixed-position .schedule-toolbar's shrink-to-fit sizing —
-         without it, overflow-x:auto alone collapses that calculation to a
-         near-zero intrinsic width and the whole dock shrinks to nothing. */
-      width: max-content; max-width: 100%;
-      overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none;
-      -webkit-overflow-scrolling: touch;
+      display: flex; gap: 8px; align-items: center; justify-content: center; flex-wrap: wrap;
+      padding: 10px; border: 1px solid var(--border-light); border-radius: 16px;
+      background: var(--primary-light);
     }
-    .schedule-toolbar-inner::-webkit-scrollbar { display: none; }
     .schedule-toolbar-inner > * { flex-shrink: 0; }
+    .schedule-toolbar .filter-btn[hidden] { display: none; }
+    @media (prefers-reduced-motion: reduce) {
+      .schedule-controls-panel, .schedule-controls-toggle { transition: none; }
+    }
     .card {
       background: var(--card-bg);
       border: 1px solid var(--border);
@@ -239,12 +242,8 @@
     .header-day-text { display: flex; flex-direction: column; align-items: center; gap: 1px; line-height: 1.3; }
     .header-day-name { font-size: 1rem; font-weight: 900; }
     .header-day-date { font-size: 0.74rem; font-weight: 700; opacity: 0.72; font-variant-numeric: tabular-nums; }
-    /* Live lesson/break countdown — a full-width sub-bar nested inside the
-       day header, rather than a small centered pill, so both rows span the
-       same width and the header reads as one even block. (On phone, this
-       and .header-day-row instead sit side by side in one row — see
-       .compact-header.header-has-live below — so this becomes a compact
-       chip there instead of a full-width bar.) */
+    /* Live lesson/break countdown: a full-width bar on desktop and a
+       centered pill below the day/date line on phone. */
     .header-live {
       display: flex; align-items: center; justify-content: center; gap: 8px;
       background: rgba(255, 255, 255, 0.14);
@@ -1155,9 +1154,9 @@
     }
     @media (max-width: 768px) {
       .site-header { padding: 14px 16px; }
-      main { padding: 0; padding-bottom: 82px; }
+      .site-title { font-size: clamp(0.7rem, calc(7vw - 8px), 1.2rem); }
+      main { padding: 0 0 env(safe-area-inset-bottom, 0px); }
       .board { gap: 12px; }
-      .schedule-toolbar { bottom: calc(14px + env(safe-area-inset-bottom, 0px)); border-radius: 20px; padding: 6px; }
       .board > .card {
         border-radius: 0;
         border-left: none;
@@ -1174,7 +1173,11 @@
       .all-schedules-actions { flex: initial; width: 100%; }
       .more-actions > .filter-btn { flex: initial; width: 100%; }
       .table { display: none; }
-      .compact-table { display: grid; }
+      .compact-table {
+        display: grid;
+        /* Keep the day header at its content height, even in a tall schedule. */
+        grid-template-rows: max-content;
+      }
       .header-full { grid-column: 1; }
       .info-grid, .split { grid-template-columns: 1fr; }
       .modal-card { border-radius: 18px; max-height: 85vh; }
@@ -1183,27 +1186,32 @@
          lessons fit one phone screen without the page needing to scroll —
          same content/layout as before (نفس التصميم), just less padding
          and smaller text throughout. */
-      .compact-header { padding: 8px 10px; gap: 6px; margin-bottom: 6px; }
-      .compact-header .header-day-row { gap: 8px; }
-      .compact-header .header-day-icon { width: 26px; height: 26px; font-size: 0.78rem; }
-      .compact-header .header-day-text { flex-direction: row; gap: 8px; white-space: nowrap; }
-      .compact-header .header-day-name::after { content: '|'; margin-inline-start: 8px; opacity: 0.72; }
-      .compact-header .header-day-name { font-size: 0.86rem; }
-      .compact-header .header-day-date { font-size: 0.86rem; opacity: 1; direction: ltr; }
-      .compact-header .header-live { padding: 6px 10px; font-size: 0.74rem; gap: 6px; }
-      .compact-header .header-live-countdown { font-size: 0.82rem; }
-      /* When there's a live lesson/break, the day/date and the
-         lesson/countdown share one row (day+date on the right, lesson on
-         the left, e.g. "السابعة : 08:55") instead of stacking as two
-         rows — that second row was most of what made this header take up
-         so much of the screen. With nothing live, .header-live stays
-         hidden and .compact-header falls back to its plain column layout
-         — day/date alone, centered, same as always. */
-      .compact-header.header-has-live {
-        flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between;
+      .compact-header {
+        padding: 12px 14px; gap: 9px; margin-bottom: 6px;
+        align-items: center; border-radius: 14px;
+        background: linear-gradient(135deg, #033c54, #075269);
+        border: 1px solid rgba(255,255,255,.16);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
       }
-      .compact-header.header-has-live .header-day-row { flex-shrink: 0; }
-      .compact-header.header-has-live .header-live { flex-shrink: 0; margin-inline-start: 8px; }
+      /* Equal columns keep the divider and the whole header centered. */
+      .compact-header .header-day-row { width: 100%; max-width: 340px; }
+      .compact-header .header-day-text {
+        position: relative; display: grid; grid-template-columns: 1fr 1fr;
+        align-items: center; width: 100%; gap: 20px; white-space: nowrap; line-height: 1.5;
+      }
+      .compact-header .header-day-text::after {
+        content: ''; position: absolute; left: 50%; top: 50%;
+        width: 1px; height: 16px; transform: translate(-50%, -50%);
+        background: rgba(255,255,255,.32);
+      }
+      .compact-header .header-day-name { font-size: .96rem; font-weight: 800; }
+      .compact-header .header-day-date { font-size: .94rem; font-weight: 700; opacity: .94; direction: ltr; }
+      .compact-header .header-live {
+        padding: 4px 14px; font-size: .8rem; gap: 8px; border-radius: 999px;
+        background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.18);
+        line-height: 1.4;
+      }
+      .compact-header .header-live-countdown { font-size: .86rem; direction: ltr; }
       .compact-table { row-gap: 3px; }
       .compact-th { padding: 6px 6px; font-size: 0.78rem; }
       .compact-cell { padding: 5px 6px; min-height: 32px; font-size: 0.76rem; }
@@ -1219,13 +1227,7 @@
          to body.today-locked (toggled in loadTodayForTeacher/
          loadWeekForTeacher) so week view keeps scrolling normally. */
       body.today-locked { height: 100vh; height: 100dvh; min-height: 0; overflow: hidden; }
-      body.today-locked main { min-height: 0; padding-bottom: 0; overflow: hidden; display: flex; flex-direction: column; }
-      /* Reserve the dock's actual height and a small gap below the schedule. */
-      body.today-locked .schedule-toolbar {
-        position: relative; left: auto; bottom: auto; transform: none;
-        flex: 0 0 auto; align-self: center; width: max-content;
-        margin: 8px 0 calc(14px + env(safe-area-inset-bottom, 0px));
-      }
+      body.today-locked main { min-height: 0; padding-bottom: env(safe-area-inset-bottom, 0px); overflow: hidden; display: flex; flex-direction: column; }
       body.today-locked .board {
         /* .board's own rule is margin:0 auto (centers it under its
            max-width on wide screens). main becoming a flex column just
@@ -1267,22 +1269,17 @@
     }
     @media (min-width: 769px) { .compact-table { display: none; } }
     @media (max-width: 480px) {
-      main { padding-bottom: 132px; }
-      .schedule-toolbar { bottom: calc(12px + env(safe-area-inset-bottom, 0px)); border-radius: 18px; }
-      .schedule-toolbar .filter-btn span { display: none; }
-      .schedule-toolbar .filter-btn { width: 44px; height: 44px; justify-content: center; padding: 0; }
+      .schedule-toolbar-inner { padding: 8px; }
+      .schedule-toolbar .view-toggle { width: 100%; }
+      .schedule-toolbar .view-toggle-btn { flex: 1; justify-content: center; }
+      .schedule-toolbar .filter-btn { flex: 1; height: 40px; padding: 0 8px; font-size: .78rem; justify-content: center; }
       .badge { padding: 6px 10px; }
       .sheet-header { padding: 14px 16px; }
       .back-btn { right: 16px; padding: 0 14px; }
       .sheet-title { font-size: 1rem; padding: 0 84px; }
       .compact-cell, .compact-th { padding: 4px 5px; font-size: 0.72rem; min-height: 28px; }
-      .compact-header { padding: 6px 8px; gap: 4px; }
-      .compact-header .header-day-icon { width: 22px; height: 22px; font-size: 0.7rem; }
-      .compact-header .header-day-name { font-size: 0.86rem; }
-      .compact-header .header-day-date { font-size: 0.86rem; }
-      .compact-header .header-live { padding: 5px 8px; font-size: 0.68rem; }
-      .compact-header .header-live-countdown { font-size: 0.76rem; }
-      
+      .compact-header { padding: 10px 12px; gap: 7px; }
+
       /* Extra small mobile improvements */
       .modal { padding: 8px; }
       .modal-card { border-radius: 16px; max-height: 95vh; }
@@ -1302,7 +1299,7 @@
       .hint { padding: 10px; font-size: 0.9rem; }
       .info-k, .info-v { font-size: 0.9rem; }
     }
-    
+
     /* Very small phones */
     @media (max-width: 360px) {
       .modal { padding: 6px; }
@@ -1314,7 +1311,7 @@
       .modal-close { width: 34px; height: 34px; }
       .info-box { padding: 8px; }
     }
-    
+
     /* Fix for landscape orientation */
     @media (max-height: 500px) and (orientation: landscape) {
       .modal-card { max-height: 85vh; }
@@ -1843,7 +1840,7 @@
 
   <!-- iOS home screen icon -->
   <link rel="apple-touch-icon" sizes="180x180" href="/images/appicon.png" />
-  
+
   <link rel="manifest" href="/manifest.webmanifest" />
   <meta name="theme-color" content="#033C54" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -1872,9 +1869,67 @@
       <button id="btnSidebarToggle" class="sidebar-toggle-btn" type="button" aria-label="فتح القائمة" aria-controls="sidebar" aria-expanded="false">
         <i class="fas fa-bars"></i>
       </button>
+      <button id="btnScheduleControls" class="schedule-controls-toggle" type="button" aria-label="أدوات الجدول" title="أدوات الجدول" aria-controls="scheduleControlsPanel" aria-expanded="false">
+        <i class="fas fa-sliders" aria-hidden="true"></i>
+      </button>
       <h1 class="site-title">ثانوية أحمد البشر الرومي</h1>
     </div>
+    <div id="scheduleControlsPanel" class="schedule-controls-panel" aria-hidden="true" inert>
+      <div class="schedule-controls-clip">
+        <div class="schedule-toolbar">
+          <div class="schedule-toolbar-inner">
+            <div class="view-toggle" role="group" aria-label="طريقة العرض">
+              <button id="btnToday" class="view-toggle-btn active" type="button" aria-label="عرض اليوم للمعلم">
+                <i class="fas fa-chalkboard-user"></i>
+                <span>اليوم</span>
+              </button>
+              <button id="btnWeek" class="view-toggle-btn" type="button">
+                <i class="fas fa-calendar-week"></i>
+                <span>الأسبوع</span>
+              </button>
+            </div>
+
+            <button id="btnRequests" class="filter-btn btn-ghost" type="button" hidden>
+              <i class="fas fa-inbox"></i>
+              <span class="request-label">طلبات القسم</span>
+              <span id="requestsPendingBadge" class="request-count" hidden aria-hidden="true"></span>
+            </button>
+
+            <button id="btnDownloadPdf" class="filter-btn btn-solid" type="button" hidden>
+              <i class="fas fa-file-pdf"></i>
+              <span>تنزيل PDF</span>
+            </button>
+
+            <button id="btnMore" class="filter-btn btn-ghost" type="button">
+              <i class="fas fa-ellipsis-h"></i>
+              <span>المزيد</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </header>
+  <script>
+    (() => {
+      const toggle = document.getElementById('btnScheduleControls');
+      const panel = document.getElementById('scheduleControlsPanel');
+      const setOpen = (open) => {
+        if (!open && panel.contains(document.activeElement)) toggle.focus();
+        toggle.setAttribute('aria-expanded', String(open));
+        panel.setAttribute('aria-hidden', String(!open));
+        panel.inert = !open;
+        panel.classList.toggle('is-open', open);
+      };
+      toggle.addEventListener('click', () => setOpen(toggle.getAttribute('aria-expanded') !== 'true'));
+      document.querySelector('.site-header').addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && toggle.getAttribute('aria-expanded') === 'true') {
+          event.preventDefault();
+          setOpen(false);
+          toggle.focus();
+        }
+      });
+    })();
+  </script>
 
   <div id="sidebarBackdrop" class="sidebar-backdrop"></div>
   <aside id="sidebar" class="sidebar" aria-hidden="true">
@@ -1930,37 +1985,6 @@
       </div>
     </div>
   </main>
-
-  <div class="schedule-toolbar">
-    <div class="schedule-toolbar-inner">
-      <div class="view-toggle" role="group" aria-label="طريقة العرض">
-        <button id="btnToday" class="view-toggle-btn active" type="button" aria-label="عرض اليوم للمعلم">
-          <i class="fas fa-chalkboard-user"></i>
-          <span>اليوم</span>
-        </button>
-        <button id="btnWeek" class="view-toggle-btn" type="button">
-          <i class="fas fa-calendar-week"></i>
-          <span>الأسبوع</span>
-        </button>
-      </div>
-
-      <button id="btnRequests" class="filter-btn btn-ghost" type="button" hidden>
-        <i class="fas fa-inbox"></i>
-        <span class="request-label">طلبات القسم</span>
-        <span id="requestsPendingBadge" class="request-count" hidden aria-hidden="true"></span>
-      </button>
-
-      <button id="btnDownloadPdf" class="filter-btn btn-solid" type="button">
-        <i class="fas fa-file-pdf"></i>
-        <span>تنزيل PDF</span>
-      </button>
-
-      <button id="btnMore" class="filter-btn btn-ghost" type="button">
-        <i class="fas fa-ellipsis-h"></i>
-        <span>المزيد</span>
-      </button>
-    </div>
-  </div>
 
   <!-- MORE -->
   <section id="moreSheet" class="sheet" aria-hidden="true">
@@ -2671,6 +2695,7 @@
     function setFilterActive(which){
       [btnToday, btnWeek].forEach(b=> b.classList.remove('active'));
       which.classList.add('active');
+      btnDownloadPdf.hidden = which !== btnWeek;
     }
     function clearStatus(){
       statusEl.textContent='';
@@ -2688,8 +2713,10 @@
       else { btn.classList.remove('loading'); btn.removeAttribute('disabled'); }
     }
     function dayNameByISO(iso){
-      const idx = weekDates.indexOf(iso);
-      return idx>=0 ? DAYS_AR[idx] : '';
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(iso || '')) return '';
+      const date = isoToUTCDate(iso);
+      if (toISO(date) !== iso) return '';
+      return [...DAYS_AR, 'الجمعة', 'السبت'][date.getUTCDay()] || '';
     }
     // Lesson times are stored/edited as 24-hour "HH:MM" (settings/lessonTimes),
     // but displayed here in 12-hour form with no leading zero and no AM/PM —
@@ -2882,9 +2909,7 @@
     }
 
     // The current lesson (short name) or break, and a live countdown to
-    // when it ends, e.g. "السابعة : 08:55". On phone this sits beside
-    // .header-day-row in one row instead of stacked below it — see
-    // .compact-header.header-has-live in the CSS.
+    // when it ends, e.g. "السابعة : 08:55", centered below the day/date.
     function liveLessonPanelHtml(){
       return `
         <div class="header-live" hidden>
@@ -2899,10 +2924,7 @@
       const panels = containerMain.querySelectorAll('.header-live');
       if (!panels.length) return;
 
-      // On phone, .compact-header switches from a stacked column to a
-      // single row (day/date on the right, lesson/countdown on the left)
-      // only while there's actually something live to show — otherwise
-      // it's just the centered day/date alone, same as before.
+      // Track whether the header includes a live lesson or break.
       const setHeaderHasLive = (has) => {
         panels.forEach(p => p.closest('.compact-header, .header-full')?.classList.toggle('header-has-live', has));
       };
@@ -4930,7 +4952,7 @@
           c.className='gcell';
           const row = map.get(iso);
           const cellData = row ? (row.get(i) || null) : null;
-          
+
           if (cellData) {
             c.textContent = cellData.subject || '—';
             c.classList.add('lesson-highlight');
@@ -6096,7 +6118,7 @@
 
     async function openIncomingRequestModal(requestDocId, reqData){
       const req = reqData || {};
-      
+
       if (req.status !== 'pending_teacher_to') {
         toast({
           title: 'طلب غير صالح',
