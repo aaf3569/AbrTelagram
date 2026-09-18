@@ -241,9 +241,12 @@
     .header-day-date { font-size: 0.74rem; font-weight: 700; opacity: 0.72; font-variant-numeric: tabular-nums; }
     /* Live lesson/break countdown — a full-width sub-bar nested inside the
        day header, rather than a small centered pill, so both rows span the
-       same width and the header reads as one even block. */
+       same width and the header reads as one even block. (On phone, this
+       and .header-day-row instead sit side by side in one row — see
+       .compact-header.header-has-live below — so this becomes a compact
+       chip there instead of a full-width bar.) */
     .header-live {
-      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
       background: rgba(255, 255, 255, 0.14);
       border: 1px solid rgba(255, 255, 255, 0.24);
       border-radius: var(--radius-sm);
@@ -252,7 +255,7 @@
       font-weight: 800;
     }
     .header-live[hidden] { display: none; }
-    .header-live-left { display: flex; align-items: center; gap: 8px; }
+    .header-live-sep { opacity: 0.65; }
     .header-live-countdown { font-size: 0.98rem; font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
     .th {
       background: linear-gradient(135deg, var(--primary-2), var(--primary));
@@ -1183,10 +1186,24 @@
       .compact-header { padding: 8px 10px; gap: 6px; margin-bottom: 6px; }
       .compact-header .header-day-row { gap: 8px; }
       .compact-header .header-day-icon { width: 26px; height: 26px; font-size: 0.78rem; }
+      .compact-header .header-day-text { flex-direction: row; gap: 8px; white-space: nowrap; }
+      .compact-header .header-day-name::after { content: '|'; margin-inline-start: 8px; opacity: 0.72; }
       .compact-header .header-day-name { font-size: 0.86rem; }
-      .compact-header .header-day-date { font-size: 0.66rem; }
+      .compact-header .header-day-date { font-size: 0.86rem; opacity: 1; direction: ltr; }
       .compact-header .header-live { padding: 6px 10px; font-size: 0.74rem; gap: 6px; }
       .compact-header .header-live-countdown { font-size: 0.82rem; }
+      /* When there's a live lesson/break, the day/date and the
+         lesson/countdown share one row (day+date on the right, lesson on
+         the left, e.g. "السابعة : 08:55") instead of stacking as two
+         rows — that second row was most of what made this header take up
+         so much of the screen. With nothing live, .header-live stays
+         hidden and .compact-header falls back to its plain column layout
+         — day/date alone, centered, same as always. */
+      .compact-header.header-has-live {
+        flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between;
+      }
+      .compact-header.header-has-live .header-day-row { flex-shrink: 0; }
+      .compact-header.header-has-live .header-live { flex-shrink: 0; margin-inline-start: 8px; }
       .compact-table { row-gap: 3px; }
       .compact-th { padding: 6px 6px; font-size: 0.78rem; }
       .compact-cell { padding: 5px 6px; min-height: 32px; font-size: 0.76rem; }
@@ -1253,8 +1270,8 @@
       .compact-cell, .compact-th { padding: 4px 5px; font-size: 0.72rem; min-height: 28px; }
       .compact-header { padding: 6px 8px; gap: 4px; }
       .compact-header .header-day-icon { width: 22px; height: 22px; font-size: 0.7rem; }
-      .compact-header .header-day-name { font-size: 0.8rem; }
-      .compact-header .header-day-date { font-size: 0.62rem; }
+      .compact-header .header-day-name { font-size: 0.86rem; }
+      .compact-header .header-day-date { font-size: 0.86rem; }
       .compact-header .header-live { padding: 5px 8px; font-size: 0.68rem; }
       .compact-header .header-live-countdown { font-size: 0.76rem; }
       
@@ -2848,7 +2865,6 @@
     function dayHeaderRowHtml(dayISO){
       return `
         <div class="header-day-row">
-          <span class="header-day-icon"><i class="far fa-calendar-check"></i></span>
           <span class="header-day-text">
             <span class="header-day-name">${dayNameByISO(dayISO) || 'اليوم'}</span>
             <span class="header-day-date">${dayISO}</span>
@@ -2857,16 +2873,15 @@
       `;
     }
 
-    // Full-width sub-bar nested inside the day header: the current lesson
-    // (short name) or break on one side, and a live countdown to when it
-    // ends on the other.
+    // The current lesson (short name) or break, and a live countdown to
+    // when it ends, e.g. "السابعة : 08:55". On phone this sits beside
+    // .header-day-row in one row instead of stacked below it — see
+    // .compact-header.header-has-live in the CSS.
     function liveLessonPanelHtml(){
       return `
         <div class="header-live" hidden>
-          <span class="header-live-left">
-            <i class="fas fa-hourglass-half"></i>
-            <span class="header-live-lesson">—</span>
-          </span>
+          <span class="header-live-lesson">—</span>
+          <span class="header-live-sep">:</span>
           <span class="header-live-countdown">00:00</span>
         </div>
       `;
@@ -2876,9 +2891,18 @@
       const panels = containerMain.querySelectorAll('.header-live');
       if (!panels.length) return;
 
+      // On phone, .compact-header switches from a stacked column to a
+      // single row (day/date on the right, lesson/countdown on the left)
+      // only while there's actually something live to show — otherwise
+      // it's just the centered day/date alone, same as before.
+      const setHeaderHasLive = (has) => {
+        panels.forEach(p => p.closest('.compact-header, .header-full')?.classList.toggle('header-has-live', has));
+      };
+
       const todayISO = kuwaitTodayISO();
       if (currentView !== 'today' || activeTodayISO !== todayISO) {
         panels.forEach(p => { p.hidden = true; });
+        setHeaderHasLive(false);
         return;
       }
 
@@ -2899,6 +2923,7 @@
 
       if (label === null || targetMinutes === null) {
         panels.forEach(p => { p.hidden = true; });
+        setHeaderHasLive(false);
         return;
       }
 
@@ -2912,6 +2937,7 @@
         if (lessonEl) lessonEl.textContent = label;
         if (countdownEl) countdownEl.textContent = countdownText;
       });
+      setHeaderHasLive(true);
     }
 
     /* ========= Modal helpers ========= */
