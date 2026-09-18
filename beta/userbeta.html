@@ -1176,6 +1176,60 @@
       .info-grid, .split { grid-template-columns: 1fr; }
       .modal-card { border-radius: 18px; max-height: 85vh; }
 
+      /* اليوم's compact view, tightened enough that the day header + all 7
+         lessons fit one phone screen without the page needing to scroll —
+         same content/layout as before (نفس التصميم), just less padding
+         and smaller text throughout. */
+      .compact-header { padding: 8px 10px; gap: 6px; margin-bottom: 6px; }
+      .compact-header .header-day-row { gap: 8px; }
+      .compact-header .header-day-icon { width: 26px; height: 26px; font-size: 0.78rem; }
+      .compact-header .header-day-name { font-size: 0.86rem; }
+      .compact-header .header-day-date { font-size: 0.66rem; }
+      .compact-header .header-live { padding: 6px 10px; font-size: 0.74rem; gap: 6px; }
+      .compact-header .header-live-countdown { font-size: 0.82rem; }
+      .compact-table { row-gap: 3px; }
+      .compact-th { padding: 6px 6px; font-size: 0.78rem; }
+      .compact-cell { padding: 5px 6px; min-height: 32px; font-size: 0.76rem; }
+      .compact-row { gap: 6px; padding-bottom: 3px; }
+      .compact-row.current-lesson .compact-cell { padding: 5px 6px; min-height: 30px; }
+
+      /* اليوم on phone: kill the page scroll. Everything from the site
+         header down is height-capped to the viewport instead of the
+         document growing past it — the schedule area is the one part
+         that may (rarely, on an unusually small screen) need its own
+         small internal scroll as a fallback, instead of the whole page
+         scrolling and the floating toolbar sliding out of view. Scoped
+         to body.today-locked (toggled in loadTodayForTeacher/
+         loadWeekForTeacher) so week view keeps scrolling normally. */
+      body.today-locked { height: 100vh; height: 100dvh; overflow: hidden; }
+      body.today-locked main { min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+      body.today-locked .board {
+        /* .board's own rule is margin:0 auto (centers it under its
+           max-width on wide screens). main becoming a flex column just
+           above makes .board a flex item, and on a flex item those same
+           auto side-margins do the OPPOSITE of centering a full-width
+           block: they shrink the item to its content width and center
+           that instead — a squished, centered card. Zeroing them here
+           keeps .board genuinely full width. */
+        margin: 0; width: 100%;
+        flex: 1 1 auto; min-height: 0;
+        display: flex; flex-direction: column;
+      }
+      body.today-locked .board > .card {
+        flex: 1 1 auto; min-height: 0;
+        display: flex; flex-direction: column;
+        overflow: hidden;
+        padding: 10px 10px 6px;
+      }
+      body.today-locked #containerMain { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+      body.today-locked .compact-table {
+        flex: 1 1 auto; min-height: 0;
+        overflow-y: auto; -webkit-overflow-scrolling: touch;
+        scrollbar-width: none; -ms-overflow-style: none;
+      }
+      body.today-locked .compact-table::-webkit-scrollbar { display: none; }
+      body.today-locked #status.status-message { flex-shrink: 0; }
+
       /* Mobile modal improvements */
       .modal { padding: 12px; }
       .modal-head { padding: 14px 16px; }
@@ -1196,7 +1250,13 @@
       .sheet-header { padding: 14px 16px; }
       .back-btn { right: 16px; padding: 0 14px; }
       .sheet-title { font-size: 1rem; padding: 0 84px; }
-      .compact-cell, .compact-th { padding: 8px 6px; font-size: 0.85rem; min-height: 45px; }
+      .compact-cell, .compact-th { padding: 4px 5px; font-size: 0.72rem; min-height: 28px; }
+      .compact-header { padding: 6px 8px; gap: 4px; }
+      .compact-header .header-day-icon { width: 22px; height: 22px; font-size: 0.7rem; }
+      .compact-header .header-day-name { font-size: 0.8rem; }
+      .compact-header .header-day-date { font-size: 0.62rem; }
+      .compact-header .header-live { padding: 5px 8px; font-size: 0.68rem; }
+      .compact-header .header-live-countdown { font-size: 0.76rem; }
       
       /* Extra small mobile improvements */
       .modal { padding: 8px; }
@@ -3576,6 +3636,7 @@
       clearStatus();
       setLoading(btnToday, true);
       currentView = 'today';
+      document.body.classList.add('today-locked');
       renderTodaySkeleton();
 
       const today = kuwaitTodayISO();
@@ -4023,6 +4084,7 @@
       clearStatus();
       setLoading(btnWeek, true);
       currentView = 'week';
+      document.body.classList.remove('today-locked');
       renderWeekSkeleton();
 
       try{
