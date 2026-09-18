@@ -1250,6 +1250,7 @@
     import { fetchClassList, sortClassList, primeClassList } from "/shared/class-registry.js";
     import { DEPARTMENT_LIST, resolveDepartmentName, getDepartmentSubjectFilters } from "/shared/departments.js";
     import { getDayScheduleHighlight } from "/shared/day-schedule-highlight.js";
+    import { teacherScheduleUids } from "/shared/schedule-teacher-identity.js";
 
 
 
@@ -1922,15 +1923,16 @@
       }
 
       try{
+        const scheduleUids = await getScheduleUids(uid);
         const qNew = query(
           collection(db,'scheduleOverrides'),
-          where('newTeacherUid','==', uid),
+          where('newTeacherUid','in', scheduleUids),
           where('active','==', true),
           where('date','in', targetDates)
         );
         const qOld = query(
           collection(db,'scheduleOverrides'),
-          where('originalTeacherUid','==', uid),
+          where('originalTeacherUid','in', scheduleUids),
           where('active','==', true),
           where('date','in', targetDates)
         );
@@ -2286,13 +2288,26 @@
     }
 
     /* ========= Data loaders ========= */
+    let scheduleProfilesPromise = null;
+    async function getScheduleUids(uid){
+      if(!scheduleProfilesPromise){
+        scheduleProfilesPromise = getDocs(collection(db, 'teachers'))
+          .then(snap => snap.docs.map(d => ({ ...d.data(), id: d.id })))
+          .catch(error => { scheduleProfilesPromise = null; throw error; });
+      }
+      return teacherScheduleUids(uid, await scheduleProfilesPromise);
+    }
+
     async function fetchWeekDocsForTeacher(uid){
-      const q1 = query(
-        collection(db,'schedules'),
-        where('teacherUid','==', uid),
-        where('dayIndex','in', [0,1,2,3,4])
-      );
-      return getDocs(q1);
+      const uids = await getScheduleUids(uid);
+      // Filter weekdays after reading: admin also accepts numeric strings.
+      const snapshots = await Promise.all(uids.map(id => getDocs(query(
+        collection(db,'schedules'), where('teacherUid','==', id)
+      ))));
+      return snapshots.flatMap(snap => snap.docs).filter(d => {
+        const day = d.data().dayIndex;
+        return day !== null && day !== '' && Number.isInteger(Number(day)) && Number(day) >= 0 && Number(day) <= 4;
+      });
     }
 
     async function fetchWeekDocsForClass(grade, section, track){
@@ -2329,7 +2344,7 @@
       if(cached && (Date.now() - cached.at) < CUSTOM_DAY_DOCS_CACHE_MS) return cached.rows;
       let rows = [];
       try{
-        const snap = await getDocs(query(collection(db,'customDaySchedules'), where('dayIndex','==', dayIndex)));
+        const snap = await getDocs(query(collection(db,'customDaySchedules'), where('dayIndex','in', [dayIndex, String(dayIndex)])));
         rows = snap.docs.map(d => d.data() || {}).filter(x => !x.deletedAt && x.enabled === true);
       }catch(e){
         console.error('[fetchCustomScheduleDocsForDayIndex]', e);
@@ -2353,13 +2368,8 @@
       const byLesson = new Map();
       const dayIndex = dayIndexForISO(dateISO);
 
-      const q1 = query(
-        collection(db,'schedules'),
-        where('teacherUid','==', uid),
-        where('dayIndex','==', dayIndex)
-      );
       const [snap, , customRows] = await Promise.all([
-        getDocs(q1),
+        fetchWeekDocsForTeacher(uid).then(docs => docs.filter(d => Number(d.data().dayIndex) === dayIndex)),
         loadOverridesForTeacherInDates(uid, [dateISO]),
         fetchCustomScheduleDocsForDayIndex(dayIndex)
       ]);
@@ -2417,7 +2427,10 @@
         }
       }
 
-      mergeCustomIntoLessonMap(byLesson, uid, customRows, { fixedLessonCount: FIXED_LESSON_COUNT });
+      const scheduleUids = await getScheduleUids(uid);
+      for(const scheduleUid of [...scheduleUids].reverse()){
+        mergeCustomIntoLessonMap(byLesson, scheduleUid, customRows, { fixedLessonCount: FIXED_LESSON_COUNT });
+      }
 
       return byLesson;
     }
@@ -2524,9 +2537,9 @@
 
     async function getWeekMapForTeacher(uid){
       const cacheKey = `${uid}_${cache.weekKey}`;
-      if (cache.teacherWeek.has(cacheKey)) {
-        return cache.teacherWeek.get(cacheKey);
-      }
+      // Reopening the week must reflect admin edits and accepted cover requests.
+      cache.overridesByTeacher.delete(uid);
+      cache.customDayDocs.clear();
 
       const map = new Map();
       for (const iso of weekDates) {
@@ -2600,6 +2613,7 @@
         }
       });
 
+      const scheduleUids = await getScheduleUids(uid);
       weekDates.forEach((iso, dayIdx) => {
         const dayMap = map.get(iso);
         const customRows = customRowsByDay[dayIdx];
@@ -2608,7 +2622,7 @@
           const max = Math.min(FIXED_LESSON_COUNT, Number(row.lessonCount) || lessonsArr.length || FIXED_LESSON_COUNT);
           for(let i=0;i<max;i++){
             const lessonRow = lessonsArr[i] || {};
-            if((lessonRow.teacherUid || '').toString() !== uid) continue;
+            if(!scheduleUids.includes((lessonRow.teacherUid || '').toString())) continue;
             const classKey = classKeyFromRow(row) || classKeyFromRow(lessonRow);
             if(!classKey) continue;
             // Custom always wins for this slot — overwrite, don't gap-fill.
