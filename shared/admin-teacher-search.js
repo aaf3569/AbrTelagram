@@ -1,6 +1,6 @@
 import { collection, getDocs } from './firebase.js';
 import { resolveDepartmentName } from './departments.js';
-import { normalizeTeacherSearch, teacherLessonReport } from './teacher-lesson-report.js';
+import { normalizeTeacherSearch, teacherLessonReport, teacherLessonCounts } from './teacher-lesson-report.js';
 
 export function initAdminTeacherSearch(db) {
   const byId = id => document.getElementById(id);
@@ -37,8 +37,10 @@ export function initAdminTeacherSearch(db) {
     const counts = element('div', undefined, 'teacher-search-counts');
     days.forEach((day, index) => counts.append(element('span', `${day}: ${lessons.filter(row => row.dayIndex === index).length}`, 'csv-chip')));
     results.append(counts);
-    const conflicts = lessons.filter((row, index) => lessons.some((other, otherIndex) => otherIndex !== index && other.dayIndex === row.dayIndex && other.lesson === row.lesson));
-    if (conflicts.length) results.append(element('p', 'تنبيه: توجد حصص في أكثر من فصل في الوقت نفسه.', 'warn'));
+    const countsByPeriod = teacherLessonCounts(lessons);
+    if (countsByPeriod.overlaps) {
+      results.append(element('p', `عدد الفترات المشغولة: ${countsByPeriod.periods} — توجد ${countsByPeriod.overlaps} إسنادات إضافية متعارضة في الوقت نفسه. إجمالي الحصص أعلاه يحسب جميع الفصول، بينما قد تعرض شبكة المعلّم فصلًا واحدًا لكل فترة. راجع الإسنادات المتعارضة أدناه.`, 'warn'));
+    }
     const scroll = element('div', undefined, 'teacher-search-table');
     const table = element('table');
     const head = element('thead');

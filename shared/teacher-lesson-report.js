@@ -6,6 +6,11 @@ export function normalizeTeacherSearch(value) {
     .replace(/[أإآٱ]/g, 'ا').replace(/ى/g, 'ي').replace(/\s+/g, ' ').trim().toLowerCase();
 }
 
+export function teacherLessonCounts(lessons) {
+  const periods = new Set(lessons.map(row => `${row.dayIndex}|${row.lesson}`)).size;
+  return { assignments: lessons.length, periods, overlaps: lessons.length - periods };
+}
+
 // Resolve each class slot before filtering by teacher: a newer reassignment or
 // cleared cell must not leave the former teacher with an extra lesson.
 export function teacherLessonReport(uid, profiles, schedules) {

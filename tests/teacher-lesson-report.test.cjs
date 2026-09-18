@@ -55,6 +55,16 @@ test('Arabic teacher search ignores diacritics, tatweel, alef variants, and extr
   assert.equal(normalizeTeacherSearch('  حَيدر   أحـمد حمزة الهزيم '), 'حيدر احمد حمزة الهزيم');
 });
 
+test('18 assignments in 16 periods are reported as two overlapping assignments', async () => {
+  const { teacherLessonCounts } = await loadReport();
+  const lessons = Array.from({ length: 16 }, (_, index) => ({ dayIndex: Math.floor(index / 7), lesson: index % 7 + 1 }));
+  lessons.push({ ...lessons[0] }, { ...lessons[1] });
+  const counts = teacherLessonCounts(lessons);
+  assert.equal(counts.assignments, 18);
+  assert.equal(counts.periods, 16);
+  assert.equal(counts.overlaps, 2);
+});
+
 test('admin page and popup module parse; every popup element reference exists', () => {
   const html = fs.readFileSync(path.join(root, 'admins/adminschedule.html'), 'utf8');
   const source = fs.readFileSync(path.join(root, 'shared/admin-teacher-search.js'), 'utf8');
