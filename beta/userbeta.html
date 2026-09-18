@@ -168,10 +168,9 @@
 
     /* Table */
     .table { display: grid; grid-template-columns: repeat(2, minmax(160px, 1fr)); column-gap: 12px; row-gap: 8px; align-items: stretch; }
-    /* Same teal-blue as the class buttons on Teachers/user.html, so this
-       header reads as the same "brand" accent across both pages. */
+    /* Match the day/date header to the sidebar header's darker blue. */
     .header-full {
-      grid-column: 1 / -1; background: linear-gradient(145deg, #033C54, #065372);
+      grid-column: 1 / -1; background: linear-gradient(135deg, var(--primary-2), var(--primary));
       color: var(--headerText); border-radius: var(--radius-sm); padding: 16px; text-align: center;
       font-weight: 900; box-shadow: var(--shadow-1);
       display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 10px;
@@ -468,7 +467,7 @@
     /* Compact on mobile */
     .compact-table { display: grid; grid-template-columns: 1fr 1fr; column-gap: 8px; row-gap: 6px; width: 100%; }
     .compact-header {
-      grid-column: 1 / -1; background: linear-gradient(145deg, #033C54, #065372);
+      grid-column: 1 / -1; background: linear-gradient(135deg, var(--primary-2), var(--primary));
       color: var(--headerText); border-radius: var(--radius-sm); padding: 12px; text-align: center;
       font-weight: 900; display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 10px; margin-bottom: 8px;
     }
@@ -518,6 +517,11 @@
       box-shadow: 0 0 0 2px rgba(2, 43, 66, 0.22);
       border-radius: var(--radius-sm);
       padding: 4px;
+    }
+    /* Leave a little breathing room below the column headings. */
+    .table > .cell[data-lesson-index="1"],
+    .compact-table > .compact-row[data-lesson-index="1"] {
+      margin-top: 4px;
     }
     /* Cells lose their own border/background inside the mother box (avoids a
        double-boxed look) and shrink their padding by roughly what the mother's
@@ -1145,7 +1149,7 @@
         align-items: center; justify-content: center;
         padding: 8px 14px; gap: 8px 10px; margin-bottom: 6px;
         border-radius: 14px;
-        background: linear-gradient(135deg, #033c54, #075269);
+        background: linear-gradient(135deg, var(--primary-2), var(--primary));
         border: 1px solid rgba(255,255,255,.16);
         box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
       }
