@@ -3701,11 +3701,17 @@
     // purely so the admin can eyeball an Excel column against the CSV
     // match before committing.
     function csvNormalizeArabic(str){
-      return (str || '').toString().replace(/[أإآٱ]/g, 'ا').replace(/ى/g, 'ي');
+      return (str || '').toString()
+        .replace(/[أإآٱ]/g, 'ا')
+        .replace(/ى/g, 'ي')
+        // "عبد العزيز" vs "عبدالعزيز" are the same name split differently —
+        // merge the space out so both become one token before comparing.
+        .replace(/عبد\s+/g, 'عبد');
     }
 
     function csvFirstNameToken(str){
-      return csvNormalizeArabic((str || '').toString().trim().split(/\s+/)[0] || '');
+      const normalized = csvNormalizeArabic((str || '').toString().trim());
+      return normalized.split(/\s+/)[0] || '';
     }
 
     function csvRowSiteTeacherName(row){
