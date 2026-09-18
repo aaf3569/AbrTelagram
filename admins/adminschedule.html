@@ -1142,7 +1142,7 @@
           </svg>
         </button>
         <button id="csvImportBtn" class="new-schedule-btn" type="button" title="استيراد الجدول من CSV">📥 استيراد CSV</button>
-        <button id="forceResaveAllBtn" class="new-schedule-btn" type="button" title="إعادة حفظ كل حصص كل الجداول بختم وقت جديد، بلا أي تغيير في البيانات">🔄 إعادة حفظ الكل</button>
+        <button id="forceResaveAllBtn" class="new-schedule-btn" type="button" title="إعادة حفظ كل حصص كل الجداول بختم وقت جديد، ويصحّح تلقائيًّا أي حصة مسندة لحساب معلّم قديم/غير صحيح">🔄 إعادة حفظ الكل</button>
       </div>
     </div>
   </header>
@@ -2283,11 +2283,21 @@
       const byUid = new Map();
       const addTeacherDoc = (d, { forcedHead = false } = {}) => {
         const t = d.data() || {};
-        const uid = t.uid || d.id;
+        // The document ID, never the doc's own `uid` field — every
+        // teacher-facing page looks up "my own schedule" via
+        // doc(db,'teachers', auth.currentUser.uid), so the ID a teacher's
+        // profile is actually stored under is the only value a schedule
+        // write can be found by later. A stale/mismatched `uid` field
+        // (e.g. left over from how a duplicate or migrated doc was
+        // created) silently assigned lessons to a teacherUid nobody could
+        // ever log in as — the lesson showed correctly here, in the admin
+        // grid, but never on that teacher's own page. See the CSV
+        // importer's loadCsvTeacherIndex() below, which had the same bug.
+        const uid = d.id;
         if(byUid.has(uid)) return; // already included from the other query
         byUid.set(uid, {
           uid,
-          name: t.name || t.email || t.uid || d.id,
+          name: t.name || t.email || d.id,
           isSupervisor: !!t.isSupervisor,
           isHead: forcedHead || (t.role || '').toString().toLowerCase() === 'head',
           subject: t.subject || '',
@@ -3577,8 +3587,12 @@
       const list = [];
       snap.forEach(d => {
         const t = d.data() || {};
+        // The document ID, not the doc's own `uid` field — see the
+        // identical fix (and full explanation) in getTeachersForClass()
+        // above. A stale field here silently pointed an imported lesson
+        // at a teacherUid nobody could log in as.
         list.push({
-          uid: t.uid || d.id,
+          uid: d.id,
           name: (t.name || t.email || d.id || '').toString(),
           subject: (t.subject || '').toString().trim(),
           // A teacher can hold two تخصص داخلي (see shared/departments.js's
@@ -4472,7 +4486,7 @@
     async function forceResaveAllSchedules(){
       if(loading) return;
       const confirmed = window.confirm(
-        'سيُعاد حفظ كل حصة في كل جداول المدرسة (كل الفصول) بختم وقت جديد، دون تغيير أي بيانات فعلية. ' +
+        'سيُعاد حفظ كل حصة في كل جداول المدرسة (كل الفصول) بختم وقت جديد، ويُصحَّح تلقائيًّا معلّم أي حصة مسندة لحساب معلّم قديم/غير صحيح. ' +
         'قد يستغرق هذا بعض الوقت حسب عدد الحصص. متابعة؟'
       );
       if(!confirmed) return;
@@ -4480,9 +4494,36 @@
       setLoading(true, "جاري إعادة حفظ كل الجداول...");
       setStatusHTML("");
       try{
+        // A teacher doc's own `uid` field can drift from its real document
+        // ID (e.g. a duplicated/migrated record) — the admin teacher-picker
+        // and the CSV importer used to trust that field over the ID, which
+        // silently assigned some lessons to a teacherUid nobody could ever
+        // log in as (the lesson showed fine here, never on that teacher's
+        // own schedule page). Both pickers are now fixed to always use the
+        // document ID, but any schedule already saved under the old, wrong
+        // uid needs to be corrected here.
+        const teachersSnap = await getDocs(collection(db,'teachers'));
+        const staleUidToCorrectUid = new Map();
+        teachersSnap.forEach(d => {
+          const t = d.data() || {};
+          const staleUid = (t.uid || '').toString().trim();
+          if(staleUid && staleUid !== d.id) staleUidToCorrectUid.set(staleUid, d.id);
+        });
+
         const snap = await getDocs(collection(db,'schedules'));
         const docs = [];
         snap.forEach(d => docs.push({ id: d.id, data: d.data() || {} }));
+
+        let uidFixed = 0;
+        docs.forEach(entry => {
+          const staleUid = (entry.data.teacherUid || '').toString().trim();
+          const correctUid = staleUidToCorrectUid.get(staleUid);
+          if(correctUid){
+            entry.data = { ...entry.data, teacherUid: correctUid };
+            entry.uidCorrected = true;
+            uidFixed++;
+          }
+        });
 
         const bySlot = new Map(); // `${dayIndex}|${lesson}|${teacherUid}` -> Map(classKey -> teacherName)
         docs.forEach(({ data }) => {
@@ -4523,9 +4564,12 @@
         let cursor = 0;
         async function worker(){
           while(cursor < docs.length){
-            const { id, data } = docs[cursor++];
+            const { id, data, uidCorrected } = docs[cursor++];
             try{
-              await setDoc(doc(db,'schedules',id), { updatedAt: serverTimestamp() }, { merge:true });
+              const patch = uidCorrected
+                ? { teacherUid: data.teacherUid, updatedAt: serverTimestamp() }
+                : { updatedAt: serverTimestamp() };
+              await setDoc(doc(db,'schedules',id), patch, { merge:true });
               written++;
             }catch(e){
               failures.push({ id, classKey: data.classKey || '', lesson: data.lesson || '', message: e?.message || String(e) });
@@ -4546,6 +4590,9 @@
           conflicts.forEach(c => {
             parts.push(`<div class="warn">${c.teacherName}: ${c.classKeys.join(' ، ')} — ${DAYS_AR[c.dayIndex] || 'يوم غير معروف'}، الحصة ${c.lesson}</div>`);
           });
+        }
+        if(uidFixed){
+          parts.push(`<div class="ok">تم تصحيح معلّم ${uidFixed} حصة كانت مسندة لحساب معلّم قديم/غير صحيح — أصبحت الآن تظهر في جدول المعلّم الفعلي.</div>`);
         }
         if(!failures.length && !conflicts.length){
           parts.push(`<div class="ok">تمّت إعادة حفظ ${written} حصة بنجاح في كل الجداول. لا يوجد أي تعارض.</div>`);
