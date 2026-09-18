@@ -532,6 +532,13 @@
       min-height: 42px;
     }
 
+    /* Occupied day-view class cells match Teachers/user.html class buttons. */
+    .table [data-row-role="class"].lesson-highlight,
+    .compact-table [data-row-role="class"].lesson-highlight {
+      background: linear-gradient(145deg, #033C54, #065372) !important;
+      color: #fff !important;
+    }
+
     /* Sidebar */
     .sidebar-backdrop {
       position: fixed; inset: 0; z-index: 95;
