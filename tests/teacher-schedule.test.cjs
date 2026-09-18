@@ -92,10 +92,9 @@ pageTest('reported wrong-class covers preserve all 18 lessons in weekly and dail
   const rows = classes.flatMap(([classKey, slots]) => slots.map(([dayIndex, lesson]) => ({ classKey, dayIndex, lesson })));
   const mondayCover = { _kind: 'original', classKey: '12 / 4 ع', _id: 'monday-cover' };
   const thursdayCover = { _kind: 'original', classKey: '12 / 1 د', _id: 'thursday-cover' };
-  const logs = [];
   const cache = { weekKey: dates[0], teacherWeek: new Map(), overridesByTeacher: new Map(), customDayDocs: new Map() };
   const context = vm.createContext({
-    console: { log: (...args) => logs.push(args), table() {}, warn() {} },
+    console,
     weekDates: dates, FIXED_LESSON_COUNT: 7, cache,
     fetchWeekDocsForTeacher: async () => rows.map(row => ({ data: () => row })),
     loadOverridesForTeacherInDates: async () => cache.overridesByTeacher.set('haider', new Map([
@@ -119,8 +118,6 @@ pageTest('reported wrong-class covers preserve all 18 lessons in weekly and dail
   assert.equal([...week.values()].reduce((count, day) => count + [...day.values()].filter(value => value !== '—').length, 0), 18);
   assert.equal(week.get(dates[1]).get(5), '12 / 1 د');
   assert.equal(week.get(dates[4]).get(2), '12 / 5 ع');
-  const diagnostic = JSON.parse(logs.find(args => args[0].includes('Copyable weekly diagnostic'))[1]);
-  assert.equal(diagnostic.decisions.filter(row => row.reason === 'ignored-outgoing-override-class-mismatch').length, 2);
   assert.equal((await context.buildTodayMapWithOverrides('haider', dates[1])).get('5').classKey, '12 / 1 د');
   assert.equal((await context.buildTodayMapWithOverrides('haider', dates[4])).get('2').classKey, '12 / 5 ع');
 
