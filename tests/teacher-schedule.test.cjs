@@ -80,6 +80,64 @@ pageTest('all 18 assignments reach the weekly grid, including legacy UID and tex
   assert.equal(map.get(dates[2]).get(4), '12 / 1 د');
 });
 
+pageTest('reported wrong-class covers preserve all 18 lessons in weekly and daily views', async () => {
+  const source = fs.readFileSync(path.join(__dirname, '../shared/schedule-priority.js'), 'utf8');
+  const priority = await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
+  const dates = ['2026-09-13', '2026-09-14', '2026-09-15', '2026-09-16', '2026-09-17'];
+  const classes = [
+    ['12 / 1 د', [[0,3],[1,5],[2,2],[3,4],[3,6],[4,3]]],
+    ['12 / 4 ع', [[0,5],[1,3],[2,6],[2,7],[3,5],[4,5]]],
+    ['12 / 5 ع', [[0,6],[1,2],[1,6],[2,3],[3,2],[4,2]]]
+  ];
+  const rows = classes.flatMap(([classKey, slots]) => slots.map(([dayIndex, lesson]) => ({ classKey, dayIndex, lesson })));
+  const mondayCover = { _kind: 'original', classKey: '12 / 4 ع', _id: 'monday-cover' };
+  const thursdayCover = { _kind: 'original', classKey: '12 / 1 د', _id: 'thursday-cover' };
+  const logs = [];
+  const cache = { weekKey: dates[0], teacherWeek: new Map(), overridesByTeacher: new Map(), customDayDocs: new Map() };
+  const context = vm.createContext({
+    console: { log: (...args) => logs.push(args), table() {}, warn() {} },
+    weekDates: dates, FIXED_LESSON_COUNT: 7, cache,
+    fetchWeekDocsForTeacher: async () => rows.map(row => ({ data: () => row })),
+    loadOverridesForTeacherInDates: async () => cache.overridesByTeacher.set('haider', new Map([
+      [dates[1], new Map([[5, mondayCover]])], [dates[4], new Map([[2, thursdayCover]])]
+    ])),
+    fetchCustomScheduleDocsForDayIndex: async () => [],
+    getOverriddenClassKeys: priority.getOverriddenClassKeys,
+    classKeyFromRow: priority.classKeyFromRow, normalizeClassKey: priority.normalizeClassKey,
+    mergeCustomIntoLessonMap: priority.mergeCustomIntoLessonMap,
+    isClassOverriddenForToday: () => false,
+    dayIndexForISO: date => dates.indexOf(date), getScheduleUids: async () => ['haider']
+  });
+  for (const [startText, endText] of [
+    ['    async function getWeekMapForTeacher(', '    async function waitForImageReady('],
+    ['    async function buildTodayMapWithOverrides(', '    function isClassOverriddenForToday(']
+  ]) {
+    const start = page.indexOf(startText);
+    vm.runInContext(page.slice(start, page.indexOf(endText, start)), context);
+  }
+  const week = await context.getWeekMapForTeacher('haider');
+  assert.equal([...week.values()].reduce((count, day) => count + [...day.values()].filter(value => value !== '—').length, 0), 18);
+  assert.equal(week.get(dates[1]).get(5), '12 / 1 د');
+  assert.equal(week.get(dates[4]).get(2), '12 / 5 ع');
+  const diagnostic = JSON.parse(logs.find(args => args[0].includes('Copyable weekly diagnostic'))[1]);
+  assert.equal(diagnostic.decisions.filter(row => row.reason === 'ignored-outgoing-override-class-mismatch').length, 2);
+  assert.equal((await context.buildTodayMapWithOverrides('haider', dates[1])).get('5').classKey, '12 / 1 د');
+  assert.equal((await context.buildTodayMapWithOverrides('haider', dates[4])).get('2').classKey, '12 / 5 ع');
+
+  // Legitimate covers still apply, including differently spaced class labels.
+  mondayCover.classKey = '12/1 د';
+  thursdayCover.classKey = '12/5 ع';
+  const coveredWeek = await context.getWeekMapForTeacher('haider');
+  assert.equal(coveredWeek.get(dates[1]).get(5), '—');
+  assert.equal(coveredWeek.get(dates[4]).get(2), '—');
+  assert.equal((await context.buildTodayMapWithOverrides('haider', dates[1])).get('5')._coveredAway, true);
+
+  // An override without a class must not erase an unrelated standing lesson.
+  mondayCover.classKey = '';
+  assert.equal((await context.getWeekMapForTeacher('haider')).get(dates[1]).get(5), '12 / 1 د');
+  assert.equal((await context.buildTodayMapWithOverrides('haider', dates[1])).get('5').classKey, '12 / 1 د');
+});
+
 pageTest('weekly map renders Monday fifth lesson and refreshes admin changes', async () => {
   let classKey = '12 / 1 د';
   const dates = ['2026-09-13', '2026-09-14', '2026-09-15', '2026-09-16', '2026-09-17'];

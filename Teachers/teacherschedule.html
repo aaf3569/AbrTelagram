@@ -2429,6 +2429,14 @@
             _overrideInfo: o
           });
         } else if(o._kind === 'original'){
+          const scheduledClass = classKeyFromRow(byLesson.get(String(i)));
+          const overrideClass = classKeyFromRow(o);
+          if (!scheduledClass || !overrideClass || normalizeClassKey(scheduledClass) !== normalizeClassKey(overrideClass)) {
+            console.warn('[teacher-schedule] Ignored outgoing override for a different class:', {
+              date: dateISO, lesson: i, scheduledClass, overrideClass, overrideId: o._id
+            });
+            continue;
+          }
           byLesson.set(String(i), {
             _coveredAway: true,
             _isOverride: true,
@@ -2631,6 +2639,15 @@
           if (isClassOverriddenForToday(o, overriddenClassKeys)) {
             decisions.push({ reason: 'override-suppressed-by-custom-schedule', date: iso, lesson: i, classKey: o.classKey, overrideId: o._id });
             continue;
+          }
+          if (o._kind === 'original') {
+            const scheduledClass = map.get(iso).get(i);
+            const overrideClass = classKeyFromRow(o);
+            if (!scheduledClass || !overrideClass || normalizeClassKey(scheduledClass) !== normalizeClassKey(overrideClass)) {
+              decisions.push({ reason: 'ignored-outgoing-override-class-mismatch', date: iso, lesson: i,
+                scheduledClass: scheduledClass || null, overrideClass, overrideId: o._id });
+              continue;
+            }
           }
           decisions.push({ reason: o._kind === 'original' ? 'lesson-covered-by-another-teacher' : 'incoming-cover-or-swap',
             date: iso, lesson: i, previousClass: map.get(iso).get(i) || null, classKey: o.classKey,
