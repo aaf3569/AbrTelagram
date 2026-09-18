@@ -18,7 +18,7 @@
 <link rel="modulepreload" href="/shared/firebase.js">
 <link rel="modulepreload" href="/shared/schedule-priority.js">
   <title>جدول المعلّم - ثانوية أحمد البشر الرومي</title>
-  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
   <link rel="stylesheet" href="/shared/base.css" />
@@ -48,13 +48,6 @@
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; }
-    /* This page only: overrides shared/base.css's --app-font (Noto Kufi
-       Arabic) so every piece of text here — including form controls that
-       fall back to base.css's own button/input/select/textarea rule
-       instead of setting their own font-family — renders in Tajawal. */
-    body, button, input, select, textarea {
-      font-family: 'Tajawal', sans-serif;
-    }
     body {
       background: var(--page);
       color: var(--text);
@@ -124,7 +117,7 @@
       border: 1px solid rgba(2, 43, 66, 0.2); background: var(--card-bg); color: var(--primary);
       font-weight: 800; cursor: pointer; box-shadow: var(--shadow-1); transition: var(--transition);
       display: inline-flex; align-items: center; gap: 8px; font-size: 0.9rem; position: relative;
-      font-family: 'Tajawal', sans-serif;
+      font-family: var(--app-font);
     }
     .filter-btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-2); border-color: rgba(2, 43, 66, 0.4); }
     .filter-btn:active { transform: translateY(0); }
@@ -162,7 +155,7 @@
       background: transparent; color: var(--text-light);
       font-weight: 800; font-size: 0.88rem; cursor: pointer; transition: var(--transition);
       display: inline-flex; align-items: center; gap: 8px;
-      font-family: 'Tajawal', sans-serif;
+      font-family: var(--app-font);
     }
     .view-toggle-btn:hover { color: var(--primary); }
     .view-toggle-btn.active {
@@ -609,9 +602,14 @@
     }
     .sidebar.open { transform: translateX(0); }
     .sidebar-head {
-      padding: 16px; display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      position: relative; padding: 16px; display: flex; flex-direction: column;
+      align-items: center; gap: 12px; text-align: center;
       background: linear-gradient(135deg, var(--primary-2), var(--primary));
       color: var(--headerText); flex-shrink: 0;
+    }
+    .sidebar-school-logo {
+      display: block; width: 180px; max-width: calc(100% - 80px); height: auto; object-fit: contain;
+      padding: 8px; border-radius: 12px; background: #fff;
     }
     .sidebar-head h2 {
       /* Scales down with the viewport instead of truncating, so the school
@@ -623,6 +621,7 @@
     .sidebar-head h2 i { flex-shrink: 0; font-size: 0.9em; opacity: .85; }
     .sidebar-head h2 span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .sidebar-close {
+      position: absolute; top: 16px; left: 16px;
       width: 32px; height: 32px; flex-shrink: 0; border-radius: 10px;
       border: 1px solid rgba(255, 255, 255, 0.24); background: rgba(255, 255, 255, 0.14);
       color: #fff; cursor: pointer; display: grid; place-items: center; transition: var(--transition);
@@ -667,7 +666,7 @@
       display: flex; align-items: center; gap: 12px; padding: 12px;
       border-radius: var(--radius-sm); border: 1px solid transparent;
       background: transparent; color: var(--text);
-      font-family: 'Tajawal', sans-serif;
+      font-family: var(--app-font);
       font-weight: 800; font-size: 0.92rem; cursor: pointer; text-align: right;
       transition: var(--transition); width: 100%;
     }
@@ -716,7 +715,7 @@
       color: var(--primary); font-weight: 900; cursor: pointer;
       box-shadow: var(--shadow-1); transition: var(--transition);
       display: flex; align-items: center; gap: 8px;
-      font-family: 'Tajawal', sans-serif;
+      font-family: var(--app-font);
     }
     .back-btn:hover { transform: translateY(calc(-50% - 2px)); box-shadow: var(--shadow-2); }
     .back-btn:active { transform: translateY(-50%) scale(0.97); }
@@ -751,7 +750,7 @@
     .select, .input {
       flex: 1; height: 50px; border: none; outline: none; background: transparent;
       font-size: 1rem; font-weight: 800; color: var(--text);
-      font-family: 'Tajawal', sans-serif;
+      font-family: var(--app-font);
       cursor: pointer;
     }
     .input { cursor: text; font-weight: 700; }
@@ -1478,7 +1477,7 @@
        refinements on top of this). This page's own #modal uses its own
        .modal-backdrop/.modal-card names, so these generic .overlay/.card
        names are free to add without touching that existing modal. */
-    .btn { font-family: 'Tajawal', sans-serif; width: 100%; min-height: 56px; border: none; border-radius: 14px; cursor: pointer; font-weight: 800; font-size: 1rem; padding: 14px 20px; transition: var(--transition); display: flex; align-items: center; justify-content: center; gap: 10px; }
+    .btn { font-family: var(--app-font); width: 100%; min-height: 56px; border: none; border-radius: 14px; cursor: pointer; font-weight: 800; font-size: 1rem; padding: 14px 20px; transition: var(--transition); display: flex; align-items: center; justify-content: center; gap: 10px; }
     .btn.cancel { background: #fff; color: var(--primary); border: 1px solid rgba(2,43,66,.25); }
     .btn.primary { background: linear-gradient(145deg, var(--primary-2), var(--primary)); color: #fff; }
     .modal .overlay { position: absolute; inset: 0; background: rgba(2, 43, 66, 0.55); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
@@ -1931,6 +1930,7 @@
   <div id="sidebarBackdrop" class="sidebar-backdrop"></div>
   <aside id="sidebar" class="sidebar" aria-hidden="true">
     <div class="sidebar-head">
+      <img class="sidebar-school-logo" src="/images/schoollogo.png" alt="شعار المدرسة" width="1080" height="435">
       <h2><i class="fas fa-school"></i><span>ثانوية أحمد البشر الرومي</span></h2>
       <button id="sidebarClose" class="sidebar-close" type="button" aria-label="إغلاق القائمة">
         <i class="fas fa-times"></i>
@@ -3917,7 +3917,7 @@
             border-radius: 18px;
             border: 1px solid #d5e2ef;
             padding: 30px 26px 24px;
-            font-family: 'Tajawal', Tahoma, Arial, sans-serif;
+            font-family: var(--app-font);
             direction: rtl;
             display: flex;
             flex-direction: column;
@@ -4344,7 +4344,7 @@
             box-sizing: border-box;
             background: #ffffff;
             color: #153554;
-            font-family: 'Tajawal', Tahoma, Arial, sans-serif;
+            font-family: var(--app-font);
             direction: rtl;
             padding: 34px 26px 26px;
             display: flex;
@@ -7755,22 +7755,11 @@
     }
     mcClose.addEventListener('click', mcCloseSheet);
 
-    // This page is reached from several different hubs depending on the
-    // signed-in user's role (Teachers/user.html, depHead/dptlead.html,
-    // supervisors/supervisor.html, admins/admin-late-attendance.html) —
-    // each records its own path right before navigating here, so الرئيسية
-    // returns to wherever the user actually came from instead of always
-    // landing on the plain teacher hub.
-    function goHome(){
-      let returnTo = '/teachers/user.html';
-      try {
-        const stored = sessionStorage.getItem('teacherScheduleReturnTo');
-        if (stored) {
-          returnTo = stored;
-          sessionStorage.removeItem('teacherScheduleReturnTo');
-        }
-      } catch {}
-      location.href = returnTo;
+    // Return to the teacher's initial day schedule within this page.
+    async function goHome(){
+      if (!currentUser?.uid) return;
+      setFilterActive(btnToday);
+      await loadTodayForTeacher(currentUser.uid);
     }
 
     btnMore.addEventListener('click', openMore);
