@@ -18,12 +18,13 @@
 <link rel="modulepreload" href="/shared/firebase.js">
 <link rel="modulepreload" href="/shared/schedule-priority.js">
   <title>جدول المعلّم - ثانوية أحمد البشر الرومي</title>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
   <link rel="stylesheet" href="/shared/base.css" />
   <style>
     :root {
+      --app-font: 'Tajawal', sans-serif;
       --primary: #022b42;
       --primary-2: #044563;
       --primary-light: rgba(2, 43, 66, 0.08);
@@ -7920,6 +7921,29 @@
       await loadWeekForTeacher(currentUser.uid);
     });
 
+    if (location.search.includes('debugToday=1')) {
+      currentUser = { uid: 'debug' };
+      currentView = 'today';
+      document.body.classList.add('today-locked');
+      const map = new Map();
+      map.set('1', { classKey: '10 / 2', subject: 'رياضيات', teacherUid: 'debug' });
+      map.set('2', { classKey: '11 / 1 ع', subject: 'فيزياء', teacherUid: 'debug' });
+      map.set('4', { classKey: '12 / 3 د', subject: 'كيمياء', teacherUid: 'debug' });
+      map.set('6', { classKey: '10 / 1', subject: 'أحياء', teacherUid: 'debug' });
+      map.set('7', { classKey: '9 / 4', subject: 'إنجليزي', teacherUid: 'debug' });
+      renderTodayTable(kuwaitTodayISO(), map, null);
+      updateCurrentLessonHighlight();
+      updateLiveLessonPanel();
+
+      if (location.search.includes('forceLive=1')) {
+        document.querySelectorAll('.header-live').forEach(p => {
+          p.hidden = false;
+          p.querySelector('.header-live-lesson').textContent = 'السابعة';
+          p.querySelector('.header-live-countdown').textContent = '08:55';
+          p.closest('.compact-header, .header-full')?.classList.add('header-has-live');
+        });
+      }
+    }
   </script>
   <script src="/shared/hub-title-link.js" defer></script>
 <script src="/shared/prefetch-nav.js" defer></script>
