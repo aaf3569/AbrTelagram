@@ -101,7 +101,7 @@
       font-size: clamp(1.2rem, 2.5vw, 1.5rem);
       color: var(--primary);
       text-align: center;
-      padding: 0 60px;
+      padding: 0 60px 0 16px;
       white-space: nowrap;
     }
 
@@ -123,7 +123,7 @@
     .filter-btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-2); border-color: rgba(2, 43, 66, 0.4); }
     .filter-btn:active { transform: translateY(0); }
     .filter-btn.active { background: linear-gradient(135deg, var(--primary-2), var(--primary)); color: var(--headerText); border-color: var(--primary); }
-    .filter-btn[disabled], .view-toggle-btn[disabled] { opacity: 0.6; cursor: not-allowed; }
+    .filter-btn[disabled], .sidebar-link[disabled] { opacity: 0.6; cursor: not-allowed; }
 
     .btn-solid {
       background: linear-gradient(135deg, var(--primary-2), var(--primary));
@@ -142,31 +142,9 @@
       color: var(--primary);
     }
 
-    /* Day/Week segmented toggle */
-    .view-toggle {
-      display: inline-flex;
-      padding: 4px;
-      gap: 2px;
-      background: rgba(2, 43, 66, 0.06);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-    }
-    .view-toggle-btn {
-      height: 38px; padding: 0 16px; border: 0; border-radius: 9px;
-      background: transparent; color: var(--text-light);
-      font-weight: 800; font-size: 0.88rem; cursor: pointer; transition: var(--transition);
-      display: inline-flex; align-items: center; gap: 8px;
-      font-family: var(--app-font);
-    }
-    .view-toggle-btn:hover { color: var(--primary); }
-    .view-toggle-btn.active {
-      background: var(--card-bg); color: var(--primary);
-      box-shadow: var(--shadow-1);
-    }
-
     /* Loading dot */
-    .filter-btn.loading, .view-toggle-btn.loading { position: relative; }
-    .filter-btn.loading::after, .view-toggle-btn.loading::after {
+    .filter-btn.loading, .sidebar-link.loading { position: relative; }
+    .filter-btn.loading::after, .sidebar-link.loading::after {
       content: ""; width: 10px; height: 10px; border-radius: 50%;
       border: 2px solid currentColor; border-top-color: transparent;
       position: absolute; left: 10px; animation: spin 0.8s linear infinite;
@@ -177,35 +155,6 @@
     main { flex: 1; padding: 20px; }
     .board { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
 
-    /* Schedule controls expand within the header and reserve their own space. */
-    .schedule-controls-toggle {
-      position: absolute; left: 0; top: 50%; transform: translateY(-50%);
-      width: 44px; height: 44px; border: 1px solid rgba(255,255,255,.25);
-      border-radius: 14px; background: linear-gradient(145deg, var(--primary-2), var(--primary));
-      color: #fff; cursor: pointer; font-size: 1.1rem;
-      display: grid; place-items: center; box-shadow: 0 4px 12px rgba(2,43,66,.2);
-      transition: background .2s ease, box-shadow .2s ease;
-    }
-    .schedule-controls-toggle[aria-expanded="true"] { box-shadow: 0 0 0 3px rgba(4,69,99,.15); }
-    .schedule-controls-toggle:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
-    .schedule-controls-panel {
-      display: grid; grid-template-rows: 0fr; opacity: 0;
-      max-width: 1200px; margin: 0 auto;
-      transition: grid-template-rows .36s cubic-bezier(.22,1,.36,1), opacity .24s ease;
-    }
-    .schedule-controls-panel.is-open { grid-template-rows: 1fr; opacity: 1; }
-    .schedule-controls-clip { min-height: 0; overflow: hidden; }
-    .schedule-toolbar { padding: 14px 4px 4px; }
-    .schedule-toolbar-inner {
-      display: flex; gap: 8px; align-items: center; justify-content: center; flex-wrap: wrap;
-      padding: 10px; border: 1px solid var(--border-light); border-radius: 16px;
-      background: var(--primary-light);
-    }
-    .schedule-toolbar-inner > * { flex-shrink: 0; }
-    .schedule-toolbar .filter-btn[hidden] { display: none; }
-    @media (prefers-reduced-motion: reduce) {
-      .schedule-controls-panel, .schedule-controls-toggle { transition: none; }
-    }
     .card {
       background: var(--card-bg);
       border: 1px solid var(--border);
@@ -656,24 +605,33 @@
     .sidebar-user-dept:empty { display: none; }
 
     .sidebar-nav {
-      padding: 10px 12px; display: flex; flex-direction: column; gap: 3px;
+      padding: 14px 12px; display: flex; flex-direction: column; gap: 16px;
       overflow-y: auto; flex: 1 1 auto;
     }
+    .sidebar-group {
+      display: flex; flex-direction: column; gap: 2px;
+    }
+    .sidebar-group:not([hidden]) + .sidebar-group {
+      padding-top: 14px; border-top: 1px solid var(--border-light);
+    }
     .sidebar-section-label {
-      padding: 16px 10px 6px; font-size: 0.72rem; font-weight: 800;
-      color: var(--muted); letter-spacing: .01em;
+      padding: 0 10px 8px; font-size: 0.7rem; font-weight: 800;
+      color: var(--muted); letter-spacing: .03em; text-transform: uppercase;
     }
     .sidebar-link {
-      display: flex; align-items: center; gap: 12px; padding: 12px;
-      border-radius: var(--radius-sm); border: 1px solid transparent;
+      position: relative;
+      display: flex; align-items: center; gap: 12px; padding: 11px 12px;
+      border-radius: 12px; border: 1px solid transparent;
       background: transparent; color: var(--text);
       font-family: var(--app-font);
-      font-weight: 800; font-size: 0.92rem; cursor: pointer; text-align: right;
+      font-weight: 800; font-size: 0.91rem; cursor: pointer; text-align: right;
       transition: var(--transition); width: 100%;
     }
     .sidebar-link i, .sidebar-link::before {
-      width: 22px; text-align: center; color: var(--primary-2);
-      font-size: 1rem; flex-shrink: 0;
+      width: 32px; height: 32px; flex-shrink: 0;
+      display: inline-flex; align-items: center; justify-content: center;
+      border-radius: 9px; background: var(--primary-light);
+      color: var(--primary-2); font-size: 0.95rem;
     }
     @media (hover: hover) and (pointer: fine) {
       .sidebar-link:hover { background: var(--primary-light); }
@@ -802,11 +760,7 @@
     }
 
     /* طلبات القسم (department heads only) — ported from depHead/schedual.html.
-       #btnRequests starts hidden and is only ever revealed via JS for role
-       'head'. .filter-btn's own display:inline-flex is an author-origin rule,
-       which beats the browser's [hidden]{display:none} UA rule regardless of
-       specificity — so without this, the button would show for everyone. */
-    #btnRequests[hidden]{ display:none; }
+       #btnRequests starts hidden and is only ever revealed via JS for role 'head'. */
     #btnRequests .request-count{
       position:absolute; top:-7px; left:-7px; min-width:21px; height:21px;
       padding:0 4px; border-radius:999px; display:inline-flex;
@@ -1167,9 +1121,7 @@
       }
       .card { padding: 16px; }
       .sheet-body { padding: 16px; }
-      .schedule-toolbar-inner { gap: 8px; }
       .filter-btn { padding: 0 14px; font-size: 0.85rem; }
-      .view-toggle-btn { height: 36px; padding: 0 12px; font-size: 0.82rem; }
       .more-actions { flex-direction: column; }
       .all-schedules-actions { flex: initial; width: 100%; }
       .more-actions > .filter-btn { flex: initial; width: 100%; }
@@ -1266,10 +1218,6 @@
     }
     @media (min-width: 769px) { .compact-table { display: none; } }
     @media (max-width: 480px) {
-      .schedule-toolbar-inner { padding: 8px; }
-      .schedule-toolbar .view-toggle { width: 100%; }
-      .schedule-toolbar .view-toggle-btn { flex: 1; justify-content: center; }
-      .schedule-toolbar .filter-btn { flex: 1; height: 40px; padding: 0 8px; font-size: .78rem; justify-content: center; }
       .badge { padding: 6px 10px; }
       .sheet-header { padding: 14px 16px; }
       .back-btn { right: 16px; padding: 0 14px; }
@@ -1866,72 +1814,15 @@
       <button id="btnSidebarToggle" class="sidebar-toggle-btn" type="button" aria-label="فتح القائمة" aria-controls="sidebar" aria-expanded="false">
         <i class="fas fa-bars"></i>
       </button>
-      <button id="btnScheduleControls" class="schedule-controls-toggle" type="button" aria-label="أدوات الجدول" title="أدوات الجدول" aria-controls="scheduleControlsPanel" aria-expanded="false">
-        <i class="fas fa-sliders" aria-hidden="true"></i>
-      </button>
       <h1 class="site-title">ثانوية أحمد البشر الرومي</h1>
     </div>
-    <div id="scheduleControlsPanel" class="schedule-controls-panel" aria-hidden="true" inert>
-      <div class="schedule-controls-clip">
-        <div class="schedule-toolbar">
-          <div class="schedule-toolbar-inner">
-            <div class="view-toggle" role="group" aria-label="طريقة العرض">
-              <button id="btnToday" class="view-toggle-btn active" type="button" aria-label="عرض اليوم للمعلم">
-                <i class="fas fa-chalkboard-user"></i>
-                <span>اليوم</span>
-              </button>
-              <button id="btnWeek" class="view-toggle-btn" type="button">
-                <i class="fas fa-calendar-week"></i>
-                <span>الأسبوع</span>
-              </button>
-            </div>
-
-            <button id="btnRequests" class="filter-btn btn-ghost" type="button" hidden>
-              <i class="fas fa-inbox"></i>
-              <span class="request-label">طلبات القسم</span>
-              <span id="requestsPendingBadge" class="request-count" hidden aria-hidden="true"></span>
-            </button>
-
-            <button id="btnDownloadPdf" class="filter-btn btn-solid" type="button" hidden>
-              <i class="fas fa-file-pdf"></i>
-              <span>تنزيل PDF</span>
-            </button>
-
-            <button id="btnMore" class="filter-btn btn-ghost" type="button">
-              <i class="fas fa-ellipsis-h"></i>
-              <span>المزيد</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
   </header>
-  <script>
-    (() => {
-      const toggle = document.getElementById('btnScheduleControls');
-      const panel = document.getElementById('scheduleControlsPanel');
-      const setOpen = (open) => {
-        if (!open && panel.contains(document.activeElement)) toggle.focus();
-        toggle.setAttribute('aria-expanded', String(open));
-        panel.setAttribute('aria-hidden', String(!open));
-        panel.inert = !open;
-        panel.classList.toggle('is-open', open);
-      };
-      toggle.addEventListener('click', () => setOpen(toggle.getAttribute('aria-expanded') !== 'true'));
-      document.querySelector('.site-header').addEventListener('keydown', (event) => {
-        if (event.key === 'Escape' && toggle.getAttribute('aria-expanded') === 'true') {
-          event.preventDefault();
-          setOpen(false);
-          toggle.focus();
-        }
-      });
-    })();
-  </script>
+  <button id="btnToday" type="button" hidden aria-hidden="true" tabindex="-1" aria-label="عرض اليوم للمعلم"></button>
 
   <div id="sidebarBackdrop" class="sidebar-backdrop"></div>
   <aside id="sidebar" class="sidebar" aria-hidden="true">
     <div class="sidebar-head">
-      <img class="sidebar-school-logo" src="/images/schoollogo.png" alt="شعار المدرسة" width="1080" height="435">
+      <img class="sidebar-school-logo" src="/images/WhiteLogo.png" alt="شعار المدرسة" width="1080" height="435">
       <h2><i class="fas fa-school"></i><span>ثانوية أحمد البشر الرومي</span></h2>
       <button id="sidebarClose" class="sidebar-close" type="button" aria-label="إغلاق القائمة">
         <i class="fas fa-times"></i>
@@ -1945,30 +1836,48 @@
       </div>
     </div>
     <nav class="sidebar-nav">
-      <button id="sidebarHome" class="sidebar-link" type="button">
-        <i class="fas fa-house"></i>
-        <span>الرئيسية</span>
-      </button>
 
-      <div id="sidebarClassesSection" hidden>
+      <div id="sidebarClassesSection" class="sidebar-group" hidden>
         <div class="sidebar-section-label">فصولي</div>
         <div id="sidebarClassesButtons" class="sidebar-classes"></div>
       </div>
 
-      <div class="sidebar-section-label">الجداول</div>
-      <button id="sidebarDeptSchedule" class="sidebar-link" type="button" hidden>
-        <i class="fas fa-users-rectangle"></i>
-        <span>جدول القسم</span>
-      </button>
-      <button id="sidebarSchoolSchedule" class="sidebar-link" type="button">
-        <i class="fas fa-building-columns"></i>
-        <span>جدول المدرسة</span>
-      </button>
+      <div class="sidebar-group">
+        <div class="sidebar-section-label">الجداول</div>
+        <button id="sidebarHome" class="sidebar-link" type="button">
+          <i class="fas fa-calendar-day"></i>
+          <span>جدولي</span>
+        </button>
+        <button id="btnWeek" class="sidebar-link" type="button">
+          <i class="fas fa-calendar-week"></i>
+          <span>الجدول الأسبوعي</span>
+        </button>
+        <button id="sidebarDeptSchedule" class="sidebar-link" type="button" hidden>
+          <i class="fas fa-users-rectangle"></i>
+          <span>جدول القسم</span>
+        </button>
+        <button id="sidebarSchoolSchedule" class="sidebar-link" type="button">
+          <i class="fas fa-building-columns"></i>
+          <span>جدول المدرسة</span>
+        </button>
+        <button id="btnMore" class="sidebar-link" type="button">
+          <i class="fas fa-chalkboard"></i>
+          <span>جدول الصفوف</span>
+        </button>
+      </div>
 
-      <button id="sidebarRequests" class="sidebar-link" type="button" hidden>
-        <i class="fas fa-inbox"></i>
-        <span>طلبات القسم</span>
-      </button>
+      <div class="sidebar-group">
+        <div class="sidebar-section-label">أدوات</div>
+        <button id="btnDownloadPdf" class="sidebar-link" type="button">
+          <i class="fas fa-file-pdf"></i>
+          <span>تنزيل PDF للجدول الأسبوعي</span>
+        </button>
+        <button id="btnRequests" class="sidebar-link" type="button" hidden>
+          <i class="fas fa-inbox"></i>
+          <span class="request-label">طلبات القسم</span>
+          <span id="requestsPendingBadge" class="request-count" hidden aria-hidden="true"></span>
+        </button>
+      </div>
     </nav>
     <div class="sidebar-footer">
       <div id="telegramSettingsSlot"></div>
@@ -2590,7 +2499,6 @@
     const sidebarHome = document.getElementById('sidebarHome');
     const sidebarDeptSchedule = document.getElementById('sidebarDeptSchedule');
     const sidebarSchoolSchedule = document.getElementById('sidebarSchoolSchedule');
-    const sidebarRequests = document.getElementById('sidebarRequests');
     const sidebarUser = document.getElementById('sidebarUser');
     const sidebarUserAvatar = document.getElementById('sidebarUserAvatar');
     const sidebarUserName = document.getElementById('sidebarUserName');
@@ -2699,7 +2607,6 @@
     function setFilterActive(which){
       [btnToday, btnWeek].forEach(b=> b.classList.remove('active'));
       which.classList.add('active');
-      btnDownloadPdf.hidden = which !== btnWeek;
     }
     function clearStatus(){
       statusEl.textContent='';
@@ -6479,7 +6386,6 @@
 
     /* ========= Sidebar ========= */
     function openSidebar(){
-      sidebarRequests.hidden = btnRequests.hidden;
       sidebar.classList.add('open');
       sidebar.setAttribute('aria-hidden','false');
       sidebarBackdrop.classList.add('open');
@@ -7785,16 +7691,15 @@
       await loadTodayForTeacher(currentUser.uid);
     }
 
-    btnMore.addEventListener('click', openMore);
+    btnMore.addEventListener('click', () => { closeSidebar(); openMore(); });
     closeMore.addEventListener('click', closeMoreSheet);
-    btnRequests.addEventListener('click', openRequestsSheet);
+    btnRequests.addEventListener('click', () => { closeSidebar(); openRequestsSheet(); });
     closeRequests.addEventListener('click', closeRequestsSheet);
 
     btnSidebarToggle.addEventListener('click', openSidebar);
     sidebarClose.addEventListener('click', closeSidebar);
     sidebarBackdrop.addEventListener('click', closeSidebar);
     sidebarHome.addEventListener('click', () => { closeSidebar(); goHome(); });
-    sidebarRequests.addEventListener('click', () => { closeSidebar(); openRequestsSheet(); });
     sidebarDeptSchedule.addEventListener('click', () => { closeSidebar(); openDeptSchedSheet(); });
     sidebarSchoolSchedule.addEventListener('click', () => { closeSidebar(); openSchoolSchedSheet(); });
 
@@ -7850,7 +7755,7 @@
       sidebarUser.hidden = !name;
     }
 
-    btnDownloadPdf.addEventListener('click', downloadWeeklySchedulePdf);
+    btnDownloadPdf.addEventListener('click', () => { closeSidebar(); downloadWeeklySchedulePdf(); });
     btnDownloadAllClassesPdf.addEventListener('click', downloadAllClassSchedulesPdf);
     btnDownloadAllClassesPng.addEventListener('click', downloadAllClassSchedulesPng);
     btnDownloadSelectedClassPdf.addEventListener('click', downloadSelectedClassSchedulePdf);
@@ -7939,33 +7844,11 @@
 
     btnWeek.addEventListener('click', async ()=>{
       if(!currentUser?.uid) return;
+      closeSidebar();
       setFilterActive(btnWeek);
       await loadWeekForTeacher(currentUser.uid);
     });
 
-    if (location.search.includes('debugToday=1')) {
-      currentUser = { uid: 'debug' };
-      currentView = 'today';
-      document.body.classList.add('today-locked');
-      const map = new Map();
-      map.set('1', { classKey: '10 / 2', subject: 'رياضيات', teacherUid: 'debug' });
-      map.set('2', { classKey: '11 / 1 ع', subject: 'فيزياء', teacherUid: 'debug' });
-      map.set('4', { classKey: '12 / 3 د', subject: 'كيمياء', teacherUid: 'debug' });
-      map.set('6', { classKey: '10 / 1', subject: 'أحياء', teacherUid: 'debug' });
-      map.set('7', { classKey: '9 / 4', subject: 'إنجليزي', teacherUid: 'debug' });
-      renderTodayTable(kuwaitTodayISO(), map, null);
-      updateCurrentLessonHighlight();
-      updateLiveLessonPanel();
-
-      if (location.search.includes('forceLive=1')) {
-        document.querySelectorAll('.header-live').forEach(p => {
-          p.hidden = false;
-          p.querySelector('.header-live-lesson').textContent = 'السابعة';
-          p.querySelector('.header-live-countdown').textContent = '08:55';
-          p.closest('.compact-header, .header-full')?.classList.add('header-has-live');
-        });
-      }
-    }
   </script>
   <script src="/shared/hub-title-link.js" defer></script>
 <script src="/shared/prefetch-nav.js" defer></script>
