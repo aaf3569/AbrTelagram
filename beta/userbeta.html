@@ -130,6 +130,11 @@
       border-color: var(--primary);
       color: var(--headerText);
     }
+    .weekly-download-btn {
+      width: 100%; min-height: 56px; height: auto; padding: 14px 20px;
+      justify-content: center; font-size: 1rem; margin-bottom: 16px;
+    }
+    .weekly-download-btn[hidden] { display: none; }
     .btn-danger {
       background: #fff;
       border-color: rgba(239, 68, 68, 0.35);
@@ -1913,15 +1918,7 @@
         </button>
         <button id="btnMore" class="sidebar-link" type="button">
           <i class="fas fa-chalkboard"></i>
-          <span>جدول الصفوف</span>
-        </button>
-      </div>
-
-      <div class="sidebar-group">
-        <div class="sidebar-section-label">أدوات</div>
-        <button id="btnDownloadPdf" class="sidebar-link" type="button">
-          <i class="fas fa-file-pdf"></i>
-          <span>تنزيل PDF للجدول الأسبوعي</span>
+          <span>جداول الصفوف</span>
         </button>
         <button id="btnRequests" class="sidebar-link" type="button" hidden>
           <i class="fas fa-inbox"></i>
@@ -1943,6 +1940,10 @@
   <main>
     <div class="board">
       <div class="card">
+        <button id="btnDownloadPdf" class="filter-btn btn-solid weekly-download-btn" type="button" hidden>
+          <i class="fas fa-file-pdf" aria-hidden="true"></i>
+          <span>تنزيل PDF للجدول الأسبوعي</span>
+        </button>
         <div id="containerMain"></div>
         <div id="status" class="status-message"></div>
       </div>
@@ -3670,6 +3671,7 @@
       clearStatus();
       setLoading(btnToday, true);
       currentView = 'today';
+      btnDownloadPdf.hidden = true;
       document.body.classList.add('today-locked');
       renderTodaySkeleton();
 
@@ -4124,6 +4126,7 @@
       clearStatus();
       setLoading(btnWeek, true);
       currentView = 'week';
+      btnDownloadPdf.hidden = false;
       document.body.classList.remove('today-locked');
       renderWeekSkeleton();
 
@@ -7823,7 +7826,7 @@
       sidebarUser.hidden = !name;
     }
 
-    btnDownloadPdf.addEventListener('click', () => { closeSidebar(); downloadWeeklySchedulePdf(); });
+    btnDownloadPdf.addEventListener('click', downloadWeeklySchedulePdf);
     btnDownloadAllClassesPdf.addEventListener('click', downloadAllClassSchedulesPdf);
     btnDownloadAllClassesPng.addEventListener('click', downloadAllClassSchedulesPng);
     btnDownloadSelectedClassPdf.addEventListener('click', downloadSelectedClassSchedulePdf);
