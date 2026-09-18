@@ -689,6 +689,7 @@
     .sidebar-settings-link::before {
       font-family: "Font Awesome 6 Free"; font-weight: 900; content: "\f013";
     }
+    #sidebarLogout { justify-content: center; text-align: center; }
 
     /* Sheet */
     .sheet {
@@ -1970,6 +1971,10 @@
     </nav>
     <div class="sidebar-footer">
       <div id="telegramSettingsSlot"></div>
+      <button id="sidebarLogout" class="sidebar-link" type="button">
+        <i class="fas fa-right-from-bracket" aria-hidden="true"></i>
+        <span>تسجيل الخروج</span>
+      </button>
     </div>
   </aside>
 
@@ -2269,7 +2274,7 @@
     /* ========= Firebase ========= */
     import { initializeApp, getApp, getApps } from "/shared/firebase.js";
     import {
-      getAuth, onAuthStateChanged, setPersistence, browserLocalPersistence
+      getAuth, onAuthStateChanged, setPersistence, browserLocalPersistence, signOut
     } from "/shared/firebase.js";
     import {
       initializeFirestore, persistentSingleTabManager,
@@ -2284,6 +2289,7 @@
     import { DEPARTMENT_LIST, resolveDepartmentName, getDepartmentSubjectFilters } from "/shared/departments.js";
     import { getDayScheduleHighlight } from "/shared/day-schedule-highlight.js";
     import { mountTelegramSettings } from "/shared/telegram-settings.js";
+    import { showActionPopup } from "/shared/action-popup.js";
     import { mountAttendanceSheet, LESSON_END_GRACE_MINUTES } from "/shared/attendance.js";
     import { mountStudentNotesSheet } from "/shared/student-notes-sheet.js";
     import { parseTimeToMinutes } from "/shared/kuwait-time.js";
@@ -7781,6 +7787,30 @@
     sidebarSchoolSchedule.addEventListener('click', () => { closeSidebar(); openSchoolSchedSheet(); });
 
     mountTelegramSettings({ auth, slotId: 'telegramSettingsSlot', extraClass: 'sidebar-link sidebar-settings-link' });
+
+    const sidebarLogout = document.getElementById('sidebarLogout');
+    sidebarLogout.addEventListener('click', async () => {
+      if (sidebarLogout.disabled) return;
+      sidebarLogout.disabled = true;
+      closeSidebar();
+      try {
+        const confirmed = await showActionPopup({
+          title: 'تسجيل الخروج',
+          message: 'هل تريد تسجيل الخروج الآن؟',
+          confirmText: 'نعم، تسجيل الخروج',
+          cancelText: 'إلغاء',
+          icon: '↩'
+        });
+        if (!confirmed) return;
+        await signOut(auth);
+        location.href = '/index.html';
+      } catch (error) {
+        console.error('Sign out failed:', error);
+        toast({ title: 'خطأ', text: 'تعذّر تسجيل الخروج. حاول مرة أخرى.', icon: 'fa-circle-exclamation' });
+      } finally {
+        sidebarLogout.disabled = false;
+      }
+    });
 
     /* ========= Sidebar user card ========= */
     function sidebarInitial(name){
