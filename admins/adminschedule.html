@@ -3700,8 +3700,12 @@
     // compares against the site's own matched teacher name for that row,
     // purely so the admin can eyeball an Excel column against the CSV
     // match before committing.
+    function csvNormalizeArabic(str){
+      return (str || '').toString().replace(/[أإآٱ]/g, 'ا').replace(/ى/g, 'ي');
+    }
+
     function csvFirstNameToken(str){
-      return (str || '').toString().trim().split(/\s+/)[0] || '';
+      return csvNormalizeArabic((str || '').toString().trim().split(/\s+/)[0] || '');
     }
 
     function csvRowSiteTeacherName(row){
