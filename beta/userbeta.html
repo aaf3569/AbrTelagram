@@ -1135,7 +1135,7 @@
          same content/layout as before (نفس التصميم), just less padding
          and smaller text throughout. */
       .compact-header {
-        display: flex; flex-wrap: wrap;
+        display: flex; flex-wrap: nowrap;
         align-items: center; justify-content: center;
         padding: 8px 14px; gap: 8px 10px; margin-bottom: 6px;
         border-radius: 14px;
@@ -1143,20 +1143,27 @@
         border: 1px solid rgba(255,255,255,.16);
         box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
       }
-      .compact-header .header-day-row { min-width: 0; }
+      .compact-header .header-day-row { min-width: 0; flex-shrink: 1; overflow: hidden; }
       .compact-header .header-day-text {
         display: flex; flex-direction: column; align-items: center;
-        gap: 2px; white-space: nowrap; line-height: 1.3;
+        gap: 2px; line-height: 1.3; min-width: 0;
+      }
+      .compact-header .header-day-name,
+      .compact-header .header-day-date {
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
       }
       .compact-header .header-day-name { font-size: .96rem; font-weight: 800; }
       .compact-header .header-day-date { font-size: .86rem; font-weight: 700; opacity: .94; direction: ltr; }
       /* When the live badge is showing, pair it with the day/date as one
          balanced cluster (a thin divider between them) instead of the two
-         stretching across separate half-width columns. */
+         stretching across separate half-width columns. The badge itself
+         never shrinks or wraps to a second line — the day/date truncate
+         first if a phone is too narrow for both on one row. */
       .compact-header.header-has-live .header-day-row {
         padding-inline-end: 12px; border-inline-end: 1px solid rgba(255,255,255,.18);
       }
       .compact-header .header-live {
+        flex-shrink: 0;
         padding: 6px 12px; font-size: .8rem; gap: 7px; border-radius: 999px;
         background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.2);
         line-height: 1.4; white-space: nowrap;
