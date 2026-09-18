@@ -863,6 +863,32 @@
     }
     .modal.show{ display:grid; }
 
+    .teacher-search-dialog{
+      width:min(860px, calc(100vw - 32px)); max-height:88vh;
+      box-sizing:border-box; overflow:auto; padding:24px;
+      border:1px solid var(--border); border-radius:18px;
+      color:var(--text); background:#fff; box-shadow:var(--shadow-strong);
+      font-family:"Noto Kufi Arabic", system-ui, sans-serif;
+    }
+    .teacher-search-dialog::backdrop{ background:rgba(10,30,45,.5); }
+    .teacher-search-header, .teacher-search-counts{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .teacher-search-header{ justify-content:space-between; }
+    .teacher-search-header h2{ margin:0; font-size:20px; color:var(--primary); }
+    .teacher-search-filters{ display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:20px 0; }
+    .teacher-search-filters label{ display:grid; gap:7px; font-size:13px; font-weight:800; }
+    .teacher-search-filters label:last-child{ grid-column:1 / -1; }
+    .teacher-search-filters .input{ width:100%; min-width:0; box-sizing:border-box; }
+    .teacher-search-total{ font-size:18px; font-weight:900; color:var(--primary); }
+    .teacher-search-table{ overflow-x:auto; margin-top:18px; }
+    .teacher-search-table table{ width:100%; border-collapse:collapse; }
+    .teacher-search-table th, .teacher-search-table td{ padding:12px; text-align:right; border-bottom:1px solid var(--border); }
+    .teacher-search-table th{ color:var(--primary); background:#f2f7f9; }
+    @media(max-width:560px){
+      .teacher-search-dialog{ padding:16px; }
+      .teacher-search-filters{ grid-template-columns:1fr; }
+      .teacher-search-table th, .teacher-search-table td{ padding:9px 6px; font-size:12px; }
+    }
+
     .modal-card{
       width:min(720px, 100%);
       background:#fff;
@@ -1138,6 +1164,7 @@
       <div class="top-info">
         <button id="backToAdminBtn" class="new-schedule-btn" type="button">← رجوع</button>
         <button id="newScheduleBtn" class="new-schedule-btn" type="button">+ إضافة جدول</button>
+        <button id="teacherSearchBtn" class="new-schedule-btn" type="button" aria-haspopup="dialog" aria-controls="teacherSearchDialog">بحث عن حصص معلّم</button>
         <button id="settingsBtn" class="new-schedule-btn icon-btn" type="button" title="الإعدادات" aria-label="الإعدادات">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <circle cx="12" cy="12" r="3"></circle>
@@ -1393,6 +1420,30 @@
     </div>
   </div>
 
+  <dialog id="teacherSearchDialog" class="teacher-search-dialog" dir="rtl" aria-labelledby="teacherSearchTitle" aria-describedby="teacherSearchDescription">
+    <div class="teacher-search-header">
+      <h2 id="teacherSearchTitle">حصص المعلّم</h2>
+      <button id="teacherSearchClose" class="btn" type="button" autofocus>إغلاق</button>
+    </div>
+    <p id="teacherSearchDescription" class="muted">الحصص المحفوظة في الجدول الأساسي لجميع الفصول. لا يشمل العرض التعديلات غير المحفوظة أو الجداول الإضافية أو التبديلات المؤقتة.</p>
+    <div class="teacher-search-filters">
+      <label for="teacherSearchInput">اسم المعلّم
+        <input id="teacherSearchInput" class="input" type="search" placeholder="اكتب اسم المعلّم أو جزءًا منه…" autocomplete="off">
+      </label>
+      <label for="teacherSearchDepartment">القسم
+        <select id="teacherSearchDepartment" class="input"><option value="">جميع الأقسام</option></select>
+      </label>
+      <label for="teacherSearchTeachers">المعلّم
+        <select id="teacherSearchTeachers" class="input"><option value="">اختر المعلّم…</option></select>
+      </label>
+    </div>
+    <div class="teacher-search-header">
+      <p id="teacherSearchStatus" class="muted" role="status" aria-live="polite"></p>
+      <button id="teacherSearchRefresh" class="btn" type="button">تحديث</button>
+    </div>
+    <div id="teacherSearchResults" aria-live="polite"></div>
+  </dialog>
+
   <script type="module">
     import { firebaseConfig } from "/shared/firebase.js";
     /* ========= Firebase ========= */
@@ -1411,6 +1462,7 @@
     } from "/shared/firebase.js";
     import { kuwaitDateTimeToDate, addMinutesToDate } from "/shared/kuwait-time.js";
     import { LESSON_END_GRACE_MINUTES } from "/shared/attendance.js";
+    import { initAdminTeacherSearch } from "/shared/admin-teacher-search.js";
 
 
 
@@ -1422,6 +1474,7 @@
       db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true, useFetchStreams: false });
     }
     const auth = getAuth(app);
+    initAdminTeacherSearch(db);
     // Start the settings/classes read the moment auth resolves, instead
     // of waiting for the role check to come back first. The two reads are
     // independent, and running them one after the other cost this page a
