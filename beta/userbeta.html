@@ -1218,8 +1218,14 @@
          scrolling and the floating toolbar sliding out of view. Scoped
          to body.today-locked (toggled in loadTodayForTeacher/
          loadWeekForTeacher) so week view keeps scrolling normally. */
-      body.today-locked { height: 100vh; height: 100dvh; overflow: hidden; }
-      body.today-locked main { min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+      body.today-locked { height: 100vh; height: 100dvh; min-height: 0; overflow: hidden; }
+      body.today-locked main { min-height: 0; padding-bottom: 0; overflow: hidden; display: flex; flex-direction: column; }
+      /* Reserve the dock's actual height and a small gap below the schedule. */
+      body.today-locked .schedule-toolbar {
+        position: relative; left: auto; bottom: auto; transform: none;
+        flex: 0 0 auto; align-self: center; width: max-content;
+        margin: 8px 0 calc(14px + env(safe-area-inset-bottom, 0px));
+      }
       body.today-locked .board {
         /* .board's own rule is margin:0 auto (centers it under its
            max-width on wide screens). main becoming a flex column just
@@ -1241,6 +1247,8 @@
       body.today-locked #containerMain { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
       body.today-locked .compact-table {
         flex: 1 1 auto; min-height: 0;
+        /* Keep the highlight's outer ring inside the scrollable area. */
+        padding: 4px;
         overflow-y: auto; -webkit-overflow-scrolling: touch;
         scrollbar-width: none; -ms-overflow-style: none;
       }
