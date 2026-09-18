@@ -1135,14 +1135,14 @@
          same content/layout as before (نفس التصميم), just less padding
          and smaller text throughout. */
       .compact-header {
-        display: grid; grid-template-columns: minmax(0, 1fr);
-        padding: 8px 14px; gap: 12px; margin-bottom: 6px;
-        align-items: center; border-radius: 14px;
+        display: flex; flex-wrap: wrap;
+        align-items: center; justify-content: center;
+        padding: 8px 14px; gap: 8px 10px; margin-bottom: 6px;
+        border-radius: 14px;
         background: linear-gradient(135deg, #033c54, #075269);
         border: 1px solid rgba(255,255,255,.16);
         box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
       }
-      .compact-header.header-has-live { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .compact-header .header-day-row { min-width: 0; }
       .compact-header .header-day-text {
         display: flex; flex-direction: column; align-items: center;
@@ -1150,12 +1150,24 @@
       }
       .compact-header .header-day-name { font-size: .96rem; font-weight: 800; }
       .compact-header .header-day-date { font-size: .86rem; font-weight: 700; opacity: .94; direction: ltr; }
+      /* When the live badge is showing, pair it with the day/date as one
+         balanced cluster (a thin divider between them) instead of the two
+         stretching across separate half-width columns. */
+      .compact-header.header-has-live .header-day-row {
+        padding-inline-end: 12px; border-inline-end: 1px solid rgba(255,255,255,.18);
+      }
       .compact-header .header-live {
-        justify-self: center; padding: 5px 8px; font-size: .8rem; gap: 6px; border-radius: 999px;
-        background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.18);
+        padding: 6px 12px; font-size: .8rem; gap: 7px; border-radius: 999px;
+        background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.2);
         line-height: 1.4; white-space: nowrap;
       }
-      .compact-header .header-live-countdown { font-size: .86rem; direction: ltr; }
+      .compact-header .header-live::before {
+        content: ''; width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+        background: #4ade80; box-shadow: 0 0 0 3px rgba(74,222,128,.28);
+      }
+      .compact-header .header-live-sep { display: none; }
+      .compact-header .header-live-lesson { opacity: .85; }
+      .compact-header .header-live-countdown { font-size: .88rem; font-weight: 900; direction: ltr; }
       .compact-table { row-gap: 3px; }
       .compact-th { padding: 6px 6px; font-size: 0.78rem; }
       .compact-cell { padding: 5px 6px; min-height: 32px; font-size: 0.76rem; }
