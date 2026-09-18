@@ -3692,6 +3692,25 @@
       csvImportConfirmBtn.disabled = !(counts.resolved > 0 || anyPicked);
     }
 
+    // A row is ambiguous because its exact (صف، مادة) pair matched more than
+    // one teacher — every OTHER row sharing that same pair was shown the
+    // identical candidate list for the identical reason: one teacher's
+    // weekly load, split across many lesson-slot rows. Before this, picking
+    // a name only resolved the one row the admin happened to be on, so a
+    // teacher with e.g. 6 rows in one class needed the same pick made 6
+    // separate times — miss one while scrolling a few hundred rows and that
+    // single lesson silently never gets written, even though the import
+    // "succeeds". Picking once now resolves the whole group.
+    function applyPickToGroup(sourceRow, picked){
+      csvRows.forEach((r, idx) => {
+        if(r.status !== 'ambiguous') return;
+        if(r.siteClassKey !== sourceRow.siteClassKey || r.subject !== sourceRow.subject) return;
+        r._picked = picked;
+        const sel = csvPreviewBody.querySelector(`.csv-ambiguous-pick[data-index="${idx}"]`);
+        if(sel) sel.value = picked ? picked.uid : '';
+      });
+    }
+
     function renderCsvPreview(){
       csvPreviewBody.innerHTML = '';
       csvRows.forEach((row, i) => csvPreviewBody.appendChild(renderCsvPreviewRow(row, i)));
@@ -3699,8 +3718,9 @@
         sel.addEventListener('change', () => {
           const i = Number(sel.dataset.index);
           const uid = sel.value;
-          const picked = csvRows[i].candidates.find(c => c.uid === uid);
-          csvRows[i]._picked = picked || null;
+          const picked = csvRows[i].candidates.find(c => c.uid === uid) || null;
+          csvRows[i]._picked = picked;
+          applyPickToGroup(csvRows[i], picked);
           updateCsvSummary();
         });
       });
@@ -3732,6 +3752,21 @@
     async function commitCsvImport(){
       const toWrite = csvRows.filter(r => r.status === 'resolved' || (r.status === 'ambiguous' && r._picked));
       if(!toWrite.length) return;
+
+      // Confirming with rows still unresolved silently imports a partial
+      // schedule — the success message only ever reports how many rows
+      // WERE written, never how many were dropped, so this is the one
+      // point that can still catch "18 rows in the file, 16 on the site"
+      // before it happens instead of after.
+      const leftover = csvRows.filter(r =>
+        (r.status === 'ambiguous' && !r._picked) || r.status === 'unmatched' || r.status === 'error'
+      );
+      if(leftover.length){
+        const proceed = window.confirm(
+          `سيتم تجاهل ${leftover.length} حصّة لم تُحل بعد (بلا معلّم مُختار أو تعذّر التطابق) ولن تُستورد. هل تريد المتابعة والاستيراد بدون هذه الحصص؟`
+        );
+        if(!proceed) return;
+      }
 
       csvImportConfirmBtn.disabled = true;
       csvImportMsg.textContent = 'جارٍ الحفظ...';
@@ -3782,6 +3817,9 @@
         }
 
         addStatusLine('ok', `تم استيراد ${written} حصّة من ملف CSV.`);
+        if(leftover.length){
+          addStatusLine('warn', `تم تجاهل ${leftover.length} حصّة لعدم التطابق أو عدم اختيار معلّم.`);
+        }
         closeCsvImportModal();
       }catch(error){
         console.error('CSV import commit failed:', error);
