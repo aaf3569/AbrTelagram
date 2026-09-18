@@ -918,6 +918,9 @@
     table.csv-table tr.csv-row-ambiguous{ background:rgba(138,90,0,.05); }
     table.csv-table tr.csv-row-error{ background:rgba(180,35,24,.05); }
     table.csv-table select{ width:100%; height:32px; border-radius:8px; border:1px solid var(--border); font-family:inherit; }
+    input.csv-test-input{ width:100%; height:30px; border-radius:8px; border:1px solid var(--border); font-family:inherit; text-align:center; padding:0 6px; }
+    input.csv-test-input.csv-test-match{ background:rgba(18,106,46,.14); border-color:rgba(18,106,46,.4); }
+    input.csv-test-input.csv-test-mismatch{ background:rgba(180,35,24,.1); border-color:rgba(180,35,24,.35); }
 
     .pop-title{
       font-weight:950;
@@ -1362,7 +1365,7 @@
           <div class="csv-table-wrap">
             <table class="csv-table">
               <thead>
-                <tr><th>الصف</th><th>اليوم</th><th>الحصة</th><th>المادة</th><th>الحالة</th><th>المعلّم</th></tr>
+                <tr><th>الصف</th><th>اليوم</th><th>الحصة</th><th>المادة</th><th>الحالة</th><th>المعلّم</th><th>اختبار (للمقارنة فقط، لا يُحفظ)</th></tr>
               </thead>
               <tbody id="csvPreviewBody"></tbody>
             </table>
@@ -3688,8 +3691,31 @@
         <td>${subjectLabel}</td>
         <td>${statusCell}</td>
         <td>${teacherCell}</td>
+        <td><input type="text" class="csv-test-input" data-index="${index}" autocomplete="off"></td>
       `;
       return tr;
+    }
+
+    // Nothing typed/pasted here is ever read by the import — it only
+    // compares against the site's own matched teacher name for that row,
+    // purely so the admin can eyeball an Excel column against the CSV
+    // match before committing.
+    function csvFirstNameToken(str){
+      return (str || '').toString().trim().split(/\s+/)[0] || '';
+    }
+
+    function csvRowSiteTeacherName(row){
+      if(row.status === 'resolved') return row.teacherName || '';
+      if(row.status === 'ambiguous' && row._picked) return row._picked.name || '';
+      return '';
+    }
+
+    function applyCsvTestHighlight(input, row){
+      input.classList.remove('csv-test-match', 'csv-test-mismatch');
+      const pasted = csvFirstNameToken(input.value);
+      const site = csvFirstNameToken(csvRowSiteTeacherName(row));
+      if(!pasted || !site) return;
+      input.classList.add(pasted === site ? 'csv-test-match' : 'csv-test-mismatch');
     }
 
     function updateCsvSummary(){
@@ -3725,6 +3751,33 @@
       });
     }
 
+    // Delegated on the (persistent) tbody rather than per-input, so a single
+    // pair of listeners keeps working across renderCsvPreview() rebuilding
+    // its rows. Pasting a whole Excel column here fills down from whichever
+    // cell it landed on, one line per row, the same way spreadsheets do.
+    csvPreviewBody.addEventListener('paste', (e) => {
+      const target = e.target.closest('.csv-test-input');
+      if(!target) return;
+      e.preventDefault();
+      const text = (e.clipboardData || window.clipboardData).getData('text');
+      const lines = text.split(/\r\n|\r|\n/);
+      while(lines.length && lines[lines.length - 1] === '') lines.pop();
+      const startIndex = Number(target.dataset.index);
+      lines.forEach((line, offset) => {
+        const idx = startIndex + offset;
+        const input = csvPreviewBody.querySelector(`.csv-test-input[data-index="${idx}"]`);
+        if(!input) return;
+        input.value = line.trim();
+        applyCsvTestHighlight(input, csvRows[idx]);
+      });
+    });
+    csvPreviewBody.addEventListener('input', (e) => {
+      const target = e.target.closest('.csv-test-input');
+      if(!target) return;
+      const idx = Number(target.dataset.index);
+      applyCsvTestHighlight(target, csvRows[idx]);
+    });
+
     function renderCsvPreview(){
       csvPreviewBody.innerHTML = '';
       csvRows.forEach((row, i) => csvPreviewBody.appendChild(renderCsvPreviewRow(row, i)));
@@ -3735,6 +3788,10 @@
           const picked = csvRows[i].candidates.find(c => c.uid === uid) || null;
           csvRows[i]._picked = picked;
           applyPickToGroup(csvRows[i], picked);
+          csvPreviewBody.querySelectorAll('.csv-test-input').forEach(input => {
+            const rowIdx = Number(input.dataset.index);
+            if(input.value) applyCsvTestHighlight(input, csvRows[rowIdx]);
+          });
           updateCsvSummary();
         });
       });
