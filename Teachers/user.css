@@ -227,6 +227,7 @@
       justify-content: center;
       min-height: 30px;
       padding: 5px 10px;
+      margin: 6px 0;
       border-radius: 999px;
       border: 1px solid rgba(2, 43, 66, 0.18);
       background: rgba(2, 43, 66, 0.06);
