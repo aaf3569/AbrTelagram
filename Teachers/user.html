@@ -154,13 +154,6 @@
           <span>تنزيل PDF للجدول الأسبوعي</span>
         </button>
         <div id="containerMain"></div>
-        <!-- Persistent (containerMain itself gets wiped and rebuilt on every
-             render), triggered by clicking the day/date row in whichever
-             .header-full/.compact-header is currently rendered — lets the
-             teacher jump the single-day view to any date instead of only
-             "today". Same hidden-input + showPicker() convention as
-             #dsMobileDateInput above. -->
-        <input id="todayDatePicker" class="today-date-picker-input" type="date" inputmode="none" aria-hidden="true" tabindex="-1" />
         <div id="status" class="status-message"></div>
       </div>
     </div>
@@ -1499,13 +1492,20 @@
       return getDayScheduleHighlight(times, SCHOOL_BREAKS, getCurrentKuwaitMinutes());
     }
 
+    // The date input sits transparent right on top of the row (same
+    // convention as دs sheet's own .ds-mobile-date-input) instead of a
+    // hidden proxy element triggered via showPicker()/.click() — iOS
+    // Safari only opens a native form picker for an element the user
+    // actually, directly tapped, so a JS-relayed synthetic click on a
+    // detached/invisible input silently does nothing there.
     function dayHeaderRowHtml(dayISO){
       return `
-        <div class="header-day-row" role="button" tabindex="0" aria-label="اختيار تاريخ آخر">
+        <div class="header-day-row" aria-label="اختيار تاريخ آخر">
           <span class="header-day-text">
             <span class="header-day-name">${dayNameByISO(dayISO) || 'اليوم'}</span>
             <span class="header-day-date">${dayISO}</span>
           </span>
+          <input class="header-day-date-input" type="date" inputmode="none" value="${dayISO}" aria-label="اختيار تاريخ آخر" />
         </div>
       `;
     }
@@ -6652,35 +6652,17 @@
     });
 
     /* ========= Custom date for the single-day view =========
-       Clicking the day/date row in whichever .header-full/.compact-header
-       is currently rendered (containerMain gets wiped and rebuilt on every
-       render, so this is delegated rather than bound once) opens
-       #todayDatePicker to jump the "جدولي" view to any date, not just
-       today — same hidden-input + showPicker() convention as the دs
-       sheet's own date button. */
-    const todayDatePicker = document.getElementById('todayDatePicker');
-    function openTodayDatePicker(){
-      if (!currentUser?.uid) return;
-      try { todayDatePicker.value = activeTodayISO || kuwaitTodayISO(); } catch {}
-      try {
-        if (typeof todayDatePicker.showPicker === 'function') { todayDatePicker.showPicker(); return; }
-      } catch {}
-      todayDatePicker.focus({ preventScroll: true });
-      todayDatePicker.click();
-    }
-    containerMain.addEventListener('click', (e) => {
-      if (e.target.closest('.header-day-row')) openTodayDatePicker();
-    });
-    containerMain.addEventListener('keydown', (e) => {
-      if ((e.key === 'Enter' || e.key === ' ') && e.target.closest('.header-day-row')) {
-        e.preventDefault();
-        openTodayDatePicker();
-      }
-    });
-    todayDatePicker.addEventListener('change', async () => {
-      if (!todayDatePicker.value || !currentUser?.uid) return;
+       .header-day-date-input sits transparent on top of the day/date row
+       in whichever .header-full/.compact-header is currently rendered — a
+       real element the user taps directly (see dayHeaderRowHtml's own
+       comment for why, vs. a hidden proxy input triggered via JS). Since
+       containerMain gets wiped and rebuilt on every render, the change
+       listener is delegated rather than bound to one instance. */
+    containerMain.addEventListener('change', async (e) => {
+      const input = e.target.closest('.header-day-date-input');
+      if (!input || !input.value || !currentUser?.uid) return;
       setFilterActive(btnToday);
-      await loadTodayForTeacher(currentUser.uid, todayDatePicker.value);
+      await loadTodayForTeacher(currentUser.uid, input.value);
     });
 
   </script>
