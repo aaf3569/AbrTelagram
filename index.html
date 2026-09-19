@@ -440,7 +440,8 @@
     .loader-heading {
       font-family: "Noto Kufi Arabic", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
       display: flex;
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
+      white-space: nowrap;
       justify-content: center;
       align-items: center;
       text-align: center;
@@ -743,7 +744,8 @@
     function getRouteForProfile(profile) {
       const role = normalizeRole(profile?.role);
       if (role === 'admin') return './admins/adminpage.html';
-      if (role === 'head') return './dephead/dptlead.html';
+      // Department heads use the same teachers hub as everyone else.
+      if (role === 'head') return './teachers/user.html';
       // Supervisors land on the same teachers/user.html hub as everyone
       // else now — it recognizes isSupervisor itself and shows the extra
       // sidebar access, so there's no separate supervisor landing page.
@@ -870,11 +872,25 @@
       const scale = Math.min(1, Math.max(0.75, baseScale));
       loader.style.setProperty('--loader-scale', String(scale));
       loader.style.setProperty('--spinner-bottom', isPhone ? '7vh' : `${Math.round(80 * scale)}px`);
+      fitLoaderHeading(scale);
+    }
+
+    // Keep the school name on a single line: shrink the font until it fits
+    // the visible width (the content box is visually scaled by --loader-scale).
+    function fitLoaderHeading(scale) {
+      const base = 26;
+      loaderTitle.style.fontSize = base + 'px';
+      const available = (window.innerWidth - 32) / (scale || 1);
+      const natural = loaderTitle.scrollWidth;
+      if (natural > available && natural > 0) {
+        loaderTitle.style.fontSize = Math.max(12, Math.floor(base * available / natural * 10) / 10) + 'px';
+      }
     }
 
     setupLoaderHeading();
     updateLoaderScale();
     window.addEventListener('resize', updateLoaderScale);
+    if (document.fonts?.ready) document.fonts.ready.then(updateLoaderScale);
 
     function setLoaderWelcomeName(name) {
       const safeName = (name || '').toString().trim();
