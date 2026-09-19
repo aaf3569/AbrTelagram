@@ -579,7 +579,8 @@
       /* Scales down with the viewport instead of truncating, so the school
          name reliably fits on one line even on narrow phones. */
       font-size: clamp(0.74rem, 4.3vw, 0.98rem);
-      font-weight: 900; display: flex; align-items: center; gap: 7px;
+      /* Align the icon with the Arabic text baseline across mobile fonts. */
+      font-weight: 900; display: flex; align-items: baseline; gap: 7px;
       min-width: 0; overflow: hidden;
     }
     .sidebar-head h2 i { flex-shrink: 0; font-size: 0.9em; opacity: .85; }
