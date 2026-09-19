@@ -1549,7 +1549,9 @@
         label = shortLessonLabel(highlight.lessonIndex);
         targetMinutes = parseHM(times[highlight.lessonIndex - 1]?.end);
       } else if (highlight?.type === 'break') {
-        label = 'استراحة';
+        label = SCHOOL_BREAKS.secondAfter === highlight.afterLesson
+          ? BREAK_LABELS.second
+          : BREAK_LABELS.first;
         targetMinutes = parseHM(times[highlight.afterLesson]?.start);
       } else if (highlight?.type === 'upcoming') {
         // Ordinary gap before the next lesson's bell — hasn't started yet,
