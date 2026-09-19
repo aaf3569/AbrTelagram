@@ -742,10 +742,11 @@
 
     function getRouteForProfile(profile) {
       const role = normalizeRole(profile?.role);
-      const isSupervisor = isTruthyFlag(profile?.isSupervisor);
       if (role === 'admin') return './admins/adminpage.html';
       if (role === 'head') return './dephead/dptlead.html';
-      if (role === 'user' && isSupervisor) return './supervisors/supervisor.html';
+      // Supervisors land on the same teachers/user.html hub as everyone
+      // else now — it recognizes isSupervisor itself and shows the extra
+      // sidebar access, so there's no separate supervisor landing page.
       if (role === 'user') return './teachers/user.html';
       return null;
     }

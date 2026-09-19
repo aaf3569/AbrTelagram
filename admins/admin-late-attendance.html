@@ -495,8 +495,7 @@
           <i class="fas fa-user-shield"></i>
           لوحة خاصة للإدارة فقط
         </span>
-        <!-- Link back to teacher schedule page (adjust filename if needed) -->
-        <a id="teacherScheduleBtn" href="/teachers/teacherschedule.html" class="link-btn">
+        <a id="teacherScheduleBtn" href="/teachers/user.html" class="link-btn">
           <i class="fas fa-calendar-alt"></i>
           <span>جدول المعلّم</span>
         </a>
@@ -1737,11 +1736,9 @@
         location.href='/index.html';
     });
 
-    /* ========= NEW: Teacher Schedule Redirect ========= */
     if (teacherScheduleBtn) {
         teacherScheduleBtn.addEventListener('click', ()=> {
-            try { sessionStorage.setItem('teacherScheduleReturnTo', '/admins/admin-late-attendance.html'); } catch {}
-            location.href = '/teachers/teacherschedule.html';
+            location.href = '/teachers/user.html';
         });
     }
 </script>

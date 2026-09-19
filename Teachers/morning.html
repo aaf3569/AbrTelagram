@@ -494,7 +494,6 @@
       serverTimestamp,
       setDoc
     } from "/shared/firebase.js";
-    import { isTruthyFlag } from "/shared/auth-guard.js";
 
     const TZ = "Asia/Kuwait";
 
@@ -555,7 +554,8 @@
       const role = String(data?.role || "").toLowerCase();
       if (role === "admin") return "/admins/adminpage.html";
       if (role === "head") return "/dephead/dptlead.html";
-      if (isTruthyFlag(data?.isSupervisor)) return "/supervisors/supervisor.html";
+      // Supervisors land on the same teachers/user.html hub as everyone
+      // else — it recognizes isSupervisor itself, no separate landing page.
       return "/teachers/user.html";
     }
     backBtn.addEventListener("click", () => {

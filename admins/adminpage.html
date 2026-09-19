@@ -2081,8 +2081,7 @@
     // NEW: schedules button action
     openSchedules.addEventListener('click', ()=>{ window.location.href = '/admins/adminschedule.html'; });
     openSchoolSchedule.addEventListener('click', ()=>{
-      try { sessionStorage.setItem('allTeachersScheduleReturnTo', '/admins/adminpage.html'); } catch {}
-      window.location.href = '/Teachers/schoolschedule.html';
+      window.location.href = '/teachers/user.html';
     });
     openNotifications.addEventListener('click', ()=> openNotificationsPanel(true));
     closeNotifications.addEventListener('click', ()=> closeNotificationsPanel(true));

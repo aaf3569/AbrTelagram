@@ -2402,18 +2402,16 @@
         scheduleModal.querySelector('.overlay').addEventListener('click', () => closeModal(scheduleModal));
         
         myScheduleBtn.addEventListener('click', () => {
-            try { sessionStorage.setItem('teacherScheduleReturnTo', '/dephead/dptlead.html'); } catch {}
-            window.location.href = '/teachers/teacherschedule.html';
+            window.location.href = '/teachers/user.html';
         });
-        
+
         deptScheduleBtn.addEventListener('click', () => {
             try { sessionStorage.setItem('deptScheduleReturnTo', '/dephead/dptlead.html'); } catch {}
             window.location.href = 'dptschedual.html';
         });
 
         allTeachersScheduleOption.addEventListener('click', () => {
-            try { sessionStorage.setItem('allTeachersScheduleReturnTo', '/dephead/dptlead.html'); } catch {}
-            window.location.href = '/teachers/schoolschedule.html';
+            window.location.href = '/teachers/user.html';
         });
 
         /* ========= Class View ========= */
