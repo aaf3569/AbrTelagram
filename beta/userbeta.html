@@ -626,6 +626,11 @@
     .sidebar-group {
       display: flex; flex-direction: column; gap: 2px;
     }
+    /* Same fix as .modal-footer[hidden] below: this rule's own display:flex
+       otherwise beats the browser's [hidden]{display:none} default, so a
+       hidden group (e.g. sidebarSupervisorGroup for non-supervisors) would
+       still show. */
+    .sidebar-group[hidden] { display: none; }
     .sidebar-group:not([hidden]) + .sidebar-group {
       padding-top: 14px; border-top: 1px solid var(--border-light);
     }
@@ -698,6 +703,7 @@
       max-width: 1200px; margin: 0 auto;
       display: flex; flex-direction: column; gap: 20px; width: 100%;
     }
+    .svs-sheet-body { padding: 0; max-width: none; display: block; }
 
     .field-label {
       display: flex; align-items: center; gap: 8px;
@@ -1837,6 +1843,342 @@
       .la-btn-attendance { height: 54px; font-size: .95rem; }
       .la-btn-secondary { height: 44px; font-size: .84rem; }
     }
+
+    /* ========= الطلاب sheet (#supervisorStudentsSheet) =========
+       Ported from /supervisors/supervisorstudents.html — that page is
+       never navigated to or edited, this is a parallel implementation
+       living inside this page's sheet stack (see the ds/ss sheets above
+       for the same convention). Every selector below is scoped under
+       #supervisorStudentsSheet since the source page's class names
+       (.btn, .row, .section, .card, .badge, .pill, .empty, ...) are far
+       too generic to add unscoped without colliding with this page's own
+       CSS. --primary/--muted/--border/etc are redefined on the container
+       itself (same trick #attendanceSheet uses above) so every var(--x)
+       reference below resolves to supervisorstudents.html's own palette
+       without renaming a single one of them. */
+#supervisorStudentsSheet {
+  --primary: #033C54; --primary-light: #e8f1f5; --page: #f6f8fb; --text: #0f172a;
+  --muted: #6b7f9f; --border: #e6edf7; --shadow-1: 0 8px 22px rgba(3,60,84,.08);
+  --radius: 16px; --focus: #79b3c8; --green: #1a7f37; --yellow: #a06d00; --red: #b42318;
+  --greenBg: rgba(26,127,55,.08); --yellowBg: rgba(160,109,0,.10); --redBg: rgba(180,35,24,.10);
+  --chip: #eef5fb;
+  --transition: transform .12s ease, box-shadow .12s ease, background-color .12s ease, border-color .12s ease, color .12s ease, opacity .12s ease;
+  font-family: var(--app-font), system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  line-height: 1.6;
+}
+#supervisorStudentsSheet * { box-sizing: border-box; }
+#supervisorStudentsSheet, #supervisorStudentsSheet .sheet-body { max-width: 100%; overflow-x: hidden; }
+#supervisorStudentsSheet main { flex:1; padding:32px 20px 40px; display:flex; max-width: 100%; }
+#supervisorStudentsSheet .column { width:min(880px, 96vw); max-width: 100%; margin:0 auto; display:flex; flex-direction:column; align-items:center; gap:24px; }
+#supervisorStudentsSheet .panel { width:100%; background:#fff; border:1px solid var(--border); border-radius:20px; padding:24px 20px; box-shadow: var(--shadow-1) }
+#supervisorStudentsSheet .state { display:none }
+#supervisorStudentsSheet .state.active { display:block }
+#supervisorStudentsSheet .loading { display:grid; place-items:center; gap:16px; padding:32px }
+#supervisorStudentsSheet .spinner { width:44px; height:44px; border-radius:50%; border:4px solid rgba(3,60,84,.12); border-top-color:var(--primary); animation:spin 1s linear infinite; margin-inline:auto }
+#supervisorStudentsSheet .msg { font-size:1rem; text-align:center }
+#supervisorStudentsSheet .error { color:#a11; background:#fde8e8; border:1px solid #f5c5c5; padding:16px; border-radius:16px }
+#supervisorStudentsSheet .muted { color:var(--muted) }
+#supervisorStudentsSheet .btn {
+  font-family: inherit;
+  height:56px; border:none; border-radius:16px; cursor:pointer; font-weight:800; font-size:1.02rem; letter-spacing:.2px;
+  transition: var(--transition); display: inline-flex; align-items: center; justify-content: center; padding: 0 20px;
+}
+#supervisorStudentsSheet .btn:active { transform:translateY(0) scale(.995) }
+#supervisorStudentsSheet .btn:focus-visible { outline:3px solid var(--focus); outline-offset:2px }
+#supervisorStudentsSheet .btn.primary {
+  background: linear-gradient(180deg, #065372, #033C54); color:#fff; box-shadow: 0 12px 28px rgba(3,60,84,.26)
+}
+#supervisorStudentsSheet .btn.primary:hover { transform:translateY(-2px); box-shadow: 0 16px 36px rgba(3,60,84,.34); filter:brightness(1.02) }
+#supervisorStudentsSheet .btn.ghost { background:#fff; color:#033C54; border:1px solid rgba(3,60,84,.35); box-shadow: var(--shadow-1) }
+#supervisorStudentsSheet .btn.ghost:hover { transform:translateY(-2px); box-shadow: 0 14px 34px rgba(3,60,84,.18); border-color:rgba(3,60,84,.55) }
+#supervisorStudentsSheet .btn.danger { background:#fff; color:#cb2b2b; border:1px solid rgba(203,43,43,.4); box-shadow: var(--shadow-1) }
+#supervisorStudentsSheet .btn.danger:hover { transform:translateY(-2px); box-shadow: 0 16px 32px rgba(203,43,43,.18); border-color:rgba(203,43,43,.55) }
+#supervisorStudentsSheet .btn.secondary { background:#fff; color:#6b7f9f; border:1px solid rgba(107,127,159,.4); box-shadow: var(--shadow-1) }
+#supervisorStudentsSheet .btn.secondary:hover { transform:translateY(-2px); box-shadow: 0 16px 32px rgba(107,127,159,.18); border-color:rgba(107,127,159,.55) }
+#supervisorStudentsSheet .subject {
+  width:100%; background:#fff; border:1px solid var(--border); border-radius:16px; padding:18px 20px;
+  display:flex; align-items:center; justify-content:space-between; gap:12px; cursor:pointer;
+  box-shadow: var(--shadow-1); color:#0f2743; font-weight:600; font-size: 1.05rem; transition: var(--transition);
+}
+#supervisorStudentsSheet .subject:hover {
+  transform:translateY(-2px); box-shadow:0 16px 32px rgba(3,60,84,.18); border-color:rgba(3,60,84,.35); background:#fbfdff
+}
+#supervisorStudentsSheet .subject:active { transform:translateY(0) scale(.997) }
+#supervisorStudentsSheet .grade-hero {
+  background:linear-gradient(120deg, #033C54 0%, #0a5f81 100%);
+  color:#fff;
+  border-color:transparent;
+  box-shadow:0 16px 34px rgba(3,60,84,.26);
+  min-height:68px;
+  border-radius:18px;
+  margin-bottom:12px;
+}
+#supervisorStudentsSheet .grade-hero span {
+  font-family: inherit;
+  font-weight:900;
+  font-size:1.18rem;
+  letter-spacing:.15px;
+}
+#supervisorStudentsSheet .grade-hero::before {
+  content:'\25C7';
+  font-size:1.05rem;
+  margin-inline-end:12px;
+  opacity:.95;
+}
+#supervisorStudentsSheet .grade-hero:hover {
+  background:linear-gradient(120deg, #044964 0%, #0a739b 100%);
+  color:#fff;
+  border-color:transparent;
+}
+#supervisorStudentsSheet .group {
+  border:1px solid var(--border);
+  border-radius:18px;
+  background:#fff;
+  box-shadow:var(--shadow-1);
+  padding:12px;
+}
+#supervisorStudentsSheet .chev { width:22px; height:22px; flex-shrink: 0; }
+#supervisorStudentsSheet .chev path { stroke:#6b7f9f; stroke-width:2.4; fill:none; stroke-linecap:round; stroke-linejoin:round }
+#supervisorStudentsSheet .group-body { display:none; padding:8px 0 2px 0 }
+#supervisorStudentsSheet .group.open .group-body { display:block; }
+#supervisorStudentsSheet .list { display:flex; flex-direction:column; gap:12px }
+#supervisorStudentsSheet .class-option {
+  background:#f8fbff;
+  border:1px solid rgba(3,60,84,.14);
+  border-radius:14px;
+  min-height:54px;
+  font-family: inherit;
+  font-weight:900;
+  font-size:1.03rem;
+  letter-spacing:.2px;
+  color:#12395a;
+  box-shadow:none;
+}
+#supervisorStudentsSheet .class-option:hover {
+  background:#eef6ff;
+  border-color:rgba(3,60,84,.35);
+  box-shadow:0 10px 22px rgba(3,60,84,.14);
+}
+#supervisorStudentsSheet .class-option span {
+  font-family: inherit;
+  font-weight:900;
+}
+#supervisorStudentsSheet .spacer { height:14px; }
+#supervisorStudentsSheet .section { background:#fff; border:1px solid var(--border); border-radius:16px; box-shadow: var(--shadow-1); padding:20px; display:flex; flex-direction:column; gap:16px; margin-bottom: 20px; }
+#supervisorStudentsSheet .section + .section { margin-top:16px; }
+#supervisorStudentsSheet .row { display:flex; gap:14px; flex-wrap:wrap; align-items:center }
+#supervisorStudentsSheet .field { display:flex; flex-direction:column; gap:10px; width:100% }
+#supervisorStudentsSheet .label { font-size:.95rem; font-weight:800; color:#0f2743 }
+#supervisorStudentsSheet .input-wrap { display:flex; align-items:center; gap:12px; min-height:56px; padding:0 18px; background:#fff; border:1px solid var(--border); border-radius:var(--radius); box-shadow: var(--shadow-1); transition: var(--transition); }
+#supervisorStudentsSheet .input-wrap:focus-within { border-color: rgba(3,60,84,.35); box-shadow: 0 16px 32px rgba(3,60,84,.18) }
+#supervisorStudentsSheet .input,
+#supervisorStudentsSheet select,
+#supervisorStudentsSheet textarea { flex:1; height:52px; border:none; outline:none; background:transparent; font-size:16px; color:#0a0a0a; font-family: inherit; }
+#supervisorStudentsSheet textarea.input { height:100px; padding-block:14px; resize:vertical }
+#supervisorStudentsSheet .inline-form { display:flex; flex-direction:column; gap:16px; padding:18px; margin-top:14px; border:1px solid var(--border); border-radius:16px; background:#fafafa; box-shadow: var(--shadow-1); }
+#supervisorStudentsSheet .inline-form .row-actions { display:flex; gap:12px; justify-content:flex-end; margin-top:8px; }
+#supervisorStudentsSheet .ok,
+#supervisorStudentsSheet .err { padding:14px; border-radius:16px; margin-top:10px; font-size:.92rem; box-shadow: var(--shadow-1); display:none }
+#supervisorStudentsSheet .ok { color:#126a2e; background:#e6f6ea; border:1px solid #c7ebd0 }
+#supervisorStudentsSheet .err { color:#a12; background:#fde8e8; border:1px solid #f5c5c5 }
+#supervisorStudentsSheet .item {
+  padding:16px 20px; border:1px solid var(--border); border-radius:16px; background:#fff; box-shadow: var(--shadow-1);
+  font-weight:800; color:#0f2743; display:flex; align-items:center; justify-content:space-between; cursor:pointer; transition: var(--transition);
+}
+#supervisorStudentsSheet .item:hover { transform:translateY(-2px); box-shadow:0 16px 32px rgba(3,60,84,.18); border-color:rgba(3,60,84,.35); background:#fbfdff }
+#supervisorStudentsSheet .item:active { transform:translateY(0) scale(.997) }
+#supervisorStudentsSheet .sub { font-size:.92rem; color:#6b7f9f; font-weight:600; margin-top: 4px; }
+#supervisorStudentsSheet .stats-grid { display:grid; grid-template-columns: repeat(3, 1fr); gap:14px; align-items:stretch; }
+#supervisorStudentsSheet .stat-card { padding:18px; border-radius:16px; border:1px solid var(--border); background:#fff; box-shadow: var(--shadow-1); text-align:center; display:flex; flex-direction:column; gap:8px; justify-content:center; min-height:94px; }
+#supervisorStudentsSheet .stat-title { font-weight:800; font-size:.95rem; color:#0f2743 }
+#supervisorStudentsSheet .stat-value { font-weight:900; font-size:1.4rem }
+#supervisorStudentsSheet .stat-present { background: var(--greenBg); border-color: rgba(26,127,55,.25) }
+#supervisorStudentsSheet .stat-present .stat-value { color: var(--green) }
+#supervisorStudentsSheet .stat-late { background: var(--yellowBg); border-color: rgba(160,109,0,.25) }
+#supervisorStudentsSheet .stat-late .stat-value { color: var(--yellow) }
+#supervisorStudentsSheet .stat-absent { background: var(--redBg); border-color: rgba(180,35,24,.25) }
+#supervisorStudentsSheet .stat-absent .stat-value { color: var(--red) }
+#supervisorStudentsSheet .pill { background:var(--chip); color:#0f2743; border:1px solid var(--border); padding:6px 12px; border-radius:999px; font-size:.9rem; font-weight:800 }
+#supervisorStudentsSheet .pill.g { color:var(--green); border-color:var(--greenBg); background:var(--greenBg) }
+#supervisorStudentsSheet .pill.y { color:var(--yellow); border-color:var(--yellowBg); background:var(--yellowBg) }
+#supervisorStudentsSheet .pill.r { color:var(--red); border-color:var(--redBg); background:var(--redBg) }
+#supervisorStudentsSheet .tabs { display:flex; gap:10px; flex-wrap:wrap; align-items:center; background:#fff; border:1px solid var(--border); border-radius:16px; padding:10px; box-shadow: var(--shadow-1); }
+#supervisorStudentsSheet .tab { height:44px; padding:0 16px; border-radius:12px; border:1px solid rgba(3,60,84,.22); background:#fff; color:#033C54; font-weight:800; cursor:pointer; transition: var(--transition); font-family: inherit; }
+#supervisorStudentsSheet .tab:hover { transform:translateY(-1px); box-shadow:0 10px 26px rgba(3,60,84,.14); border-color:rgba(3,60,84,.4) }
+#supervisorStudentsSheet .tab.active { background:linear-gradient(180deg, #065372, #033C54); color:#fff; border-color:transparent; box-shadow:0 14px 30px rgba(3,60,84,.26) }
+#supervisorStudentsSheet .tab-panels { display:flex; flex-direction:column; gap:16px }
+#supervisorStudentsSheet .tab-panel { display:none }
+#supervisorStudentsSheet .tab-panel.active { display:flex; flex-direction:column; gap:16px }
+#supervisorStudentsSheet .card { padding:16px; border:1px solid var(--border); border-radius:16px; background:#fff; box-shadow: var(--shadow-1); display:flex; gap:14px; justify-content:space-between; align-items:flex-start; }
+#supervisorStudentsSheet .card-title { font-family: inherit; font-weight:900; color:#033C54; margin-bottom: 4px; font-size:1.04rem; }
+#supervisorStudentsSheet .card-sub { color:#6b7f9f; font-weight:700; font-size:.92rem; line-height: 1.65; }
+#supervisorStudentsSheet .tag { padding:5px 10px; border-radius:999px; background:var(--chip); border:1px solid var(--border); font-weight:800; font-size:.82rem }
+#supervisorStudentsSheet .mini { height:38px; padding:0 14px; border-radius:10px; font-size:.92rem }
+#supervisorStudentsSheet .actions { display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:flex-start; border-top:1px dashed var(--border); padding-top:10px; margin-top:6px; }
+#supervisorStudentsSheet .record-card-main { display:flex; flex-direction:column; gap:8px; }
+#supervisorStudentsSheet .record-card-meta { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+#supervisorStudentsSheet .record-card-body { background:#f8fbff; border:1px solid rgba(3,60,84,.12); border-radius:12px; padding:10px 12px; font-weight:700; color:#12395a; }
+#supervisorStudentsSheet .divider { height:1px; background:var(--border); width:100%; margin:6px 0 }
+#supervisorStudentsSheet .k-badge { padding:5px 10px; border-radius:999px; font-weight:800; font-size:.82rem; border:1px solid rgba(3,60,84,.2) }
+#supervisorStudentsSheet .k-ok { background:var(--greenBg); color:var(--green); border-color:rgba(26,127,55,.25) }
+#supervisorStudentsSheet .k-warn { background:var(--yellowBg); color:var(--yellow); border-color:rgba(160,109,0,.25) }
+#supervisorStudentsSheet .k-danger { background:var(--redBg); color:var(--red); border-color:rgba(180,35,24,.25) }
+#supervisorStudentsSheet .empty { text-align:center; color:var(--muted); padding:20px; border:1px dashed var(--border); border-radius:16px; background:#fff; margin: 10px 0; }
+#supervisorStudentsSheet .student-header {
+  padding:22px; border:1px solid var(--border); border-radius:16px; background:#fff; box-shadow: var(--shadow-1); cursor:pointer; text-align:center; transition: var(--transition);
+}
+#supervisorStudentsSheet .student-header:hover { transform:translateY(-2px); box-shadow:0 16px 32px rgba(3,60,84,.18); border-color:rgba(3,60,84,.35); background:#fbfdff }
+#supervisorStudentsSheet .student-name { margin:0; font-size:1.3rem; font-weight:900; color:#033C54 }
+#supervisorStudentsSheet .student-class { margin:8px 0 0; font-weight:800; color:#6b7f9f }
+#supervisorStudentsSheet .collapse-body { display:none }
+#supervisorStudentsSheet .collapse-body.open { display:block }
+#supervisorStudentsSheet .group > .subject::after { content: ''; width: 22px; height: 22px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7f9f' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: center; transition: transform 0.3s ease; }
+#supervisorStudentsSheet .group.open > .subject::after { transform: rotate(180deg); }
+#supervisorStudentsSheet .group > .subject .chev { display: none; }
+#supervisorStudentsSheet .group > .grade-hero::after { filter: brightness(0) invert(1); opacity: .95; }
+#supervisorStudentsSheet .status-edit-form { display: none; background: #f9f9f9; border-radius: 12px; padding: 16px; margin-top: 16px; border: 1px solid var(--border); box-shadow: var(--shadow-1); }
+#supervisorStudentsSheet .status-edit-form.active { display: flex; flex-direction: column; gap: 12px; }
+#supervisorStudentsSheet .status-options { display: flex; gap: 10px; flex-wrap: wrap; }
+#supervisorStudentsSheet .status-option { flex: 1; min-width: 100px; padding: 12px; border: 2px solid var(--border); border-radius: 8px; background: white; cursor: pointer; text-align: center; font-weight: 700; transition: var(--transition); }
+#supervisorStudentsSheet .status-option:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+#supervisorStudentsSheet .status-option.selected { border-color: var(--primary); background: var(--primary-light); color: var(--primary); }
+#supervisorStudentsSheet .status-present.selected { border-color: var(--green); background: var(--greenBg); color: var(--green); }
+#supervisorStudentsSheet .status-late.selected { border-color: var(--yellow); background: var(--yellowBg); color: var(--yellow); }
+#supervisorStudentsSheet .status-absent.selected { border-color: var(--red); background: var(--redBg); color: var(--red); }
+#supervisorStudentsSheet .status-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 10px; }
+#supervisorStudentsSheet .special-case-icon { width: 20px; height: 20px; margin-right: 8px; vertical-align: middle; }
+#supervisorStudentsSheet .filter-active { background: var(--primary-light) !important; border-color: var(--primary) !important; }
+#supervisorStudentsSheet .item-number {
+  display:inline-flex; align-items:center; justify-content:center; min-width:28px; height:28px; border-radius:999px;
+  margin-inline-start:8px; font-family: inherit; font-weight:900; font-size:.9rem;
+  background:#eaf5ff; color:#0f3c5c; border:1px solid rgba(3,60,84,.18);
+}
+#supervisorStudentsSheet .stats-insight { border:1px solid rgba(3,60,84,.14); border-radius:14px; background:#f7fbff; padding:14px; color:#164264; font-weight:800; }
+#supervisorStudentsSheet .stats-daily { display:flex; flex-direction:column; gap:10px; }
+#supervisorStudentsSheet .stats-daily-item { border:1px solid var(--border); border-radius:12px; padding:10px 12px; background:#fff; display:flex; justify-content:space-between; gap:10px; }
+#supervisorStudentsSheet .stats-daily-item .meta { color:#6b7f9f; font-size:.88rem; font-weight:700; }
+#supervisorStudentsSheet .quick-backdrop { position:fixed; inset:0; background:rgba(15,23,42,.34); backdrop-filter:blur(4px); z-index:1200; display:none; }
+#supervisorStudentsSheet .quick-backdrop.open { display:block; }
+#supervisorStudentsSheet .inline-form.popup {
+  position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); width:min(620px,92vw); max-height:82vh; overflow:auto;
+  z-index:1201; background:#fff; margin-top:0; box-shadow:0 24px 60px rgba(3,60,84,.26);
+}
+#supervisorStudentsSheet .record-detail-content { display:flex; flex-direction:column; gap:12px; }
+#supervisorStudentsSheet .record-detail-item { border:1px solid var(--border); border-radius:12px; background:#fff; padding:12px 14px; }
+#supervisorStudentsSheet .record-detail-label { color:#6b7f9f; font-size:.86rem; font-weight:800; margin-bottom:4px; }
+#supervisorStudentsSheet .record-detail-value { color:#0f2743; font-weight:800; white-space:pre-wrap; word-break:break-word; }
+#supervisorStudentsSheet .record-toolbar { display:flex; justify-content:flex-end; }
+#supervisorStudentsSheet .detail-paper { width:min(860px, 94vw); margin-inline:auto; background:#fff; border:1px solid #d7e2ee; border-radius:10px; box-shadow:0 8px 22px rgba(3,60,84,.09); padding:clamp(30px, 3.2vw, 46px); display:flex; flex-direction:column; }
+#supervisorStudentsSheet .paper-head { display:flex; justify-content:center; }
+#supervisorStudentsSheet .paper-brand { display:flex; align-items:center; gap:14px; }
+#supervisorStudentsSheet .paper-brand.centered { justify-content:center; text-align:center; width:100%; }
+#supervisorStudentsSheet .paper-logo { width:140px; height:auto; max-height:118px; object-fit:contain; image-rendering:auto; aspect-ratio:auto; display:block; }
+#supervisorStudentsSheet .paper-school-wrap { display:flex; flex-direction:column; gap:2px; }
+#supervisorStudentsSheet .paper-school { font-family: inherit; font-weight:900; color:#0f2743; font-size:1.42rem; }
+#supervisorStudentsSheet .paper-sub { color:#5f7693; font-size:1.08rem; font-weight:700; }
+#supervisorStudentsSheet .paper-doc-type { font-family: inherit; font-weight:900; color:#0f2743; font-size:1.55rem; text-align:center; }
+#supervisorStudentsSheet .paper-doc-student { color:#264764; font-size:1.3rem; font-weight:800; text-align:center; }
+#supervisorStudentsSheet .paper-rule { margin:18px 0 22px; height:2.4px; background:linear-gradient(to left, transparent, rgba(3,60,84,.45), transparent); }
+#supervisorStudentsSheet .paper-top-meta { display:flex; flex-direction:column; gap:24px; margin-top:16px; margin-bottom:42px; align-items:center; }
+#supervisorStudentsSheet .paper-meta-grid { display:grid; grid-template-columns: 1fr 1fr; gap:24px 56px; width:min(800px, 100%); margin-inline:auto; }
+#supervisorStudentsSheet .paper-meta-grid .paper-meta-item:nth-child(n+3) { margin-top:18px; }
+#supervisorStudentsSheet .paper-meta-item { color:#204666; font-size:1.18rem; font-weight:800; line-height:2.2; text-align:center; }
+#supervisorStudentsSheet .paper-meta-wide { grid-column: 1 / -1; text-align:center; }
+#supervisorStudentsSheet .paper-body { display:flex; flex-direction:column; gap:34px; flex:1; justify-content:space-evenly; min-height:36vh; }
+#supervisorStudentsSheet .paper-line { color:#173852; font-weight:700; line-height:2.2; font-size:1.28rem; text-align:center; }
+#supervisorStudentsSheet .paper-line strong { color:#0f2743; font-weight:900; }
+#supervisorStudentsSheet .paper-main-text { margin-top:6px; padding-top:10px; border-top:1px solid #e4edf6; color:#0f2743; font-weight:700; line-height:2; white-space:pre-wrap; font-size:1.22rem; text-align:center; }
+#supervisorStudentsSheet .paper-subtitle { text-align:center; color:#1f4565; font-weight:900; font-size:1.46rem; margin-top:4px; }
+#supervisorStudentsSheet .paper-main-content { flex:1; display:flex; flex-direction:column; justify-content:space-between; min-height:80vh; }
+#supervisorStudentsSheet .paper-signature-row { margin-top:48px; display:flex; justify-content:space-between; gap:18px; }
+#supervisorStudentsSheet .sign-box { flex:1; display:flex; flex-direction:column; align-items:center; gap:8px; }
+#supervisorStudentsSheet .sign-line { width:78%; border-top:1.5px solid #9eb1c6; }
+#supervisorStudentsSheet .sign-label { color:#6b7f9f; font-size:1.08rem; font-weight:800; text-align:center; }
+#supervisorStudentsSheet #saveRecordPdf { font-family: inherit; font-weight:900; }
+#supervisorStudentsSheet #paperPreviewPage { min-height:max(1320px, calc(100vh - 170px)); }
+#supervisorStudentsSheet #paperPreviewBody .record-detail-item { background:transparent; border:0; padding:0; }
+#supervisorStudentsSheet .checkbox-field { display: flex; align-items: center; gap: 12px; padding: 12px 0; cursor: pointer; }
+#supervisorStudentsSheet .checkbox-field input[type="checkbox"] { transform: scale(1.3); cursor: pointer; }
+#supervisorStudentsSheet .stats-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+#supervisorStudentsSheet .stats-filters { display: flex; gap: 10px; flex-wrap: wrap; }
+#supervisorStudentsSheet .stats-filters select,
+#supervisorStudentsSheet .stats-filters input { min-width: 140px; }
+#supervisorStudentsSheet .absence-group { background: var(--primary-light); border: 1px solid rgba(3,60,84,.2); border-radius: 12px; margin-bottom: 8px; }
+#supervisorStudentsSheet .absence-group-header { padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: var(--transition); }
+#supervisorStudentsSheet .absence-group-header:hover { background: rgba(3,60,84,.05); }
+#supervisorStudentsSheet .absence-group-title { font-weight: 800; color: var(--primary); }
+#supervisorStudentsSheet .absence-group-count { background: var(--red); color: white; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: 700; }
+#supervisorStudentsSheet .absence-group-body { display: none; padding: 0 16px 16px; }
+#supervisorStudentsSheet .absence-group.open .absence-group-body { display: block; }
+@media (max-width: 768px) {
+  #supervisorStudentsSheet main { padding: 20px 12px 30px; }
+  #supervisorStudentsSheet .column { gap: 18px; }
+  #supervisorStudentsSheet .panel { padding: 18px 16px; border-radius: 14px; }
+  #supervisorStudentsSheet .section { padding: 16px; }
+  #supervisorStudentsSheet .stats-grid { grid-template-columns: 1fr; gap: 10px; }
+  #supervisorStudentsSheet .row { flex-direction: column; gap: 12px; }
+  #supervisorStudentsSheet .tabs { justify-content: center; }
+  #supervisorStudentsSheet .card { flex-direction: column; gap: 12px; }
+  #supervisorStudentsSheet .actions { width: 100%; justify-content: center; }
+  #supervisorStudentsSheet .status-options { flex-direction: column; }
+  #supervisorStudentsSheet .paper-brand.centered { flex-direction:column; }
+  #supervisorStudentsSheet .paper-main-content { min-height:calc(100vh - 360px); }
+  #supervisorStudentsSheet .paper-signature-row { gap:10px; }
+  #supervisorStudentsSheet #paperPreviewPage { min-height:calc(100vh - 170px); width:100%; }
+  #supervisorStudentsSheet .stats-filters { flex-direction: column; }
+}
+@media (max-width: 480px) {
+  #supervisorStudentsSheet .btn { height: 50px; font-size: 0.95rem; }
+  #supervisorStudentsSheet .subject { padding: 14px 16px; }
+  #supervisorStudentsSheet .item { padding: 14px 16px; }
+  #supervisorStudentsSheet .stat-card { padding: 14px; min-height: 80px; }
+  #supervisorStudentsSheet .tab { height: 40px; padding: 0 12px; font-size: 0.9rem; }
+}
+/* shared/attendance-tiles.css, scoped the same way (see comment above) —
+   not <link>-ed globally since .badge/.att-tile/etc are too generic to
+   risk colliding with this page's own CSS elsewhere. */
+#supervisorStudentsSheet .analytics-shell { display:flex; flex-direction:column; gap:14px; }
+#supervisorStudentsSheet .analytics-card { background:#fff; border:1px solid var(--border); border-radius:16px; box-shadow:var(--shadow-1); padding:18px; }
+#supervisorStudentsSheet .analytics-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+#supervisorStudentsSheet .analytics-title { margin:0; font-family: inherit; font-weight:900; font-size:1rem; color:#0f2743; }
+#supervisorStudentsSheet .att-group { display:flex; flex-direction:column; gap:12px }
+#supervisorStudentsSheet .analytics-card > .row:first-child { margin-bottom:14px; }
+#supervisorStudentsSheet .att-tile { padding:14px 16px; border:1px solid var(--border); border-radius:16px; background:#fff; box-shadow: var(--shadow-1); display:flex; align-items:center; justify-content:space-between; cursor:pointer; transition: var(--transition); }
+#supervisorStudentsSheet .att-tile:hover { transform:translateY(-2px); box-shadow:0 16px 32px rgba(3,60,84,.18); border-color:rgba(3,60,84,.35); background:#fbfdff }
+#supervisorStudentsSheet .att-left { display:flex; flex-direction:column; gap:6px; flex: 1; }
+#supervisorStudentsSheet .att-title { font-weight:800; color:var(--primary, #033C54); }
+#supervisorStudentsSheet .att-sub { color:var(--muted, #6b7f9f); font-weight:700; font-size:.94rem }
+#supervisorStudentsSheet .badge { padding:6px 10px; border-radius:999px; font-weight:800; font-size:.84rem }
+#supervisorStudentsSheet .b-late { background:var(--yellowBg); color:var(--yellow); border:1px solid rgba(160,109,0,.25) }
+#supervisorStudentsSheet .b-absent { background:var(--redBg); color:var(--red); border:1px solid rgba(180,35,24,.25) }
+#supervisorStudentsSheet .b-present { background:var(--greenBg); color:var(--green); border:1px solid rgba(26,127,55,.25) }
+#supervisorStudentsSheet .b-excused { background:var(--excusedBg, rgba(147,51,234,.10)); color:var(--excused, #9333ea); border:1px solid rgba(147,51,234,.25) }
+/* shared/warning-system.css, scoped the same way. */
+#supervisorStudentsSheet .warning-level-badge { padding: 5px 12px; border-radius: 999px; font-weight: 800; font-size: 0.82rem; white-space: nowrap; }
+#supervisorStudentsSheet .warning-level-0 { background: var(--greenBg); color: var(--green); border: 1px solid rgba(26, 127, 55, 0.25); }
+#supervisorStudentsSheet .warning-level-1 { background: rgba(255, 193, 7, 0.15); color: #b38f00; border: 1px solid rgba(255, 193, 7, 0.3); }
+#supervisorStudentsSheet .warning-level-2 { background: rgba(255, 152, 0, 0.15); color: #cc7a00; border: 1px solid rgba(255, 152, 0, 0.3); }
+#supervisorStudentsSheet .warning-level-3 { background: rgba(244, 67, 54, 0.15); color: #c62828; border: 1px solid rgba(244, 67, 54, 0.3); }
+#supervisorStudentsSheet .warning-level-4 { background: rgba(123, 17, 19, 0.15); color: #7b1113; border: 1px solid rgba(123, 17, 19, 0.35); }
+#supervisorStudentsSheet .warning-excused-level-0 { background: var(--greenBg); color: var(--green); border: 1px solid rgba(26, 127, 55, 0.25); }
+#supervisorStudentsSheet .warning-excused-level-1 { background: rgba(147, 51, 234, 0.12); color: #7c3aed; border: 1px solid rgba(147, 51, 234, 0.28); }
+#supervisorStudentsSheet .warning-excused-level-2 { background: rgba(147, 51, 234, 0.18); color: #6d28d9; border: 1px solid rgba(147, 51, 234, 0.35); }
+#supervisorStudentsSheet .warning-excused-level-3 { background: rgba(107, 33, 168, 0.2); color: #5b21b6; border: 1px solid rgba(107, 33, 168, 0.4); }
+#supervisorStudentsSheet .warning-count-row { display: flex; align-items: baseline; gap: 8px; margin-bottom: 12px; }
+#supervisorStudentsSheet .warning-count-value { font-size: 1.7rem; font-weight: 900; color: var(--red); line-height: 1; }
+#supervisorStudentsSheet .warning-count-value.excused { color: #7c3aed; }
+#supervisorStudentsSheet .warning-count-label { font-size: 0.88rem; font-weight: 700; color: var(--muted); }
+#supervisorStudentsSheet .warning-progress-track { height: 10px; border-radius: 999px; background: var(--border); overflow: hidden; }
+#supervisorStudentsSheet .warning-progress-fill { height: 100%; width: 0%; border-radius: 999px; background: var(--green); transition: width 0.3s ease, background-color 0.3s ease; }
+#supervisorStudentsSheet .warning-progress-fill.level-1 { background: #d9a300; }
+#supervisorStudentsSheet .warning-progress-fill.level-2 { background: #e07b00; }
+#supervisorStudentsSheet .warning-progress-fill.level-3 { background: #d32f2f; }
+#supervisorStudentsSheet .warning-progress-fill.level-4 { background: #7b1113; }
+#supervisorStudentsSheet .warning-progress-fill.excused-level-1 { background: #9333ea; }
+#supervisorStudentsSheet .warning-progress-fill.excused-level-2 { background: #7c3aed; }
+#supervisorStudentsSheet .warning-progress-fill.excused-level-3 { background: #6d28d9; }
+#supervisorStudentsSheet .warning-scale { display: flex; justify-content: space-between; margin-top: 6px; font-size: 0.76rem; font-weight: 700; color: var(--muted); }
+#supervisorStudentsSheet .warning-next-hint { margin-top: 10px; font-size: 0.86rem; font-weight: 700; color: var(--text); text-align: center; }
   </style>
 
   <!-- iOS home screen icon -->
@@ -1924,6 +2266,22 @@
           <i class="fas fa-inbox"></i>
           <span class="request-label">طلبات القسم</span>
           <span id="requestsPendingBadge" class="request-count" hidden aria-hidden="true"></span>
+        </button>
+      </div>
+
+      <div id="sidebarSupervisorGroup" class="sidebar-group" hidden>
+        <div class="sidebar-section-label">صلاحيات إضافية</div>
+        <button id="sidebarSupervisorStudents" class="sidebar-link" type="button" hidden>
+          <i class="fas fa-user-graduate"></i>
+          <span>الطلاب</span>
+        </button>
+        <button id="sidebarMorningLate" class="sidebar-link" type="button" hidden>
+          <i class="fas fa-clock"></i>
+          <span>تسجيل تأخير الصباح</span>
+        </button>
+        <button id="sidebarEditSchedule" class="sidebar-link" type="button" hidden>
+          <i class="fas fa-table-cells"></i>
+          <span>تعديل جدول الإدارة</span>
         </button>
       </div>
 
@@ -2157,6 +2515,420 @@
     </div>
   </section>
 
+  <!-- SUPERVISOR STUDENTS SHEET (الطلاب) — supervisors only. An in-page
+       port of /supervisors/supervisorstudents.html's whole class/student/
+       attendance/warnings/commitments/enrollments/reports/notes feature
+       set — that file is never navigated to or edited, this is a parallel
+       implementation living inside this page's sheet stack (same
+       convention as the ds/ss sheets above). All of its own nested
+       "sheets" (classSheet/studentSheet/attDetailSheet/recordDetailSheet)
+       live as siblings inside this one #supervisorStudentsSheet container
+       so the CSS above can scope every ported selector under it. Opens
+       with a #supervisorstudents history entry, same back-button
+       convention as the other sheets. -->
+  <section id="supervisorStudentsSheet" class="sheet" aria-hidden="true">
+    <div class="sheet-header">
+      <button id="svsClose" class="back-btn" type="button">
+        <i class="fas fa-arrow-right"></i>
+        <span>رجوع</span>
+      </button>
+      <h3 class="sheet-title">الطلاب</h3>
+    </div>
+    <div class="sheet-body svs-sheet-body">
+      <main>
+        <div class="column">
+          <div id="stateLoading" class="state active panel">
+            <div class="loading">
+              <div class="spinner"></div>
+              <div class="muted">جاري التحقق من الصلاحيات…</div>
+            </div>
+          </div>
+          <div id="stateNotLogged" class="state panel">
+            <div class="msg error">يرجى تسجيل الدخول قبل الاستخدام.</div>
+          </div>
+          <div id="stateDenied" class="state panel">
+            <div class="msg error">تم رفض الوصول — هذه الصفحة مخصّصة للمشرفين فقط.</div>
+          </div>
+
+          <!-- Classes chooser -->
+          <section id="stateClasses" class="state panel" aria-label="اختر الصف">
+            <div class="group" id="g10">
+              <button class="subject grade-hero" type="button"> <span>الصف العاشر</span> </button>
+              <div class="group-body"> <div class="list" id="list10"></div> </div>
+            </div>
+            <div class="spacer"></div>
+            <div class="group" id="g11">
+              <button class="subject grade-hero" type="button"> <span>الصف الحادي عشر</span> </button>
+              <div class="group-body"> <div class="list" id="list11"></div> </div>
+            </div>
+            <div class="spacer"></div>
+            <div class="group" id="g12">
+              <button class="subject grade-hero" type="button"> <span>الصف الثاني عشر</span> </button>
+              <div class="group-body"> <div class="list" id="list12"></div> </div>
+            </div>
+          </section>
+        </div>
+      </main>
+
+      <!-- CLASS PAGE -->
+      <section id="classSheet" class="sheet" aria-hidden="true">
+        <div class="sheet-header">
+          <button id="closeClass" class="back-btn" aria-label="رجوع">رجوع</button>
+          <h3 id="classTitle" class="sheet-title">—</h3>
+        </div>
+        <div class="sheet-body">
+          <div class="section">
+            <div class="row" style="justify-content:space-between;">
+              <div class="label" style="margin:0;">إدارة الطلاب لفصل <span id="classNameStrong" style="font-weight:900;"></span></div>
+              <div style="display:flex; gap:12px; flex-wrap:wrap;">
+                <button id="refreshStudents" class="btn ghost" type="button" style="height:48px; padding:0 16px;">تحديث</button>
+                <button id="openAddStudent" class="btn primary" type="button" style="height:48px; padding:0 16px; display:none;">إضافة طالب</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Add student form - Hidden for supervisor -->
+          <div id="addStudentForm" class="section" style="display:none;">
+            <div class="row">
+              <div class="field">
+                <div class="label">اسم الطالب</div>
+                <div class="input-wrap"><input id="stName" class="input" type="text" placeholder="الاسم الكامل" autocomplete="name"></div>
+              </div>
+              <div class="field">
+                <div class="label">رقم المستخدم</div>
+                <div class="input-wrap"><input id="stCivil" class="input" type="text" inputmode="numeric" placeholder="رقم المستخدم"></div>
+              </div>
+            </div>
+
+            <div class="field">
+              <label class="checkbox-field">
+                <input id="stSpecialCase" type="checkbox">
+                <span class="label" style="margin: 0; font-weight: 600;">حالة خاصة؟</span>
+              </label>
+              <div class="muted" style="font-size:.86rem; margin-top:-6px;">لن يتم إنشاء حساب دخول — فقط حفظ بيانات الطالب في Firestore.</div>
+            </div>
+
+            <div style="display:flex; gap:12px; justify-content:flex-end;">
+              <button id="createStudentBtn" class="btn primary" type="button" style="height:48px; padding:0 16px;">حفظ الطالب</button>
+            </div>
+            <div id="asOk" class="ok"></div>
+            <div id="asErr" class="err"></div>
+          </div>
+
+          <!-- Students list -->
+          <div class="section">
+            <div class="row" style="justify-content:space-between; align-items:center; margin-bottom:6px;">
+              <div class="label" style="margin:0;">قائمة الطلاب</div>
+              <div style="display:flex; gap:12px; flex-wrap:wrap;">
+                <button id="filterSpecialCases" class="btn ghost" type="button" style="height:48px; padding:0 16px;">
+                  عرض الحالات الخاصة فقط
+                </button>
+              </div>
+            </div>
+            <div id="studentsList" class="list"></div>
+          </div>
+
+          <!-- Statistics Section -->
+          <div class="section">
+            <div class="stats-header">
+              <div class="label" style="margin:0;">إحصائيات مفصلة</div>
+              <div class="stats-filters">
+                <select id="statsPeriod" class="input">
+                  <option value="week">هذا الأسبوع</option>
+                  <option value="month">هذا الشهر</option>
+                  <option value="last6months">آخر 6 أشهر</option>
+                  <option value="year">هذه السنة</option>
+                  <option value="custom">مخصص</option>
+                </select>
+                <div id="customDateRange" style="display:none;">
+                  <input id="statsFrom" class="input" type="date" placeholder="من">
+                  <input id="statsTo" class="input" type="date" placeholder="إلى">
+                </div>
+              </div>
+            </div>
+
+            <div class="stats-grid">
+              <div class="stat-card stat-present">
+                <div class="stat-title">إجمالي الحضور</div>
+                <div id="statsTotalPresent" class="stat-value">—</div>
+              </div>
+              <div class="stat-card stat-absent">
+                <div class="stat-title">إجمالي الغياب</div>
+                <div id="statsTotalAbsent" class="stat-value">—</div>
+              </div>
+              <div class="stat-card stat-late">
+                <div class="stat-title">إجمالي التأخير</div>
+                <div id="statsTotalLate" class="stat-value">—</div>
+              </div>
+            </div>
+
+            <div id="statsInsight" class="stats-insight">سيتم عرض ملخص واضح لآخر ٧ أيام حسب الفترة المختارة.</div>
+            <div id="statsDailySummary" class="stats-daily"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- STUDENT EDIT SHEET -->
+      <section id="studentSheet" class="sheet small" aria-hidden="true">
+        <div class="sheet-header">
+          <button id="closeStudent" class="back-btn" aria-label="رجوع">رجوع</button>
+          <h3 id="studentTitle" class="sheet-title">بيانات الطالب</h3>
+        </div>
+        <div class="sheet-body">
+          <!-- Collapsible Student Header -->
+          <div id="studentHeaderCard" class="student-header">
+            <h4 id="studentHeaderName" class="student-name">—</h4>
+            <div id="studentHeaderClass" class="student-class">—</div>
+          </div>
+
+          <!-- Collapsible details (save/delete/id...) - Hidden for supervisor -->
+          <div id="studentCollapseBody" class="section collapse-body" style="display:none;">
+            <div class="row">
+              <div class="field">
+                <div class="label">الاسم</div>
+                <div class="input-wrap"><input id="edSName" class="input" type="text" placeholder="الاسم"></div>
+              </div>
+              <div class="field">
+                <div class="label">رقم المستخدم</div>
+                <div class="input-wrap"><input id="edSCivil" class="input" type="text" inputmode="numeric" placeholder="رقم المستخدم"></div>
+              </div>
+            </div>
+
+            <div class="field">
+              <label class="checkbox-field">
+                <input id="edSSpecialCase" type="checkbox">
+                <span class="label" style="margin: 0; font-weight: 600;">حالة خاصة؟</span>
+              </label>
+            </div>
+
+            <div style="display:flex; gap:12px; justify-content:flex-end;">
+              <button id="saveStudent" class="btn primary" type="button" style="height:48px; padding:0 16px;">حفظ</button>
+              <button id="deleteStudent" class="btn danger" type="button" style="height:48px; padding:0 16px;">حذف</button>
+            </div>
+            <div id="edOk" class="ok"></div>
+            <div id="edErr" class="err"></div>
+          </div>
+
+          <!-- ===== "بيانات" (Totals + Absences/Lates) ===== -->
+          <div id="analyticsSection" class="analytics-shell">
+            <div class="analytics-card">
+              <div class="analytics-head"><h4 class="analytics-title">بيانات</h4></div>
+              <div class="stats-grid" style="align-items:stretch;">
+                <div class="stat-card stat-present"> <div class="stat-title">إجمالي الحضور</div> <div id="totPresent" class="stat-value">—</div> </div>
+                <div class="stat-card stat-absent"> <div class="stat-title">أيام الغياب بدون عذر</div> <div id="totAbsent" class="stat-value">—</div> </div>
+                <div class="stat-card stat-late"> <div class="stat-title">إجمالي التأخير</div> <div id="totLate" class="stat-value">—</div> </div>
+              </div>
+            </div>
+
+            <div class="analytics-card">
+              <div class="analytics-head">
+                <h4 class="analytics-title">نظام التحذيرات</h4>
+                <span id="warningLevelBadge" class="warning-level-badge warning-level-0">لا يوجد</span>
+              </div>
+              <div class="warning-count-row">
+                <span id="warningAbsenceCount" class="warning-count-value">0</span>
+                <span class="warning-count-label">أيام غياب بدون عذر</span>
+              </div>
+              <div class="warning-progress-track">
+                <div id="warningProgressFill" class="warning-progress-fill"></div>
+              </div>
+              <div class="warning-scale">
+                <span>0</span><span>5</span><span>8</span><span>11</span><span>15+</span>
+              </div>
+              <div id="warningNextHint" class="warning-next-hint">لا توجد غيابات بدون عذر بعد.</div>
+            </div>
+
+            <div class="analytics-card">
+              <div class="analytics-head">
+                <h4 class="analytics-title">نظام التحذيرات (غياب بعذر)</h4>
+                <span id="warningLevelBadgeExcused" class="warning-level-badge warning-excused-level-0">لا يوجد</span>
+              </div>
+              <div class="warning-count-row">
+                <span id="warningExcusedCount" class="warning-count-value excused">0</span>
+                <span class="warning-count-label">أيام غياب بعذر</span>
+              </div>
+              <div class="warning-progress-track">
+                <div id="warningProgressFillExcused" class="warning-progress-fill"></div>
+              </div>
+              <div class="warning-scale">
+                <span>0</span><span>15</span><span>20</span><span>25+</span>
+              </div>
+              <div id="warningNextHintExcused" class="warning-next-hint">لا توجد غيابات بعذر بعد.</div>
+            </div>
+
+            <div class="analytics-card">
+              <div class="row" style="justify-content:space-between; align-items:center;">
+                <div class="label" style="margin:0;">الغيابات</div> <span id="absentCountPill" class="pill r">أيام غياب: ٠</span>
+              </div>
+              <div id="absencesList" class="att-group"></div>
+            </div>
+            <div class="analytics-card">
+              <div class="row" style="justify-content:space-between; align-items:center;">
+                <div class="label" style="margin:0;">التأخيرات</div> <span id="lateCountPill" class="pill y">تأخير: 0</span>
+              </div>
+              <div id="latesList" class="att-group"></div>
+            </div>
+          </div>
+
+          <!-- ===== Tabs ===== -->
+          <div class="section">
+            <div class="tabs" role="tablist">
+              <button class="tab active" id="tabCommit" role="tab" aria-controls="panelCommit">تعهدات</button>
+              <button class="tab" id="tabEnroll" role="tab" aria-controls="panelEnroll">فصول</button>
+              <button class="tab" id="tabReport" role="tab" aria-controls="panelReport">تقارير</button>
+              <button class="tab" id="tabNote" role="tab" aria-controls="panelNote">ملاحظات</button>
+            </div>
+            <div class="tab-panels">
+              <!-- Commitments -->
+              <div id="panelCommit" class="tab-panel active" role="tabpanel">
+                <div class="row" style="justify-content:space-between; align-items:center;">
+                  <div class="label" style="margin:0;">التعهدات</div> <button id="addCommitBtn" class="btn primary mini" type="button">تعهد جديد</button>
+                </div>
+                <div id="commitQuick" class="inline-form" style="display:none;">
+                  <div class="field"> <div class="label">العنوان</div> <div class="input-wrap"><input id="commitTitle" class="input" type="text" placeholder="مثال: تعهد سلوك"></div> </div>
+                  <div class="field"> <div class="label">السبب</div> <div class="input-wrap"><textarea id="commitReason" class="input" placeholder="سبب التعهد"></textarea></div> </div>
+                  <div class="field"> <div class="label">التاريخ</div> <div class="input-wrap"><input id="commitDue" class="input" type="date"></div> </div>
+                  <div class="field"> <div class="label">الفئة المستهدفة</div> <div class="input-wrap"> <select id="commitAudience" class="input"> <option value="guardian">ولي الأمر</option> <option value="student">الطالب</option> <option value="both">الطالب + ولي الأمر</option> </select> </div> </div>
+                  <div class="row-actions"> <button id="commitSave" class="btn primary" type="button">حفظ</button> <button id="commitCancel" class="btn ghost" type="button">إلغاء</button> </div>
+                </div>
+                <div id="commitList" class="list"></div> <div id="commitEmpty" class="empty" style="display:none;">لا توجد تعهدات حتى الآن.</div>
+              </div>
+
+              <!-- Enrollments -->
+              <div id="panelEnroll" class="tab-panel" role="tabpanel">
+                <div class="row" style="justify-content:space-between; align-items:center;">
+                  <div class="label" style="margin:0;">سجل الفصول</div> <button id="addEnrollBtn" class="btn primary mini" type="button">إضافة قيد</button>
+                </div>
+                <div id="enrollQuick" class="inline-form" style="display:none;">
+                  <div class="field"> <div class="label">العنوان</div> <div class="input-wrap"><input id="enrollTitle" class="input" type="text" placeholder="عنوان القيد/الفصل"></div> </div>
+                  <div class="field"> <div class="label">السبب</div> <div class="input-wrap"><textarea id="enrollReason" class="input" placeholder="سبب القيد"></textarea></div> </div>
+                  <div class="field"> <div class="label">المدة (نص)</div> <div class="input-wrap"><input id="enrollLength" class="input" type="text" placeholder="مثال: فصل دراسي كامل"></div> </div>
+                  <div class="field"> <div class="label">من</div> <div class="input-wrap"><input id="enrollFrom" class="input" type="date"></div> </div>
+                  <div class="field"> <div class="label">إلى</div> <div class="input-wrap"><input id="enrollTo" class="input" type="date"></div> </div>
+                  <div class="row-actions"> <button id="enrollSave" class="btn primary" type="button">حفظ</button> <button id="enrollCancel" class="btn ghost" type="button">إلغاء</button> </div>
+                </div>
+                <div id="enrollList" class="list"></div> <div id="enrollEmpty" class="empty" style="display:none;">لا توجد قيود مسجلة.</div>
+              </div>
+
+              <!-- Reports -->
+              <div id="panelReport" class="tab-panel" role="tabpanel">
+                <div class="row" style="justify-content:space-between; align-items:center;">
+                  <div class="label" style="margin:0;">التقارير</div> <button id="addReportBtn" class="btn primary mini" type="button">تقرير جديد</button>
+                </div>
+                <div id="reportQuick" class="inline-form" style="display:none;">
+                  <div class="field"> <div class="label">نوع التقرير</div> <div class="input-wrap"> <select id="reportType" class="input"> <option value="behavior">سلوك</option> <option value="academic">تحصيلي</option> <option value="incident">واقعة</option> <option value="health">صحي</option> <option value="custom">custom</option> </select> </div> </div>
+                  <div class="field"> <div class="label">العنوان</div> <div class="input-wrap"><input id="reportTitle" class="input" type="text" placeholder="عنوان التقرير"></div> </div>
+                  <div class="field"> <div class="label">السبب</div> <div class="input-wrap"><textarea id="reportReason" class="input" placeholder="سبب التقرير"></textarea></div> </div>
+                  <div class="field"> <div class="label">التاريخ</div> <div class="input-wrap"><input id="reportDate" class="input" type="date"></div> </div>
+                  <div class="row-actions"> <button id="reportSave" class="btn primary" type="button">حفظ</button> <button id="reportCancel" class="btn ghost" type="button">إلغاء</button> </div>
+                </div>
+                <div id="reportList" class="list"></div> <div id="reportEmpty" class="empty" style="display:none;">لا توجد تقارير.</div>
+              </div>
+
+              <!-- Notes -->
+              <div id="panelNote" class="tab-panel" role="tabpanel">
+                <div class="row" style="justify-content:space-between; align-items:center;">
+                  <div class="label" style="margin:0;">الملاحظات</div> <button id="addNoteBtn" class="btn primary mini" type="button">ملاحظة جديدة</button>
+                </div>
+                <div id="noteQuick" class="inline-form" style="display:none;">
+                  <div class="field"> <div class="label">نص الملاحظة</div> <div class="input-wrap"><input id="noteBody" class="input" type="text" placeholder="اكتب الملاحظة"></div> </div>
+                  <div class="field"> <div class="label">النوع</div> <div class="input-wrap"> <select id="noteType" class="input"> <option value="general">عام</option> <option value="behavior">سلوك</option> <option value="academic">تحصيلي</option> <option value="health">صحي</option> <option value="parent-call">اتصال بولي الأمر</option> <option value="meeting">اجتماع</option> </select> </div> </div>
+                  <label class="label" style="font-weight:800; display:flex; align-items:center; gap:8px;"> <input id="notePinned" type="checkbox" style="transform:scale(1.2)"> تثبيت </label>
+                  <div class="row-actions"> <button id="noteSave" class="btn primary" type="button">حفظ</button> <button id="noteCancel" class="btn ghost" type="button">إلغاء</button> </div>
+                </div>
+                <div id="noteList" class="list"></div> <div id="noteEmpty" class="empty" style="display:none;">لا توجد ملاحظات.</div>
+              </div>
+            </div>
+          </div>
+          <div id="quickFormBackdrop" class="quick-backdrop"></div>
+        </div>
+      </section>
+
+      <!-- ATTENDANCE DETAIL SHEET -->
+      <section id="attDetailSheet" class="sheet small" aria-hidden="true">
+        <div class="sheet-header">
+          <button id="closeAttDetail" class="back-btn" aria-label="رجوع">رجوع</button>
+          <h3 id="attDetailTitle" class="sheet-title">تفاصيل الحالة</h3>
+          <button id="editAttBtn" class="btn secondary" type="button" style="margin-right: auto; display:none;">تعديل</button>
+        </div>
+        <div class="sheet-body">
+          <div class="section" id="attDetailBody">
+            <div class="row" style="justify-content:space-between;"> <div class="label" style="margin:0;">الحالة</div> <span id="dBadge" class="badge">—</span> </div>
+            <div class="row"><span class="label" style="min-width:110px;">التاريخ:</span><span id="dDate">—</span></div>
+            <div class="row"><span class="label" style="min-width:110px;">الحصة:</span><span id="dLesson">—</span></div>
+            <div class="row"><span class="label" style="min-width:110px;">الفصل:</span><span id="dClass">—</span></div>
+            <div class="row"><span class="label" style="min-width:110px;">أُضيفت بواسطة:</span><span id="dTeacher">—</span></div>
+            <div class="row"><span class="label" style="min-width:110px;">وقت الإضافة:</span><span id="dCreatedAt">—</span></div>
+            <div class="row"><span class="label" style="min-width:110px;">آخر تعديل:</span><span id="dUpdatedAt">—</span></div>
+
+            <!-- Edit Status Form - Hidden for supervisor -->
+            <div id="statusEditForm" class="status-edit-form" style="display:none;">
+              <div class="label">تغيير حالة الحضور</div>
+              <div class="status-options">
+                <div class="status-option status-present" data-status="present">حضور</div>
+                <div class="status-option status-late" data-status="late">تأخير</div>
+                <div class="status-option status-absent" data-status="absent">غياب</div>
+              </div>
+              <div class="status-actions">
+                <button id="saveStatusBtn" class="btn primary" type="button">حفظ التغييرات</button>
+                <button id="cancelStatusBtn" class="btn ghost" type="button">إلغاء</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      <section id="recordDetailSheet" class="sheet small" aria-hidden="true">
+        <div class="sheet-header">
+          <button id="closeRecordDetail" class="back-btn" aria-label="رجوع">رجوع</button>
+          <h3 id="recordDetailTitle" class="sheet-title">التفاصيل</h3>
+        </div>
+        <div class="sheet-body">
+          <div class="record-toolbar">
+            <button id="saveRecordPdf" class="btn primary mini" type="button">تنزيل PDF</button>
+          </div>
+          <div id="recordDetailBody" class="record-detail-content"></div>
+        </div>
+      </section>
+      <div id="paperExportTemplate" style="position:fixed; left:-10000px; top:0; visibility:hidden; pointer-events:none; z-index:-1;">
+        <article id="paperPreviewPage" class="detail-paper">
+          <header class="paper-head">
+            <div class="paper-brand centered">
+              <img class="paper-logo" src="/images/schoollogo.png" alt="شعار المدرسة">
+              <div class="paper-school-wrap">
+                <div class="paper-school">ثانوية أحمد البشر الرومي</div>
+                <div class="paper-sub">نموذج رسمي - شؤون الطلبة</div>
+              </div>
+            </div>
+          </header>
+          <div class="paper-rule"></div>
+          <div class="paper-main-content">
+            <div class="paper-top-meta">
+              <div id="paperDocType" class="paper-doc-type">—</div>
+              <div class="paper-meta-grid">
+                <div id="paperStudentLine" class="paper-meta-item">الطالب: —</div>
+                <div id="paperClassLine" class="paper-meta-item">الصف: —</div>
+                <div id="paperReasonLine" class="paper-meta-item">السبب: —</div>
+                <div id="paperDateLine" class="paper-meta-item">التاريخ: —</div>
+                <div id="paperCreatorLine" class="paper-meta-item paper-meta-wide">تم الإعداد بواسطة: —</div>
+              </div>
+            </div>
+            <div id="paperPreviewBody" class="paper-body"></div>
+          </div>
+          <div class="paper-signature-row">
+            <div class="sign-box">
+              <div class="sign-line"></div>
+              <div class="sign-label">توقيع مسؤول الشؤون</div>
+            </div>
+            <div class="sign-box">
+              <div class="sign-line"></div>
+              <div class="sign-label">الختم الرسمي</div>
+            </div>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
   <!-- Lesson popover: two internal views (info+actions, then the request
        form) swapped in place so this stays one clean surface, never a
        modal stacked over a modal — same convention as
@@ -2257,6 +3029,7 @@
     import { mountAttendanceSheet, LESSON_END_GRACE_MINUTES } from "/shared/attendance.js";
     import { mountStudentNotesSheet } from "/shared/student-notes-sheet.js";
     import { parseTimeToMinutes } from "/shared/kuwait-time.js";
+    import { isTruthyFlag } from "/shared/auth-guard.js";
 
 
 
@@ -2552,6 +3325,10 @@
     const sidebarHome = document.getElementById('sidebarHome');
     const sidebarDeptSchedule = document.getElementById('sidebarDeptSchedule');
     const sidebarSchoolSchedule = document.getElementById('sidebarSchoolSchedule');
+    const sidebarSupervisorGroup = document.getElementById('sidebarSupervisorGroup');
+    const sidebarSupervisorStudents = document.getElementById('sidebarSupervisorStudents');
+    const sidebarMorningLate = document.getElementById('sidebarMorningLate');
+    const sidebarEditSchedule = document.getElementById('sidebarEditSchedule');
     const sidebarUser = document.getElementById('sidebarUser');
     const sidebarUserAvatar = document.getElementById('sidebarUserAvatar');
     const sidebarUserName = document.getElementById('sidebarUserName');
@@ -2596,6 +3373,7 @@
     let classScheduleExportInProgress = false;
     let currentUser = null;
     let currentRole = '';
+    let pendingSignOutTimer = null;
     let currentTeacherProfile = null;
     let myDeptSchedDepartment = ''; // resolved once the profile loads — gates sidebarDeptSchedule/جدول القسم
 
@@ -2962,6 +3740,7 @@
     document.addEventListener('keydown', (e)=>{
       if(e.key === 'Escape' && modalEl.classList.contains('open')) closeModal();
       if(e.key === 'Escape' && sidebar.classList.contains('open')) closeSidebar();
+      if(e.key === 'Escape' && document.getElementById('supervisorStudentsSheet')?.classList.contains('open')) closeSupervisorStudentsSheet();
     });
 
     /* ========= Teachers list ========= */
@@ -7413,6 +8192,44 @@
 
     ssClose.addEventListener('click', closeSchoolSchedSheet);
 
+    /* ========= الطلاب (svs*) =========
+       Supervisors only (teachers/{uid}.isSupervisor). The actual class/
+       student/attendance feature set is a straight port of
+       /supervisors/supervisorstudents.html running in its own <script
+       type="module"> further down this page (see the comment there for
+       why it's a separate module and not folded in here) — that script
+       owns everything inside #supervisorStudentsSheet once it's visible.
+       This block only owns the sheet's own open/close chrome, same
+       #hash/history-entry convention as the ds/ss sheets above
+       (#supervisorstudents). */
+    const svsSheetEl = document.getElementById('supervisorStudentsSheet');
+    const svsClose = document.getElementById('svsClose');
+
+    function openSupervisorStudentsSheet(){
+      if (sidebarSupervisorStudents.hidden || svsSheetEl.classList.contains('open')) return;
+      svsSheetEl.classList.add('open');
+      svsSheetEl.setAttribute('aria-hidden', 'false');
+      try { history.pushState({ svsSheetOpen: true }, '', '#supervisorstudents'); } catch {}
+    }
+
+    function closeSupervisorStudentsSheet(){
+      if (!svsSheetEl.classList.contains('open')) return;
+      svsSheetEl.classList.remove('open');
+      svsSheetEl.setAttribute('aria-hidden', 'true');
+      if (history.state?.svsSheetOpen) { try { history.back(); } catch {} }
+    }
+
+    window.addEventListener('popstate', () => {
+      if (!svsSheetEl.classList.contains('open')) return;
+      svsSheetEl.classList.remove('open');
+      svsSheetEl.setAttribute('aria-hidden', 'true');
+    });
+
+    svsClose.addEventListener('click', closeSupervisorStudentsSheet);
+    sidebarSupervisorStudents.addEventListener('click', () => { closeSidebar(); openSupervisorStudentsSheet(); });
+    sidebarMorningLate.addEventListener('click', () => { closeSidebar(); location.href = '/teachers/morning.html'; });
+    sidebarEditSchedule.addEventListener('click', () => { closeSidebar(); location.href = '/admins/adminschedule.html'; });
+
     /* ========= فصولي (mc*) =========
        An in-page copy of Teachers/user.html's own class buttons + student
        sheet — that page is never navigated to or edited, this
@@ -7845,18 +8662,39 @@
     setPersistence(auth, browserLocalPersistence).catch(()=>{});
 
     onAuthStateChanged(auth, async (user)=>{
-      stopRequestsListeners();
-      headUid = '';
-      btnRequests.hidden = true;
+      // Debounced: a transient null immediately followed by the real user
+      // again (a brief SDK flicker) shouldn't yank the sheet closed or
+      // flash the login screen — only a sign-out with no follow-up event
+      // within the window is treated as real.
+      if (pendingSignOutTimer) { clearTimeout(pendingSignOutTimer); pendingSignOutTimer = null; }
+
       if(!user){
-        currentUser = null;
-        showStatus('الرجاء تسجيل الدخول أولاً.', true);
-        updateSidebarUser();
-        mcStopClassHighlightTicker();
-        mcRenderClassButtons([]);
+        pendingSignOutTimer = setTimeout(() => {
+          pendingSignOutTimer = null;
+          stopRequestsListeners();
+          headUid = '';
+          btnRequests.hidden = true;
+          sidebarSupervisorGroup.hidden = true;
+          sidebarSupervisorStudents.hidden = true;
+          sidebarMorningLate.hidden = true;
+          sidebarEditSchedule.hidden = true;
+          currentUser = null;
+          showStatus('الرجاء تسجيل الدخول أولاً.', true);
+          updateSidebarUser();
+          mcStopClassHighlightTicker();
+          mcRenderClassButtons([]);
+          closeSupervisorStudentsSheet();
+        }, 800);
         return;
       }
 
+      stopRequestsListeners();
+      headUid = '';
+      btnRequests.hidden = true;
+      sidebarSupervisorGroup.hidden = true;
+      sidebarSupervisorStudents.hidden = true;
+      sidebarMorningLate.hidden = true;
+      sidebarEditSchedule.hidden = true;
       currentUser = user;
       currentRole = '';
       updateSidebarUser();
@@ -7883,6 +8721,22 @@
               currentTeacherProfile?.department || currentTeacherProfile?.dept || currentTeacherProfile?.subject || ''
             );
             sidebarDeptSchedule.hidden = !myDeptSchedDepartment;
+
+            // Extra per-teacher permissions granted from admins/teachers.html's
+            // "صلاحيات المستخدم" editor (teachers/{uid}.permissions.*) — same
+            // fields Teachers/user.html's own hub reads to show these same
+            // buttons. isSupervisor also unlocks "الطلاب" on its own, same as
+            // the supervisorstudents-sheet.js gate itself (allowSupervisor
+            // OR permissions.allowSupervisorStudents).
+            const perms = (currentTeacherProfile?.permissions && typeof currentTeacherProfile.permissions === 'object')
+              ? currentTeacherProfile.permissions : {};
+            const allowSupervisorStudents = isTruthyFlag(currentTeacherProfile?.isSupervisor) || isTruthyFlag(perms.allowSupervisorStudents);
+            const allowMorningLate = isTruthyFlag(perms.allowMorningLate);
+            const allowEditSchedule = isTruthyFlag(perms.allowEditSchedule);
+            sidebarSupervisorStudents.hidden = !allowSupervisorStudents;
+            sidebarMorningLate.hidden = !allowMorningLate;
+            sidebarEditSchedule.hidden = !allowEditSchedule;
+            sidebarSupervisorGroup.hidden = !(allowSupervisorStudents || allowMorningLate || allowEditSchedule);
 
             // Own classes plus anything being covered today — same
             // convention as Teachers/user.html's own class buttons.
@@ -7921,6 +8775,7 @@
     });
 
   </script>
+<script type="module" src="/beta/supervisorstudents-sheet.js"></script>
   <script src="/shared/hub-title-link.js" defer></script>
 <script src="/shared/prefetch-nav.js" defer></script>
 <script src="/name-glow.js" defer></script>
