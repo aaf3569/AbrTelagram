@@ -1,0 +1,2156 @@
+    :root {
+      --app-font: 'Tajawal', sans-serif;
+      --primary: #022b42;
+      --primary-2: #044563;
+      --primary-light: rgba(2, 43, 66, 0.08);
+      --page: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #0f172a;
+      --text-light: #475569;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --border-light: #f1f5f9;
+      --radius: 16px;
+      --radius-sm: 12px;
+      --shadow-1: 0 4px 12px rgba(2, 43, 66, 0.08);
+      --shadow-2: 0 10px 25px rgba(2, 43, 66, 0.12);
+      --headerText: #ffffff;
+      --focus: #79b3c8;
+      --success: #10b981;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --transition: transform .12s ease, box-shadow .12s ease, background-color .12s ease, border-color .12s ease, color .12s ease, opacity .12s ease;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      background: var(--page);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      line-height: 1.6;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body.modal-open { overflow: hidden; }
+
+    /* Header */
+    .site-header {
+      position: sticky; top: 0; z-index: 20; flex-shrink: 0;
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(2, 43, 66, 0.08);
+      box-shadow: 0 6px 18px rgba(2, 43, 66, 0.12);
+      padding: 16px 20px;
+      /* iOS Safari can leave a sticky element's hit-testing stale right
+         after load when it also uses backdrop-filter, so the first tap(s)
+         on controls inside it (the sidebar toggle button) silently miss.
+         Forcing the header onto its own compositor layer up front keeps
+         hit-testing in sync with paint from the first tap. */
+      transform: translateZ(0);
+      will-change: transform;
+    }
+    .header-container {
+      max-width: 1200px; margin: 0 auto;
+      position: relative;
+      display: flex; justify-content: center; align-items: center; min-height: 44px;
+    }
+    .sidebar-toggle-btn {
+      position: absolute; right: 0; top: 50%; transform: translateY(-50%);
+      width: 44px; height: 44px; flex-shrink: 0;
+      border-radius: var(--radius-sm);
+      border: 1px solid rgba(2, 43, 66, 0.2); background: var(--card-bg); color: var(--primary);
+      font-size: 1.05rem; cursor: pointer; box-shadow: var(--shadow-1); transition: var(--transition);
+      display: inline-flex; align-items: center; justify-content: center;
+    }
+    .sidebar-toggle-btn:hover { transform: translateY(calc(-50% - 2px)); box-shadow: var(--shadow-2); border-color: rgba(2, 43, 66, 0.4); }
+    .sidebar-toggle-btn:active { transform: translateY(-50%) scale(0.97); }
+    /* Toggle button is absolutely positioned to one side, so the title stays
+       centered against the header's full width instead of the leftover
+       space beside the button — symmetric padding keeps it clear of the
+       button at any text length. */
+    .site-title {
+      font-weight: 900;
+      font-size: clamp(1.2rem, 2.5vw, 1.5rem);
+      color: var(--primary);
+      text-align: center;
+      padding: 0 60px 0 16px;
+      white-space: nowrap;
+    }
+
+    .badge {
+      padding: 6px 14px; border-radius: 999px; background: var(--primary-light);
+      border: 1px solid var(--border); color: var(--primary);
+      font-weight: 800; font-size: 12px; display: flex; align-items: center; gap: 6px;
+    }
+    .badge i { font-size: 0.9em; }
+
+    /* Buttons */
+    .filter-btn {
+      height: 44px; padding: 0 18px; border-radius: var(--radius-sm);
+      border: 1px solid rgba(2, 43, 66, 0.2); background: var(--card-bg); color: var(--primary);
+      font-weight: 800; cursor: pointer; box-shadow: var(--shadow-1); transition: var(--transition);
+      display: inline-flex; align-items: center; gap: 8px; font-size: 0.9rem; position: relative;
+      font-family: var(--app-font);
+    }
+    .filter-btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-2); border-color: rgba(2, 43, 66, 0.4); }
+    .filter-btn:active { transform: translateY(0); }
+    .filter-btn.active { background: linear-gradient(135deg, var(--primary-2), var(--primary)); color: var(--headerText); border-color: var(--primary); }
+    .filter-btn[disabled], .sidebar-link[disabled] { opacity: 0.6; cursor: not-allowed; }
+
+    .btn-solid {
+      background: linear-gradient(135deg, var(--primary-2), var(--primary));
+      border-color: var(--primary);
+      color: var(--headerText);
+    }
+    .weekly-download-btn {
+      width: 100%; min-height: 56px; height: auto; padding: 14px 20px;
+      justify-content: center; font-size: 1rem; margin-bottom: 16px;
+    }
+    .weekly-download-btn[hidden] { display: none; }
+    .btn-danger {
+      background: #fff;
+      border-color: rgba(239, 68, 68, 0.35);
+      color: #b91c1c;
+    }
+    .btn-danger:hover { border-color: rgba(239, 68, 68, 0.6); }
+    .btn-ghost {
+      background: rgba(2, 43, 66, 0.04);
+      border-color: rgba(2, 43, 66, 0.14);
+      color: var(--primary);
+    }
+
+    /* Loading dot */
+    .filter-btn.loading, .sidebar-link.loading { position: relative; }
+    .filter-btn.loading::after, .sidebar-link.loading::after {
+      content: ""; width: 10px; height: 10px; border-radius: 50%;
+      border: 2px solid currentColor; border-top-color: transparent;
+      position: absolute; left: 10px; animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Main & cards */
+    main { flex: 1; padding: 20px; }
+    .board { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-1);
+      padding: 20px;
+      transition: var(--transition);
+    }
+    .card:hover { box-shadow: var(--shadow-2); }
+    .muted { color: var(--muted); font-size: 0.9rem; }
+
+    /* Table */
+    .table { display: grid; grid-template-columns: repeat(2, minmax(160px, 1fr)); column-gap: 12px; row-gap: 8px; align-items: stretch; }
+    /* Match the day/date header to the sidebar header's darker blue. */
+    .header-full {
+      grid-column: 1 / -1; background: linear-gradient(135deg, var(--primary-2), var(--primary));
+      color: var(--headerText); border-radius: var(--radius-sm); padding: 16px; text-align: center;
+      font-weight: 900; box-shadow: var(--shadow-1);
+      display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 10px;
+    }
+    .header-day-row { display: flex; align-items: center; justify-content: center; gap: 10px; }
+    .header-day-icon {
+      width: 34px; height: 34px; flex-shrink: 0; border-radius: 10px;
+      background: rgba(255, 255, 255, 0.16); border: 1px solid rgba(255, 255, 255, 0.22);
+      display: grid; place-items: center; font-size: 0.92rem;
+    }
+    .header-day-text { display: flex; flex-direction: column; align-items: center; gap: 1px; line-height: 1.3; }
+    .header-day-name { font-size: 1rem; font-weight: 900; }
+    .header-day-date { font-size: 0.74rem; font-weight: 700; opacity: 0.72; font-variant-numeric: tabular-nums; }
+    /* Live lesson/break countdown beside the stacked day/date. */
+    .header-live {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      background: rgba(255, 255, 255, 0.14);
+      border: 1px solid rgba(255, 255, 255, 0.24);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      font-size: 0.85rem;
+      font-weight: 800;
+    }
+    .header-live[hidden] { display: none; }
+    .header-live-sep { opacity: 0.65; }
+    .header-live-countdown { font-size: 0.98rem; font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
+    .th {
+      background: linear-gradient(135deg, var(--primary-2), var(--primary));
+      color: var(--headerText); border-radius: var(--radius-sm);
+      padding: 14px 10px; text-align: center; font-weight: 900; box-shadow: var(--shadow-1);
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .cell {
+      background: var(--card-bg); border: 1px solid var(--border-light); border-radius: var(--radius-sm);
+      padding: 16px 12px; text-align: center; min-height: 60px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      font-weight: 800; transition: var(--transition);
+      position: relative;
+      line-height: 1.25;
+    }
+    .cell:hover { border-color: var(--border); transform: translateY(-2px); box-shadow: var(--shadow-1); }
+    .small { font-size: 0.8rem; color: var(--muted); margin-top: 4px; font-weight: 700; }
+    .lesson-meta {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      margin-inline: auto;
+      text-align: center;
+    }
+    .lesson-title-row {
+      font-weight: 900;
+      line-height: 1.2;
+      text-align: center;
+      direction: rtl;
+      width: 100%;
+      display: block;
+    }
+    .lesson-time-row {
+      font-size: 0.8rem;
+      color: var(--muted);
+      font-weight: 700;
+      line-height: 1.2;
+      direction: ltr;
+      text-align: center;
+      width: 100%;
+      display: block;
+    }
+    .opportunity-divider {
+      grid-column: 1 / -1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 30px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(2, 43, 66, 0.18);
+      background: rgba(2, 43, 66, 0.06);
+      color: var(--primary);
+      font-size: 12px;
+      font-weight: 900;
+      line-height: 1.2;
+      text-align: center;
+    }
+    .opportunity-divider-label {
+      display: block;
+      width: 100%;
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .cell.clickable { cursor: pointer; }
+    .cell.clickable::after {
+      content: "";
+      position: absolute; inset: 0;
+      border-radius: var(--radius-sm);
+      box-shadow: 0 0 0 0 rgba(2, 43, 66, 0.0);
+      transition: box-shadow 0.25s ease;
+      pointer-events: none;
+    }
+    .cell.clickable:hover::after { box-shadow: 0 0 0 3px rgba(2, 43, 66, 0.10); }
+
+    /* Week grid.
+
+       Read as a table, not as a field of cards. The old version gave all
+       forty-eight slots the same outlined box, the same 12px gap and the same
+       800-900 weight, so a teacher's four lessons had to compete with thirty
+       or so empty slots drawn just as loudly. The signal here is which slots
+       are taught and which class — everything else should get out of the way.
+
+       Three moves: the 12px gutters become 1px rules (the gap shows the
+       container colour through, which draws the grid lines for free and
+       removes forty-eight borders); empty slots recede to a faint dash; and
+       the lessons themselves carry the only saturated colour and the only
+       heavy weight on the screen. */
+    /* The wrapper owns the frame and the scrolling, not the grid. Two
+       reasons: an element with overflow:hidden becomes the scroll container
+       for its own sticky children, so clipping on .grid would stop the day
+       column ever sticking; and the grid has a ~1050px minimum from its
+       column template, so at any width below that the old overflow:visible
+       simply spilled it out of the card. Scrolling here handles both. */
+    .grid-wrap {
+      overflow: auto;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-1);
+      -webkit-overflow-scrolling: touch;
+    }
+    .grid {
+      direction: rtl; display: grid;
+      grid-template-columns: 140px repeat(7, minmax(130px, 1fr));
+      align-items: stretch;
+      gap: 1px;
+      background: var(--border);
+    }
+    /* One unbroken header band. Seven separately-rounded gradient blocks read
+       as seven objects; at a 1px gutter a flat fill reads as one. */
+    .gth {
+      background: var(--primary); color: var(--headerText);
+      border-radius: 0; padding: 13px 10px; text-align: center; font-weight: 800;
+      display: grid;
+      place-items: center;
+      align-content: center;
+      animation: gridCellIn 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+    .gth .lesson-title-row { font-weight: 800; }
+    .gth .lesson-time-row {
+      font-weight: 600; font-size: .74rem;
+      color: rgba(255, 255, 255, .68); font-variant-numeric: tabular-nums;
+    }
+    /* The quiet default: an empty slot. */
+    .gcell {
+      background: var(--card-bg); border: 0; border-radius: 0;
+      padding: 13px 10px; display: grid; align-items: center; justify-items: center; text-align: center;
+      min-height: 62px; position: relative; font-weight: 400; color: rgba(100, 116, 139, .38);
+      transition: background-color .14s ease, color .14s ease, box-shadow .14s ease;
+      animation: gridCellIn 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+    /* No lift on hover. The wrapper clips, so a raised cell at the edge would
+       be cut off, and a column of cells hopping as the pointer travels across
+       is a good part of what made this feel restless. A fill change is enough
+       to show which slot is under the cursor. */
+    .gcell:hover { background: #f7fafc; }
+    .gcell.empty { color: rgba(100, 116, 139, 0.38); font-weight: 400; }
+    .gcell.clickable { cursor: pointer; }
+    /* Day column: sticky, so the day stays readable while the week is
+       scrolled sideways on a phone. Needs an opaque fill to sit over the
+       cells passing beneath it. */
+    .day-col {
+      background: #f4f7fa;
+      position: sticky; inset-inline-start: 0; z-index: 2;
+      box-shadow: 1px 0 0 var(--border), -1px 0 0 var(--border);
+      font-weight: 400; color: var(--text);
+    }
+    .day-col > div:first-child { font-weight: 800; color: var(--primary); }
+    .day-col .small {
+      font-weight: 600; font-size: .74rem; color: var(--muted);
+      font-variant-numeric: tabular-nums; margin-top: 2px;
+    }
+    .grid > .gth:first-child { position: sticky; inset-inline-start: 0; z-index: 3; }
+    @keyframes gridCellIn {
+      from { opacity: 0; transform: translateY(5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .gth, .gcell { animation: none; }
+    }
+
+    /* Skeleton loader — shown in containerMain the instant a view starts
+       loading (today/week), in place of the real .table/.compact-table/.grid
+       markup it renders into, so the layout doesn't jump once real data
+       arrives a moment later. */
+    .skel {
+      background: linear-gradient(100deg, rgba(2,43,66,.08) 30%, rgba(2,43,66,.15) 45%, rgba(2,43,66,.08) 60%);
+      background-size: 250% 100%;
+      animation: skelShimmer 1.4s ease-in-out infinite;
+      border-radius: 6px;
+    }
+    @keyframes skelShimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .skel { animation: none; }
+    }
+    .skel-line { height: 14px; width: 70%; margin: 0 auto; }
+    .skel-line.wide { width: 90%; }
+    .skel-line.short { width: 45%; height: 11px; }
+    .skel-header { grid-column: 1 / -1; height: 44px; border-radius: var(--radius-sm); }
+    .skel-th { height: 40px; border-radius: var(--radius-sm); }
+    .skel-cell { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
+
+    /* Status */
+    .status-message {
+      padding: 12px 16px; border-radius: var(--radius-sm); background: var(--primary-light);
+      color: var(--primary); font-weight: 700; margin-top: 12px; display: none; align-items: center; gap: 10px;
+    }
+
+    /* Highlight (has lesson) — the one place this view spends any colour.
+
+       The old sticky-note yellow (#fff9c4 on #ffd54f) belonged to a different
+       palette entirely and was the main reason the week read as dated next to
+       the rest of the app. A tinted wash in the brand navy carries the same
+       "this slot is taught" signal, and a solid bar down the reading edge
+       makes the taught slots scannable as a column at a glance. */
+    .lesson-highlight {
+      background: linear-gradient(180deg, rgba(4, 69, 99, .10), rgba(4, 69, 99, .055)) !important;
+      border: 0 !important;
+      border-inline-start: 3px solid var(--primary-2) !important;
+      color: var(--primary);
+      font-weight: 800;
+    }
+    .lesson-highlight:hover {
+      background: linear-gradient(180deg, rgba(4, 69, 99, .155), rgba(4, 69, 99, .09)) !important;
+    }
+    .lesson-highlight.clickable:hover { box-shadow: inset 0 0 0 1px rgba(4, 69, 99, .22); }
+
+    /* Current lesson highlight (time-based, day view only) */
+    .current-lesson {
+      background-color: rgba(4, 69, 99, 0.10) !important;
+      border: 2px solid var(--primary-2) !important;
+      box-shadow: 0 0 0 3px rgba(2, 43, 66, 0.28);
+      color: var(--primary-2) !important;
+      position: relative;
+      font-weight: 900;
+    }
+    /* Badge on the الصف cell of whichever lesson is live right now, signaling
+       attendance can be taken — added/removed live by updateCurrentLessonHighlight()
+       rather than baked into the render, so it tracks the real bell schedule. */
+    .attendance-ready-badge {
+      position: absolute; top: -9px; left: -9px; z-index: 1;
+      width: 26px; height: 26px; border-radius: 50%;
+      background: #033C54; color: #fff;
+      display: grid; place-items: center; font-size: 12px;
+      box-shadow: 0 3px 10px rgba(3, 60, 84, 0.5), 0 0 0 3px var(--card-bg);
+      animation: attendanceBadgePulse 1.8s ease-in-out infinite;
+    }
+    @keyframes attendanceBadgePulse {
+      0%, 100% { box-shadow: 0 3px 10px rgba(3,60,84,.5), 0 0 0 3px var(--card-bg), 0 0 0 0 rgba(3,60,84,.5); }
+      50% { box-shadow: 0 3px 10px rgba(3,60,84,.5), 0 0 0 3px var(--card-bg), 0 0 0 6px rgba(3,60,84,0); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .attendance-ready-badge { animation: none; }
+    }
+
+    /* Override badges */
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 900;
+      border: 1px solid var(--border);
+      background: rgba(2, 43, 66, 0.06);
+      color: var(--primary);
+      margin-top: 8px;
+      justify-content: center;
+      width: fit-content;
+    }
+    .pill.success {
+      background: rgba(16, 185, 129, 0.12);
+      border-color: rgba(16, 185, 129, 0.25);
+      color: #065f46;
+    }
+    .pill.warn {
+      background: rgba(245, 158, 11, 0.14);
+      border-color: rgba(245, 158, 11, 0.30);
+      color: #7c2d12;
+    }
+
+    /* Compact on mobile */
+    .compact-table { display: grid; grid-template-columns: 1fr 1fr; column-gap: 8px; row-gap: 6px; width: 100%; }
+    .compact-header {
+      grid-column: 1 / -1; background: linear-gradient(135deg, var(--primary-2), var(--primary));
+      color: var(--headerText); border-radius: var(--radius-sm); padding: 12px; text-align: center;
+      font-weight: 900; display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 10px; margin-bottom: 8px;
+    }
+    .compact-th {
+      background: var(--primary-light); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 10px 8px; text-align: center;
+      font-weight: 900; font-size: 0.9rem;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .compact-cell {
+      background: transparent; border: none;
+      border-radius: var(--radius-sm); padding: 10px 8px; text-align: center;
+      min-height: 50px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 0.9rem;
+      position: relative;
+      line-height: 1.25;
+    }
+    .compact-cell.lesson-cell {
+      align-items: stretch;
+      justify-content: center;
+    }
+    .compact-cell.lesson-cell .lesson-meta {
+      min-height: 100%;
+      justify-content: center;
+    }
+    .compact-cell.clickable { cursor: pointer; }
+    .compact-cell.clickable:hover { background: var(--primary-light); }
+    /* الحصة + الصف for one lesson slot — spans both grid columns so it keeps
+       the same footprint as a normal row. Individual cells have no border/
+       background of their own (avoids a boxed-container look per lesson,
+       which felt crowded with 7+ rows on screen) — rows are separated by a
+       plain hairline instead. When it's the current lesson, the wrapper
+       becomes the single blue container and the two cells sit inside it as
+       smaller sub-boxes. */
+    .compact-row {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      border-bottom: 1px solid var(--border-light);
+      padding-bottom: 6px;
+    }
+    .compact-row:last-child { border-bottom: none; padding-bottom: 0; }
+    .compact-row.current-lesson {
+      background-color: rgba(4, 69, 99, 0.10);
+      border: 2px solid var(--primary-2);
+      box-shadow: 0 0 0 2px rgba(2, 43, 66, 0.22);
+      border-radius: var(--radius-sm);
+      padding: 4px;
+    }
+    /* Leave a little breathing room below the column headings. */
+    .table > .cell[data-lesson-index="1"],
+    .compact-table > .compact-row[data-lesson-index="1"] {
+      margin-top: 4px;
+    }
+    /* Cells lose their own border/background inside the mother box (avoids a
+       double-boxed look) and shrink their padding by roughly what the mother's
+       own border+padding just added, so the highlighted row's overall height
+       still matches a normal row instead of growing taller than its neighbors. */
+    .compact-row.current-lesson .compact-cell {
+      color: var(--primary-2);
+      font-weight: 900;
+      background: transparent;
+      border-color: transparent;
+      padding: 8px 6px;
+      min-height: 42px;
+    }
+
+    /* Occupied day-view class cells match Teachers/user.html class buttons. */
+    .table [data-row-role="class"].lesson-highlight,
+    .compact-table [data-row-role="class"].lesson-highlight {
+      background: linear-gradient(145deg, #033C54, #065372) !important;
+      color: #fff !important;
+    }
+
+    /* Sidebar */
+    .sidebar-backdrop {
+      position: fixed; inset: 0; z-index: 95;
+      background: rgba(2, 43, 66, 0.55);
+      backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+      opacity: 0; pointer-events: none; transition: opacity 0.25s ease;
+    }
+    .sidebar-backdrop.open { opacity: 1; pointer-events: auto; }
+    .sidebar {
+      position: fixed; top: 0; right: 0; bottom: 0; z-index: 96;
+      width: min(320px, 86vw);
+      background: var(--card-bg);
+      box-shadow: -12px 0 40px rgba(2, 43, 66, 0.22);
+      transform: translateX(100%);
+      transition: transform 0.3s cubic-bezier(0.22, 0.7, 0.25, 1);
+      display: flex; flex-direction: column;
+    }
+    .sidebar.open { transform: translateX(0); }
+    .sidebar-head {
+      position: relative; padding: 16px; display: flex; flex-direction: column;
+      align-items: center; gap: 12px; text-align: center;
+      background: linear-gradient(135deg, var(--primary-2), var(--primary));
+      color: var(--headerText); flex-shrink: 0;
+    }
+    .sidebar-school-logo {
+      display: block; width: 120px; max-width: calc(100% - 80px); height: auto; object-fit: contain;
+    }
+    .sidebar-head h2 {
+      /* Scales down with the viewport instead of truncating, so the school
+         name reliably fits on one line even on narrow phones. */
+      font-size: clamp(0.74rem, 4.3vw, 0.98rem);
+      font-weight: 900; display: flex; align-items: center; gap: 7px;
+      min-width: 0; overflow: hidden;
+    }
+    .sidebar-head h2 i { flex-shrink: 0; font-size: 0.9em; opacity: .85; }
+    .sidebar-head h2 span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .sidebar-close {
+      position: absolute; top: 16px; left: 16px;
+      width: 32px; height: 32px; flex-shrink: 0; border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.24); background: rgba(255, 255, 255, 0.14);
+      color: #fff; cursor: pointer; display: grid; place-items: center; transition: var(--transition);
+    }
+    @media (hover: hover) and (pointer: fine) {
+      .sidebar-close:hover { transform: rotate(90deg); background: rgba(255, 255, 255, 0.22); }
+    }
+
+    /* User card */
+    .sidebar-user {
+      display: flex; align-items: center; gap: 12px; padding: 14px 16px;
+      flex-shrink: 0; background: var(--primary-light);
+      border-bottom: 1px solid var(--border-light);
+    }
+    .sidebar-user[hidden] { display: none; }
+    .sidebar-user-avatar {
+      width: 44px; height: 44px; flex-shrink: 0; border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary-2), var(--primary));
+      color: #fff; font-weight: 900; font-size: 1rem;
+      display: grid; place-items: center; box-shadow: var(--shadow-1);
+    }
+    .sidebar-user-info { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+    .sidebar-user-name {
+      font-weight: 800; font-size: 0.94rem; color: var(--text);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .sidebar-user-dept {
+      font-size: 0.78rem; font-weight: 700; color: var(--primary-2);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .sidebar-user-dept:empty { display: none; }
+
+    .sidebar-nav {
+      padding: 14px 12px; display: flex; flex-direction: column; gap: 16px;
+      overflow-y: auto; flex: 1 1 auto;
+      padding-bottom: max(14px, env(safe-area-inset-bottom, 0px));
+    }
+    .sidebar-group {
+      display: flex; flex-direction: column; gap: 2px;
+    }
+    /* Same fix as .modal-footer[hidden] below: this rule's own display:flex
+       otherwise beats the browser's [hidden]{display:none} default, so a
+       hidden group (e.g. sidebarSupervisorGroup for non-supervisors) would
+       still show. */
+    .sidebar-group[hidden] { display: none; }
+    .sidebar-group:not([hidden]) + .sidebar-group {
+      padding-top: 14px; border-top: 1px solid var(--border-light);
+    }
+    .sidebar-section-label {
+      padding: 0 10px 8px; font-size: 0.7rem; font-weight: 800;
+      color: var(--muted); letter-spacing: .03em; text-transform: uppercase;
+    }
+    .sidebar-link {
+      position: relative;
+      display: flex; align-items: center; gap: 12px; padding: 11px 12px;
+      border-radius: 12px; border: 1px solid transparent;
+      background: transparent; color: var(--text);
+      font-family: var(--app-font);
+      font-weight: 800; font-size: 0.91rem; cursor: pointer; text-align: right;
+      transition: var(--transition); width: 100%;
+    }
+    .sidebar-link i, .sidebar-link::before {
+      width: 32px; height: 32px; flex-shrink: 0;
+      display: inline-flex; align-items: center; justify-content: center;
+      border-radius: 9px; background: var(--primary-light);
+      color: var(--primary-2); font-size: 0.95rem;
+    }
+    @media (hover: hover) and (pointer: fine) {
+      .sidebar-link:hover { background: var(--primary-light); }
+    }
+    .sidebar-link:active { background: var(--primary-light); }
+    .sidebar-link[hidden] { display: none; }
+
+    .sidebar-settings-link::before {
+      font-family: "Font Awesome 6 Free"; font-weight: 900; content: "\f013";
+    }
+    #sidebarLogout { justify-content: center; text-align: center; }
+
+    /* Sheet */
+    .sheet {
+      position: fixed; inset: 0; z-index: 50; background: var(--page);
+      display: flex; flex-direction: column;
+      transform: translateX(100%);
+      transition: transform 0.3s cubic-bezier(0.22, 0.7, 0.25, 1);
+    }
+    .sheet.open { transform: translateX(0); }
+    .sheet-header {
+      background: var(--card-bg); border-bottom: 1px solid var(--border);
+      padding: 18px 20px;
+      position: sticky; top: 0; z-index: 10;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 2px 8px rgba(2, 43, 66, 0.06);
+    }
+    .back-btn {
+      position: absolute;
+      right: 20px;
+      top: 50%;
+      transform: translateY(-50%);
+      height: 44px; padding: 0 18px; border-radius: var(--radius-sm);
+      border: 1px solid rgba(2, 43, 66, 0.25); background: var(--card-bg);
+      color: var(--primary); font-weight: 900; cursor: pointer;
+      box-shadow: var(--shadow-1); transition: var(--transition);
+      display: flex; align-items: center; gap: 8px;
+      font-family: var(--app-font);
+    }
+    .back-btn:hover { transform: translateY(calc(-50% - 2px)); box-shadow: var(--shadow-2); }
+    .back-btn:active { transform: translateY(-50%) scale(0.97); }
+    /* Back button is absolutely positioned to one side, so the title is
+       centered against the header's full width rather than the leftover
+       space next to it — padding keeps it clear of the button at any
+       text length. */
+    .sheet-title { margin: 0; font-size: 1.15rem; font-weight: 900; color: var(--primary); text-align: center; padding: 0 112px; }
+    .sheet-body {
+      flex: 1 1 auto; overflow: auto; padding: 24px;
+      max-width: 1200px; margin: 0 auto;
+      display: flex; flex-direction: column; gap: 20px; width: 100%;
+    }
+    .svs-sheet-body { padding: 0; max-width: none; display: block; }
+
+    .field-label {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 12.5px; font-weight: 900; color: var(--muted);
+      margin-bottom: 8px;
+    }
+    .field-label i { color: var(--primary-2); font-size: 0.95em; }
+    .input-wrap {
+      display: flex; align-items: center; gap: 12px; min-height: 54px; padding: 0 16px;
+      background: var(--card-bg);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      box-shadow: var(--shadow-1);
+      transition: var(--transition);
+    }
+    .input-wrap:hover { border-color: rgba(2, 43, 66, 0.3); }
+    .input-wrap:focus-within { border-color: var(--primary-2); box-shadow: 0 0 0 4px rgba(4, 69, 99, 0.12); }
+    .input-icon { color: var(--primary-2); font-size: 0.95rem; flex-shrink: 0; }
+    .select, .input {
+      flex: 1; height: 50px; border: none; outline: none; background: transparent;
+      font-size: 1rem; font-weight: 800; color: var(--text);
+      font-family: var(--app-font);
+      cursor: pointer;
+    }
+    .input { cursor: text; font-weight: 700; }
+    .input::placeholder { color: rgba(71, 85, 105, 0.65); font-weight: 700; }
+    .more-actions {
+      margin-top: 12px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .more-actions .filter-btn {
+      flex: 1 1 220px;
+      justify-content: center;
+      white-space: nowrap;
+    }
+    .all-schedules-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: 1 1 220px;
+      min-width: 0;
+    }
+    .more-actions .all-schedules-actions .btn-instagram {
+      flex: 0 0 44px;
+      width: 44px;
+      padding: 0;
+      border: 0;
+      color: #fff;
+      background: linear-gradient(35deg, #feda75 0%, #fa7e1e 22%, #d62976 50%, #962fbf 76%, #4f5bd5 100%);
+      box-shadow: 0 4px 12px rgba(214, 41, 118, 0.22);
+      font-size: 23px;
+    }
+    .btn-instagram:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+    .btn-instagram.loading i { visibility: hidden; }
+    .btn-instagram.loading::after { width: 18px; height: 18px; left: 13px; }
+    .all-schedules-actions #btnDownloadAllClassesPdf { flex: 1 1 auto; min-width: 0; }
+    .more-actions .filter-btn[hidden] { display: none; }
+    .class-export-status {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      margin-top: 10px;
+    }
+    .class-export-status:empty { display: none; }
+    @media (max-width: 480px) {
+      .more-actions { flex-direction: column; }
+      .more-actions .filter-btn { width: 100%; flex: initial; }
+    }
+
+    /* طلبات القسم (department heads only) — ported from depHead/schedual.html.
+       #btnRequests starts hidden and is only ever revealed via JS for role 'head'. */
+    #btnRequests .request-count{
+      position:absolute; top:-7px; left:-7px; min-width:21px; height:21px;
+      padding:0 4px; border-radius:999px; display:inline-flex;
+      align-items:center; justify-content:center; background:var(--danger);
+      color:#fff; border:2px solid #fff; font-size:.7rem; font-weight:900;
+      line-height:1; box-shadow:0 2px 7px rgba(185,28,28,.3);
+    }
+    #btnRequests .request-count[hidden]{display:none;}
+
+    /* Current/past tabs at the top of طلبات القسم */
+    .requests-tabs {
+      display: flex;
+      gap: 6px;
+      padding: 4px;
+      background: var(--border-light);
+      border-radius: 14px;
+      margin-bottom: 16px;
+    }
+    .requests-tab {
+      flex: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      min-height: 44px;
+      border: none;
+      border-radius: 11px;
+      background: transparent;
+      color: var(--muted);
+      font-family: inherit;
+      font-weight: 800;
+      font-size: 0.88rem;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    .requests-tab.active {
+      background: var(--card-bg);
+      color: var(--primary);
+      box-shadow: var(--shadow-1);
+    }
+    .requests-tab .tab-count {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 20px;
+      height: 20px;
+      padding: 0 6px;
+      border-radius: 999px;
+      background: var(--border);
+      color: var(--text);
+      font-size: 0.74rem;
+      font-weight: 900;
+    }
+    .requests-tab.active .tab-count {
+      background: var(--primary-light);
+      color: var(--primary);
+    }
+    @media (max-width: 480px) {
+      .requests-tab span:not(.tab-count) { display: none; }
+      .requests-tab i { font-size: 1.05rem; }
+      .requests-tab .tab-count { display: inline-flex; }
+    }
+
+    /* Spacing between request cards — previously none, which is most of
+       why this sheet felt cramped on phone. */
+    #requestsContainer {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .request-card {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 18px;
+      background: var(--card-bg);
+      box-shadow: var(--shadow-1);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .request-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border-light);
+    }
+    .request-type {
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      font-weight: 900;
+    }
+    .type-cover { background: rgba(59, 130, 246, 0.12); color: #1d4ed8; }
+    .type-swap { background: rgba(168, 85, 247, 0.12); color: #7c3aed; }
+    .request-body { display: flex; flex-direction: column; }
+    .request-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 700;
+      padding: 9px 0;
+      border-bottom: 1px solid var(--border-light);
+    }
+    .request-row:last-child { border-bottom: none; padding-bottom: 0; }
+    .request-row:first-child { padding-top: 0; }
+    .request-label {
+      color: var(--muted);
+      font-size: 0.85rem;
+      min-width: 70px;
+      flex-shrink: 0;
+    }
+    .request-value {
+      color: var(--text);
+      font-weight: 800;
+    }
+    .status-badge {
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      font-weight: 900;
+    }
+    .status-pending { background: rgba(245, 158, 11, 0.12); color: #92400e; }
+    .status-accepted { background: rgba(16, 185, 129, 0.12); color: #065f46; }
+    .status-denied { background: rgba(239, 68, 68, 0.12); color: #991b1b; }
+    .request-footer {
+      display: flex;
+      gap: 10px;
+      margin-top: 2px;
+    }
+    @media (max-width: 768px) {
+      .request-footer { flex-wrap: wrap; }
+      .request-footer .filter-btn { flex: 1; min-width: 120px; }
+    }
+    /* Stack label above value instead of cramming them onto one line once
+       the value text (teacher names + subjects, notes...) gets long. */
+    @media (max-width: 480px) {
+      .request-card { padding: 14px; gap: 12px; }
+      .request-row { flex-direction: column; align-items: flex-start; gap: 3px; }
+      .request-label { min-width: 0; font-size: 0.78rem; }
+      .request-value { font-size: 0.92rem; }
+    }
+
+    /* Modal - IMPROVED FOR MOBILE */
+    .modal {
+      position: fixed; inset: 0; z-index: 70;
+      display: none;
+      align-items: center; justify-content: center;
+      padding: 16px;
+      width: 100%;
+      height: 100%;
+      box-sizing: border-box;
+    }
+    .modal.open { display: flex; }
+    .modal-backdrop {
+      position: absolute; inset: 0;
+      background: rgba(2, 43, 66, 0.55);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      animation: fadeIn 0.18s ease both;
+    }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    .modal-card {
+      position: relative;
+      width: 100%;
+      max-width: 720px;
+      max-height: min(92vh, calc(100vh - 32px));
+      background: rgba(255,255,255,0.97);
+      border: 1px solid rgba(226, 232, 240, 0.9);
+      border-radius: 22px;
+      box-shadow: 0 28px 70px rgba(2, 43, 66, 0.28);
+      overflow: hidden;
+      transform: translateY(14px) scale(0.97);
+      animation: popIn 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+      display: flex;
+      flex-direction: column;
+      padding-bottom: env(safe-area-inset-bottom, 0);
+    }
+    @keyframes popIn { to { transform: translateY(0) scale(1); } }
+    @media (prefers-reduced-motion: reduce) {
+      .modal-backdrop, .modal-card { animation: none; }
+    }
+
+    .modal-head {
+      padding: 18px;
+      background: linear-gradient(135deg, var(--primary-2), var(--primary));
+      border-bottom: 1px solid rgba(226, 232, 240, 0.85);
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      flex-shrink: 0;
+      position: relative;
+      overflow: hidden;
+    }
+    .modal-head::after {
+      content: "";
+      position: absolute; inset: 0;
+      background: radial-gradient(120% 140% at 100% 0%, rgba(255,255,255,0.14), transparent 55%);
+      pointer-events: none;
+    }
+    .modal-title {
+      font-weight: 900;
+      color: var(--headerText);
+      display: flex; align-items: center; gap: 10px;
+      font-size: 1.05rem;
+      flex: 1;
+      min-width: 0;
+      position: relative;
+    }
+    .modal-title span:last-child {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .icon-circle {
+      width: 38px; height: 38px; border-radius: 12px;
+      background: rgba(255, 255, 255, 0.16);
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      display: grid; place-items: center;
+      color: var(--headerText);
+      flex-shrink: 0;
+      position: relative;
+    }
+    .modal-close {
+      width: 44px; height: 44px; border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.24);
+      background: rgba(255, 255, 255, 0.14);
+      cursor: pointer;
+      display: grid; place-items: center;
+      color: var(--headerText);
+      transition: var(--transition);
+      flex-shrink: 0;
+      position: relative;
+    }
+    .modal-close:hover { transform: translateY(-2px) rotate(90deg); background: rgba(255, 255, 255, 0.22); }
+    .modal-body {
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      flex: 1;
+      min-height: 0;
+    }
+    .modal-footer {
+      padding: 16px 18px;
+      border-top: 1px solid rgba(226, 232, 240, 0.85);
+      display: flex; gap: 10px; justify-content: flex-start; flex-wrap: wrap;
+      background: rgba(248, 250, 252, 0.65);
+      flex-shrink: 0;
+    }
+    /* This author rule's display:flex otherwise beats the browser's own
+       [hidden]{display:none} default, so a hidden footer would still show
+       as an empty bordered bar without this. */
+    .modal-footer[hidden] { display: none; }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .info-box {
+      border: 1px solid rgba(226, 232, 240, 0.95);
+      background: rgba(255,255,255,0.8);
+      border-radius: 14px;
+      padding: 12px;
+      box-shadow: 0 8px 18px rgba(2, 43, 66, 0.06);
+    }
+    .info-k { color: var(--muted); font-weight: 800; font-size: 12px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+    .info-k i {
+      width: 22px; height: 22px; border-radius: 7px;
+      background: rgba(4, 69, 99, 0.08);
+      color: var(--primary-2);
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 11px; flex-shrink: 0;
+    }
+    .info-v { color: var(--text); font-weight: 900; font-size: 14px; }
+
+    .split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .hint {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 12px;
+      border-radius: 14px;
+      background: rgba(2, 43, 66, 0.06);
+      border: 1px solid rgba(2, 43, 66, 0.10);
+      color: var(--primary);
+      font-weight: 700;
+    }
+
+    .toast-wrap {
+      position: fixed;
+      bottom: 18px;
+      left: 18px;
+      z-index: 90;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      width: min(420px, calc(100% - 36px));
+    }
+    .toast {
+      border-radius: 16px;
+      background: rgba(255,255,255,0.92);
+      border: 1px solid rgba(226, 232, 240, 0.95);
+      box-shadow: 0 18px 50px rgba(2, 43, 66, 0.18);
+      padding: 12px 14px;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      animation: toastIn 0.22s ease both;
+    }
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .toast .ticon {
+      width: 38px; height: 38px; border-radius: 14px;
+      display: grid; place-items: center;
+      background: rgba(2, 43, 66, 0.08);
+      border: 1px solid rgba(2, 43, 66, 0.10);
+      color: var(--primary);
+      flex: 0 0 auto;
+    }
+    .toast .tmain { flex: 1 1 auto; min-width: 0; }
+    .toast .ttitle { font-weight: 900; color: var(--text); font-size: 0.95rem; margin-bottom: 2px; }
+    .toast .ttext { color: var(--muted); font-weight: 700; font-size: 0.86rem; }
+    .toast .tclose {
+      width: 40px; height: 40px; border-radius: 14px;
+      border: 1px solid rgba(2, 43, 66, 0.16);
+      background: rgba(255,255,255,0.7);
+      cursor: pointer;
+      display: grid; place-items: center;
+      transition: var(--transition);
+      color: var(--primary);
+      flex: 0 0 auto;
+    }
+    .toast .tclose:hover { transform: translateY(-2px); box-shadow: var(--shadow-1); }
+
+    /* Responsive - ENHANCED FOR MOBILE */
+    @media (max-width: 920px) {
+      .grid-wrap { overflow: auto; }
+      .grid { min-width: 1100px; }
+    }
+    @media (max-width: 768px) {
+      .site-header { padding: 14px 16px; }
+      .site-title { font-size: clamp(0.7rem, calc(7vw - 8px), 1.2rem); }
+      main { padding: 0 0 env(safe-area-inset-bottom, 0px); }
+      .board { gap: 12px; }
+      .board > .card {
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+        box-shadow: none;
+        padding: 16px 12px;
+      }
+      .card { padding: 16px; }
+      .sheet-body { padding: 16px; }
+      .filter-btn { padding: 0 14px; font-size: 0.85rem; }
+      .more-actions { flex-direction: column; }
+      .all-schedules-actions { flex: initial; width: 100%; }
+      .more-actions > .filter-btn { flex: initial; width: 100%; }
+      .table { display: none; }
+      .compact-table {
+        display: grid;
+        /* Keep the day header at its content height, even in a tall schedule. */
+        grid-template-rows: max-content;
+      }
+      .header-full { grid-column: 1; }
+      .info-grid, .split { grid-template-columns: 1fr; }
+      .modal-card { border-radius: 18px; max-height: 85vh; }
+
+      /* اليوم's compact view, tightened enough that the day header + all 7
+         lessons fit one phone screen without the page needing to scroll —
+         same content/layout as before (نفس التصميم), just less padding
+         and smaller text throughout. */
+      .compact-header {
+        display: flex; flex-wrap: nowrap;
+        align-items: center; justify-content: center;
+        padding: 8px 14px; gap: 8px 10px; margin-bottom: 6px;
+        border-radius: 14px;
+        background: linear-gradient(135deg, var(--primary-2), var(--primary));
+        border: 1px solid rgba(255,255,255,.16);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
+      }
+      .compact-header .header-day-row { min-width: 0; flex-shrink: 1; overflow: hidden; }
+      .compact-header .header-day-text {
+        display: flex; flex-direction: column; align-items: center;
+        gap: 2px; line-height: 1.3; min-width: 0;
+      }
+      .compact-header .header-day-name,
+      .compact-header .header-day-date {
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+      }
+      .compact-header .header-day-name { font-size: .96rem; font-weight: 800; }
+      .compact-header .header-day-date { font-size: .86rem; font-weight: 700; opacity: .94; direction: ltr; }
+      /* When the live badge is showing, pair it with the day/date as one
+         balanced cluster (a thin divider between them) instead of the two
+         stretching across separate half-width columns. The badge itself
+         never shrinks or wraps to a second line — the day/date truncate
+         first if a phone is too narrow for both on one row. */
+      .compact-header.header-has-live .header-day-row {
+        padding-inline-end: 12px; border-inline-end: 1px solid rgba(255,255,255,.18);
+      }
+      .compact-header .header-live {
+        flex-shrink: 0;
+        padding: 6px 12px; font-size: .8rem; gap: 7px; border-radius: 999px;
+        background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.2);
+        line-height: 1.4; white-space: nowrap;
+      }
+      .compact-header .header-live::before {
+        content: ''; width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+        background: #4ade80; box-shadow: 0 0 0 3px rgba(74,222,128,.28);
+      }
+      .compact-header .header-live-sep { display: none; }
+      .compact-header .header-live-lesson { opacity: .85; }
+      .compact-header .header-live-countdown { font-size: .88rem; font-weight: 900; direction: ltr; }
+      .compact-table { row-gap: 3px; }
+      .compact-th { padding: 6px 6px; font-size: 0.78rem; }
+      .compact-cell { padding: 5px 6px; min-height: 32px; font-size: 0.76rem; }
+      .compact-row { gap: 6px; padding-bottom: 3px; }
+      .compact-row.current-lesson .compact-cell { padding: 5px 6px; min-height: 30px; }
+
+      /* اليوم on phone: kill the page scroll. Everything from the site
+         header down is height-capped to the viewport instead of the
+         document growing past it — the schedule area is the one part
+         that may (rarely, on an unusually small screen) need its own
+         small internal scroll as a fallback, instead of the whole page
+         scrolling and the floating toolbar sliding out of view. Scoped
+         to body.today-locked (toggled in loadTodayForTeacher/
+         loadWeekForTeacher) so week view keeps scrolling normally. */
+      body.today-locked { height: 100vh; height: 100dvh; min-height: 0; overflow: hidden; }
+      body.today-locked main { min-height: 0; padding-bottom: env(safe-area-inset-bottom, 0px); overflow: hidden; display: flex; flex-direction: column; }
+      body.today-locked .board {
+        /* .board's own rule is margin:0 auto (centers it under its
+           max-width on wide screens). main becoming a flex column just
+           above makes .board a flex item, and on a flex item those same
+           auto side-margins do the OPPOSITE of centering a full-width
+           block: they shrink the item to its content width and center
+           that instead — a squished, centered card. Zeroing them here
+           keeps .board genuinely full width. */
+        margin: 0; width: 100%;
+        flex: 1 1 auto; min-height: 0;
+        display: flex; flex-direction: column;
+      }
+      body.today-locked .board > .card {
+        flex: 1 1 auto; min-height: 0;
+        display: flex; flex-direction: column;
+        overflow: hidden;
+        padding: 10px 10px 6px;
+      }
+      body.today-locked #containerMain { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+      body.today-locked .compact-table {
+        flex: 1 1 auto; min-height: 0;
+        /* Keep the highlight's outer ring inside the scrollable area. */
+        padding: 4px;
+        overflow-y: auto; -webkit-overflow-scrolling: touch;
+        scrollbar-width: none; -ms-overflow-style: none;
+      }
+      body.today-locked .compact-table::-webkit-scrollbar { display: none; }
+      body.today-locked #status.status-message { flex-shrink: 0; }
+
+      /* Mobile modal improvements */
+      .modal { padding: 12px; }
+      .modal-head { padding: 14px 16px; }
+      .modal-body { padding: 16px; gap: 12px; }
+      .modal-footer { padding: 14px 16px; gap: 8px; }
+      .modal-title { font-size: 1rem; }
+      .icon-circle { width: 32px; height: 32px; }
+      .modal-close { width: 40px; height: 40px; }
+      .info-box { padding: 10px; }
+    }
+    @media (min-width: 769px) { .compact-table { display: none; } }
+    @media (max-width: 480px) {
+      .badge { padding: 6px 10px; }
+      .sheet-header { padding: 14px 16px; }
+      .back-btn { right: 16px; padding: 0 14px; }
+      .sheet-title { font-size: 1rem; padding: 0 84px; }
+      .compact-cell, .compact-th { padding: 4px 5px; font-size: 0.72rem; min-height: 28px; }
+      .compact-header { padding: 8px 10px; gap: 10px; }
+
+      /* Extra small mobile improvements */
+      .modal { padding: 8px; }
+      .modal-card { border-radius: 16px; max-height: 95vh; }
+      .modal-head { padding: 12px 14px; }
+      .modal-body { padding: 14px; gap: 10px; }
+      .modal-footer { 
+        padding: 12px 14px; 
+        flex-direction: column;
+      }
+      .modal-footer .filter-btn {
+        width: 100%;
+        justify-content: center;
+      }
+      .modal-title { font-size: 0.95rem; }
+      .icon-circle { width: 30px; height: 30px; border-radius: 10px; }
+      .modal-close { width: 36px; height: 36px; border-radius: 12px; }
+      .hint { padding: 10px; font-size: 0.9rem; }
+      .info-k, .info-v { font-size: 0.9rem; }
+    }
+
+    /* Very small phones */
+    @media (max-width: 360px) {
+      .modal { padding: 6px; }
+      .modal-card { border-radius: 14px; }
+      .modal-head { padding: 10px 12px; }
+      .modal-body { padding: 12px; }
+      .modal-footer { padding: 10px 12px; }
+      .modal-title { font-size: 0.9rem; gap: 6px; }
+      .modal-close { width: 34px; height: 34px; }
+      .info-box { padding: 8px; }
+    }
+
+    /* Fix for landscape orientation */
+    @media (max-height: 500px) and (orientation: landscape) {
+      .modal-card { max-height: 85vh; }
+      .modal-body { max-height: 60vh; }
+    }
+
+    /* ============================================================
+       جدول القسم (dsSheet) — an in-page copy of depHead/dptschedual.html's
+       grid + popover UI (that file itself is untouched; this is a parallel
+       implementation living inside this page instead of a navigation).
+       Sizes/padding/fonts are copied from that page so it displays the
+       same way, not a condensed reinterpretation — class names are
+       "ds-"-prefixed since dptschedual.html's originals (.table, .chip,
+       .section, .list, .li, .popover, ...) are common enough names that
+       reusing them bare would be a real collision risk in this file.
+
+       Layout note: this page's shared .sheet-body scrolls itself
+       (overflow:auto, padded, max-width-capped) — fine for the other
+       sheets, which hold simple stacked content. The department grid
+       instead needs to be its OWN single scroll container (sticky thead +
+       sticky right column, like dptschedual.html's own table-scroll), so
+       .ds-sheet-body turns that default off and hands scrolling to
+       .ds-table-scroll alone. Every flex level in between carries
+       min-height:0 — without it a nested flex column refuses to shrink
+       below its content size and the inner scroll area either never gets
+       a bounded height (sticky thead stops sticking) or the sheet grows
+       past the viewport instead of scrolling. ============================================================ */
+    .ds-sheet-body {
+      padding: 0; max-width: none; margin: 0; gap: 0;
+      overflow: hidden; min-height: 0;
+    }
+    .ds-toolbar { display: flex; justify-content: center; padding: 14px 16px; flex-shrink: 0; }
+    .ds-date-btn {
+      border: none; cursor: pointer; font-family: inherit; font-weight: 900; font-size: .95rem;
+      color: var(--primary); display: inline-flex; align-items: center; gap: 10px;
+      padding: 10px 14px; border-radius: 999px; background: #fff; border: 1px solid var(--border);
+      box-shadow: var(--shadow-1); transition: var(--transition); max-width: 100%; position: relative;
+    }
+    .ds-date-btn:hover { transform: translateY(-1px); box-shadow: var(--shadow-2); }
+    .ds-date-btn small { color: var(--muted); font-weight: 900; font-size: .82rem; }
+    .ds-date-input-wrapper { position: absolute; inset: 0; opacity: 0; pointer-events: auto; }
+    .ds-mobile-date-input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; pointer-events: auto; font-size: 16px; border: 0; background: transparent; }
+
+    .ds-state { display: none; }
+    .ds-state.active { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
+    #dsStateLoading.active, #dsStateDenied.active, #dsStateLoadError.active {
+      align-items: center; justify-content: center; padding: 24px 16px; text-align: center;
+    }
+    .ds-spinner { width: 40px; height: 40px; border-radius: 50%; border: 4px solid var(--primary-light); border-top-color: var(--primary); animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .ds-msg-error { color: #a11; background: #fde8e8; border: 1px solid #f5c5c5; padding: 12px; border-radius: 14px; font-weight: 800; }
+    .ds-retry-btn { margin-top: 10px; border: 1px solid var(--border); border-radius: 12px; padding: 9px 18px; background: #fff; color: var(--primary); font: inherit; font-weight: 900; cursor: pointer; }
+
+    .ds-table-shell { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; width: 100%; background: #fff; border-top: 1px solid var(--border); }
+    .ds-table-scroll {
+      flex: 1 1 auto; min-height: 0; width: 100%; overflow: auto;
+      -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+      padding-bottom: max(12px, env(safe-area-inset-bottom, 0px));
+      position: relative;
+    }
+    table.ds-table { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 940px; direction: rtl; table-layout: fixed; }
+    .ds-table thead { position: sticky; top: 0; z-index: 20; background: #fff; }
+    .ds-table thead th {
+      position: relative; background: #fff; border-bottom: 2px solid var(--primary); padding: 16px 10px;
+      text-align: center; font-weight: 900; color: var(--primary); white-space: nowrap; overflow: visible;
+      box-shadow: 0 4px 12px rgba(2, 43, 66, .08);
+    }
+    .ds-th-stack { display: none; }
+    .ds-table th.ds-sticky-col, .ds-table td.ds-sticky-col {
+      position: sticky; right: 0; background: #fff; border-left: 2px solid var(--border);
+      text-align: center; min-width: 140px; padding: 12px 10px; z-index: 15;
+    }
+    .ds-table thead th.ds-sticky-col { z-index: 25; box-shadow: 4px 0 12px rgba(2, 43, 66, .08); }
+    .ds-table tbody td { border-bottom: 1px solid var(--border); padding: 10px; text-align: center; vertical-align: middle; background: #fff; }
+    .ds-table tbody tr:hover td { background: #fbfdff; }
+    .ds-teacher-name {
+      font-weight: 900; color: var(--text); font-size: .95rem; line-height: 1.2;
+      display: flex; align-items: center; justify-content: center; min-height: 38px; padding: 0 4px;
+      word-break: keep-all; overflow-wrap: break-word;
+    }
+
+    .ds-cell-btn-taken, .ds-cell-btn-not-taken, .ds-cell-empty {
+      width: 56px; height: 38px; display: inline-flex; align-items: center; justify-content: center;
+      border-radius: 12px; font-weight: 900; font-family: inherit;
+    }
+    .ds-cell-btn-taken { border: 1px solid rgba(16,185,129,.25); background: rgba(16,185,129,.10); color: var(--success); cursor: pointer; transition: var(--transition); box-shadow: 0 10px 20px rgba(16,185,129,.10); }
+    .ds-cell-btn-not-taken { border: 1px solid rgba(239,68,68,.25); background: rgba(239,68,68,.10); color: var(--danger); cursor: pointer; transition: var(--transition); box-shadow: 0 10px 20px rgba(239,68,68,.10); }
+    .ds-cell-btn-taken:hover { transform: translateY(-1px); box-shadow: 0 14px 26px rgba(16,185,129,.14); border-color: rgba(16,185,129,.35); }
+    .ds-cell-btn-not-taken:hover { transform: translateY(-1px); box-shadow: 0 14px 26px rgba(239,68,68,.14); border-color: rgba(239,68,68,.35); }
+    .ds-cell-empty { border: 1px solid rgba(2,43,66,.12); background: #f8fafc; color: rgba(100,116,139,.8); user-select: none; }
+
+    .ds-popover-backdrop { position: fixed; inset: 0; background: rgba(2,6,23,.12); display: none; z-index: 999; }
+    .ds-popover-backdrop.open { display: block; }
+    .ds-popover {
+      position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;
+      width: min(520px, 92vw); max-height: min(520px, 70vh); overflow: auto;
+      background: #fff; border: 1px solid var(--border); border-radius: 18px;
+      box-shadow: 0 18px 44px rgba(2,6,23,.18); display: none;
+    }
+    .ds-popover.open { display: block; }
+    .ds-pop-head {
+      position: sticky; top: 0; background: rgba(255,255,255,.96); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--border); padding: 14px; display: flex; align-items: flex-start;
+      justify-content: space-between; gap: 10px;
+    }
+    .ds-pop-title { display: flex; flex-direction: column; gap: 2px; }
+    .ds-pop-title b { color: var(--primary); font-size: 1.02rem; }
+    .ds-pop-title span { color: var(--muted); font-weight: 900; font-size: .9rem; }
+    .ds-pop-close {
+      width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--border); background: #fff;
+      color: var(--muted); cursor: pointer; font-size: 20px; line-height: 1; transition: var(--transition);
+      box-shadow: 0 10px 20px rgba(2,6,23,.05);
+    }
+    .ds-pop-close:hover { background: var(--primary-light); transform: translateY(-1px); box-shadow: 0 14px 26px rgba(2,6,23,.08); }
+    .ds-pop-body { padding: 14px 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+
+    .ds-section { border: 1px solid var(--border); background: #fff; border-radius: 14px; padding: 12px; box-shadow: 0 10px 22px rgba(2,6,23,.04); }
+    .ds-sec-title { font-weight: 900; color: var(--primary); display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--border); margin-bottom: 10px; }
+    .ds-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .ds-chip { display: inline-flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 999px; background: var(--primary-light); border: 1px solid var(--border); font-weight: 900; color: var(--text); font-size: .9rem; }
+
+    .ds-alert, .ds-success {
+      display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; font-weight: 900;
+    }
+    .ds-alert { border: 1px solid rgba(239,68,68,.28); background: linear-gradient(180deg, rgba(239,68,68,.12), #fff); color: #991b1b; }
+    .ds-success { border: 1px solid rgba(16,185,129,.28); background: linear-gradient(180deg, rgba(16,185,129,.12), #fff); color: #065f46; }
+    .ds-alert .ds-dot, .ds-success .ds-dot { width: 10px; height: 10px; border-radius: 999px; flex: 0 0 auto; }
+    .ds-alert .ds-dot { background: var(--danger); box-shadow: 0 0 0 6px rgba(239,68,68,.12); }
+    .ds-success .ds-dot { background: var(--success); box-shadow: 0 0 0 6px rgba(16,185,129,.12); }
+
+    .ds-btn-cover { width: 100%; height: 46px; border-radius: 12px; border: 1px solid var(--primary); background: #fff; color: var(--primary); font-weight: 900; font-size: .95rem; cursor: pointer; transition: var(--transition); font-family: inherit; }
+    .ds-btn-cover:hover { background: var(--primary-light); transform: translateY(-1px); }
+    .ds-btn-take-attendance { width: 100%; height: 48px; border-radius: 12px; border: none; background: linear-gradient(145deg, var(--primary-2), var(--primary)); color: #fff; font-weight: 900; font-size: .95rem; cursor: pointer; box-shadow: 0 14px 30px rgba(2,43,66,.26); transition: var(--transition); font-family: inherit; }
+    .ds-btn-take-attendance:hover { transform: translateY(-1px); }
+    .ds-btn-assign { width: 100%; height: 46px; border-radius: 12px; border: none; background: var(--border); color: var(--muted); font-weight: 900; font-size: .95rem; cursor: not-allowed; transition: var(--transition); font-family: inherit; }
+    .ds-btn-assign:not(:disabled) { background: linear-gradient(180deg, var(--primary-2), var(--primary)); color: #fff; cursor: pointer; box-shadow: 0 14px 30px rgba(2,43,66,.26); }
+    .ds-btn-assign:not(:disabled):hover { transform: translateY(-1px); }
+
+    .ds-cover-list { display: flex; flex-direction: column; gap: 8px; margin: 10px 0; max-height: 220px; overflow: auto; }
+    .ds-cover-option {
+      display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-radius: 12px;
+      border: 1px solid var(--border); background: #fff; color: var(--text); font-weight: 800; cursor: pointer;
+      text-align: right; transition: border-color .12s ease, background .12s ease; font-family: inherit;
+    }
+    .ds-cover-option:hover { background: var(--primary-light); }
+    .ds-cover-option.selected { border-color: var(--primary); background: rgba(59,130,246,.08); color: var(--primary); }
+
+    @media (max-width: 480px) {
+      .ds-th-full { display: none; }
+      .ds-th-stack { display: flex; flex-direction: column; align-items: center; gap: 2px; line-height: 1.15; }
+      .ds-th-word { font-size: .68rem; font-weight: 800; color: var(--muted); }
+      .ds-th-ordinal { font-size: 1rem; font-weight: 900; color: var(--primary); white-space: nowrap; }
+      table.ds-table { min-width: 760px; }
+      .ds-table th.ds-sticky-col, .ds-table td.ds-sticky-col { min-width: 120px; }
+      .ds-table thead th { padding: 10px 4px; }
+      .ds-teacher-name { font-size: .88rem; padding: 0 2px; }
+      .ds-date-btn { padding: 12px 16px; min-height: 48px; }
+      .ds-pop-head { padding: 12px; }
+      .ds-pop-body { padding: 12px 12px 14px; gap: 10px; }
+      .ds-chip { font-size: .85rem; padding: 7px 9px; }
+      .ds-cover-list { max-height: 32vh; }
+    }
+
+    /* Base chrome shared/attendance.js relies on the host page to provide
+       (.sheet, .modal, .btn, .btn.primary, .btn.cancel — attendance.js's
+       own bundled styles only add #attendanceSheet/#att*Modal-scoped
+       refinements on top of this). This page's own #modal uses its own
+       .modal-backdrop/.modal-card names, so these generic .overlay/.card
+       names are free to add without touching that existing modal. */
+    .btn { font-family: var(--app-font); width: 100%; min-height: 56px; border: none; border-radius: 14px; cursor: pointer; font-weight: 800; font-size: 1rem; padding: 14px 20px; transition: var(--transition); display: flex; align-items: center; justify-content: center; gap: 10px; }
+    .btn.cancel { background: #fff; color: var(--primary); border: 1px solid rgba(2,43,66,.25); }
+    .btn.primary { background: linear-gradient(145deg, var(--primary-2), var(--primary)); color: #fff; }
+    .modal .overlay { position: absolute; inset: 0; background: rgba(2, 43, 66, 0.55); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+    .modal .card { position: relative; z-index: 1; width: min(92vw, 420px); max-height: min(92vh, calc(100vh - 32px)); overflow: auto; background: #fff; border-radius: var(--radius); box-shadow: var(--shadow-2); padding: 22px; }
+    .modal .card h3 { margin: 0 0 8px; font-size: 1.1rem; color: var(--primary); font-weight: 900; }
+    .modal .card p { margin: 0 0 12px; color: var(--muted); font-weight: 700; }
+    .modal .card .row { display: flex; gap: 10px; justify-content: flex-start; margin-top: 16px; flex-wrap: wrap; }
+
+    /* Match the shared attendance sheet's host styles in Teachers/user.html. */
+    #attendanceSheet, .modal[id^="att"] {
+      --primary: #033C54; --primary-light: #065372; --primary-extra-light: #eef5fb;
+      --muted: #6b7f9f; --border: #e6edf7; --chip: #eef5fb;
+      --shadow-1: 0 8px 22px rgba(3, 60, 84, .14);
+      --app-font: 'Noto Kufi Arabic', system-ui, sans-serif;
+      font-family: var(--app-font); line-height: 1.6;
+    }
+    #attendanceSheet { z-index: 1000; background: #fff; overflow: hidden; }
+    .modal[id^="att"] { z-index: 1100; }
+    #attendanceSheet .sheet-header {
+      justify-content: flex-start; gap: 16px; padding: 18px 20px;
+      box-shadow: 0 2px 10px rgba(3,60,84,.06); flex-shrink: 0;
+    }
+    #attendanceSheet .sheet-title { padding: 0; font-size: 1.2rem; }
+    #attendanceSheet .back-btn { position: static; transform: none; }
+    #attendanceSheet .back-btn:hover { transform: translateY(-2px); }
+    #attendanceSheet .sheet-body {
+      width: min(1100px, 100%); max-width: 1100px; min-height: 0;
+      padding: 24px 20px; touch-action: pan-y; -webkit-overflow-scrolling: touch;
+    }
+    .modal[id^="att"] .btn.primary { background: linear-gradient(145deg, var(--primary-light), var(--primary)); }
+    @media (max-width: 768px) {
+      #attendanceSheet .sheet-header { padding: 16px; }
+      #attendanceSheet .sheet-body { padding: 20px 16px; }
+    }
+
+    /* ============================================================
+       جدول المدرسة (ssSheet) — an in-page copy of
+       Teachers/schoolschedule.html's whole-school grid (every teacher,
+       grouped by department with sticky separator rows) plus its lesson
+       popover and طلب تبديل request form. That file is never navigated
+       to or edited; this is a parallel implementation living inside this
+       page. Same single-scroll-container layout fix as the جدول القسم
+       sheet above: .ss-sheet-body hands scrolling to .ss-table-scroll
+       alone instead of scrolling itself, with min-height:0 threaded
+       through every flex level in between.
+       ============================================================ */
+    .ss-sheet-body {
+      padding: 0; max-width: none; margin: 0; gap: 0;
+      overflow: hidden; min-height: 0;
+    }
+    .ss-toolbar { display: flex; justify-content: center; padding: 14px 16px; flex-shrink: 0; }
+    .ss-date-btn {
+      border: none; cursor: pointer; font-family: inherit; font-weight: 900; font-size: .95rem;
+      color: var(--primary); display: inline-flex; align-items: center; gap: 10px;
+      padding: 10px 14px; border-radius: 999px; background: #fff; border: 1px solid var(--border);
+      box-shadow: var(--shadow-1); transition: var(--transition); max-width: 100%; position: relative;
+    }
+    .ss-date-btn:hover { transform: translateY(-1px); box-shadow: var(--shadow-2); }
+    .ss-date-btn small { color: var(--muted); font-weight: 900; font-size: .82rem; }
+    .ss-date-input-wrapper { position: absolute; inset: 0; opacity: 0; pointer-events: auto; }
+    .ss-mobile-date-input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; pointer-events: auto; font-size: 16px; border: 0; background: transparent; }
+
+    .ss-state { display: none; }
+    .ss-state.active { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
+    #ssStateLoading.active, #ssStateDenied.active {
+      align-items: center; justify-content: center; padding: 24px 16px; text-align: center;
+    }
+    .ss-spinner { width: 40px; height: 40px; border-radius: 50%; border: 4px solid var(--primary-light); border-top-color: var(--primary); animation: spin 1s linear infinite; }
+    .ss-msg-error { color: #a11; background: #fde8e8; border: 1px solid #f5c5c5; padding: 12px; border-radius: 14px; font-weight: 800; }
+
+    .ss-table-shell { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; width: 100%; background: #fff; border-top: 1px solid var(--border); }
+    .ss-table-scroll {
+      flex: 1 1 auto; min-height: 0; width: 100%; overflow: auto;
+      -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+      padding-bottom: max(12px, env(safe-area-inset-bottom, 0px));
+      position: relative;
+    }
+    table.ss-table { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 940px; direction: rtl; table-layout: fixed; }
+    .ss-table thead { position: sticky; top: 0; z-index: 20; background: #fff; }
+    .ss-table thead th {
+      position: relative; background: #fff; border-bottom: 2px solid var(--primary); padding: 16px 10px;
+      text-align: center; font-weight: 900; color: var(--primary); white-space: nowrap; overflow: visible;
+      box-shadow: 0 4px 12px rgba(2, 43, 66, .08);
+    }
+    .ss-lesson-th { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; line-height: 1.35; }
+    .ss-th-ordinal { font-size: 1rem; font-weight: 900; color: var(--primary); }
+    .ss-th-time { font-size: .74rem; font-weight: 700; color: var(--muted); direction: ltr; unicode-bidi: isolate; }
+
+    .ss-table th.ss-sticky-col, .ss-table td.ss-sticky-col {
+      position: sticky; right: 0; background: #fff; border-left: 2px solid var(--border);
+      text-align: center; min-width: 150px; padding: 12px 10px; z-index: 15;
+    }
+    .ss-table thead th.ss-sticky-col { z-index: 25; box-shadow: 4px 0 12px rgba(2, 43, 66, .08); }
+    .ss-table tbody td { border-bottom: 1px solid var(--border); padding: 10px; text-align: center; vertical-align: middle; background: #fff; }
+    .ss-table tbody tr:hover td { background: #fbfdff; }
+    .ss-teacher-name {
+      font-weight: 900; color: var(--text); font-size: .95rem; line-height: 1.2;
+      display: flex; align-items: center; justify-content: center; min-height: 38px; padding: 0 4px;
+      word-break: keep-all; overflow-wrap: break-word;
+    }
+
+    /* Department separator — pinned just under the sticky column-header
+       row (measured in JS, not guessed — the header's real height shifts
+       with the two-line lesson/time labels) so it stays visible for as
+       long as you're scrolled through that department's teachers. */
+    tr.ss-dept-row td {
+      position: sticky; top: var(--ss-theadH, 54px); z-index: 19;
+      padding: 0; border-bottom: none;
+    }
+    .ss-dept-sep {
+      position: relative; height: 44px;
+      display: flex; align-items: center; justify-content: center;
+      background: linear-gradient(145deg, var(--primary-2), var(--primary));
+      color: #fff; box-shadow: 0 4px 14px rgba(2,43,66,.22);
+    }
+    .ss-dept-sep-name {
+      position: absolute; top: 50%; left: var(--ss-deptCenterX, 50%);
+      transform: translate(-50%, -50%);
+      max-width: calc(100vw - 32px); text-align: center;
+      font-weight: 900; font-size: .95rem;
+    }
+
+    .ss-cell-btn {
+      width: 100%; min-width: 56px; height: 38px;
+      display: inline-flex; align-items: center; justify-content: center;
+      border-radius: 12px; border: 1px solid rgba(2,43,66,.16);
+      background: rgba(2,43,66,.06); color: var(--primary);
+      font-weight: 900; cursor: pointer; transition: var(--transition);
+      font-family: inherit; padding: 0 4px; font-size: .86rem;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .ss-cell-btn:hover { transform: translateY(-1px); box-shadow: 0 10px 20px rgba(2,43,66,.14); border-color: rgba(2,43,66,.32); background: rgba(2,43,66,.10); }
+    .ss-cell-empty { display: inline-flex; align-items: center; justify-content: center; width: 100%; min-width: 56px; height: 38px; border-radius: 12px; border: 1px solid rgba(2,43,66,.10); background: #f8fafc; color: rgba(100,116,139,.7); font-weight: 900; user-select: none; }
+
+    @media (max-width: 860px) {
+      .ss-th-time { font-size: .68rem; }
+      table.ss-table { min-width: 760px; }
+      .ss-table th.ss-sticky-col, .ss-table td.ss-sticky-col { min-width: 120px; }
+      .ss-table thead th { padding: 10px 4px; }
+      .ss-teacher-name { font-size: .85rem; padding: 0 2px; }
+      .ss-date-btn { padding: 8px 14px; min-height: 40px; }
+      .ss-date-btn small { display: none; }
+      .ss-info-grid { grid-template-columns: 1fr; }
+    }
+
+    /* Lesson popover — info view, then (on demand) the طلب تبديل request
+       form view, swapped in place within the same popover, same as
+       Teachers/schoolschedule.html's own. */
+    .ss-popover-backdrop { position: fixed; inset: 0; background: rgba(15,23,42,.30); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); display: none; z-index: 999; }
+    .ss-popover-backdrop.open { display: block; }
+    .ss-popover {
+      position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;
+      width: min(380px, 92vw); max-height: min(520px, 80vh);
+      background: #fff; border: 1px solid var(--border); border-radius: 20px;
+      box-shadow: 0 24px 60px rgba(2,6,23,.22); display: none;
+      flex-direction: column; overflow: hidden;
+      transition: width .18s ease;
+    }
+    .ss-popover.open { display: flex; }
+    .ss-popover.ss-popover-wide { width: min(420px, 94vw); max-height: min(560px, 84vh); }
+
+    .ss-pop-head {
+      flex-shrink: 0; width: 100%; box-sizing: border-box; background: #fff;
+      border-bottom: 1px solid var(--border); padding: 14px 16px;
+      display: grid; grid-template-columns: 36px 1fr 36px; align-items: center; gap: 8px;
+    }
+    .ss-pop-title { width: 100%; min-width: 0; text-align: center; }
+    .ss-pop-title b { color: var(--primary); font-size: 1.05rem; display: block; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ss-pop-title span { color: var(--muted); font-weight: 900; font-size: .82rem; display: block; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 1px; }
+    .ss-pop-back, .ss-pop-close {
+      width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--border);
+      background: var(--primary-light); color: var(--primary); cursor: pointer;
+      display: grid; place-items: center; transition: var(--transition);
+    }
+    .ss-pop-back svg, .ss-pop-close svg { width: 15px; height: 15px; }
+    .ss-pop-back:hover, .ss-pop-close:hover { background: rgba(2,43,66,.12); transform: scale(1.06); }
+    .ss-pop-back.ss-pop-back-hidden { visibility: hidden; pointer-events: none; }
+
+    .ss-pop-body { padding: 18px; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; }
+
+    @media (max-width: 480px) {
+      .ss-popover { width: calc(100vw - 28px); max-height: 88vh; }
+      .ss-popover.ss-popover-wide { width: calc(100vw - 20px); max-height: 90vh; }
+      .ss-pop-head { padding: 14px 14px; gap: 6px; }
+      .ss-pop-title b { font-size: 1rem; }
+      .ss-pop-title span { white-space: normal; }
+    }
+
+    .ss-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .ss-info-cell { border: 1px solid var(--border); border-radius: 14px; padding: 12px 13px; background: #fbfdff; }
+    .ss-info-cell-label { color: var(--muted); font-weight: 800; font-size: .74rem; margin-bottom: 4px; }
+    .ss-info-cell-value { color: var(--text); font-weight: 900; font-size: .92rem; line-height: 1.3; }
+
+    .ss-req-context {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 9px 12px; border-radius: 12px; background: #fbfdff; border: 1px solid var(--border);
+      color: var(--muted); font-weight: 800; font-size: .82rem; text-align: center;
+    }
+
+    .ss-pop-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 2px; }
+    .ss-pop-btn {
+      width: 100%; min-height: 50px; border-radius: 14px; cursor: pointer; font-family: inherit;
+      font-weight: 900; font-size: .95rem; display: flex; align-items: center; justify-content: center;
+      gap: 8px; transition: var(--transition); border: none;
+    }
+    .ss-pop-btn.solid { background: linear-gradient(145deg, var(--primary-2), var(--primary)); color: #fff; box-shadow: 0 14px 30px rgba(2,43,66,.26); }
+    .ss-pop-btn.solid:hover { transform: translateY(-1px); }
+    .ss-pop-btn:disabled { opacity: .55; cursor: not-allowed; transform: none !important; }
+
+    .ss-form-field { display: flex; flex-direction: column; gap: 6px; }
+    .ss-form-field label { font-weight: 800; font-size: .82rem; color: var(--muted); }
+    .ss-form-field select, .ss-form-field input {
+      width: 100%; height: 46px; border-radius: 12px; border: 1px solid var(--border);
+      background: #fff; padding: 0 12px; font-family: inherit; font-weight: 800; color: var(--text);
+      font-size: .9rem; transition: var(--transition);
+    }
+    .ss-form-field select:disabled, .ss-form-field input:disabled { background: var(--page); color: var(--muted); cursor: not-allowed; }
+    .ss-form-field select:focus, .ss-form-field input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(2,43,66,.10); }
+    .ss-form-hint { font-size: .78rem; color: var(--muted); font-weight: 700; margin-top: -2px; }
+
+    .ss-req-hint {
+      display: flex; align-items: flex-start; gap: 8px; padding: 11px 12px; border-radius: 14px;
+      background: var(--primary-light); border: 1px solid var(--border); color: var(--primary);
+      font-weight: 800; font-size: .84rem; line-height: 1.5;
+    }
+    .ss-req-hint.err { background: rgba(239,68,68,.10); border-color: rgba(239,68,68,.22); color: #991b1b; }
+    .ss-req-hint svg { width: 16px; height: 16px; flex-shrink: 0; margin-top: 2px; }
+
+    /* ============================================================
+       فصولي (mc*) — an in-page copy of Teachers/user.html's own class
+       buttons + student sheet (own classes + today's تغطية coverage,
+       tapping one opens the class's student list with search and
+       تسجيل الغياب). That page is never navigated to or edited; this is
+       a parallel implementation living inside this page's sidebar.
+       ============================================================ */
+    @property --mc-border-angle { syntax: '<angle>'; inherits: false; initial-value: 0turn; }
+
+    .sidebar-classes { display: flex; flex-direction: column; gap: 6px; padding: 2px 2px 4px; }
+    .sidebar-class-btn {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      width: 100%; min-height: 46px; padding: 10px 14px;
+      border-radius: var(--radius-sm); border: none; cursor: pointer;
+      background: linear-gradient(145deg, var(--primary-2), var(--primary));
+      color: #fff; font-weight: 900; font-size: .92rem; font-family: inherit;
+      box-shadow: 0 10px 22px rgba(2,43,66,.24);
+      transition: var(--transition);
+      position: relative; isolation: isolate;
+    }
+    .sidebar-class-btn:hover { transform: translateY(-2px); box-shadow: 0 14px 28px rgba(2,43,66,.3); }
+    .sidebar-class-btn.mc-current-lesson {
+      box-shadow: 0 0 0 1.5px rgba(2,43,66,.3), 0 0 14px rgba(2,43,66,.18), 0 14px 28px rgba(2,43,66,.32);
+      animation: mcClassLessonPulse 3.6s ease-in-out infinite;
+    }
+    .sidebar-class-btn.mc-current-lesson::before {
+      content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1.5px;
+      background: conic-gradient(from var(--mc-border-angle), transparent 0%, transparent 78%, rgba(148,197,255,.55) 89%, rgba(219,234,254,.9) 94%, rgba(148,197,255,.55) 99%, transparent 100%);
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor;
+      mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      mask-composite: exclude;
+      pointer-events: none;
+      animation: mcBorderChase 4s linear infinite;
+    }
+    @keyframes mcClassLessonPulse {
+      0%, 100% { box-shadow: 0 0 0 1.5px rgba(2,43,66,.24), 0 0 10px rgba(2,43,66,.14), 0 14px 28px rgba(2,43,66,.3); }
+      50% { box-shadow: 0 0 0 2px rgba(2,43,66,.34), 0 0 16px rgba(2,43,66,.22), 0 14px 28px rgba(2,43,66,.3); }
+    }
+    @keyframes mcBorderChase { to { --mc-border-angle: 1turn; } }
+
+    .mc-sheet-body { display: flex; flex-direction: column; gap: 16px; }
+    .mc-hero {
+      border: 2px dashed var(--border); background: var(--primary-light);
+      border-radius: var(--radius); padding: 18px;
+      display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;
+    }
+    .mc-class-name { margin: 0; font-size: clamp(1.15rem, 4vw, 1.5rem); color: var(--primary); font-weight: 900; }
+    .mc-btn-attend {
+      min-height: 46px; padding: 0 20px; border: none; border-radius: var(--radius-sm);
+      background: linear-gradient(145deg, var(--primary-2), var(--primary)); color: #fff;
+      font-weight: 900; font-size: .92rem; cursor: pointer; font-family: inherit;
+      box-shadow: 0 10px 22px rgba(2,43,66,.24); transition: var(--transition);
+    }
+    .mc-btn-attend:hover { transform: translateY(-2px); }
+    .mc-btn-attend.mc-attend-edit { background: linear-gradient(145deg, #c98a1f, var(--warning)); box-shadow: 0 10px 22px rgba(160,109,0,.28); }
+
+    .mc-input-wrap {
+      display: flex; align-items: center; gap: 10px; min-height: 50px; padding: 0 14px;
+      background: var(--card-bg); border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+      transition: var(--transition);
+    }
+    .mc-input-wrap:focus-within { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-light); }
+    .mc-input-icon { color: var(--muted); font-size: .9rem; flex-shrink: 0; }
+    .mc-input { flex: 1; height: 46px; border: none; outline: none; background: transparent; font-size: 16px; color: var(--text); font-family: inherit; }
+    .mc-input::placeholder { color: var(--muted); }
+
+    .mc-student-grid { display: grid; gap: 12px; grid-template-columns: 1fr; }
+    @media (min-width: 520px) { .mc-student-grid { grid-template-columns: repeat(2, 1fr); } }
+    .mc-student-item {
+      width: 100%; min-height: 54px; padding: 14px 16px; border: 1px solid var(--border);
+      border-radius: var(--radius-sm); background: var(--card-bg); box-shadow: var(--shadow-1);
+      font-weight: 800; color: var(--text); cursor: pointer; transition: var(--transition);
+    }
+    .mc-student-item:hover { transform: translateY(-2px); box-shadow: var(--shadow-2); }
+    .mc-student-item.mc-special-case { background: #fff8e1; border: 2px solid #ffd54f; box-shadow: 0 8px 20px rgba(255,213,79,.22); }
+    .mc-student-item-content { display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 10px; }
+    .mc-student-name-container { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
+    .mc-student-name-container span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .mc-special-case-icon { width: 17px; height: 17px; margin-inline-start: 6px; flex-shrink: 0; }
+    .mc-student-number-badge {
+      background: var(--primary-light); color: var(--primary); font-size: .8rem; font-weight: 800;
+      padding: 3px 10px; border-radius: 12px; border: 1px solid var(--border); flex-shrink: 0;
+      margin-inline-start: auto; min-width: 34px; text-align: center;
+    }
+    .mc-loading { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 24px; }
+
+    /* ============================================================
+       إدارة الحصة popup — scoped under la- (Lesson Actions) so this
+       redesign doesn't touch the shared openModal()/.info-grid/
+       .filter-btn shell the other popups (cover/swap request forms,
+       class info, ...) still use.
+       ============================================================ */
+    .la-hero {
+      background: linear-gradient(145deg, var(--primary-2), var(--primary));
+      color: #fff; border-radius: 18px; padding: 18px 20px;
+      display: flex; align-items: center; justify-content: space-between; gap: 14px;
+      position: relative; overflow: hidden; isolation: isolate;
+    }
+    .la-hero::after {
+      content: ""; position: absolute; inset: 0;
+      background: radial-gradient(120% 140% at 100% 0%, rgba(255,255,255,.16), transparent 55%);
+      pointer-events: none;
+    }
+    .la-hero-main { min-width: 0; }
+    .la-hero-class { font-size: clamp(1.5rem, 6vw, 2rem); font-weight: 900; line-height: 1.1; }
+    .la-hero-lesson { margin-top: 6px; font-weight: 800; font-size: .92rem; color: rgba(255,255,255,.86); display: flex; align-items: center; gap: 6px; }
+    .la-hero-badge {
+      flex-shrink: 0; width: 52px; height: 52px; border-radius: 16px;
+      background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.24);
+      display: grid; place-items: center; font-size: 1.3rem; color: #fff;
+    }
+
+    .la-chips { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
+    .la-chip {
+      border: 1px solid var(--border); background: var(--card-bg);
+      border-radius: 14px; padding: 11px 12px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .la-chip-icon {
+      width: 32px; height: 32px; border-radius: 10px; flex-shrink: 0;
+      background: var(--primary-light); color: var(--primary-2);
+      display: grid; place-items: center; font-size: .85rem;
+    }
+    .la-chip-text { min-width: 0; }
+    .la-chip-label { color: var(--muted); font-weight: 800; font-size: 11px; }
+    .la-chip-value { color: var(--text); font-weight: 900; font-size: .86rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    .la-actions { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+    .la-actions-row { display: flex; gap: 10px; width: 100%; }
+    .la-btn-secondary {
+      flex: 1; height: 48px; border-radius: 14px; border: 1px solid rgba(2,43,66,.18);
+      background: #fff; color: var(--primary); font-weight: 800; font-size: .88rem;
+      cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      transition: var(--transition); font-family: inherit;
+    }
+    .la-btn-secondary:hover { transform: translateY(-2px); box-shadow: var(--shadow-1); border-color: rgba(2,43,66,.32); }
+    .la-btn-attendance {
+      width: 100%; height: 58px; border-radius: 16px; border: none;
+      background: linear-gradient(145deg, var(--primary-2), var(--primary)); color: #fff;
+      font-weight: 900; font-size: 1rem; cursor: pointer; font-family: inherit;
+      display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+      box-shadow: 0 16px 34px rgba(2,43,66,.32); transition: var(--transition);
+    }
+    .la-btn-attendance:hover { transform: translateY(-2px); box-shadow: 0 20px 40px rgba(2,43,66,.38); }
+    .la-btn-attendance i { font-size: 1.05rem; }
+
+    @media (max-width: 480px) {
+      .la-hero { padding: 16px; border-radius: 16px; }
+      .la-hero-badge { width: 44px; height: 44px; border-radius: 13px; font-size: 1.1rem; }
+      .la-btn-attendance { height: 54px; font-size: .95rem; }
+      .la-btn-secondary { height: 44px; font-size: .84rem; }
+    }
+
+    /* ========= الطلاب sheet (#supervisorStudentsSheet) =========
+       Ported from /supervisors/supervisorstudents.html — that page is
+       never navigated to or edited, this is a parallel implementation
+       living inside this page's sheet stack (see the ds/ss sheets above
+       for the same convention). Every selector below is scoped under
+       #supervisorStudentsSheet since the source page's class names
+       (.btn, .row, .section, .card, .badge, .pill, .empty, ...) are far
+       too generic to add unscoped without colliding with this page's own
+       CSS. --primary/--muted/--border/etc are redefined on the container
+       itself (same trick #attendanceSheet uses above) so every var(--x)
+       reference below resolves to supervisorstudents.html's own palette
+       without renaming a single one of them. */
+#supervisorStudentsSheet {
+  --primary: #033C54; --primary-light: #e8f1f5; --page: #f6f8fb; --text: #0f172a;
+  --muted: #6b7f9f; --border: #e6edf7; --shadow-1: 0 8px 22px rgba(3,60,84,.08);
+  --radius: 16px; --focus: #79b3c8; --green: #1a7f37; --yellow: #a06d00; --red: #b42318;
+  --greenBg: rgba(26,127,55,.08); --yellowBg: rgba(160,109,0,.10); --redBg: rgba(180,35,24,.10);
+  --chip: #eef5fb;
+  --transition: transform .12s ease, box-shadow .12s ease, background-color .12s ease, border-color .12s ease, color .12s ease, opacity .12s ease;
+  font-family: var(--app-font), system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  line-height: 1.6;
+}
+#supervisorStudentsSheet * { box-sizing: border-box; }
+#supervisorStudentsSheet, #supervisorStudentsSheet .sheet-body { max-width: 100%; overflow-x: hidden; }
+#supervisorStudentsSheet main { flex:1; padding:32px 20px 40px; display:flex; max-width: 100%; }
+#supervisorStudentsSheet .column { width:min(880px, 96vw); max-width: 100%; margin:0 auto; display:flex; flex-direction:column; align-items:center; gap:24px; }
+#supervisorStudentsSheet .panel { width:100%; background:#fff; border:1px solid var(--border); border-radius:20px; padding:24px 20px; box-shadow: var(--shadow-1) }
+#supervisorStudentsSheet .state { display:none }
+#supervisorStudentsSheet .state.active { display:block }
+#supervisorStudentsSheet .loading { display:grid; place-items:center; gap:16px; padding:32px }
+#supervisorStudentsSheet .spinner { width:44px; height:44px; border-radius:50%; border:4px solid rgba(3,60,84,.12); border-top-color:var(--primary); animation:spin 1s linear infinite; margin-inline:auto }
+#supervisorStudentsSheet .msg { font-size:1rem; text-align:center }
+#supervisorStudentsSheet .error { color:#a11; background:#fde8e8; border:1px solid #f5c5c5; padding:16px; border-radius:16px }
+#supervisorStudentsSheet .muted { color:var(--muted) }
+#supervisorStudentsSheet .btn {
+  font-family: inherit;
+  height:56px; border:none; border-radius:16px; cursor:pointer; font-weight:800; font-size:1.02rem; letter-spacing:.2px;
+  transition: var(--transition); display: inline-flex; align-items: center; justify-content: center; padding: 0 20px;
+}
+#supervisorStudentsSheet .btn:active { transform:translateY(0) scale(.995) }
+#supervisorStudentsSheet .btn:focus-visible { outline:3px solid var(--focus); outline-offset:2px }
+#supervisorStudentsSheet .btn.primary {
+  background: linear-gradient(180deg, #065372, #033C54); color:#fff; box-shadow: 0 12px 28px rgba(3,60,84,.26)
+}
+#supervisorStudentsSheet .btn.primary:hover { transform:translateY(-2px); box-shadow: 0 16px 36px rgba(3,60,84,.34); filter:brightness(1.02) }
+#supervisorStudentsSheet .btn.ghost { background:#fff; color:#033C54; border:1px solid rgba(3,60,84,.35); box-shadow: var(--shadow-1) }
+#supervisorStudentsSheet .btn.ghost:hover { transform:translateY(-2px); box-shadow: 0 14px 34px rgba(3,60,84,.18); border-color:rgba(3,60,84,.55) }
+#supervisorStudentsSheet .btn.danger { background:#fff; color:#cb2b2b; border:1px solid rgba(203,43,43,.4); box-shadow: var(--shadow-1) }
+#supervisorStudentsSheet .btn.danger:hover { transform:translateY(-2px); box-shadow: 0 16px 32px rgba(203,43,43,.18); border-color:rgba(203,43,43,.55) }
+#supervisorStudentsSheet .btn.secondary { background:#fff; color:#6b7f9f; border:1px solid rgba(107,127,159,.4); box-shadow: var(--shadow-1) }
+#supervisorStudentsSheet .btn.secondary:hover { transform:translateY(-2px); box-shadow: 0 16px 32px rgba(107,127,159,.18); border-color:rgba(107,127,159,.55) }
+#supervisorStudentsSheet .subject {
+  width:100%; background:#fff; border:1px solid var(--border); border-radius:16px; padding:18px 20px;
+  display:flex; align-items:center; justify-content:space-between; gap:12px; cursor:pointer;
+  box-shadow: var(--shadow-1); color:#0f2743; font-weight:600; font-size: 1.05rem; transition: var(--transition);
+}
+#supervisorStudentsSheet .subject:hover {
+  transform:translateY(-2px); box-shadow:0 16px 32px rgba(3,60,84,.18); border-color:rgba(3,60,84,.35); background:#fbfdff
+}
+#supervisorStudentsSheet .subject:active { transform:translateY(0) scale(.997) }
+#supervisorStudentsSheet .grade-hero {
+  background:linear-gradient(120deg, #033C54 0%, #0a5f81 100%);
+  color:#fff;
+  border-color:transparent;
+  box-shadow:0 16px 34px rgba(3,60,84,.26);
+  min-height:68px;
+  border-radius:18px;
+  margin-bottom:12px;
+}
+#supervisorStudentsSheet .grade-hero span {
+  font-family: inherit;
+  font-weight:900;
+  font-size:1.18rem;
+  letter-spacing:.15px;
+}
+#supervisorStudentsSheet .grade-hero::before {
+  content:'\25C7';
+  font-size:1.05rem;
+  margin-inline-end:12px;
+  opacity:.95;
+}
+#supervisorStudentsSheet .grade-hero:hover {
+  background:linear-gradient(120deg, #044964 0%, #0a739b 100%);
+  color:#fff;
+  border-color:transparent;
+}
+#supervisorStudentsSheet .group {
+  border:1px solid var(--border);
+  border-radius:18px;
+  background:#fff;
+  box-shadow:var(--shadow-1);
+  padding:12px;
+}
+#supervisorStudentsSheet .chev { width:22px; height:22px; flex-shrink: 0; }
+#supervisorStudentsSheet .chev path { stroke:#6b7f9f; stroke-width:2.4; fill:none; stroke-linecap:round; stroke-linejoin:round }
+#supervisorStudentsSheet .group-body { display:none; padding:8px 0 2px 0 }
+#supervisorStudentsSheet .group.open .group-body { display:block; }
+#supervisorStudentsSheet .list { display:flex; flex-direction:column; gap:12px }
+#supervisorStudentsSheet .class-option {
+  background:#f8fbff;
+  border:1px solid rgba(3,60,84,.14);
+  border-radius:14px;
+  min-height:54px;
+  font-family: inherit;
+  font-weight:900;
+  font-size:1.03rem;
+  letter-spacing:.2px;
+  color:#12395a;
+  box-shadow:none;
+}
+#supervisorStudentsSheet .class-option:hover {
+  background:#eef6ff;
+  border-color:rgba(3,60,84,.35);
+  box-shadow:0 10px 22px rgba(3,60,84,.14);
+}
+#supervisorStudentsSheet .class-option span {
+  font-family: inherit;
+  font-weight:900;
+}
+#supervisorStudentsSheet .spacer { height:14px; }
+#supervisorStudentsSheet .section { background:#fff; border:1px solid var(--border); border-radius:16px; box-shadow: var(--shadow-1); padding:20px; display:flex; flex-direction:column; gap:16px; margin-bottom: 20px; }
+#supervisorStudentsSheet .section + .section { margin-top:16px; }
+#supervisorStudentsSheet .row { display:flex; gap:14px; flex-wrap:wrap; align-items:center }
+#supervisorStudentsSheet .field { display:flex; flex-direction:column; gap:10px; width:100% }
+#supervisorStudentsSheet .label { font-size:.95rem; font-weight:800; color:#0f2743 }
+#supervisorStudentsSheet .input-wrap { display:flex; align-items:center; gap:12px; min-height:56px; padding:0 18px; background:#fff; border:1px solid var(--border); border-radius:var(--radius); box-shadow: var(--shadow-1); transition: var(--transition); }
+#supervisorStudentsSheet .input-wrap:focus-within { border-color: rgba(3,60,84,.35); box-shadow: 0 16px 32px rgba(3,60,84,.18) }
+#supervisorStudentsSheet .input,
+#supervisorStudentsSheet select,
+#supervisorStudentsSheet textarea { flex:1; height:52px; border:none; outline:none; background:transparent; font-size:16px; color:#0a0a0a; font-family: inherit; }
+#supervisorStudentsSheet textarea.input { height:100px; padding-block:14px; resize:vertical }
+#supervisorStudentsSheet .inline-form { display:flex; flex-direction:column; gap:16px; padding:18px; margin-top:14px; border:1px solid var(--border); border-radius:16px; background:#fafafa; box-shadow: var(--shadow-1); }
+#supervisorStudentsSheet .inline-form .row-actions { display:flex; gap:12px; justify-content:flex-end; margin-top:8px; }
+#supervisorStudentsSheet .ok,
+#supervisorStudentsSheet .err { padding:14px; border-radius:16px; margin-top:10px; font-size:.92rem; box-shadow: var(--shadow-1); display:none }
+#supervisorStudentsSheet .ok { color:#126a2e; background:#e6f6ea; border:1px solid #c7ebd0 }
+#supervisorStudentsSheet .err { color:#a12; background:#fde8e8; border:1px solid #f5c5c5 }
+#supervisorStudentsSheet .item {
+  padding:16px 20px; border:1px solid var(--border); border-radius:16px; background:#fff; box-shadow: var(--shadow-1);
+  font-weight:800; color:#0f2743; display:flex; align-items:center; justify-content:space-between; cursor:pointer; transition: var(--transition);
+}
+#supervisorStudentsSheet .item:hover { transform:translateY(-2px); box-shadow:0 16px 32px rgba(3,60,84,.18); border-color:rgba(3,60,84,.35); background:#fbfdff }
+#supervisorStudentsSheet .item:active { transform:translateY(0) scale(.997) }
+#supervisorStudentsSheet .sub { font-size:.92rem; color:#6b7f9f; font-weight:600; margin-top: 4px; }
+#supervisorStudentsSheet .stats-grid { display:grid; grid-template-columns: repeat(3, 1fr); gap:14px; align-items:stretch; }
+#supervisorStudentsSheet .stat-card { padding:18px; border-radius:16px; border:1px solid var(--border); background:#fff; box-shadow: var(--shadow-1); text-align:center; display:flex; flex-direction:column; gap:8px; justify-content:center; min-height:94px; }
+#supervisorStudentsSheet .stat-title { font-weight:800; font-size:.95rem; color:#0f2743 }
+#supervisorStudentsSheet .stat-value { font-weight:900; font-size:1.4rem }
+#supervisorStudentsSheet .stat-present { background: var(--greenBg); border-color: rgba(26,127,55,.25) }
+#supervisorStudentsSheet .stat-present .stat-value { color: var(--green) }
+#supervisorStudentsSheet .stat-late { background: var(--yellowBg); border-color: rgba(160,109,0,.25) }
+#supervisorStudentsSheet .stat-late .stat-value { color: var(--yellow) }
+#supervisorStudentsSheet .stat-absent { background: var(--redBg); border-color: rgba(180,35,24,.25) }
+#supervisorStudentsSheet .stat-absent .stat-value { color: var(--red) }
+#supervisorStudentsSheet .pill { background:var(--chip); color:#0f2743; border:1px solid var(--border); padding:6px 12px; border-radius:999px; font-size:.9rem; font-weight:800 }
+#supervisorStudentsSheet .pill.g { color:var(--green); border-color:var(--greenBg); background:var(--greenBg) }
+#supervisorStudentsSheet .pill.y { color:var(--yellow); border-color:var(--yellowBg); background:var(--yellowBg) }
+#supervisorStudentsSheet .pill.r { color:var(--red); border-color:var(--redBg); background:var(--redBg) }
+#supervisorStudentsSheet .tabs { display:flex; gap:10px; flex-wrap:wrap; align-items:center; background:#fff; border:1px solid var(--border); border-radius:16px; padding:10px; box-shadow: var(--shadow-1); }
+#supervisorStudentsSheet .tab { height:44px; padding:0 16px; border-radius:12px; border:1px solid rgba(3,60,84,.22); background:#fff; color:#033C54; font-weight:800; cursor:pointer; transition: var(--transition); font-family: inherit; }
+#supervisorStudentsSheet .tab:hover { transform:translateY(-1px); box-shadow:0 10px 26px rgba(3,60,84,.14); border-color:rgba(3,60,84,.4) }
+#supervisorStudentsSheet .tab.active { background:linear-gradient(180deg, #065372, #033C54); color:#fff; border-color:transparent; box-shadow:0 14px 30px rgba(3,60,84,.26) }
+#supervisorStudentsSheet .tab-panels { display:flex; flex-direction:column; gap:16px }
+#supervisorStudentsSheet .tab-panel { display:none }
+#supervisorStudentsSheet .tab-panel.active { display:flex; flex-direction:column; gap:16px }
+#supervisorStudentsSheet .card { padding:16px; border:1px solid var(--border); border-radius:16px; background:#fff; box-shadow: var(--shadow-1); display:flex; gap:14px; justify-content:space-between; align-items:flex-start; }
+#supervisorStudentsSheet .card-title { font-family: inherit; font-weight:900; color:#033C54; margin-bottom: 4px; font-size:1.04rem; }
+#supervisorStudentsSheet .card-sub { color:#6b7f9f; font-weight:700; font-size:.92rem; line-height: 1.65; }
+#supervisorStudentsSheet .tag { padding:5px 10px; border-radius:999px; background:var(--chip); border:1px solid var(--border); font-weight:800; font-size:.82rem }
+#supervisorStudentsSheet .mini { height:38px; padding:0 14px; border-radius:10px; font-size:.92rem }
+#supervisorStudentsSheet .actions { display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:flex-start; border-top:1px dashed var(--border); padding-top:10px; margin-top:6px; }
+#supervisorStudentsSheet .record-card-main { display:flex; flex-direction:column; gap:8px; }
+#supervisorStudentsSheet .record-card-meta { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+#supervisorStudentsSheet .record-card-body { background:#f8fbff; border:1px solid rgba(3,60,84,.12); border-radius:12px; padding:10px 12px; font-weight:700; color:#12395a; }
+#supervisorStudentsSheet .divider { height:1px; background:var(--border); width:100%; margin:6px 0 }
+#supervisorStudentsSheet .k-badge { padding:5px 10px; border-radius:999px; font-weight:800; font-size:.82rem; border:1px solid rgba(3,60,84,.2) }
+#supervisorStudentsSheet .k-ok { background:var(--greenBg); color:var(--green); border-color:rgba(26,127,55,.25) }
+#supervisorStudentsSheet .k-warn { background:var(--yellowBg); color:var(--yellow); border-color:rgba(160,109,0,.25) }
+#supervisorStudentsSheet .k-danger { background:var(--redBg); color:var(--red); border-color:rgba(180,35,24,.25) }
+#supervisorStudentsSheet .empty { text-align:center; color:var(--muted); padding:20px; border:1px dashed var(--border); border-radius:16px; background:#fff; margin: 10px 0; }
+#supervisorStudentsSheet .student-header {
+  padding:22px; border:1px solid var(--border); border-radius:16px; background:#fff; box-shadow: var(--shadow-1); cursor:pointer; text-align:center; transition: var(--transition);
+}
+#supervisorStudentsSheet .student-header:hover { transform:translateY(-2px); box-shadow:0 16px 32px rgba(3,60,84,.18); border-color:rgba(3,60,84,.35); background:#fbfdff }
+#supervisorStudentsSheet .student-name { margin:0; font-size:1.3rem; font-weight:900; color:#033C54 }
+#supervisorStudentsSheet .student-class { margin:8px 0 0; font-weight:800; color:#6b7f9f }
+#supervisorStudentsSheet .collapse-body { display:none }
+#supervisorStudentsSheet .collapse-body.open { display:block }
+#supervisorStudentsSheet .group > .subject::after { content: ''; width: 22px; height: 22px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7f9f' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: center; transition: transform 0.3s ease; }
+#supervisorStudentsSheet .group.open > .subject::after { transform: rotate(180deg); }
+#supervisorStudentsSheet .group > .subject .chev { display: none; }
+#supervisorStudentsSheet .group > .grade-hero::after { filter: brightness(0) invert(1); opacity: .95; }
+#supervisorStudentsSheet .status-edit-form { display: none; background: #f9f9f9; border-radius: 12px; padding: 16px; margin-top: 16px; border: 1px solid var(--border); box-shadow: var(--shadow-1); }
+#supervisorStudentsSheet .status-edit-form.active { display: flex; flex-direction: column; gap: 12px; }
+#supervisorStudentsSheet .status-options { display: flex; gap: 10px; flex-wrap: wrap; }
+#supervisorStudentsSheet .status-option { flex: 1; min-width: 100px; padding: 12px; border: 2px solid var(--border); border-radius: 8px; background: white; cursor: pointer; text-align: center; font-weight: 700; transition: var(--transition); }
+#supervisorStudentsSheet .status-option:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+#supervisorStudentsSheet .status-option.selected { border-color: var(--primary); background: var(--primary-light); color: var(--primary); }
+#supervisorStudentsSheet .status-present.selected { border-color: var(--green); background: var(--greenBg); color: var(--green); }
+#supervisorStudentsSheet .status-late.selected { border-color: var(--yellow); background: var(--yellowBg); color: var(--yellow); }
+#supervisorStudentsSheet .status-absent.selected { border-color: var(--red); background: var(--redBg); color: var(--red); }
+#supervisorStudentsSheet .status-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 10px; }
+#supervisorStudentsSheet .special-case-icon { width: 20px; height: 20px; margin-right: 8px; vertical-align: middle; }
+#supervisorStudentsSheet .filter-active { background: var(--primary-light) !important; border-color: var(--primary) !important; }
+#supervisorStudentsSheet .item-number {
+  display:inline-flex; align-items:center; justify-content:center; min-width:28px; height:28px; border-radius:999px;
+  margin-inline-start:8px; font-family: inherit; font-weight:900; font-size:.9rem;
+  background:#eaf5ff; color:#0f3c5c; border:1px solid rgba(3,60,84,.18);
+}
+#supervisorStudentsSheet .stats-insight { border:1px solid rgba(3,60,84,.14); border-radius:14px; background:#f7fbff; padding:14px; color:#164264; font-weight:800; }
+#supervisorStudentsSheet .stats-daily { display:flex; flex-direction:column; gap:10px; }
+#supervisorStudentsSheet .stats-daily-item { border:1px solid var(--border); border-radius:12px; padding:10px 12px; background:#fff; display:flex; justify-content:space-between; gap:10px; }
+#supervisorStudentsSheet .stats-daily-item .meta { color:#6b7f9f; font-size:.88rem; font-weight:700; }
+#supervisorStudentsSheet .quick-backdrop { position:fixed; inset:0; background:rgba(15,23,42,.34); backdrop-filter:blur(4px); z-index:1200; display:none; }
+#supervisorStudentsSheet .quick-backdrop.open { display:block; }
+#supervisorStudentsSheet .inline-form.popup {
+  position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); width:min(620px,92vw); max-height:82vh; overflow:auto;
+  z-index:1201; background:#fff; margin-top:0; box-shadow:0 24px 60px rgba(3,60,84,.26);
+}
+#supervisorStudentsSheet .record-detail-content { display:flex; flex-direction:column; gap:12px; }
+#supervisorStudentsSheet .record-detail-item { border:1px solid var(--border); border-radius:12px; background:#fff; padding:12px 14px; }
+#supervisorStudentsSheet .record-detail-label { color:#6b7f9f; font-size:.86rem; font-weight:800; margin-bottom:4px; }
+#supervisorStudentsSheet .record-detail-value { color:#0f2743; font-weight:800; white-space:pre-wrap; word-break:break-word; }
+#supervisorStudentsSheet .record-toolbar { display:flex; justify-content:flex-end; }
+#supervisorStudentsSheet .detail-paper { width:min(860px, 94vw); margin-inline:auto; background:#fff; border:1px solid #d7e2ee; border-radius:10px; box-shadow:0 8px 22px rgba(3,60,84,.09); padding:clamp(30px, 3.2vw, 46px); display:flex; flex-direction:column; }
+#supervisorStudentsSheet .paper-head { display:flex; justify-content:center; }
+#supervisorStudentsSheet .paper-brand { display:flex; align-items:center; gap:14px; }
+#supervisorStudentsSheet .paper-brand.centered { justify-content:center; text-align:center; width:100%; }
+#supervisorStudentsSheet .paper-logo { width:140px; height:auto; max-height:118px; object-fit:contain; image-rendering:auto; aspect-ratio:auto; display:block; }
+#supervisorStudentsSheet .paper-school-wrap { display:flex; flex-direction:column; gap:2px; }
+#supervisorStudentsSheet .paper-school { font-family: inherit; font-weight:900; color:#0f2743; font-size:1.42rem; }
+#supervisorStudentsSheet .paper-sub { color:#5f7693; font-size:1.08rem; font-weight:700; }
+#supervisorStudentsSheet .paper-doc-type { font-family: inherit; font-weight:900; color:#0f2743; font-size:1.55rem; text-align:center; }
+#supervisorStudentsSheet .paper-doc-student { color:#264764; font-size:1.3rem; font-weight:800; text-align:center; }
+#supervisorStudentsSheet .paper-rule { margin:18px 0 22px; height:2.4px; background:linear-gradient(to left, transparent, rgba(3,60,84,.45), transparent); }
+#supervisorStudentsSheet .paper-top-meta { display:flex; flex-direction:column; gap:24px; margin-top:16px; margin-bottom:42px; align-items:center; }
+#supervisorStudentsSheet .paper-meta-grid { display:grid; grid-template-columns: 1fr 1fr; gap:24px 56px; width:min(800px, 100%); margin-inline:auto; }
+#supervisorStudentsSheet .paper-meta-grid .paper-meta-item:nth-child(n+3) { margin-top:18px; }
+#supervisorStudentsSheet .paper-meta-item { color:#204666; font-size:1.18rem; font-weight:800; line-height:2.2; text-align:center; }
+#supervisorStudentsSheet .paper-meta-wide { grid-column: 1 / -1; text-align:center; }
+#supervisorStudentsSheet .paper-body { display:flex; flex-direction:column; gap:34px; flex:1; justify-content:space-evenly; min-height:36vh; }
+#supervisorStudentsSheet .paper-line { color:#173852; font-weight:700; line-height:2.2; font-size:1.28rem; text-align:center; }
+#supervisorStudentsSheet .paper-line strong { color:#0f2743; font-weight:900; }
+#supervisorStudentsSheet .paper-main-text { margin-top:6px; padding-top:10px; border-top:1px solid #e4edf6; color:#0f2743; font-weight:700; line-height:2; white-space:pre-wrap; font-size:1.22rem; text-align:center; }
+#supervisorStudentsSheet .paper-subtitle { text-align:center; color:#1f4565; font-weight:900; font-size:1.46rem; margin-top:4px; }
+#supervisorStudentsSheet .paper-main-content { flex:1; display:flex; flex-direction:column; justify-content:space-between; min-height:80vh; }
+#supervisorStudentsSheet .paper-signature-row { margin-top:48px; display:flex; justify-content:space-between; gap:18px; }
+#supervisorStudentsSheet .sign-box { flex:1; display:flex; flex-direction:column; align-items:center; gap:8px; }
+#supervisorStudentsSheet .sign-line { width:78%; border-top:1.5px solid #9eb1c6; }
+#supervisorStudentsSheet .sign-label { color:#6b7f9f; font-size:1.08rem; font-weight:800; text-align:center; }
+#supervisorStudentsSheet #saveRecordPdf { font-family: inherit; font-weight:900; }
+#supervisorStudentsSheet #paperPreviewPage { min-height:max(1320px, calc(100vh - 170px)); }
+#supervisorStudentsSheet #paperPreviewBody .record-detail-item { background:transparent; border:0; padding:0; }
+#supervisorStudentsSheet .checkbox-field { display: flex; align-items: center; gap: 12px; padding: 12px 0; cursor: pointer; }
+#supervisorStudentsSheet .checkbox-field input[type="checkbox"] { transform: scale(1.3); cursor: pointer; }
+#supervisorStudentsSheet .stats-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+#supervisorStudentsSheet .stats-filters { display: flex; gap: 10px; flex-wrap: wrap; }
+#supervisorStudentsSheet .stats-filters select,
+#supervisorStudentsSheet .stats-filters input { min-width: 140px; }
+#supervisorStudentsSheet .absence-group { background: var(--primary-light); border: 1px solid rgba(3,60,84,.2); border-radius: 12px; margin-bottom: 8px; }
+#supervisorStudentsSheet .absence-group-header { padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: var(--transition); }
+#supervisorStudentsSheet .absence-group-header:hover { background: rgba(3,60,84,.05); }
+#supervisorStudentsSheet .absence-group-title { font-weight: 800; color: var(--primary); }
+#supervisorStudentsSheet .absence-group-count { background: var(--red); color: white; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: 700; }
+#supervisorStudentsSheet .absence-group-body { display: none; padding: 0 16px 16px; }
+#supervisorStudentsSheet .absence-group.open .absence-group-body { display: block; }
+@media (max-width: 768px) {
+  #supervisorStudentsSheet main { padding: 20px 12px 30px; }
+  #supervisorStudentsSheet .column { gap: 18px; }
+  #supervisorStudentsSheet .panel { padding: 18px 16px; border-radius: 14px; }
+  #supervisorStudentsSheet .section { padding: 16px; }
+  #supervisorStudentsSheet .stats-grid { grid-template-columns: 1fr; gap: 10px; }
+  #supervisorStudentsSheet .row { flex-direction: column; gap: 12px; }
+  #supervisorStudentsSheet .tabs { justify-content: center; }
+  #supervisorStudentsSheet .card { flex-direction: column; gap: 12px; }
+  #supervisorStudentsSheet .actions { width: 100%; justify-content: center; }
+  #supervisorStudentsSheet .status-options { flex-direction: column; }
+  #supervisorStudentsSheet .paper-brand.centered { flex-direction:column; }
+  #supervisorStudentsSheet .paper-main-content { min-height:calc(100vh - 360px); }
+  #supervisorStudentsSheet .paper-signature-row { gap:10px; }
+  #supervisorStudentsSheet #paperPreviewPage { min-height:calc(100vh - 170px); width:100%; }
+  #supervisorStudentsSheet .stats-filters { flex-direction: column; }
+}
+@media (max-width: 480px) {
+  #supervisorStudentsSheet .btn { height: 50px; font-size: 0.95rem; }
+  #supervisorStudentsSheet .subject { padding: 14px 16px; }
+  #supervisorStudentsSheet .item { padding: 14px 16px; }
+  #supervisorStudentsSheet .stat-card { padding: 14px; min-height: 80px; }
+  #supervisorStudentsSheet .tab { height: 40px; padding: 0 12px; font-size: 0.9rem; }
+}
+/* shared/attendance-tiles.css, scoped the same way (see comment above) —
+   not <link>-ed globally since .badge/.att-tile/etc are too generic to
+   risk colliding with this page's own CSS elsewhere. */
+#supervisorStudentsSheet .analytics-shell { display:flex; flex-direction:column; gap:14px; }
+#supervisorStudentsSheet .analytics-card { background:#fff; border:1px solid var(--border); border-radius:16px; box-shadow:var(--shadow-1); padding:18px; }
+#supervisorStudentsSheet .analytics-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+#supervisorStudentsSheet .analytics-title { margin:0; font-family: inherit; font-weight:900; font-size:1rem; color:#0f2743; }
+#supervisorStudentsSheet .att-group { display:flex; flex-direction:column; gap:12px }
+#supervisorStudentsSheet .analytics-card > .row:first-child { margin-bottom:14px; }
+#supervisorStudentsSheet .att-tile { padding:14px 16px; border:1px solid var(--border); border-radius:16px; background:#fff; box-shadow: var(--shadow-1); display:flex; align-items:center; justify-content:space-between; cursor:pointer; transition: var(--transition); }
+#supervisorStudentsSheet .att-tile:hover { transform:translateY(-2px); box-shadow:0 16px 32px rgba(3,60,84,.18); border-color:rgba(3,60,84,.35); background:#fbfdff }
+#supervisorStudentsSheet .att-left { display:flex; flex-direction:column; gap:6px; flex: 1; }
+#supervisorStudentsSheet .att-title { font-weight:800; color:var(--primary, #033C54); }
+#supervisorStudentsSheet .att-sub { color:var(--muted, #6b7f9f); font-weight:700; font-size:.94rem }
+#supervisorStudentsSheet .badge { padding:6px 10px; border-radius:999px; font-weight:800; font-size:.84rem }
+#supervisorStudentsSheet .b-late { background:var(--yellowBg); color:var(--yellow); border:1px solid rgba(160,109,0,.25) }
+#supervisorStudentsSheet .b-absent { background:var(--redBg); color:var(--red); border:1px solid rgba(180,35,24,.25) }
+#supervisorStudentsSheet .b-present { background:var(--greenBg); color:var(--green); border:1px solid rgba(26,127,55,.25) }
+#supervisorStudentsSheet .b-excused { background:var(--excusedBg, rgba(147,51,234,.10)); color:var(--excused, #9333ea); border:1px solid rgba(147,51,234,.25) }
+/* shared/warning-system.css, scoped the same way. */
+#supervisorStudentsSheet .warning-level-badge { padding: 5px 12px; border-radius: 999px; font-weight: 800; font-size: 0.82rem; white-space: nowrap; }
+#supervisorStudentsSheet .warning-level-0 { background: var(--greenBg); color: var(--green); border: 1px solid rgba(26, 127, 55, 0.25); }
+#supervisorStudentsSheet .warning-level-1 { background: rgba(255, 193, 7, 0.15); color: #b38f00; border: 1px solid rgba(255, 193, 7, 0.3); }
+#supervisorStudentsSheet .warning-level-2 { background: rgba(255, 152, 0, 0.15); color: #cc7a00; border: 1px solid rgba(255, 152, 0, 0.3); }
+#supervisorStudentsSheet .warning-level-3 { background: rgba(244, 67, 54, 0.15); color: #c62828; border: 1px solid rgba(244, 67, 54, 0.3); }
+#supervisorStudentsSheet .warning-level-4 { background: rgba(123, 17, 19, 0.15); color: #7b1113; border: 1px solid rgba(123, 17, 19, 0.35); }
+#supervisorStudentsSheet .warning-excused-level-0 { background: var(--greenBg); color: var(--green); border: 1px solid rgba(26, 127, 55, 0.25); }
+#supervisorStudentsSheet .warning-excused-level-1 { background: rgba(147, 51, 234, 0.12); color: #7c3aed; border: 1px solid rgba(147, 51, 234, 0.28); }
+#supervisorStudentsSheet .warning-excused-level-2 { background: rgba(147, 51, 234, 0.18); color: #6d28d9; border: 1px solid rgba(147, 51, 234, 0.35); }
+#supervisorStudentsSheet .warning-excused-level-3 { background: rgba(107, 33, 168, 0.2); color: #5b21b6; border: 1px solid rgba(107, 33, 168, 0.4); }
+#supervisorStudentsSheet .warning-count-row { display: flex; align-items: baseline; gap: 8px; margin-bottom: 12px; }
+#supervisorStudentsSheet .warning-count-value { font-size: 1.7rem; font-weight: 900; color: var(--red); line-height: 1; }
+#supervisorStudentsSheet .warning-count-value.excused { color: #7c3aed; }
+#supervisorStudentsSheet .warning-count-label { font-size: 0.88rem; font-weight: 700; color: var(--muted); }
+#supervisorStudentsSheet .warning-progress-track { height: 10px; border-radius: 999px; background: var(--border); overflow: hidden; }
+#supervisorStudentsSheet .warning-progress-fill { height: 100%; width: 0%; border-radius: 999px; background: var(--green); transition: width 0.3s ease, background-color 0.3s ease; }
+#supervisorStudentsSheet .warning-progress-fill.level-1 { background: #d9a300; }
+#supervisorStudentsSheet .warning-progress-fill.level-2 { background: #e07b00; }
+#supervisorStudentsSheet .warning-progress-fill.level-3 { background: #d32f2f; }
+#supervisorStudentsSheet .warning-progress-fill.level-4 { background: #7b1113; }
+#supervisorStudentsSheet .warning-progress-fill.excused-level-1 { background: #9333ea; }
+#supervisorStudentsSheet .warning-progress-fill.excused-level-2 { background: #7c3aed; }
+#supervisorStudentsSheet .warning-progress-fill.excused-level-3 { background: #6d28d9; }
+#supervisorStudentsSheet .warning-scale { display: flex; justify-content: space-between; margin-top: 6px; font-size: 0.76rem; font-weight: 700; color: var(--muted); }
+#supervisorStudentsSheet .warning-next-hint { margin-top: 10px; font-size: 0.86rem; font-weight: 700; color: var(--text); text-align: center; }
