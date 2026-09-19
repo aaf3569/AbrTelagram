@@ -154,6 +154,13 @@
           <span>تنزيل PDF للجدول الأسبوعي</span>
         </button>
         <div id="containerMain"></div>
+        <!-- Persistent (containerMain itself gets wiped and rebuilt on every
+             render), triggered by clicking the day/date row in whichever
+             .header-full/.compact-header is currently rendered — lets the
+             teacher jump the single-day view to any date instead of only
+             "today". Same hidden-input + showPicker() convention as
+             #dsMobileDateInput above. -->
+        <input id="todayDatePicker" class="today-date-picker-input" type="date" inputmode="none" aria-hidden="true" tabindex="-1" />
         <div id="status" class="status-message"></div>
       </div>
     </div>
@@ -1494,7 +1501,7 @@
 
     function dayHeaderRowHtml(dayISO){
       return `
-        <div class="header-day-row">
+        <div class="header-day-row" role="button" tabindex="0" aria-label="اختيار تاريخ آخر">
           <span class="header-day-text">
             <span class="header-day-name">${dayNameByISO(dayISO) || 'اليوم'}</span>
             <span class="header-day-date">${dayISO}</span>
@@ -2299,7 +2306,7 @@
       return slots.find(x => x.lesson === lessonNum) || null;
     }
 
-    async function loadTodayForTeacher(uid){
+    async function loadTodayForTeacher(uid, dateISO){
       clearStatus();
       setLoading(btnToday, true);
       currentView = 'today';
@@ -2307,7 +2314,7 @@
       document.body.classList.add('today-locked');
       renderTodaySkeleton();
 
-      const today = kuwaitTodayISO();
+      const today = dateISO || kuwaitTodayISO();
       let byLesson = new Map();
       let dayCustomTimes = null;
 
@@ -6636,6 +6643,38 @@
       closeSidebar();
       setFilterActive(btnWeek);
       await loadWeekForTeacher(currentUser.uid);
+    });
+
+    /* ========= Custom date for the single-day view =========
+       Clicking the day/date row in whichever .header-full/.compact-header
+       is currently rendered (containerMain gets wiped and rebuilt on every
+       render, so this is delegated rather than bound once) opens
+       #todayDatePicker to jump the "جدولي" view to any date, not just
+       today — same hidden-input + showPicker() convention as the دs
+       sheet's own date button. */
+    const todayDatePicker = document.getElementById('todayDatePicker');
+    function openTodayDatePicker(){
+      if (!currentUser?.uid) return;
+      try { todayDatePicker.value = activeTodayISO || kuwaitTodayISO(); } catch {}
+      try {
+        if (typeof todayDatePicker.showPicker === 'function') { todayDatePicker.showPicker(); return; }
+      } catch {}
+      todayDatePicker.focus({ preventScroll: true });
+      todayDatePicker.click();
+    }
+    containerMain.addEventListener('click', (e) => {
+      if (e.target.closest('.header-day-row')) openTodayDatePicker();
+    });
+    containerMain.addEventListener('keydown', (e) => {
+      if ((e.key === 'Enter' || e.key === ' ') && e.target.closest('.header-day-row')) {
+        e.preventDefault();
+        openTodayDatePicker();
+      }
+    });
+    todayDatePicker.addEventListener('change', async () => {
+      if (!todayDatePicker.value || !currentUser?.uid) return;
+      setFilterActive(btnToday);
+      await loadTodayForTeacher(currentUser.uid, todayDatePicker.value);
     });
 
   </script>

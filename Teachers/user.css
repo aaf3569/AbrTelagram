@@ -155,7 +155,14 @@
       font-weight: 900; box-shadow: var(--shadow-1);
       display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 10px;
     }
-    .header-day-row { display: flex; align-items: center; justify-content: center; gap: 10px; }
+    /* Clickable — opens #todayDatePicker to view any date's lessons, not
+       just today. */
+    .header-day-row {
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      cursor: pointer; border-radius: var(--radius-sm); padding: 4px 8px; margin: -4px -8px;
+      transition: background-color .15s ease;
+    }
+    .header-day-row:hover, .header-day-row:focus-visible { background: rgba(255, 255, 255, 0.12); }
     .header-day-icon {
       width: 34px; height: 34px; flex-shrink: 0; border-radius: 10px;
       background: rgba(255, 255, 255, 0.16); border: 1px solid rgba(255, 255, 255, 0.22);
@@ -164,12 +171,16 @@
     .header-day-text { display: flex; flex-direction: column; align-items: center; gap: 1px; line-height: 1.3; }
     .header-day-name { font-size: 1rem; font-weight: 900; }
     .header-day-date { font-size: 0.74rem; font-weight: 700; opacity: 0.72; font-variant-numeric: tabular-nums; }
-    /* Live lesson/break countdown beside the stacked day/date. */
+    /* Programmatic-only — opened via showPicker(), never a real click target. */
+    .today-date-picker-input { position: absolute; width: 0; height: 0; opacity: 0; pointer-events: none; border: 0; }
+    /* Live lesson/break countdown beside the stacked day/date. Small,
+       mostly-square radius (not the pill-like --radius-sm) so it reads as
+       a distinct box next to the day/date text instead of blending into it. */
     .header-live {
       display: flex; align-items: center; justify-content: center; gap: 8px;
       background: rgba(255, 255, 255, 0.14);
       border: 1px solid rgba(255, 255, 255, 0.24);
-      border-radius: var(--radius-sm);
+      border-radius: 6px;
       padding: 10px 14px;
       font-size: 0.85rem;
       font-weight: 800;
@@ -1161,7 +1172,7 @@
       }
       .compact-header .header-live {
         flex-shrink: 0;
-        padding: 6px 12px; font-size: .8rem; gap: 7px; border-radius: 999px;
+        padding: 6px 12px; font-size: .8rem; gap: 7px; border-radius: 6px;
         background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.2);
         line-height: 1.4; white-space: nowrap;
       }
