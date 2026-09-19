@@ -2240,6 +2240,19 @@
         <div id="sidebarClassesButtons" class="sidebar-classes"></div>
       </div>
 
+      <div id="sidebarDeptGroup" class="sidebar-group" hidden>
+        <div class="sidebar-section-label">القسم</div>
+        <button id="btnRequests" class="sidebar-link" type="button" hidden>
+          <i class="fas fa-inbox"></i>
+          <span class="request-label">طلبات القسم</span>
+          <span id="requestsPendingBadge" class="request-count" hidden aria-hidden="true"></span>
+        </button>
+        <button id="sidebarHeadDept" class="sidebar-link" type="button" hidden>
+          <i class="fas fa-users-gear"></i>
+          <span>قسمي</span>
+        </button>
+      </div>
+
       <div class="sidebar-group">
         <div class="sidebar-section-label">الجداول</div>
         <button id="sidebarHome" class="sidebar-link" type="button">
@@ -2262,11 +2275,6 @@
           <i class="fas fa-chalkboard"></i>
           <span>جداول الصفوف</span>
         </button>
-        <button id="btnRequests" class="sidebar-link" type="button" hidden>
-          <i class="fas fa-inbox"></i>
-          <span class="request-label">طلبات القسم</span>
-          <span id="requestsPendingBadge" class="request-count" hidden aria-hidden="true"></span>
-        </button>
       </div>
 
       <div id="sidebarSupervisorGroup" class="sidebar-group" hidden>
@@ -2282,10 +2290,6 @@
         <button id="sidebarEditSchedule" class="sidebar-link" type="button" hidden>
           <i class="fas fa-table-cells"></i>
           <span>تعديل جدول الإدارة</span>
-        </button>
-        <button id="sidebarHeadDept" class="sidebar-link" type="button" hidden>
-          <i class="fas fa-users-gear"></i>
-          <span>قسمي</span>
         </button>
       </div>
 
@@ -3334,6 +3338,7 @@
     const sidebarMorningLate = document.getElementById('sidebarMorningLate');
     const sidebarEditSchedule = document.getElementById('sidebarEditSchedule');
     const sidebarHeadDept = document.getElementById('sidebarHeadDept');
+    const sidebarDeptGroup = document.getElementById('sidebarDeptGroup');
     const sidebarUser = document.getElementById('sidebarUser');
     const sidebarUserAvatar = document.getElementById('sidebarUserAvatar');
     const sidebarUserName = document.getElementById('sidebarUserName');
@@ -8680,6 +8685,7 @@
           stopRequestsListeners();
           headUid = '';
           btnRequests.hidden = true;
+          sidebarDeptGroup.hidden = true;
           sidebarSupervisorGroup.hidden = true;
           sidebarSupervisorStudents.hidden = true;
           sidebarMorningLate.hidden = true;
@@ -8698,6 +8704,7 @@
       stopRequestsListeners();
       headUid = '';
       btnRequests.hidden = true;
+      sidebarDeptGroup.hidden = true;
       sidebarSupervisorGroup.hidden = true;
       sidebarSupervisorStudents.hidden = true;
       sidebarMorningLate.hidden = true;
@@ -8741,14 +8748,16 @@
             const allowSupervisorStudents = isTruthyFlag(currentTeacherProfile?.isSupervisor) || isTruthyFlag(perms.allowSupervisorStudents);
             const allowMorningLate = isTruthyFlag(perms.allowMorningLate);
             const allowEditSchedule = isTruthyFlag(perms.allowEditSchedule);
-            // Department heads (role: 'head') get their own dashboard link —
-            // same role check btnRequests/طلبات القسم above already uses.
+            // Department heads (role: 'head') get their own القسم group —
+            // طلبات القسم (btnRequests, shown further below once headUid is
+            // set) plus قسمي.
             const isHead = currentRole === 'head';
             sidebarSupervisorStudents.hidden = !allowSupervisorStudents;
             sidebarMorningLate.hidden = !allowMorningLate;
             sidebarEditSchedule.hidden = !allowEditSchedule;
+            sidebarSupervisorGroup.hidden = !(allowSupervisorStudents || allowMorningLate || allowEditSchedule);
             sidebarHeadDept.hidden = !isHead;
-            sidebarSupervisorGroup.hidden = !(allowSupervisorStudents || allowMorningLate || allowEditSchedule || isHead);
+            sidebarDeptGroup.hidden = !isHead;
 
             // Own classes plus anything being covered today — same
             // convention as Teachers/user.html's own class buttons.
