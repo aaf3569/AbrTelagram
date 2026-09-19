@@ -155,18 +155,22 @@
       font-weight: 900; box-shadow: var(--shadow-1);
       display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 10px;
     }
-    /* Day | timer divider — only when the timer is actually showing. */
-    .header-full.header-has-live .header-day-row {
-      padding-inline-end: 12px; border-inline-end: 1px solid rgba(255, 255, 255, .18);
-    }
     /* Clickable — opens #todayDatePicker to view any date's lessons, not
        just today. */
     .header-day-row {
       display: flex; align-items: center; justify-content: center; gap: 10px;
-      cursor: pointer; border-radius: var(--radius-sm); padding: 4px 8px; margin: -4px -8px;
+      cursor: pointer; border-radius: 8px;
       transition: background-color .15s ease;
     }
     .header-day-row:hover, .header-day-row:focus-visible { background: rgba(255, 255, 255, 0.12); }
+    /* Day | timer divider — only when the timer is actually showing. Set on
+       .header-full itself (not .header-day-row, which a hover background
+       could otherwise visually merge into) so it always reads as a clean
+       line between the two. */
+    .header-full.header-has-live .header-day-row {
+      padding-inline-end: 12px; margin-inline-end: 2px;
+      border-inline-end: 2px solid rgba(255, 255, 255, .4);
+    }
     .header-day-icon {
       width: 34px; height: 34px; flex-shrink: 0; border-radius: 10px;
       background: rgba(255, 255, 255, 0.16); border: 1px solid rgba(255, 255, 255, 0.22);
@@ -176,7 +180,9 @@
     .header-day-name { font-size: 1rem; font-weight: 900; }
     .header-day-date { font-size: 0.74rem; font-weight: 700; opacity: 0.72; font-variant-numeric: tabular-nums; }
     /* Programmatic-only — opened via showPicker(), never a real click target. */
-    .today-date-picker-input { position: absolute; width: 0; height: 0; opacity: 0; pointer-events: none; border: 0; }
+    /* Needs a real (if tiny) box — some browsers refuse showPicker() on a
+       zero-size element, which was silently no-op-ing the whole feature. */
+    .today-date-picker-input { position: fixed; bottom: 0; left: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; border: 0; }
     /* Live lesson/break countdown beside the stacked day/date. Small,
        mostly-square radius (not the pill-like --radius-sm) so it reads as
        a distinct box next to the day/date text instead of blending into it. */
@@ -1172,7 +1178,7 @@
          never shrinks or wraps to a second line — the day/date truncate
          first if a phone is too narrow for both on one row. */
       .compact-header.header-has-live .header-day-row {
-        padding-inline-end: 12px; border-inline-end: 1px solid rgba(255,255,255,.18);
+        padding-inline-end: 12px; border-inline-end: 2px solid rgba(255,255,255,.4);
       }
       .compact-header .header-live {
         flex-shrink: 0;
