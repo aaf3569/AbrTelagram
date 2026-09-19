@@ -3757,7 +3757,26 @@
 
       openModal({ title: 'إدارة الحصة', bodyHtml: body, footerHtml: footer, icon: 'fa-chalkboard-user' });
 
-      document.getElementById('actAttendance').addEventListener('click', async (event) => {
+      const attendanceButton = document.getElementById('actAttendance');
+      // Refresh for this exact date, lesson and class each time the popup opens.
+      // Keep the captured element so a late response cannot change a newer popup.
+      if (currentUser) {
+        getDocs(query(
+          collection(db, 'attendanceSessions'),
+          where('teacherUid', '==', currentUser.uid),
+          where('date', '==', meta.date),
+          where('lesson', '==', meta.lesson)
+        )).then(snap => {
+          if (!attendanceButton.isConnected) return;
+          const taken = snap.docs.some(session =>
+            normalizeClassKey(session.data().classKey) === normalizeClassKey(meta.classKey)
+          );
+          attendanceButton.classList.toggle('la-btn-attendance-edit', taken);
+          attendanceButton.querySelector('span').textContent = taken ? 'تعديل الغياب' : 'تسجيل الغياب';
+        }).catch(error => console.error('Could not check lesson attendance:', error));
+      }
+
+      attendanceButton.addEventListener('click', async (event) => {
         if (meta.date !== kuwaitTodayISO()) {
           toast({ title: 'الحصة غير متاحة', text: 'يمكن تسجيل الغياب في يوم الحصة فقط.', icon: 'fa-clock' });
           return;

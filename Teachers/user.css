@@ -1835,6 +1835,11 @@
       box-shadow: 0 16px 34px rgba(2,43,66,.32); transition: var(--transition);
     }
     .la-btn-attendance:hover { transform: translateY(-2px); box-shadow: 0 20px 40px rgba(2,43,66,.38); }
+    .la-btn-attendance.la-btn-attendance-edit {
+      background: linear-gradient(145deg, #a86b12, #80500b);
+      box-shadow: 0 16px 34px rgba(160,109,0,.28);
+    }
+    .la-btn-attendance.la-btn-attendance-edit:hover { box-shadow: 0 20px 40px rgba(160,109,0,.34); }
     .la-btn-attendance i { font-size: 1.05rem; }
 
     @media (max-width: 480px) {
