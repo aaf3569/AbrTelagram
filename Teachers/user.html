@@ -1945,7 +1945,7 @@
           });
         }
 
-        if (highlight?.type === 'lesson' && highlight.lessonIndex === i) {
+        if ((highlight?.type === 'lesson' || highlight?.type === 'upcoming') && highlight.lessonIndex === i) {
           cLesson.classList.add('current-lesson');
           cClass.classList.add('current-lesson');
         }
@@ -2011,7 +2011,7 @@
         const compactRow = document.createElement('div');
         compactRow.className = 'compact-row';
         compactRow.dataset.lessonIndex = String(i);
-        if (highlight?.type === 'lesson' && highlight.lessonIndex === i) {
+        if ((highlight?.type === 'lesson' || highlight?.type === 'upcoming') && highlight.lessonIndex === i) {
           compactRow.classList.add('current-lesson');
         }
         compactRow.appendChild(compactLesson);
@@ -5070,7 +5070,7 @@
           .forEach(el => el.classList.add('current-lesson'));
         return;
       }
-      if (highlight?.type !== 'lesson') return;
+      if (highlight?.type !== 'lesson' && highlight?.type !== 'upcoming') return;
 
       const i = highlight.lessonIndex;
       const mainLessonCell = containerMain.querySelector(`.table .cell[data-row-role="lesson"][data-lesson-index="${i}"]`);
@@ -5081,8 +5081,10 @@
       if (compactRow) compactRow.classList.add('current-lesson');
       const compactClassCell = containerMain.querySelector(`.compact-table .compact-cell[data-row-role="class"][data-lesson-index="${i}"]`);
 
-      addAttendanceReadyBadge(mainClassCell);
-      addAttendanceReadyBadge(compactClassCell);
+      if (highlight.type === 'lesson') {
+        addAttendanceReadyBadge(mainClassCell);
+        addAttendanceReadyBadge(compactClassCell);
+      }
     }
 
     /* ========= Init week ========= */
