@@ -81,7 +81,8 @@ const STYLES = `
   #attendanceSheet .select-wrap::after{content:"";position:absolute;top:50%;transform:translateY(-50%);inset-inline-start:14px;width:22px;height:22px;pointer-events:none;opacity:.95;background:url('data:image/svg+xml;utf8,<svg fill="%23ffffff" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>') no-repeat center / 20px 20px;filter:drop-shadow(0 1px 0 rgba(0,0,0,.15))}
   #attendanceSheet .hint{font-weight:800;color:var(--muted)}
   #attConfirmModal .filter-buttons{display:flex;gap:10px;margin-bottom:16px;justify-content:center;flex-shrink:0}
-  #attConfirmModal .filter-btn{flex:1;min-height:50px;border-radius:12px;font-weight:800;border:2px solid var(--border);background:#fff;color:var(--primary);cursor:pointer;transition:var(--transition)}
+  #attConfirmModal .filter-btn{flex:0 1 160px;display:flex;align-items:center;justify-content:center;min-height:50px;border-radius:12px;font-weight:800;border:2px solid var(--border);background:#fff;color:var(--primary);cursor:pointer;transition:var(--transition)}
+  #attConfirmModal .present-count{text-align:center;font-weight:800;color:var(--green,#1a7f37)}
   #attConfirmModal .filter-btn.active{background:var(--primary);color:#fff;border-color:var(--primary)}
   #attConfirmModal #attFilterAbsent{color:var(--red,#b42318);border-color:rgba(180,35,24,.35)}
   #attConfirmModal #attFilterAbsent.active{background:var(--red,#b42318);border-color:var(--red,#b42318);color:#fff}
@@ -96,6 +97,7 @@ const STYLES = `
      page's own .modal/.card rules don't already constrain it. */
   #attConfirmModal .card{width:min(480px,92vw);max-height:min(640px,88vh);display:flex;flex-direction:column;overflow:hidden}
   #attConfirmModal .card > h3,#attConfirmModal .card > p{flex-shrink:0}
+  #attConfirmModal #attConfirmTitle{margin:0 0 14px;padding:16px 18px;border-radius:14px;background:linear-gradient(145deg,#065372,var(--primary,#033c54));color:#fff;text-align:center;line-height:1.7;box-shadow:0 8px 20px rgba(3,60,84,.18)}
   #attConfirmModal .names-list{border:1px dashed var(--border);border-radius:14px;background:#fafcff;padding:12px;flex:1 1 auto;min-height:0;max-height:none;overflow-y:auto;-webkit-overflow-scrolling:touch}
   #attConfirmModal .names-list ul{margin:0;padding-inline-start:18px}
   #attConfirmModal .names-list li{margin:6px 0;font-weight:800}
@@ -215,11 +217,11 @@ const SHEET_HTML = `
   <div id="attConfirmModal" class="modal" aria-hidden="true">
     <div class="overlay"></div>
     <div class="card" role="dialog" aria-modal="true" aria-labelledby="attConfirmTitle">
-      <h3 id="attConfirmTitle">تأكيد حفظ التقرير | الحصة</h3>
-      <p>سيتم حفظ الغياب للحصّة المحددة.</p>
+      <h3 id="attConfirmTitle">تأكيد الحفظ | الحصة</h3>
+      <p id="attConfirmPresentCount" class="present-count">الحضور: 0</p>
       <div class="filter-buttons">
-        <button id="attFilterAbsent" class="filter-btn active" type="button">الغياب</button>
-        <button id="attFilterLate" class="filter-btn" type="button">التاخير</button>
+        <button id="attFilterAbsent" class="filter-btn active" type="button">الغياب (0)</button>
+        <button id="attFilterLate" class="filter-btn" type="button">التاخير (0)</button>
       </div>
       <div class="names-list">
         <ul id="attConfirmAbsentList"></ul>
@@ -429,6 +431,7 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
     submitBtn: document.getElementById("attSubmitBtn"),
     confirmModal: document.getElementById("attConfirmModal"),
     confirmTitle: document.getElementById("attConfirmTitle"),
+    confirmPresentCount: document.getElementById("attConfirmPresentCount"),
     confirmAbsentList: document.getElementById("attConfirmAbsentList"),
     confirmLateList: document.getElementById("attConfirmLateList"),
     filterAbsent: document.getElementById("attFilterAbsent"),
@@ -1946,7 +1949,10 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
     const lessonIndex = parseInt(els.lessonSelect.value, 10);
     const lesson = LESSON_TIMES.find(l => l.index === lessonIndex);
     const lessonLabel = lesson ? lesson.label : `الحصة ${lessonIndex}`;
-    els.confirmTitle.textContent = `تأكيد حفظ التقرير | ${lessonLabel}`;
+    els.confirmTitle.textContent = `تأكيد الحفظ | ${lessonLabel}`;
+    els.confirmPresentCount.textContent = `الحضور: ${attStudentList.filter(s => attStatuses[s.uid || s.name] === "present").length}`;
+    els.filterAbsent.textContent = `الغياب (${absNames.length})`;
+    els.filterLate.textContent = `التاخير (${lateNames.length})`;
     els.confirmAbsentList.innerHTML = "";
     els.confirmLateList.innerHTML = "";
     if (absNames.length) {
