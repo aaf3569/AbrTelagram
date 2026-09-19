@@ -29,7 +29,11 @@ export function getDayScheduleHighlight(times, breaks, nowMinutes) {
       if (breaks?.firstAfter === afterLesson || breaks?.secondAfter === afterLesson) {
         return { type: 'break', afterLesson };
       }
-      return { type: 'lesson', lessonIndex: index + 2 };
+      // An ordinary gap (no declared الفرصة break here) before the next
+      // lesson's bell — 'upcoming', not 'lesson': it hasn't started, so a
+      // caller counting down to its end (like it would for a live lesson)
+      // would silently fold this gap into the lesson's remaining time.
+      return { type: 'upcoming', lessonIndex: index + 2 };
     }
   }
   return null;

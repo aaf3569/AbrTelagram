@@ -1551,6 +1551,12 @@
       } else if (highlight?.type === 'break') {
         label = 'استراحة';
         targetMinutes = parseHM(times[highlight.afterLesson]?.start);
+      } else if (highlight?.type === 'upcoming') {
+        // Ordinary gap before the next lesson's bell — hasn't started yet,
+        // so count down to its start ("الخامسة بعد") instead of folding
+        // this gap into its remaining time like a live lesson would.
+        label = `${shortLessonLabel(highlight.lessonIndex)} بعد`;
+        targetMinutes = parseHM(times[highlight.lessonIndex - 1]?.start);
       }
 
       if (label === null || targetMinutes === null) {

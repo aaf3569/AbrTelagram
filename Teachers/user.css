@@ -155,6 +155,10 @@
       font-weight: 900; box-shadow: var(--shadow-1);
       display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 10px;
     }
+    /* Day | timer divider — only when the timer is actually showing. */
+    .header-full.header-has-live .header-day-row {
+      padding-inline-end: 12px; border-inline-end: 1px solid rgba(255, 255, 255, .18);
+    }
     /* Clickable — opens #todayDatePicker to view any date's lessons, not
        just today. */
     .header-day-row {
