@@ -26,6 +26,18 @@ const ATTENDANCE_RECORDS_SUBCOLLECTION = "attendanceRecords";
 // module would when it resyncs today's sessions after a bell-time edit.
 export const LESSON_END_GRACE_MINUTES = 4;
 
+// Some student names were entered with Farsi/Urdu letter variants (e.g. ی
+// U+06CC instead of Arabic ي U+064A). Tajawal has no glyph for those
+// variants, so the browser silently falls back to another font for just
+// that one letter — it renders disconnected from the rest of the name.
+// Normalizing to the Arabic forms for display fixes that without touching
+// the underlying stored data.
+function normalizeArabicName(name) {
+  return String(name || "")
+    .replace(/ی/g, "ي") // ی (Farsi yeh) -> ي (Arabic yeh)
+    .replace(/ک/g, "ك"); // ک (Farsi keheh) -> ك (Arabic kaf)
+}
+
 const STYLES = `
   /* Attendance sheet — bundled by /shared/attendance.js */
   /* Relies on host page providing .sheet, .modal, .btn, .btn.primary, .btn.cancel chrome. */
@@ -1367,7 +1379,7 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
         snap.forEach(d => {
           const s = d.data() || {};
           out.push({
-            name: s.name || s.fullName || d.id,
+            name: normalizeArabicName(s.name || s.fullName || d.id),
             uid: d.id,
             class: s.class || s.className || "",
             specialCase: s.specialCase || false,
@@ -1383,7 +1395,7 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
           return arr
             .filter(s => (s.class || s.className) === cls)
             .map(s => ({
-              name: s.name || s.fullName || "",
+              name: normalizeArabicName(s.name || s.fullName || ""),
               uid: s.uid || "",
               class: s.class || s.className || "",
               specialCase: s.specialCase || false,
