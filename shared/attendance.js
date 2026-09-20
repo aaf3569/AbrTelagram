@@ -26,14 +26,18 @@ const ATTENDANCE_RECORDS_SUBCOLLECTION = "attendanceRecords";
 // module would when it resyncs today's sessions after a bell-time edit.
 export const LESSON_END_GRACE_MINUTES = 4;
 
-// Some student names were entered with Farsi/Urdu letter variants (e.g. ی
-// U+06CC instead of Arabic ي U+064A). Tajawal has no glyph for those
-// variants, so the browser silently falls back to another font for just
-// that one letter — it renders disconnected from the rest of the name.
-// Normalizing to the Arabic forms for display fixes that without touching
-// the underlying stored data.
+// Some student names carry characters Tajawal has no glyph for — legacy
+// Arabic Presentation Forms (e.g. an isolated-form ﻱ instead of a plain ي,
+// often left over from copy/pasting out of Word or a PDF), invisible
+// zero-width/bidi control characters, or Farsi/Urdu letter variants (ی vs
+// ي, ک vs ك). Any of these makes the browser silently fall back to another
+// font for just that one letter, so it renders disconnected from the rest
+// of the name. Normalizing for display fixes that without touching the
+// underlying stored data.
 function normalizeArabicName(name) {
   return String(name || "")
+    .normalize("NFKC") // presentation-form letters -> their base Arabic letter
+    .replace(/[​-‏﻿]/g, "") // zero-width / bidi marks
     .replace(/ی/g, "ي") // ی (Farsi yeh) -> ي (Arabic yeh)
     .replace(/ک/g, "ك"); // ک (Farsi keheh) -> ك (Arabic kaf)
 }

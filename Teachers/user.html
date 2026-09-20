@@ -6166,6 +6166,22 @@
     let mcHighlightInFlight = false;
     const MC_CLASS_HIGHLIGHT_REFRESH_MS = 30000;
 
+    // Some student names carry characters Tajawal has no glyph for — legacy
+    // Arabic Presentation Forms (e.g. an isolated-form ﻱ instead of a plain
+    // ي, often left over from copy/pasting out of Word or a PDF), invisible
+    // zero-width/bidi control characters, or Farsi/Urdu letter variants (ی
+    // vs ي, ک vs ك). Any of these makes the browser silently fall back to
+    // another font for just that one letter, so it renders disconnected
+    // from the rest of the name. Normalizing for display fixes that
+    // without touching the underlying stored data.
+    function normalizeArabicNameForDisplay(name){
+      return String(name || '')
+        .normalize('NFKC') // presentation-form letters -> their base Arabic letter
+        .replace(/[​-‏﻿]/g, '') // zero-width / bidi marks
+        .replace(/ی/g, 'ي') // ی -> ي
+        .replace(/ک/g, 'ك'); // ک -> ك
+    }
+
     function mcNormalizeArabic(text){
       if (!text || typeof text !== 'string') return '';
       let normalized = text.normalize('NFD');
@@ -6362,7 +6378,7 @@
           snap.forEach(d => {
             const s = d.data() || {};
             out.push({
-              name: s.name || s.fullName || d.id,
+              name: normalizeArabicNameForDisplay(s.name || s.fullName || d.id),
               uid: d.id,
               class: s.class || s.className || '',
               specialCase: s.specialCase || false,
@@ -6376,7 +6392,7 @@
             const data = mSnap.data();
             const arr = Object.values(data || {}).filter(Boolean);
             return arr.filter(s => (s.class || s.className) === cls).map(s => ({
-              name: s.name || s.fullName || '',
+              name: normalizeArabicNameForDisplay(s.name || s.fullName || ''),
               uid: s.uid || '',
               class: s.class || s.className || '',
               specialCase: s.specialCase || false,
