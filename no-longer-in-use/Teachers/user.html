@@ -1008,6 +1008,18 @@
         </div>
     </div>
 
+    <!-- New Update Popup -->
+    <div id="updateModal" class="modal open" aria-hidden="false">
+        <div class="overlay"></div>
+        <div class="card" role="dialog" aria-modal="true" aria-labelledby="updateModalTitle" style="text-align:center">
+            <h3 id="updateModalTitle">يوجد تحديث جديد</h3>
+            <p>تم إصدار نسخة جديدة من هذه الصفحة. يرجى الانتقال إليها للاستمرار.</p>
+            <div class="row" style="justify-content:center">
+                <button id="updateModalOk" class="btn primary" type="button">حسناً</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast -->
     <div id="toast" class="toast hidden" aria-live="polite">
         <div class="inner">
@@ -3836,6 +3848,14 @@
         classInfoClose.addEventListener('click', closeClassInfoModal);
         blockedClose.addEventListener('click', ()=> closeModal(blockedModal));
         blockedOk.addEventListener('click', ()=> closeModal(blockedModal));
+
+        /* ========= New Update Popup ========= */
+        const updateModal = document.getElementById('updateModal');
+        const updateModalOk = document.getElementById('updateModalOk');
+        lockBodyScroll();
+        updateModalOk.addEventListener('click', ()=>{
+            window.location.href = '/Teachers/user.html';
+        });
 
         document.addEventListener('keydown', (e)=>{
             if(e.key==='Escape') {
