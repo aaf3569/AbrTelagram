@@ -53,7 +53,7 @@ const STYLES = `
   #attendanceSheet .lesson-picker{width:100%}
   #attendanceSheet .att-row{display:flex;gap:12px;flex-wrap:wrap}
   #attendanceSheet .seg{display:flex;align-items:center;border:1px solid var(--border);border-radius:14px;overflow:hidden;background:#fff;box-shadow:var(--shadow-1)}
-  #attendanceSheet .seg button{flex:1 1 0;min-height:48px;padding:12px 10px;background:transparent;border:0;cursor:pointer;font-weight:900;font-size:1rem;font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;transition:var(--transition)}
+  #attendanceSheet .seg button{flex:1 1 0;min-height:48px;padding:12px 10px;background:transparent;border:0;cursor:pointer;font-weight:900;font-size:1rem;font-family:var(--app-font, "Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif);transition:var(--transition)}
   #attendanceSheet .seg .sep{width:1px;height:32px;background:var(--border)}
   #attendanceSheet .seg .present{color:var(--green,#1a7f37)}
   #attendanceSheet .seg .late{color:var(--yellow,#a06d00)}
@@ -75,7 +75,7 @@ const STYLES = `
   #attendanceSheet .lesson-controls{width:100%;display:flex;gap:12px;flex-wrap:wrap;align-items:center}
   #attendanceSheet .lesson-controls .select-wrap{flex:1 1 320px}
   #attendanceSheet .select-wrap{position:relative;max-width:380px;width:100%}
-  #attendanceSheet .select{appearance:none;-webkit-appearance:none;-moz-appearance:none;width:100%;min-height:52px;padding:12px 16px;padding-inline-end:44px;border-radius:16px;font-weight:800;font-size:1rem;cursor:pointer;border:1px solid rgba(3,60,84,.15);background:linear-gradient(145deg,var(--primary),var(--primary-light));color:#fff;box-shadow:0 14px 32px rgba(3,60,84,.25);transition:var(--transition);font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif}
+  #attendanceSheet .select{appearance:none;-webkit-appearance:none;-moz-appearance:none;width:100%;min-height:52px;padding:12px 16px;padding-inline-end:44px;border-radius:16px;font-weight:800;font-size:1rem;cursor:pointer;border:1px solid rgba(3,60,84,.15);background:linear-gradient(145deg,var(--primary),var(--primary-light));color:#fff;box-shadow:0 14px 32px rgba(3,60,84,.25);transition:var(--transition);font-family:var(--app-font, "Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif)}
   #attendanceSheet .select:hover{transform:translateY(-2px);box-shadow:0 18px 40px rgba(3,60,84,.32)}
   #attendanceSheet .select:focus{outline:none;box-shadow:0 0 0 3px rgba(3,60,84,.18), 0 18px 40px rgba(3,60,84,.32)}
   #attendanceSheet .select-wrap::after{content:"";position:absolute;top:50%;transform:translateY(-50%);inset-inline-start:14px;width:22px;height:22px;pointer-events:none;opacity:.95;background:url('data:image/svg+xml;utf8,<svg fill="%23ffffff" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>') no-repeat center / 20px 20px;filter:drop-shadow(0 1px 0 rgba(0,0,0,.15))}

@@ -645,6 +645,10 @@
     .sidebar-group:not([hidden]) + .sidebar-group {
       padding-top: 14px; border-top: 1px solid var(--border-light);
     }
+    /* Settings/logout sit at the bottom of the sidebar's spare space when
+       the other groups don't fill it, but stay part of the normal scroll
+       flow (not fixed) once content overflows. */
+    .sidebar-group-bottom { margin-top: auto; }
     .sidebar-section-label {
       padding: 0 10px 8px; font-size: 0.7rem; font-weight: 800;
       color: var(--muted); letter-spacing: .03em; text-transform: uppercase;
@@ -1043,6 +1047,61 @@
        [hidden]{display:none} default, so a hidden footer would still show
        as an empty bordered bar without this. */
     .modal-footer[hidden] { display: none; }
+
+    /* Blocked popup — centered modal body with a looping X-draw icon,
+       used for hard-stop feedback (wrong lesson/day) instead of a toast. */
+    .blocked-popup {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      text-align: center;
+      padding: 8px 4px 4px;
+    }
+    .blocked-popup .blocked-icon { width: 88px; height: 88px; display: grid; place-items: center; }
+    .blocked-popup .blocked-icon svg { width: 88px; height: 88px; overflow: visible; }
+    .blocked-popup .blocked-icon circle {
+      fill: none;
+      stroke: #dc2626;
+      stroke-width: 6;
+      stroke-dasharray: 220;
+      stroke-dashoffset: 220;
+      animation: blockedRingDraw 1.2s ease-in-out infinite;
+    }
+    .blocked-popup .blocked-icon path {
+      fill: none;
+      stroke: #dc2626;
+      stroke-width: 7;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-dasharray: 56;
+      stroke-dashoffset: 56;
+      animation: blockedXDraw 1.2s ease-in-out infinite;
+    }
+    .blocked-popup .blocked-msg {
+      margin: 0;
+      color: #7f1d1d;
+      font-weight: 800;
+      font-size: .95rem;
+      line-height: 1.7;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .blocked-popup .blocked-icon circle,
+      .blocked-popup .blocked-icon path { animation: none; stroke-dashoffset: 0; }
+    }
+    @keyframes blockedRingDraw {
+      0% { stroke-dashoffset: 220; opacity: .5; }
+      30% { stroke-dashoffset: 0; opacity: 1; }
+      70% { stroke-dashoffset: 0; opacity: 1; }
+      100% { stroke-dashoffset: 220; opacity: .5; }
+    }
+    @keyframes blockedXDraw {
+      0% { stroke-dashoffset: 56; opacity: 0; }
+      25% { stroke-dashoffset: 56; opacity: 0; }
+      45% { stroke-dashoffset: 0; opacity: 1; }
+      70% { stroke-dashoffset: 0; opacity: 1; }
+      100% { stroke-dashoffset: 56; opacity: 0; }
+    }
 
     .info-grid {
       display: grid;
@@ -1509,7 +1568,7 @@
       --primary: #033C54; --primary-light: #065372; --primary-extra-light: #eef5fb;
       --muted: #6b7f9f; --border: #e6edf7; --chip: #eef5fb;
       --shadow-1: 0 8px 22px rgba(3, 60, 84, .14);
-      --app-font: 'Noto Kufi Arabic', system-ui, sans-serif;
+      --app-font: 'Tajawal', sans-serif;
       font-family: var(--app-font); line-height: 1.6;
     }
     #attendanceSheet { z-index: 1000; background: #fff; overflow: hidden; }

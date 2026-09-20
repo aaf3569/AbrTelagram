@@ -136,7 +136,7 @@
         </button>
       </div>
 
-      <div class="sidebar-group">
+      <div class="sidebar-group sidebar-group-bottom">
         <div id="telegramSettingsSlot"></div>
         <button id="sidebarLogout" class="sidebar-link" type="button">
           <i class="fas fa-right-from-bracket" aria-hidden="true"></i>
@@ -1355,6 +1355,26 @@
       el.querySelector('.tclose').addEventListener('click', close);
       toastWrap.appendChild(el);
       setTimeout(close, ms);
+    }
+
+    function showBlockedPopup(title, text){
+      const body = `
+        <div class="blocked-popup">
+          <div class="blocked-icon" aria-hidden="true">
+            <svg viewBox="0 0 100 100">
+              <circle cx="50" cy="50" r="35"></circle>
+              <path d="M35 35 L65 65"></path>
+              <path d="M65 35 L35 65"></path>
+            </svg>
+          </div>
+          <p class="blocked-msg">${escapeHtml(text)}</p>
+        </div>
+      `;
+      const footer = `
+        <button id="blockedPopupOk" class="filter-btn btn-solid" type="button">حسناً</button>
+      `;
+      openModal({ title, bodyHtml: body, footerHtml: footer, icon: 'fa-ban' });
+      document.getElementById('blockedPopupOk').addEventListener('click', closeModal);
     }
 
     function escapeHtml(str){
@@ -3780,7 +3800,7 @@
 
       attendanceButton.addEventListener('click', async (event) => {
         if (meta.date !== kuwaitTodayISO()) {
-          toast({ title: 'الحصة غير متاحة', text: 'يمكن تسجيل الغياب في يوم الحصة فقط.', icon: 'fa-clock' });
+          showBlockedPopup('الحصة غير متاحة', 'يمكن تسجيل الغياب في يوم الحصة فقط.');
           return;
         }
         const button = event.currentTarget;
@@ -3790,7 +3810,7 @@
           const live = await dsAttendance.getCurrentLessonClass(false);
           if (!live.ok || live.date !== meta.date || live.lesson !== meta.lesson ||
               normalizeClassKey(live.classKey) !== normalizeClassKey(meta.classKey)) {
-            toast({ title: 'الحصة غير متاحة', text: 'يمكن تسجيل الغياب لحصتك الحالية فقط.', icon: 'fa-clock' });
+            showBlockedPopup('الحصة غير متاحة', 'يمكن تسجيل الغياب لحصتك الحالية فقط.');
             return;
           }
           closeModal();
