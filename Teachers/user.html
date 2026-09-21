@@ -97,6 +97,14 @@
       </div>
 
       <div class="sidebar-group">
+        <div class="sidebar-section-label">الصفوف</div>
+        <button id="sidebarOtherClasses" class="sidebar-link" type="button">
+          <i class="fas fa-users-rectangle" aria-hidden="true"></i>
+          <span>صفوف أخرى</span>
+        </button>
+      </div>
+
+      <div class="sidebar-group">
         <div class="sidebar-section-label">الجداول</div>
         <button id="sidebarHome" class="sidebar-link" type="button">
           <i class="fas fa-calendar-day"></i>
@@ -199,6 +207,21 @@
           <div id="classWeekGrid" class="grid"></div>
         </div>
       </div>
+    </div>
+  </section>
+
+  <!-- OTHER CLASSES: pick a grade, then a class -->
+  <section id="ocSheet" class="sheet" aria-hidden="true">
+    <div class="sheet-header">
+      <button id="ocClose" class="back-btn" type="button">
+        <i class="fas fa-arrow-right"></i>
+        <span>رجوع</span>
+      </button>
+      <h3 class="sheet-title">صفوف أخرى</h3>
+    </div>
+    <div class="sheet-body">
+      <p class="oc-hint">اختر الصف ثم الفصل لعرض الطلاب وتسجيل الغياب.</p>
+      <div id="ocGroups" class="oc-groups"></div>
     </div>
   </section>
 
@@ -818,7 +841,13 @@
     <div class="sheet-body mc-sheet-body">
       <div class="mc-hero">
         <h2 id="mcClassHeroName" class="mc-class-name">—</h2>
-        <button id="mcAttendBtn" class="mc-btn-attend" type="button">تسجيل الغياب</button>
+        <div class="mc-hero-actions">
+          <button id="mcAttendBtn" class="mc-btn-attend" type="button">تسجيل الغياب</button>
+          <button id="mcDownloadBtn" class="mc-btn-download" type="button">
+            <i class="fas fa-file-arrow-down" aria-hidden="true"></i>
+            <span>تنزيل القائمة</span>
+          </button>
+        </div>
       </div>
       <div class="mc-input-wrap">
         <i class="fas fa-magnifying-glass mc-input-icon"></i>
@@ -6155,6 +6184,7 @@
     const mcSheetTitle = document.getElementById('mcSheetTitle');
     const mcClassHeroName = document.getElementById('mcClassHeroName');
     const mcAttendBtn = document.getElementById('mcAttendBtn');
+    const mcDownloadBtn = document.getElementById('mcDownloadBtn');
     const mcStudentSearch = document.getElementById('mcStudentSearch');
     const mcStudentsList = document.getElementById('mcStudentsList');
 
@@ -6479,6 +6509,133 @@
       mcRenderStudentsGrid(mcCachedStudents.filter(s => mcNormalizeArabic(s.name || '').includes(nq)));
     });
 
+    /* ========= Download class list (PDF) ========= */
+    // The whole class always goes on ONE A4 page: row height and font size
+    // shrink with the student count instead of spilling onto a second page.
+    const SL_TABLE_SPACE = 770;
+
+    function slBuildPageHost({ cls, rows }){
+      const rowH = Math.max(14, Math.min(34, Math.floor(SL_TABLE_SPACE / Math.max(1, rows.length))));
+      const fontPx = Math.max(8.5, Math.min(14, Math.round(rowH * 0.44 * 2) / 2));
+      const bodyRows = rows.map((s) => {
+        const num = mcGetStudentNumber(s);
+        const numText = num === Infinity ? '—' : toArabicDigits(num);
+        return `
+          <tr>
+            <td class="c-num">${escapeHtml(numText)}</td>
+            <td class="c-name"><span class="name-text">${escapeHtml(s.name || '—')}</span></td>
+            <td class="c-notes"></td>
+          </tr>`;
+      }).join('');
+
+      const host = document.createElement('div');
+      host.style.cssText = 'position:fixed;top:0;left:-10000px;width:794px;height:1123px;background:#fff;z-index:-1';
+      host.innerHTML = `
+        <style>
+          #slPdfCard {
+            width: 794px; height: 1123px; box-sizing: border-box; background: #fff; color: #102542;
+            padding: 34px 32px 22px; direction: rtl; display: flex; flex-direction: column;
+            font-family: 'Tajawal', sans-serif;
+          }
+          #slPdfCard .sl-head { text-align: center; }
+          #slPdfCard .sl-logo { display: block; height: 78px; width: auto; max-width: 240px; margin: 0 auto 10px; object-fit: contain; }
+          #slPdfCard .sl-school { font-size: 22px; font-weight: 900; color: #0e3554; margin-bottom: 6px; }
+          #slPdfCard .sl-title { font-size: 20px; font-weight: 800; color: #1d4d72; }
+          #slPdfCard .sl-title b { font-weight: 900; color: #0e3554; }
+          #slPdfCard .sl-sep { border-top: 2px solid #dbe7f2; margin: 14px 0 16px; }
+          #slPdfCard table { width: 100%; border-collapse: collapse; table-layout: fixed; border: 1px solid #b9cfe3; }
+          #slPdfCard thead th {
+            background: linear-gradient(135deg, #0e3a5c, #1c5b88); color: #fff;
+            font-size: 14px; font-weight: 800; height: 38px; padding: 0 8px; text-align: center;
+            border-left: 1px solid rgba(255,255,255,.22);
+          }
+          #slPdfCard thead th:last-child { border-left: none; }
+          #slPdfCard tbody td {
+            height: ${rowH}px; padding: 0 10px; border-top: 1px solid #cfdfee; border-left: 1px solid #cfdfee;
+            font-size: ${fontPx}px; font-weight: 700; vertical-align: middle;
+          }
+          #slPdfCard tbody td:last-child { border-left: none; }
+          #slPdfCard tbody tr:nth-child(even) td { background: #f5f9fd; }
+          #slPdfCard .c-num { text-align: center; font-weight: 800; color: #0e3554; }
+          #slPdfCard .c-name { white-space: nowrap; overflow: hidden; text-align: right; }
+          #slPdfCard .name-text { display: inline-block; white-space: nowrap; }
+        </style>
+        <div id="slPdfCard">
+          <div class="sl-head">
+            <img id="slPdfLogo" class="sl-logo" src="/images/schoollogo.png" alt="School Logo">
+            <div class="sl-school">ثانوية أحمد البشر الرومي</div>
+            <div class="sl-title">قائمة طلاب الصف <b>${escapeHtml(toArabicDigits(cls))}</b></div>
+            <div class="sl-sep"></div>
+          </div>
+          <table>
+            <colgroup><col style="width:72px"><col style="width:330px"><col></colgroup>
+            <thead><tr><th>الرقم</th><th>اسم الطالب</th><th>ملاحظات</th></tr></thead>
+            <tbody>${bodyRows}</tbody>
+          </table>
+        </div>`;
+      return host;
+    }
+
+    // A name never wraps: shrink its font just enough to fit its cell.
+    function slFitNames(host){
+      host.querySelectorAll('.c-name').forEach(cell => {
+        const span = cell.querySelector('.name-text');
+        const avail = cell.clientWidth - 20;
+        let size = parseFloat(getComputedStyle(span).fontSize) || 14;
+        while (span.scrollWidth > avail && size > 7) {
+          size -= 0.5;
+          span.style.fontSize = size + 'px';
+        }
+      });
+    }
+
+    async function slDownloadPdf(){
+      const students = mcCachedStudents;
+      const cls = mcCurrentClass;
+      if (!cls || !students.length) return;
+      if (!window.html2canvas || !window.jspdf?.jsPDF) {
+        toast({ title: 'خطأ', text: 'مكتبة إنشاء PDF غير متاحة حالياً.', icon: 'fa-exclamation-circle' });
+        return;
+      }
+
+      const label = mcDownloadBtn.querySelector('span');
+      const original = label.textContent;
+      mcDownloadBtn.disabled = true;
+      label.textContent = 'جاري التجهيز…';
+
+      try {
+        if (document.fonts?.load) {
+          await Promise.all(['500', '700', '800', '900'].map(w => document.fonts.load(`${w} 14px Tajawal`)));
+        }
+        if (document.fonts?.ready) await document.fonts.ready;
+
+        const { jsPDF } = window.jspdf;
+        const docPdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4', compress: true });
+        const host = slBuildPageHost({ cls, rows: students });
+        document.body.appendChild(host);
+        try {
+          try { await waitForImageReady(host.querySelector('#slPdfLogo')); } catch (_) {}
+          slFitNames(host);
+          const canvas = await window.html2canvas(host.querySelector('#slPdfCard'), {
+            backgroundColor: '#ffffff', scale: 2, useCORS: true, logging: false
+          });
+          addCanvasToA4Page(docPdf, canvas, 14);
+        } finally {
+          host.remove();
+        }
+
+        docPdf.save(filenameSafe(`قائمة-طلاب-${toArabicDigits(cls)}`) + '.pdf');
+        toast({ title: 'تم', text: 'تم تنزيل قائمة الطلاب.', icon: 'fa-check-circle' });
+      } catch (e) {
+        console.error(e);
+        toast({ title: 'خطأ', text: 'تعذّر إنشاء ملف PDF.', icon: 'fa-exclamation-circle' });
+      } finally {
+        label.textContent = original;
+        mcDownloadBtn.disabled = false;
+      }
+    }
+    mcDownloadBtn.addEventListener('click', slDownloadPdf);
+
     mcAttendBtn.addEventListener('click', () => {
       if (mcAttendEditSessionId) dsAttendance.openForEdit(mcAttendEditSessionId);
       else dsAttendance.start();
@@ -6504,6 +6661,74 @@
       setFilterActive(btnToday);
       await loadTodayForTeacher(currentUser.uid);
     }
+
+    /* ========= صفوف أخرى (any class, by grade) ========= */
+    const ocSheet = document.getElementById('ocSheet');
+    const ocClose = document.getElementById('ocClose');
+    const ocGroups = document.getElementById('ocGroups');
+    const sidebarOtherClasses = document.getElementById('sidebarOtherClasses');
+    const OC_GRADES = [
+      { grade: 10, label: 'الصف العاشر' },
+      { grade: 11, label: 'الصف الحادي عشر' },
+      { grade: 12, label: 'الصف الثاني عشر' }
+    ];
+    let ocBuiltFor = '';
+
+    function ocGradeOf(cls){
+      const m = /^\s*(\d+)/.exec(String(cls || ''));
+      return m ? Number(m[1]) : 0;
+    }
+
+    function ocBuildGroups(){
+      const signature = CLASS_OPTIONS.join('|');
+      if (signature === ocBuiltFor && ocGroups.childElementCount) return;
+      ocBuiltFor = signature;
+      ocGroups.innerHTML = '';
+
+      OC_GRADES.forEach(({ grade, label }) => {
+        const classes = CLASS_OPTIONS.filter(c => ocGradeOf(c) === grade);
+        const details = document.createElement('details');
+        details.className = 'oc-group';
+
+        const summary = document.createElement('summary');
+        summary.innerHTML = `
+          <span class="oc-grade-badge">${escapeHtml(toArabicDigits(grade))}</span>
+          <span class="oc-grade-label">${escapeHtml(label)}</span>
+          <span class="oc-count">${escapeHtml(toArabicDigits(classes.length))}</span>
+          <i class="fas fa-chevron-down oc-chev" aria-hidden="true"></i>`;
+        details.appendChild(summary);
+
+        const grid = document.createElement('div');
+        grid.className = 'oc-grid';
+        if (!classes.length) {
+          grid.innerHTML = '<div class="oc-empty">لا توجد فصول.</div>';
+        }
+        classes.forEach(cls => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'oc-class-btn';
+          btn.textContent = toArabicDigits(cls);
+          btn.addEventListener('click', () => { mcOpenClassView(cls); });
+          grid.appendChild(btn);
+        });
+        details.appendChild(grid);
+        ocGroups.appendChild(details);
+      });
+    }
+
+    function openOtherClasses(){
+      ocBuildGroups();
+      ocSheet.classList.add('open');
+      ocSheet.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+    }
+    function closeOtherClasses(){
+      ocSheet.classList.remove('open');
+      ocSheet.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = '';
+    }
+    sidebarOtherClasses.addEventListener('click', () => { closeSidebar(); openOtherClasses(); });
+    ocClose.addEventListener('click', closeOtherClasses);
 
     btnMore.addEventListener('click', () => { closeSidebar(); openMore(); });
     closeMore.addEventListener('click', closeMoreSheet);
