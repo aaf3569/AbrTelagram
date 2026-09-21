@@ -673,6 +673,17 @@
     }
     .sidebar-link:active { background: var(--primary-light); }
     .sidebar-link[hidden] { display: none; }
+    /* The section you are currently in. */
+    .sidebar-link.is-current {
+      background: var(--primary-light); border-color: rgba(2, 43, 66, 0.18); color: var(--primary);
+      box-shadow: inset -4px 0 0 var(--primary);
+    }
+    .sidebar-link.is-current i {
+      background: linear-gradient(145deg, var(--primary-2), var(--primary)); color: #fff;
+    }
+    .sidebar-class-btn.is-current {
+      outline: 3px solid rgba(2, 43, 66, 0.32); outline-offset: 2px;
+    }
 
     .sidebar-settings-link::before {
       font-family: "Font Awesome 6 Free"; font-weight: 900; content: "\f013";

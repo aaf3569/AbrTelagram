@@ -5173,7 +5173,36 @@
     }
 
     /* ========= Sidebar ========= */
+    // Marks the sidebar entry for whatever is currently open. Computed when
+    // the sidebar opens, from the sheets that are showing (the one on top,
+    // i.e. latest in the DOM, wins) or else the schedule view underneath.
+    function updateSidebarActive(){
+      sidebar.querySelectorAll('.is-current').forEach(el => el.classList.remove('is-current'));
+
+      const sheets = [
+        [moreSheet, () => btnMore],
+        [ocSheet, () => sidebarOtherClasses],
+        [requestsSheet, () => btnRequests],
+        [dsSheetEl, () => sidebarDeptSchedule],
+        [ssSheetEl, () => sidebarSchoolSchedule],
+        [svsSheetEl, () => sidebarSupervisorStudents],
+        [mcSheetEl, () => {
+          if (ocSheet.classList.contains('open')) return sidebarOtherClasses;
+          return [...sidebarClassesButtons.querySelectorAll('.sidebar-class-btn')]
+            .find(b => b.dataset.classKey === mcCurrentClass) || null;
+        }]
+      ];
+
+      let target = null;
+      for (const [sheet, resolve] of sheets) {
+        if (sheet && sheet.classList.contains('open')) target = resolve();
+      }
+      if (!target) target = currentView === 'week' ? btnWeek : sidebarHome;
+      if (target) target.classList.add('is-current');
+    }
+
     function openSidebar(){
+      updateSidebarActive();
       sidebar.classList.add('open');
       sidebar.setAttribute('aria-hidden','false');
       sidebarBackdrop.classList.add('open');
