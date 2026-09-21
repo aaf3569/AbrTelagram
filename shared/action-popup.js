@@ -35,26 +35,42 @@ function ensurePopupStyles() {
       position: absolute;
       inset: 0;
       background: rgba(5, 15, 35, 0.56);
-      backdrop-filter: blur(4px);
-      -webkit-backdrop-filter: blur(4px);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
     }
 
     #${POPUP_HOST_ID} .abr-popup-dialog {
+      --abr-accent: #0b5f88;
+      --abr-accent-2: #0f7cb0;
+      --abr-accent-soft: #e6f1f8;
+      --abr-accent-glow: rgba(11, 95, 136, 0.32);
       position: relative;
-      width: fit-content;
-      min-width: 300px;
-      max-width: min(400px, calc(100vw - 28px));
-      border-radius: 20px;
-      border: 1px solid #d9e7f5;
-      background: linear-gradient(180deg, #ffffff 0%, #f7fbff 100%);
-      box-shadow: 0 24px 55px rgba(15, 40, 75, 0.28);
-      padding: 22px 20px 18px;
-      transform: translateY(8px) scale(0.97);
+      width: min(360px, calc(100vw - 32px));
+      border-radius: 24px;
+      border: 1px solid #dbe7f2;
+      background: #ffffff;
+      box-shadow: 0 30px 70px rgba(10, 30, 60, 0.32);
+      padding: 30px 22px 20px;
+      transform: translateY(12px) scale(0.96);
       opacity: 0;
-      transition: transform .2s ease, opacity .2s ease;
-      font-family: "Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      transition: transform .24s cubic-bezier(.22,.7,.25,1), opacity .2s ease;
+      font-family: var(--app-font, "Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif);
       direction: rtl;
-      text-align: right;
+      text-align: center;
+      overflow: hidden;
+    }
+
+    /* Soft accent wash behind the icon. */
+    #${POPUP_HOST_ID} .abr-popup-dialog::before {
+      content: "";
+      position: absolute;
+      top: -70px;
+      left: 50%;
+      width: 240px;
+      height: 170px;
+      transform: translateX(-50%);
+      background: radial-gradient(closest-side, var(--abr-accent-soft), transparent);
+      pointer-events: none;
     }
 
     #${POPUP_HOST_ID}.is-open .abr-popup-dialog {
@@ -63,56 +79,71 @@ function ensurePopupStyles() {
     }
 
     #${POPUP_HOST_ID} .abr-popup-icon {
-      width: 46px;
-      height: 46px;
-      border-radius: 999px;
+      position: relative;
+      width: 68px;
+      height: 68px;
+      border-radius: 50%;
       display: grid;
       place-items: center;
-      margin-bottom: 12px;
-      background: linear-gradient(135deg, #0b5f88, #0f7cb0);
+      margin: 0 auto 16px;
+      background: linear-gradient(145deg, var(--abr-accent), var(--abr-accent-2));
       color: #fff;
-      font-size: 22px;
+      font-size: 26px;
       font-weight: 900;
-      box-shadow: 0 12px 26px rgba(11, 95, 136, 0.35);
+      box-shadow: 0 14px 30px var(--abr-accent-glow), 0 0 0 8px var(--abr-accent-soft);
+    }
+
+    #${POPUP_HOST_ID} .abr-popup-icon svg {
+      width: 30px;
+      height: 30px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2.2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
     }
 
     #${POPUP_HOST_ID} .abr-popup-title {
+      position: relative;
       margin: 0 0 8px;
-      color: #083b57;
-      font-size: 1.1rem;
+      color: #0a2f47;
+      font-size: 1.2rem;
       font-weight: 900;
       line-height: 1.5;
     }
 
     #${POPUP_HOST_ID} .abr-popup-message {
-      margin: 0;
-      color: #35546b;
-      font-size: 0.94rem;
-      line-height: 1.9;
+      position: relative;
+      margin: 0 auto;
+      max-width: 290px;
+      color: #4a6478;
+      font-size: 0.95rem;
+      font-weight: 600;
+      line-height: 1.85;
     }
 
     #${POPUP_HOST_ID} .abr-popup-actions {
-      margin-top: 18px;
-      display: flex;
+      position: relative;
+      margin-top: 22px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
       gap: 10px;
-      flex-wrap: wrap;
-      justify-content: flex-start;
     }
 
     #${POPUP_HOST_ID} .abr-popup-btn {
       border: 0;
-      border-radius: 12px;
-      min-height: 44px;
-      padding: 0 14px;
+      border-radius: 14px;
+      min-height: 50px;
+      padding: 0 12px;
       font-family: inherit;
       font-weight: 800;
-      font-size: 0.93rem;
+      font-size: 0.95rem;
       cursor: pointer;
-      transition: transform .14s ease, box-shadow .14s ease, opacity .14s ease;
+      transition: transform .14s ease, box-shadow .14s ease, background-color .14s ease;
     }
 
     #${POPUP_HOST_ID} .abr-popup-btn:focus-visible {
-      outline: 3px solid rgba(11, 95, 136, 0.35);
+      outline: 3px solid var(--abr-accent-glow);
       outline-offset: 2px;
     }
 
@@ -121,35 +152,32 @@ function ensurePopupStyles() {
     }
 
     #${POPUP_HOST_ID} .abr-popup-btn.cancel {
-      background: #f2f7fc;
-      color: #24465d;
-      border: 1px solid #d8e5f2;
+      background: #f1f5f9;
+      color: #33526a;
+      border: 1px solid #dbe5ee;
     }
 
     #${POPUP_HOST_ID} .abr-popup-btn.cancel:hover {
-      background: #e8f1fa;
+      background: #e6edf4;
     }
 
     #${POPUP_HOST_ID} .abr-popup-btn.confirm {
-      background: linear-gradient(145deg, #0b5f88, #0f7cb0);
+      background: linear-gradient(145deg, var(--abr-accent), var(--abr-accent-2));
       color: #fff;
-      box-shadow: 0 12px 25px rgba(11, 95, 136, 0.3);
+      box-shadow: 0 12px 26px var(--abr-accent-glow);
     }
 
     #${POPUP_HOST_ID} .abr-popup-btn.confirm:hover {
       transform: translateY(-1px);
-      box-shadow: 0 15px 30px rgba(11, 95, 136, 0.36);
+      box-shadow: 0 16px 32px var(--abr-accent-glow);
     }
 
     #${POPUP_HOST_ID}.is-danger .abr-popup-dialog {
-      border-color: #f4c7c9;
-      background: linear-gradient(180deg, #fff5f5 0%, #fff 100%);
-      box-shadow: 0 24px 55px rgba(130, 20, 24, 0.22);
-    }
-
-    #${POPUP_HOST_ID}.is-danger .abr-popup-icon {
-      background: linear-gradient(145deg, #b42318, #dc2626);
-      box-shadow: 0 12px 26px rgba(180, 35, 24, 0.34);
+      --abr-accent: #b42318;
+      --abr-accent-2: #dc2626;
+      --abr-accent-soft: #fdeceb;
+      --abr-accent-glow: rgba(180, 35, 24, 0.32);
+      border-color: #f4d3d3;
     }
 
     #${POPUP_HOST_ID}.is-danger .abr-popup-title {
@@ -157,38 +185,35 @@ function ensurePopupStyles() {
     }
 
     #${POPUP_HOST_ID}.is-danger .abr-popup-message {
-      color: #7f1d1d;
-    }
-
-    #${POPUP_HOST_ID}.is-danger .abr-popup-btn:focus-visible {
-      outline-color: rgba(220, 38, 38, 0.28);
-    }
-
-    #${POPUP_HOST_ID}.is-danger .abr-popup-btn.confirm {
-      background: linear-gradient(145deg, #b42318, #dc2626);
-      box-shadow: 0 12px 25px rgba(180, 35, 24, 0.31);
-    }
-
-    #${POPUP_HOST_ID}.is-danger .abr-popup-btn.confirm:hover {
-      box-shadow: 0 15px 30px rgba(180, 35, 24, 0.37);
+      color: #7f3a3a;
     }
 
     @media (max-width: 480px) {
       #${POPUP_HOST_ID} .abr-popup-dialog {
-        padding: 18px 16px 16px;
+        padding: 26px 18px 18px;
       }
+    }
 
-      #${POPUP_HOST_ID} .abr-popup-actions {
-        margin-top: 16px;
-      }
-
+    @media (prefers-reduced-motion: reduce) {
+      #${POPUP_HOST_ID} .abr-popup-dialog,
       #${POPUP_HOST_ID} .abr-popup-btn {
-        flex: 1 1 0;
+        transition: none;
       }
     }
   `;
 
   document.head.appendChild(style);
+}
+
+const POPUP_ICONS = {
+  "↩": '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>',
+  "!": '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.9 18a2 2 0 0 0 1.7 3h16.8a2 2 0 0 0 1.7-3L14.1 3.9a2 2 0 0 0-3.6 0Z"/></svg>',
+  "؟": '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 2.5-3 4.5"/><path d="M12 17.5h.01"/></svg>'
+};
+
+function setPopupIcon(el, icon) {
+  if (POPUP_ICONS[icon]) el.innerHTML = POPUP_ICONS[icon];
+  else el.textContent = icon;
 }
 
 function closePopup(confirmed) {
@@ -288,7 +313,7 @@ export function showActionPopup(options = {}) {
 
   const variant = options.variant === "danger" ? "danger" : "default";
   refs.host.classList.toggle("is-danger", variant === "danger");
-  refs.icon.textContent = options.icon || (variant === "danger" ? "!" : "؟");
+  setPopupIcon(refs.icon, options.icon || (variant === "danger" ? "!" : "؟"));
   refs.title.textContent = options.title || "تأكيد";
   refs.message.textContent = options.message || "هل تريد المتابعة؟";
   refs.cancelBtn.textContent = options.cancelText || "إلغاء";

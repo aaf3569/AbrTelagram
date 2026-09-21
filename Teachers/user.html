@@ -857,6 +857,26 @@
     </div>
   </section>
 
+  <!-- Download choice: PDF or Excel -->
+  <div id="dlChoiceModal" class="dl-choice" aria-hidden="true">
+    <div class="dl-choice-backdrop"></div>
+    <div class="dl-choice-card" role="dialog" aria-modal="true" aria-labelledby="dlChoiceTitle">
+      <h3 id="dlChoiceTitle" class="dl-choice-title">تنزيل القائمة</h3>
+      <p id="dlChoiceSub" class="dl-choice-sub">—</p>
+      <button id="dlChoicePdf" class="dl-opt" type="button">
+        <span class="dl-opt-icon pdf"><i class="fas fa-file-pdf" aria-hidden="true"></i></span>
+        <span class="dl-opt-text"><b>تنزيل PDF</b><small>جاهز للطباعة</small></span>
+        <i class="fas fa-chevron-left dl-opt-chev" aria-hidden="true"></i>
+      </button>
+      <button id="dlChoiceExcel" class="dl-opt" type="button">
+        <span class="dl-opt-icon excel"><i class="fas fa-file-excel" aria-hidden="true"></i></span>
+        <span class="dl-opt-text"><b>تنزيل Excel</b><small>قابل للتعديل</small></span>
+        <i class="fas fa-chevron-left dl-opt-chev" aria-hidden="true"></i>
+      </button>
+      <button id="dlChoiceClose" class="dl-choice-close" type="button">إغلاق</button>
+    </div>
+  </div>
+
   <!-- MODAL -->
   <section id="modal" class="modal" aria-hidden="true">
     <div class="modal-backdrop" id="modalBackdrop"></div>
@@ -6674,7 +6694,135 @@
         mcDownloadBtn.disabled = false;
       }
     }
-    mcDownloadBtn.addEventListener('click', slDownloadPdf);
+    /* ========= Download choice (PDF / Excel) ========= */
+    const dlChoiceModal = document.getElementById('dlChoiceModal');
+    const dlChoiceSub = document.getElementById('dlChoiceSub');
+
+    function openDlChoice(){
+      if (!mcCurrentClass || !mcCachedStudents.length) {
+        toast({ title: 'تنبيه', text: 'لا يوجد طلاب لتنزيل القائمة.', icon: 'fa-circle-info' });
+        return;
+      }
+      dlChoiceSub.textContent = `الصف ${toArabicDigits(mcCurrentClass)} · ${toArabicDigits(mcCachedStudents.length)} طالب`;
+      dlChoiceModal.classList.add('open');
+      dlChoiceModal.setAttribute('aria-hidden', 'false');
+    }
+    function closeDlChoice(){
+      dlChoiceModal.classList.remove('open');
+      dlChoiceModal.setAttribute('aria-hidden', 'true');
+    }
+    document.getElementById('dlChoiceClose').addEventListener('click', closeDlChoice);
+    dlChoiceModal.querySelector('.dl-choice-backdrop').addEventListener('click', closeDlChoice);
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && dlChoiceModal.classList.contains('open')) closeDlChoice();
+    });
+    document.getElementById('dlChoicePdf').addEventListener('click', () => { closeDlChoice(); slDownloadPdf(); });
+    document.getElementById('dlChoiceExcel').addEventListener('click', () => { closeDlChoice(); slDownloadExcel(); });
+    mcDownloadBtn.addEventListener('click', openDlChoice);
+
+    function slLoadExcelJs(){
+      if (window.ExcelJS) return Promise.resolve();
+      return new Promise((resolve, reject) => {
+        const el = document.createElement('script');
+        el.src = 'https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js';
+        el.onload = () => resolve();
+        el.onerror = () => reject(new Error('exceljs_load_failed'));
+        document.head.appendChild(el);
+      });
+    }
+
+    // A styled, right-to-left workbook: school + title rows, a navy header,
+    // one row per student (number, name, blank notes), zebra rows, and print
+    // settings that put the whole class on one A4 page.
+    async function slDownloadExcel(){
+      const students = mcCachedStudents;
+      const cls = mcCurrentClass;
+      if (!cls || !students.length) return;
+
+      const label = mcDownloadBtn.querySelector('span');
+      const original = label.textContent;
+      mcDownloadBtn.disabled = true;
+      label.textContent = 'جاري التجهيز…';
+
+      try {
+        await slLoadExcelJs();
+
+        const wb = new window.ExcelJS.Workbook();
+        wb.creator = 'ثانوية أحمد البشر الرومي';
+        wb.created = new Date();
+
+        const sheetName = `الصف ${cls}`.replace(/[\\/?*\[\]:]/g, '-').slice(0, 31);
+        const ws = wb.addWorksheet(sheetName, {
+          views: [{ rightToLeft: true, state: 'frozen', ySplit: 3 }],
+          pageSetup: {
+            paperSize: 9, orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 1,
+            horizontalCentered: true, printTitlesRow: '3:3',
+            margins: { left: 0.5, right: 0.5, top: 0.6, bottom: 0.6, header: 0.3, footer: 0.3 }
+          }
+        });
+        ws.columns = [{ width: 10 }, { width: 44 }, { width: 42 }];
+
+        const navy = 'FF0E3A5C';
+        const border = { style: 'thin', color: { argb: 'FFB9CFE3' } };
+        const allBorders = { top: border, left: border, bottom: border, right: border };
+
+        ws.mergeCells('A1:C1');
+        const school = ws.getCell('A1');
+        school.value = 'ثانوية أحمد البشر الرومي';
+        school.font = { name: 'Arial', size: 16, bold: true, color: { argb: 'FF0E3554' } };
+        school.alignment = { horizontal: 'center', vertical: 'middle' };
+        ws.getRow(1).height = 30;
+
+        ws.mergeCells('A2:C2');
+        const title = ws.getCell('A2');
+        title.value = `قائمة طلاب الصف ${toArabicDigits(cls)}`;
+        title.font = { name: 'Arial', size: 13, bold: true, color: { argb: 'FF1D4D72' } };
+        title.alignment = { horizontal: 'center', vertical: 'middle' };
+        ws.getRow(2).height = 24;
+
+        const head = ws.getRow(3);
+        head.values = ['الرقم', 'اسم الطالب', 'ملاحظات'];
+        head.height = 26;
+        head.eachCell((cell) => {
+          cell.font = { name: 'Arial', size: 12, bold: true, color: { argb: 'FFFFFFFF' } };
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: navy } };
+          cell.alignment = { horizontal: 'center', vertical: 'middle' };
+          cell.border = allBorders;
+        });
+
+        students.forEach((s, i) => {
+          const num = mcGetStudentNumber(s);
+          const row = ws.addRow([Number.isFinite(num) ? num : '—', s.name || '—', '']);
+          row.height = 22;
+          row.eachCell({ includeEmpty: true }, (cell, col) => {
+            cell.font = { name: 'Arial', size: 12, bold: col === 1, color: { argb: 'FF102542' } };
+            cell.alignment = { horizontal: col === 2 ? 'right' : 'center', vertical: 'middle', wrapText: false };
+            cell.border = allBorders;
+            if (i % 2 === 1) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5F9FD' } };
+          });
+        });
+
+        const buffer = await wb.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filenameSafe(`قائمة-طلاب-${toArabicDigits(cls)}`) + '.xlsx';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 4000);
+
+        toast({ title: 'تم', text: 'تم تنزيل ملف Excel.', icon: 'fa-check-circle' });
+      } catch (e) {
+        console.error(e);
+        toast({ title: 'خطأ', text: 'تعذّر إنشاء ملف Excel.', icon: 'fa-exclamation-circle' });
+      } finally {
+        label.textContent = original;
+        mcDownloadBtn.disabled = false;
+      }
+    }
+
 
     mcAttendBtn.addEventListener('click', () => {
       if (mcAttendEditSessionId) dsAttendance.openForEdit(mcAttendEditSessionId);

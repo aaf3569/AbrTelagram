@@ -1886,6 +1886,49 @@
     .mc-btn-download:disabled { opacity: .6; cursor: default; transform: none; }
     .mc-btn-attend.mc-attend-edit { background: linear-gradient(145deg, #c98a1f, var(--warning)); box-shadow: 0 10px 22px rgba(160,109,0,.28); }
 
+    /* Download choice popup (PDF / Excel) */
+    .dl-choice {
+      position: fixed; inset: 0; z-index: 1150; display: grid; place-items: center; padding: 16px;
+      opacity: 0; visibility: hidden; pointer-events: none; transition: opacity .2s ease, visibility .2s ease;
+    }
+    .dl-choice.open { opacity: 1; visibility: visible; pointer-events: auto; }
+    .dl-choice-backdrop {
+      position: absolute; inset: 0; background: rgba(5, 15, 35, .56);
+      backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    }
+    .dl-choice-card {
+      position: relative; width: min(360px, calc(100vw - 32px)); background: #fff;
+      border: 1px solid var(--border); border-radius: 24px; padding: 26px 18px 18px;
+      box-shadow: 0 30px 70px rgba(10, 30, 60, .32); text-align: center;
+      display: grid; gap: 10px;
+      transform: translateY(12px) scale(.96); transition: transform .24s cubic-bezier(.22,.7,.25,1);
+    }
+    .dl-choice.open .dl-choice-card { transform: translateY(0) scale(1); }
+    .dl-choice-title { margin: 0; font-size: 1.2rem; font-weight: 900; color: var(--primary); }
+    .dl-choice-sub { margin: 0 0 6px; font-size: .9rem; font-weight: 700; color: var(--muted); }
+    .dl-opt {
+      display: flex; align-items: center; gap: 14px; width: 100%; min-height: 66px; padding: 10px 14px;
+      background: #fff; border: 1.5px solid var(--border); border-radius: 16px; cursor: pointer;
+      font-family: inherit; text-align: right; transition: var(--transition);
+    }
+    .dl-opt:hover { transform: translateY(-2px); border-color: rgba(2,43,66,.3); box-shadow: 0 12px 26px rgba(2,43,66,.14); }
+    .dl-opt-icon {
+      width: 44px; height: 44px; flex-shrink: 0; border-radius: 13px; display: grid; place-items: center; font-size: 1.25rem;
+    }
+    .dl-opt-icon.pdf { background: #fdeceb; color: #c62828; }
+    .dl-opt-icon.excel { background: #e6f5ec; color: #1e7e46; }
+    .dl-opt-text { flex: 1; display: grid; gap: 1px; }
+    .dl-opt-text b { font-size: 1rem; font-weight: 900; color: var(--text); }
+    .dl-opt-text small { font-size: .78rem; font-weight: 700; color: var(--muted); }
+    .dl-opt-chev { color: var(--muted); font-size: .8rem; }
+    .dl-choice-close {
+      margin-top: 4px; min-height: 48px; border-radius: 14px; cursor: pointer;
+      border: 1px solid var(--border); background: #f1f5f9; color: var(--primary);
+      font-family: inherit; font-weight: 800; font-size: 1rem; transition: var(--transition);
+    }
+    .dl-choice-close:hover { background: #e6edf4; }
+    @media (prefers-reduced-motion: reduce) { .dl-choice, .dl-choice-card { transition: none; } }
+
     /* صفوف أخرى */
     .oc-hint { margin: 0; color: var(--muted); font-weight: 700; font-size: .92rem; }
     .oc-groups { display: grid; gap: 12px; }
