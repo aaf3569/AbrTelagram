@@ -1193,6 +1193,31 @@
       .grid-wrap { overflow: auto; }
       .grid { min-width: 1100px; }
     }
+    /* جدولي الأسبوعي on phone: fit the whole week in the viewport instead of
+       a 1100px grid you scroll sideways. Pinch-zoom still works. The column
+       template is set inline by JS, hence !important. */
+    @media (max-width: 768px) {
+      .grid-wrap.week-fit { overflow: hidden; border-radius: 12px; }
+      .grid-wrap.week-fit .grid {
+        min-width: 0;
+        grid-template-columns: 46px repeat(7, minmax(0, 1fr)) !important;
+      }
+      .week-fit .gth { padding: 8px 1px; }
+      .week-fit .gth > i { display: none; }
+      .week-fit .gth .lesson-title-row {
+        font-size: .58rem; line-height: 1.25; overflow-wrap: anywhere;
+      }
+      .week-fit .gth .lesson-time-row { display: none; }
+      .week-fit .gcell {
+        padding: 6px 1px; min-height: 46px;
+        font-size: .68rem; line-height: 1.25; overflow-wrap: anywhere;
+      }
+      .week-fit .gcell.lesson-highlight { font-weight: 800; }
+      .week-fit .day-col { position: static; box-shadow: none; padding: 6px 1px; }
+      .week-fit .day-col > div:first-child { font-size: .62rem; }
+      .week-fit .day-col .small { display: none; }
+      .week-fit .grid > .gth:first-child { position: static; }
+    }
     @media (max-width: 768px) {
       .site-header { padding: 14px 16px; }
       .site-title { font-size: clamp(0.7rem, calc(7vw - 8px), 1.2rem); }

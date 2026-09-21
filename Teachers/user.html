@@ -1858,7 +1858,7 @@
     function renderWeekSkeleton(){
       containerMain.innerHTML = '';
       const wrap = document.createElement('div');
-      wrap.className = 'grid-wrap';
+      wrap.className = 'grid-wrap week-fit';
       const grid = document.createElement('div');
       grid.className = 'grid';
       grid.style.gridTemplateColumns = `140px repeat(${FIXED_LESSON_COUNT}, minmax(130px, 1fr))`;
@@ -2075,7 +2075,7 @@
       const onLessonClick = typeof options.onLessonClick === 'function' ? options.onLessonClick : null;
       containerEl.innerHTML = '';
       const wrap = document.createElement('div');
-      wrap.className = 'grid-wrap';
+      wrap.className = 'grid-wrap week-fit';
       const grid = document.createElement('div');
       grid.className = 'grid';
       grid.style.gridTemplateColumns = `140px repeat(${FIXED_LESSON_COUNT}, minmax(130px, 1fr))`;
