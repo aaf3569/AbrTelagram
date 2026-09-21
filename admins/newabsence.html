@@ -1180,8 +1180,10 @@
       th.name-col, td.name-col { width: auto; min-width: 0; padding: 8px 6px; }
       thead th:last-child, td.lessons-col { width: 108px; min-width: 108px; }
       td.lessons-col { padding: 8px 6px; }
-      .lesson-dots { display: grid; grid-template-columns: repeat(3, 28px); gap: 6px; justify-content: start; }
-      .lesson-dots .morning-chip, .lesson-dots .none { grid-column: 1 / -1; justify-self: start; }
+      /* Three per row (96px = 3 circles + 2 gaps), every row centred in the column. */
+      .lesson-dots { width: 96px; margin-inline: auto; gap: 6px; justify-content: center; }
+      .lesson-dots .morning-chip { flex: 0 0 100%; }
+      .lesson-dots .none { flex: 0 0 100%; text-align: center; }
       .lesson-dot { width: 28px; height: 28px; font-size: .8rem; }
       .morning-chip { font-size: .74rem; padding: 4px 9px; gap: 4px; }
       .lesson-dots { min-width: 0; }
