@@ -1352,6 +1352,17 @@
       if(h === 0) h = 12;
       return `${h}:${m[2]}`;
     }
+    // PDF export only. html2canvas doesn't reorder bidi text like the browser
+    // does, so a single string came out flipped. Three explicit left-to-right
+    // boxes render the same on every engine: end on the left, start on the
+    // right, as Arabic reads (e.g. 9:30 - 8:45 for a 8:45 to 9:30 lesson).
+    function lessonTimeHtmlForPdf(idx, overrideTimes){
+      const t = (overrideTimes && overrideTimes.start && overrideTimes.end) ? overrideTimes : LESSON_TIMES[idx-1];
+      if(!t) return '<div class="lesson-time">—</div>';
+      return `<div class="lesson-time" style="display:flex;direction:ltr;justify-content:center;gap:3px">` +
+        `<span>${escapeHtml(to12HourLabel(t.end))}</span><span>-</span><span>${escapeHtml(to12HourLabel(t.start))}</span></div>`;
+    }
+
     function lessonTimeLabel(idx, overrideTimes){
       const t = (overrideTimes && overrideTimes.start && overrideTimes.end) ? overrideTimes : LESSON_TIMES[idx-1];
       if(!t) return '—';
@@ -2549,7 +2560,7 @@
         return `
           <th>
             <div class="lesson-label">${lessonHeaderHtml(LESSONS_AR[idx])}</div>
-            <div class="lesson-time">${escapeHtml(lessonTimeLabel(lessonNumber))}</div>
+            ${lessonTimeHtmlForPdf(lessonNumber)}
           </th>
         `;
       }).join('');
@@ -2969,7 +2980,7 @@
         return `
           <th>
             <div class="lesson-label">${lessonHeaderHtml(LESSONS_AR[idx])}</div>
-            <div class="lesson-time">${escapeHtml(lessonTimeLabel(lessonNumber))}</div>
+            ${lessonTimeHtmlForPdf(lessonNumber)}
           </th>
         `;
       }).join('');
