@@ -17,7 +17,7 @@
 <link rel="modulepreload" href="/shared/firebase.js">
 <link rel="modulepreload" href="/shared/presence.js">
   <title>إدارة المعلّمين - ثانوية أحمد البشر الرومي</title>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet"/>
 
   <!-- iOS home screen icon -->
   <link rel="apple-touch-icon" sizes="180x180" href="/images/appicon.png" />
@@ -48,7 +48,7 @@
     :root{--primary:#033C54;--page:#f6f8fb;--text:#0f172a;--muted:#6b7f9f;--border:#e6edf7;--shadow-1:0 8px 22px rgba(3,60,84,.14);--radius:16px;--focus:#79b3c8}
     *{box-sizing:border-box}
     html,body{height:100%;margin:0;padding:0}
-    body{background:var(--page);color:var(--text);font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;display:flex;flex-direction:column;min-height:100vh}
+    body{background:var(--page);color:var(--text);font-family:"Tajawal", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;display:flex;flex-direction:column;min-height:100vh}
     .site-header{position:sticky;top:0;z-index:10;background:rgba(255,255,255,.68);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);color:var(--primary);padding:16px 20px;display:flex;align-items:center;justify-content:center;border-bottom:1px solid rgba(3,60,84,.08);box-shadow:0 2px 10px rgba(3,60,84,.06)}
     .site-title{margin:0;font-weight:900;letter-spacing:.2px;font-size:clamp(1.1rem,2.4vw,1.5rem)}
     .header-admin-back{
@@ -71,7 +71,7 @@
     @keyframes spin{to{transform:rotate(360deg)}}
     .error{color:#a11;background:#fde8e8;border:1px solid #f5c5c5;padding:12px;border-radius:14px}
     .muted{color:var(--muted)}
-    .btn{font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;height:52px;border:none;border-radius:14px;cursor:pointer;font-weight:900;font-size:.98rem;padding:0 16px;transition:.14s ease}
+    .btn{font-family:"Tajawal", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;height:52px;border:none;border-radius:14px;cursor:pointer;font-weight:900;font-size:.98rem;padding:0 16px;transition:.14s ease}
     .btn:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
     .btn.primary{background:linear-gradient(180deg,#065372,#033C54);color:#fff;box-shadow:0 12px 28px rgba(3,60,84,.26)}
     .btn.ghost{background:#fff;color:#033C54;border:1px solid rgba(3,60,84,.35);box-shadow:var(--shadow-1)}
@@ -81,7 +81,7 @@
     .subject:active{transform:translateY(0);box-shadow:0 5px 12px rgba(3,60,84,.09)}
     .subject:focus-visible{outline:3px solid rgba(11,111,149,.28);outline-offset:2px}
     .subject-card{background:#fff}
-    .subject-card span{font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;font-size:1.02rem;font-weight:900;letter-spacing:.04px;line-height:1.4}
+    .subject-card span{font-family:"Tajawal", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;font-size:1.02rem;font-weight:900;letter-spacing:.04px;line-height:1.4}
     .subject-admin-entry{margin-bottom:20px}
     .chev{width:22px;height:22px;flex-shrink:0}
     .chev path{stroke:#6b7f9f;stroke-width:2.35;fill:none;stroke-linecap:round;stroke-linejoin:round;transition:stroke .14s ease, transform .14s ease}
@@ -113,7 +113,7 @@
     .delete-confirm-text{margin:0;color:#334155;font-weight:700;line-height:1.8}
     .delete-confirm-text strong{color:#cb2b2b}
     .input-wrap{display:flex;align-items:center;gap:10px;min-height:52px;padding:0 14px;background:#fff;border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-1);overflow:hidden}
-    .input{flex:1;height:48px;border:none;outline:none;background:transparent;font-size:16px;color:#0a0a0a;font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;min-width:0}
+    .input{flex:1;height:48px;border:none;outline:none;background:transparent;font-size:16px;color:#0a0a0a;font-family:"Tajawal", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;min-width:0}
     .input:disabled{color:#334155;opacity:1;cursor:default}
     .input-wrap.password-field{padding-inline-end:8px}
     .eye-toggle{width:38px;height:38px;border-radius:10px;border:1px solid rgba(3,60,84,.2);background:#fff;color:#64748b;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:.14s ease;flex-shrink:0;font-weight:900}
@@ -126,7 +126,7 @@
     .checkbox-wrap{display:flex;align-items:center;gap:10px}
     .ok,.err{padding:12px;border-radius:14px;margin-top:6px;font-size:.9rem;box-shadow:var(--shadow-1);display:none}
     .ok{color:#126a2e;background:#e6f6ea;border:1px solid #c7ebd0}.err{color:#a12;background:#fde8e8;border:1px solid #f5c5c5}
-    .classes-list{display:flex;flex-direction:column;gap:10px}.class-row{display:flex;flex-direction:column;gap:8px;border:1px dashed var(--border);border-radius:14px;padding:10px;background:#fcfeff}.class-row .top{display:flex;gap:10px;align-items:center}.class-row .remove{height:40px;padding:0 12px;border-radius:10px;border:1px solid rgba(203,43,43,.35);color:#cb2b2b;background:#fff;font-weight:800;cursor:pointer;font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif}.inline-add{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.inline-add .add{height:44px;padding:0 16px;border-radius:12px;border:1px solid rgba(3,60,84,.3);background:#fff;color:#033C54;font-weight:900;cursor:pointer;box-shadow:var(--shadow-1);font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif}
+    .classes-list{display:flex;flex-direction:column;gap:10px}.class-row{display:flex;flex-direction:column;gap:8px;border:1px dashed var(--border);border-radius:14px;padding:10px;background:#fcfeff}.class-row .top{display:flex;gap:10px;align-items:center}.class-row .remove{height:40px;padding:0 12px;border-radius:10px;border:1px solid rgba(203,43,43,.35);color:#cb2b2b;background:#fff;font-weight:800;cursor:pointer;font-family:"Tajawal", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif}.inline-add{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.inline-add .add{height:44px;padding:0 16px;border-radius:12px;border:1px solid rgba(3,60,84,.3);background:#fff;color:#033C54;font-weight:900;cursor:pointer;box-shadow:var(--shadow-1);font-family:"Tajawal", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif}
     .profile-shell{display:flex;flex-direction:column;gap:12px}
     .profile-hero{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px;border:1px solid var(--border);border-radius:16px;background:linear-gradient(180deg,#ffffff,#f5fbff);box-shadow:var(--shadow-1)}
     .profile-head{display:flex;align-items:center;gap:12px;min-width:0}
@@ -173,7 +173,7 @@
     .teacher-readonly .classes-editor{display:none !important}
     .teacher-readonly .edit-only{display:none !important}
     .teacher-editing .view-only{display:none !important}
-    .teacher-profile-back{position:fixed;right:20px;top:92px;z-index:55;height:46px;padding:0 16px;border-radius:14px;border:1px solid rgba(3,60,84,.24);background:#fff;color:#033C54;font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;font-weight:900;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;box-shadow:0 14px 34px rgba(3,60,84,.2);transition:.16s ease}
+    .teacher-profile-back{position:fixed;right:20px;top:92px;z-index:55;height:46px;padding:0 16px;border-radius:14px;border:1px solid rgba(3,60,84,.24);background:#fff;color:#033C54;font-family:"Tajawal", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;font-weight:900;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;box-shadow:0 14px 34px rgba(3,60,84,.2);transition:.16s ease}
     .teacher-profile-back:hover{transform:translateY(-2px);box-shadow:0 18px 40px rgba(3,60,84,.26);border-color:rgba(3,60,84,.45)}
     #teacherSheet:not(.open) .teacher-profile-back{display:none}
     /* Desktop-shell-only elements: invisible and out of flow on phones/
@@ -198,7 +198,7 @@
     .supervisor-grade-body{display:flex;flex-direction:column;gap:10px}
     .supervisor-grade-hint{margin:0;font-size:.9rem;font-weight:700;color:#475569}
     .supervisor-grade-options{display:flex;flex-direction:column;gap:10px}
-    .supervisor-grade-option{width:100%;min-height:48px;padding:10px 14px;border-radius:12px;border:1px solid rgba(3,60,84,.2);background:#fff;color:#0f2743;font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;font-weight:900;cursor:pointer;transition:.14s ease;text-align:right}
+    .supervisor-grade-option{width:100%;min-height:48px;padding:10px 14px;border-radius:12px;border:1px solid rgba(3,60,84,.2);background:#fff;color:#0f2743;font-family:"Tajawal", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;font-weight:900;cursor:pointer;transition:.14s ease;text-align:right}
     .supervisor-grade-option:hover{border-color:rgba(3,60,84,.45);box-shadow:0 10px 24px rgba(3,60,84,.12);transform:translateY(-1px)}
     .supervisor-grade-option:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
     .add-teacher-body{display:flex;flex-direction:column;gap:12px}
@@ -278,7 +278,7 @@
       .teacher-search-icon{width:16px;height:16px;flex-shrink:0;stroke:#9aabc2;stroke-width:2.2;fill:none;stroke-linecap:round;stroke-linejoin:round}
       .teacher-search-input{
         flex:1;min-width:0;height:100%;border:none;outline:none;background:transparent;
-        font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+        font-family:"Tajawal", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
         font-size:.88rem;font-weight:700;color:#33475b;
       }
       .teacher-search-input::placeholder{color:#9aabc2;font-weight:600}

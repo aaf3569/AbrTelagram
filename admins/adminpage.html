@@ -23,8 +23,8 @@
 <link rel="modulepreload" href="/shared/telegram-settings.js">
   <title>لوحة الإدارة - ثانوية أحمد البشر الرومي</title>
 
-  <!-- Noto Kufi Arabic -->
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+  <!-- Tajawal -->
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
   <link rel="stylesheet" href="/shared/base.css" />
@@ -42,7 +42,7 @@
     body{
       background: var(--page);
       color:var(--text);
-      font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      font-family:"Tajawal", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
       display:flex; flex-direction:column; min-height:100vh;
       -webkit-tap-highlight-color: transparent;
     }
@@ -119,7 +119,7 @@
 
     .stack{ width:min(640px, 100%); display:flex; flex-direction:column; gap:20px; margin-top:16px; align-items:center; margin-inline:auto }
     .btn{
-      font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      font-family:"Tajawal", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
       width:100%; min-height:72px; border:none; border-radius:18px; cursor:pointer;
       font-weight:800; font-size:clamp(1rem, 2.2vw, 1.1rem); letter-spacing:.2px;
       padding:18px 24px; transition:var(--transition);
@@ -138,6 +138,97 @@
     .btn.danger:hover{ transform:translateY(-3px); box-shadow:0 18px 40px rgba(203,43,43,.2); border-color:rgba(203,43,43,.55) }
     .btn.section-break{ margin-top:12px }
 
+    /* ===== Sidebar =====
+       Ported as-is from the Admin/admin.html sidebar design (same commit
+       that page's phone dashboard came from). Design/markup only — the
+       buttons inside don't wire up to anything yet, just open/close. */
+    .header-toggle-btn{
+      position:absolute; right:14px; top:50%; transform:translateY(-50%);
+      width:42px; height:42px; flex-shrink:0; border-radius:12px;
+      border:1px solid rgba(3,60,84,.2); background:#fff; color:var(--primary);
+      font-size:1.05rem; cursor:pointer; box-shadow:var(--shadow-1); transition:var(--transition);
+      display:inline-flex; align-items:center; justify-content:center; z-index:1;
+    }
+    .header-toggle-btn:hover{ transform:translateY(calc(-50% - 2px)); box-shadow:0 12px 26px rgba(3,60,84,.18); border-color:rgba(3,60,84,.4); }
+    .header-toggle-btn:active{ transform:translateY(-50%) scale(.96); }
+
+    .sidebar-backdrop{
+      position:fixed; inset:0; z-index:95; background:rgba(3,60,84,.55);
+      backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
+      opacity:0; pointer-events:none; transition:opacity .25s ease;
+    }
+    .sidebar-backdrop.open{ opacity:1; pointer-events:auto; }
+    .sidebar{
+      position:fixed; top:0; right:0; bottom:0; z-index:96;
+      width:min(320px, 86vw); background:#fff;
+      box-shadow:-12px 0 40px rgba(3,60,84,.22);
+      transform:translateX(100%); transition:transform .3s cubic-bezier(.22,.7,.25,1);
+      display:flex; flex-direction:column;
+    }
+    .sidebar.open{ transform:translateX(0); }
+    .sidebar-head{
+      position:relative; padding:16px; display:flex; flex-direction:column; align-items:center; gap:12px; text-align:center;
+      background:linear-gradient(135deg, #044563, #022b42); color:#fff; flex-shrink:0;
+    }
+    .sidebar-school-logo{ display:block; width:120px; max-width:calc(100% - 80px); height:auto; object-fit:contain; }
+    .sidebar-head h2{ margin:0; font-size:clamp(.74rem,4.3vw,.98rem); font-weight:900; display:flex; align-items:baseline; gap:7px; min-width:0; overflow:hidden; }
+    .sidebar-head h2 i{ flex-shrink:0; font-size:.9em; opacity:.85; }
+    .sidebar-head h2 span{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .sidebar-close{
+      position:absolute; top:16px; left:16px; width:32px; height:32px; flex-shrink:0; border-radius:10px;
+      border:1px solid rgba(255,255,255,.24); background:rgba(255,255,255,.14); color:#fff; cursor:pointer;
+      display:grid; place-items:center; transition:var(--transition);
+    }
+    @media (hover:hover) and (pointer:fine){ .sidebar-close:hover{ transform:rotate(90deg); background:rgba(255,255,255,.22); } }
+
+    .sidebar-user{
+      display:flex; align-items:center; gap:12px; padding:14px 16px; flex-shrink:0;
+      background:rgba(3,60,84,.06); border-bottom:1px solid var(--border);
+    }
+    .sidebar-user[hidden]{ display:none; }
+    .sidebar-user-avatar{
+      width:44px; height:44px; flex-shrink:0; border-radius:50%;
+      background:linear-gradient(135deg, var(--primary-light), var(--primary)); color:#fff; font-weight:900; font-size:1.05rem;
+      display:grid; place-items:center; box-shadow:var(--shadow-1);
+    }
+    .sidebar-user-info{ min-width:0; display:flex; flex-direction:column; gap:2px; }
+    .sidebar-user-name{ font-weight:800; font-size:.94rem; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .sidebar-user-role{ font-size:.78rem; font-weight:700; color:var(--primary-light); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+    .sidebar-nav{ padding:14px 12px; display:flex; flex-direction:column; gap:16px; overflow-y:auto; flex:1 1 auto; padding-bottom:max(14px, env(safe-area-inset-bottom,0px)); }
+    .sidebar-group{ display:flex; flex-direction:column; gap:2px; }
+    .sidebar-group[hidden]{ display:none; }
+    .sidebar-group:not([hidden]) + .sidebar-group{ padding-top:14px; border-top:1px solid var(--border); }
+    .sidebar-group-bottom{ margin-top:auto; }
+    .sidebar-section-label{ padding:0 10px 8px; font-size:.7rem; font-weight:800; color:var(--muted); letter-spacing:.03em; text-transform:uppercase; }
+    .sidebar-link{
+      position:relative; display:flex; align-items:center; gap:12px; padding:11px 12px;
+      border-radius:12px; border:1px solid transparent; background:transparent; color:var(--text);
+      font-family:"Tajawal", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      font-weight:800; font-size:.91rem; cursor:pointer; text-align:right; transition:var(--transition); width:100%;
+    }
+    .sidebar-link i{
+      width:32px; height:32px; flex-shrink:0; display:inline-flex; align-items:center; justify-content:center;
+      border-radius:9px; background:rgba(3,60,84,.08); color:var(--primary-light); font-size:.95rem;
+    }
+    @media (hover:hover) and (pointer:fine){ .sidebar-link:hover{ background:rgba(3,60,84,.08); } }
+    .sidebar-link:active{ background:rgba(3,60,84,.08); }
+    .sidebar-link[hidden]{ display:none; }
+    .sidebar-link.is-current{ background:rgba(3,60,84,.08); border-color:rgba(3,60,84,.18); color:var(--primary); box-shadow:inset -4px 0 0 var(--primary); }
+    .sidebar-link.is-current i{ background:linear-gradient(145deg, var(--primary-light), var(--primary)); color:#fff; }
+    #sidebarLogout{ justify-content:center; text-align:center; }
+
+    .sidebar-classes{ display:flex; flex-direction:column; gap:6px; padding:2px 2px 4px; }
+    .sidebar-class-btn{
+      display:flex; align-items:center; justify-content:center; gap:8px;
+      width:100%; min-height:46px; padding:10px 14px;
+      border-radius:12px; border:none; cursor:pointer;
+      background:linear-gradient(145deg, var(--primary), var(--primary-light));
+      color:#fff; font-weight:900; font-size:.92rem; font-family:inherit;
+      box-shadow:0 10px 22px rgba(3,60,84,.24); transition:var(--transition);
+    }
+    .sidebar-class-btn:hover{ transform:translateY(-2px); box-shadow:0 14px 28px rgba(3,60,84,.3); }
+
     .sheet{ position:fixed; inset:0; z-index:50; background:var(--page); display:flex; flex-direction:column; transform: translateX(100%); transition: transform .28s cubic-bezier(.22,.7,.25,1); }
     .sheet.open{ transform: translateX(0) }
     .sheet-header{ background:#ffffff; border-bottom:1px solid var(--border); padding:14px 12px; display:flex; align-items:center; gap:10px; position:sticky; top:0; z-index:10 }
@@ -149,7 +240,7 @@
     .subject{
       width:100%; background:#fff; border:1px solid var(--border); border-radius:16px; padding:14px;
       display:flex; align-items:center; justify-content:space-between; gap:10px; cursor:pointer; box-shadow: var(--shadow-1);
-      color:#0f2743; font-weight:600; font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      color:#0f2743; font-weight:600; font-family:"Tajawal", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
       transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease, background .12s ease;
     }
     .subject:hover{ transform:translateY(-2px); box-shadow:0 16px 32px rgba(3,60,84,.18); border-color:rgba(3,60,84,.35); background:#fbfdff }
@@ -165,7 +256,7 @@
     .input-wrap:focus-within{ border-color: rgba(3,60,84,.35); box-shadow: 0 16px 32px rgba(3,60,84,.18) }
     .input, select{
       flex:1; height:52px; border:none; outline:none; background:transparent; font-size:16px; color:#0a0a0a;
-      font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      font-family:"Tajawal", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
     }
     .ok, .err{ padding:12px; border-radius:14px; margin-top:6px; font-size:.9rem; box-shadow: var(--shadow-1); display:none }
     .ok{ color:#126a2e; background:#e6f6ea; border:1px solid #c7ebd0 }
@@ -357,7 +448,7 @@
       width: 100%; min-height: 62px; padding: 10px 14px;
       display: flex; align-items: center; gap: 14px;
       border-radius: 16px; border: 1px solid var(--border); background: #fff; color: var(--text);
-      font-family: "Noto Kufi Arabic", system-ui; font-weight: 800; font-size: 1rem; text-align: right;
+      font-family: "Tajawal", system-ui; font-weight: 800; font-size: 1rem; text-align: right;
       cursor: pointer; transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease, background-color .15s ease;
     }
     .absence-opt:hover { transform: translateY(-2px); border-color: rgba(3,60,84,.35); box-shadow: 0 12px 26px rgba(3,60,84,.14); }
@@ -380,7 +471,7 @@
     .absence-close {
       width: 100%; min-height: 50px; border-radius: 14px; cursor: pointer;
       border: 1px solid var(--border); background: #f4f7fa; color: var(--primary);
-      font-family: "Noto Kufi Arabic", system-ui; font-weight: 800; font-size: 1rem;
+      font-family: "Tajawal", system-ui; font-weight: 800; font-size: 1rem;
       transition: background-color .15s ease, border-color .15s ease;
     }
     .absence-close:hover { background: #eaf0f6; border-color: rgba(3,60,84,.25); }
@@ -434,7 +525,7 @@
     .notif-textarea {
       width:100%; min-height:130px; border:1px solid var(--border); border-radius:var(--radius);
       padding:14px 16px;
-      font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      font-family:"Tajawal", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
       font-size:16px; color:#0a0a0a; resize:vertical; outline:none;
       box-shadow:var(--shadow-1); transition:border-color .12s ease, box-shadow .12s ease;
       background:#fff; direction:rtl; line-height:1.8;
@@ -477,7 +568,7 @@
       border-radius:999px; background:#f4f8fb; color:#033C54;
       font-weight:800; font-size:.8rem; cursor:pointer;
       transition:background .12s ease, border-color .12s ease;
-      font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      font-family:"Tajawal", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
       white-space:nowrap; align-self:flex-start;
     }
     .seen-count-btn:hover { background:#e8f0f8; border-color:rgba(3,60,84,.3); }
@@ -495,7 +586,7 @@
     .notif-deactivate-btn {
       padding:8px 14px; border-radius:10px; border:1px solid rgba(203,43,43,.35);
       background:#fff; color:#cb2b2b; font-weight:800; font-size:.82rem; cursor:pointer;
-      font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      font-family:"Tajawal", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
       transition:background .12s ease, border-color .12s ease;
       display:inline-flex; align-items:center; gap:6px;
     }
@@ -527,7 +618,7 @@
     .notif-edit-actions { display:flex; gap:8px; justify-content:flex-end; }
     .notif-edit-save, .notif-edit-cancel {
       padding:10px 18px; border-radius:10px; font-weight:800; font-size:.85rem; cursor:pointer;
-      font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      font-family:"Tajawal", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
       transition:opacity .12s ease, background .12s ease;
     }
     .notif-edit-save { border:none; background:var(--primary); color:#fff; }
@@ -562,6 +653,13 @@
       .site-header{ padding:20px 40px; gap:14px; }
       .site-logo{ display:block; width:38px; height:38px; object-fit:contain; filter:drop-shadow(0 4px 10px rgba(3,60,84,.25)); }
       .site-title{ font-size:1.35rem; }
+      /* Stays visible on desktop too (unlike Admin/admin.html's copy of
+         this sidebar, which hides it there since its desktop dashboard
+         already lists every action in a grid) — this page's sidebar
+         buttons aren't wired to anything yet, so this is the only way in
+         to it until they are. Sits further from the edge to match the
+         wider desktop header padding. */
+      .header-toggle-btn{ right:24px; }
 
       main{ padding:56px 40px 72px; align-items:flex-start; }
       .column{ width:min(1180px, 92vw); align-items:stretch; gap:36px; }
@@ -678,9 +776,136 @@
 </head>
 <body>
   <header class="site-header">
+    <button id="btnSidebarToggle" class="header-toggle-btn" type="button" aria-label="فتح القائمة" aria-controls="sidebar" aria-expanded="false">
+      <i class="fas fa-bars" aria-hidden="true"></i>
+    </button>
     <img class="site-logo" src="/images/schoollogo.png" alt="" aria-hidden="true">
     <h1 class="site-title">ثانوية أحمد البشر الرومي</h1>
   </header>
+
+  <!-- ===== Sidebar =====
+       Ported as-is from the Admin/admin.html sidebar (design/markup only —
+       see the matching CSS comment above). The buttons below don't do
+       anything yet beyond opening/closing the sidebar itself; wiring them
+       to actual actions is a separate pass. -->
+  <div id="sidebarBackdrop" class="sidebar-backdrop"></div>
+  <aside id="sidebar" class="sidebar" aria-hidden="true">
+    <div class="sidebar-head">
+      <img class="sidebar-school-logo" src="/images/WhiteLogo.png?v=2" alt="شعار المدرسة" width="1976" height="796">
+      <h2><i class="fas fa-school" aria-hidden="true"></i><span>ثانوية أحمد البشر الرومي</span></h2>
+      <button id="sidebarClose" class="sidebar-close" type="button" aria-label="إغلاق القائمة">
+        <i class="fas fa-times" aria-hidden="true"></i>
+      </button>
+    </div>
+
+    <div id="sidebarUser" class="sidebar-user" hidden>
+      <div id="sidebarUserAvatar" class="sidebar-user-avatar"><i class="fas fa-user-shield" aria-hidden="true"></i></div>
+      <div class="sidebar-user-info">
+        <span id="sidebarUserName" class="sidebar-user-name"></span>
+        <span class="sidebar-user-role">مشرف للنظام</span>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="sidebar-group">
+        <button id="sidebarHome" class="sidebar-link" type="button">
+          <i class="fas fa-house" aria-hidden="true"></i>
+          <span>الرئيسية</span>
+        </button>
+      </div>
+
+      <div id="sidebarClassesSection" class="sidebar-group" hidden>
+        <div class="sidebar-section-label">فصولي</div>
+        <div id="sidebarClassesButtons" class="sidebar-classes"></div>
+      </div>
+
+      <div class="sidebar-group">
+        <div class="sidebar-section-label">الغياب</div>
+        <button id="sidebarTodayAbsence" class="sidebar-link" type="button">
+          <i class="fas fa-calendar-day" aria-hidden="true"></i>
+          <span>غياب اليوم</span>
+        </button>
+        <button id="sidebarOverallAbsence" class="sidebar-link" type="button">
+          <i class="fas fa-list-check" aria-hidden="true"></i>
+          <span>الغياب المختصر</span>
+        </button>
+        <button id="sidebarDetailedAbsence" class="sidebar-link" type="button">
+          <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
+          <span>تدقيق في الغائب</span>
+        </button>
+        <button id="sidebarMorningLate" class="sidebar-link" type="button">
+          <i class="fas fa-clock" aria-hidden="true"></i>
+          <span>تسجيل التأخير الصباحي</span>
+        </button>
+      </div>
+
+      <div class="sidebar-group">
+        <div class="sidebar-section-label">الإجراءات السريعة</div>
+        <button id="sidebarTeachers" class="sidebar-link" type="button">
+          <i class="fas fa-chalkboard-user" aria-hidden="true"></i>
+          <span>المعلمون</span>
+        </button>
+        <button id="sidebarStudents" class="sidebar-link" type="button">
+          <i class="fas fa-school" aria-hidden="true"></i>
+          <span>الطلاب</span>
+        </button>
+        <button id="sidebarSchedules" class="sidebar-link" type="button">
+          <i class="fas fa-calendar-days" aria-hidden="true"></i>
+          <span>الجداول</span>
+        </button>
+        <button id="sidebarSchoolSchedule" class="sidebar-link" type="button">
+          <i class="fas fa-table-cells" aria-hidden="true"></i>
+          <span>جدول المدرسة</span>
+        </button>
+        <button id="sidebarNotifications" class="sidebar-link" type="button">
+          <i class="fas fa-bell" aria-hidden="true"></i>
+          <span>الإشعارات</span>
+        </button>
+      </div>
+
+      <div class="sidebar-group sidebar-group-bottom">
+        <button id="sidebarSettings" class="sidebar-link sidebar-settings-link" type="button" hidden>
+          <span>إعدادات المستخدم</span>
+        </button>
+        <button id="sidebarLogout" class="sidebar-link" type="button">
+          <i class="fas fa-right-from-bracket" aria-hidden="true"></i>
+          <span>تسجيل الخروج</span>
+        </button>
+      </div>
+    </nav>
+  </aside>
+
+  <script>
+    // Sidebar open/close only — the buttons above aren't wired to any
+    // action yet (that's a separate pass); this just makes the ported
+    // design usable.
+    (function(){
+      var toggleBtn = document.getElementById('btnSidebarToggle');
+      var sidebar = document.getElementById('sidebar');
+      var backdrop = document.getElementById('sidebarBackdrop');
+      var closeBtn = document.getElementById('sidebarClose');
+
+      function openSidebar(){
+        sidebar.classList.add('open');
+        sidebar.setAttribute('aria-hidden', 'false');
+        backdrop.classList.add('open');
+        toggleBtn.setAttribute('aria-expanded', 'true');
+      }
+      function closeSidebar(){
+        sidebar.classList.remove('open');
+        sidebar.setAttribute('aria-hidden', 'true');
+        backdrop.classList.remove('open');
+        toggleBtn.setAttribute('aria-expanded', 'false');
+      }
+
+      toggleBtn.addEventListener('click', openSidebar);
+      closeBtn.addEventListener('click', closeSidebar);
+      backdrop.addEventListener('click', closeSidebar);
+      document.addEventListener('keydown', function(e){
+        if (e.key === 'Escape' && sidebar.classList.contains('open')) closeSidebar();
+      });
+    })();
+  </script>
 
   <main>
     <div class="column">
@@ -1407,7 +1632,7 @@
                     display: 'flex',
                     flexDirection: 'column',
                     gap: '12px',
-                    fontFamily: '"Noto Kufi Arabic", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif'
+                    fontFamily: '"Tajawal", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif'
                 });
 
                 const title = document.createElement('div');
@@ -1708,7 +1933,7 @@
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '10px',
-                fontFamily: '"Noto Kufi Arabic", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif'
+                fontFamily: '"Tajawal", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif'
             });
 
             const title = document.createElement('div');

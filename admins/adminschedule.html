@@ -17,8 +17,8 @@
 <link rel="modulepreload" href="/shared/firebase.js">
   <title>إدارة الجدول الأسبوعي - ثانوية أحمد البشر الرومي</title>
 
-  <!-- Noto Kufi Arabic -->
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+  <!-- Tajawal -->
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet"/>
 
   <link rel="stylesheet" href="/shared/base.css" />
   <style>
@@ -51,14 +51,14 @@
 
     *{ 
       box-sizing:border-box;
-      font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif !important;
+      font-family:"Tajawal", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif !important;
     }
     html,body{ height:100%; margin:0; padding:0; }
 
     body{
       background: var(--page);
       color:var(--text);
-      font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      font-family:"Tajawal", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
       min-height:100vh;
       display:flex;
       flex-direction:column;
@@ -70,7 +70,7 @@
     .modal, .modal-card, .pop-title, .pop-desc,
     .th, .td, .cell-btn, .btn, .badge, .chip,
     .site-title, label, .hint, .status, .muted {
-      font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif !important;
+      font-family:"Tajawal", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif !important;
     }
 
     /* Header */
@@ -859,7 +859,7 @@
       display:none;
       place-items:center;
       padding:16px;
-      font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      font-family:"Tajawal", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
     }
     .modal.show{ display:grid; }
 
@@ -868,7 +868,7 @@
       box-sizing:border-box; overflow:auto; padding:24px;
       border:1px solid var(--border); border-radius:18px;
       color:var(--text); background:#fff; box-shadow:var(--shadow-strong);
-      font-family:"Noto Kufi Arabic", system-ui, sans-serif;
+      font-family:"Tajawal", system-ui, sans-serif;
     }
     .teacher-search-dialog::backdrop{ background:rgba(10,30,45,.5); }
     .teacher-search-header, .teacher-search-counts{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
@@ -978,7 +978,7 @@
       outline:none;
       background:#fff;
       transition: box-shadow .12s ease, border-color .12s ease;
-      font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      font-family:"Tajawal", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
       height:48px;
       font-weight:950;
       font-size:15px;
@@ -1050,7 +1050,7 @@
       font-weight:950;
       cursor:pointer;
       transition: transform .08s ease, box-shadow .12s ease, opacity .12s ease;
-      font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      font-family:"Tajawal", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
     }
     .btn:hover{ box-shadow:0 8px 16px rgba(11,79,108,.10); }
     .btn:active{ transform:scale(.99); }
@@ -1094,7 +1094,7 @@
       color:var(--text);
       box-shadow: 0 6px 16px rgba(3,60,84,.06);
       transition: box-shadow .12s ease, border-color .12s ease;
-      font-family:"Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      font-family:"Tajawal", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
       font-size:14px;
     }
     .time-input:focus{
@@ -4759,7 +4759,7 @@
 
         if (role !== "admin" && !allowScheduleEdit) {
           document.body.innerHTML = `
-            <div style="display:grid; place-items:center; min-height:100vh; padding:20px; text-align:center; font-family:'Noto Kufi Arabic',system-ui">
+            <div style="display:grid; place-items:center; min-height:100vh; padding:20px; text-align:center; font-family:'Tajawal',system-ui">
               <div style="background:#fff; border:1px solid ${getComputedStyle(document.documentElement).getPropertyValue('--border')}; border-radius:18px; box-shadow: 0 18px 52px rgba(2,6,23,.16); padding:24px; max-width:560px">
                 <div style="font-size:1.2rem; font-weight:950; color:#a11; margin-bottom:10px">تم رفض الوصول</div>
                 <div style="color:#6b7f9f; font-weight:800; margin-bottom:16px">هذه الصفحة مخصّصة للإدارة أو للمستخدمين المصرح لهم بالتعديل.</div>
@@ -4793,7 +4793,7 @@
       } catch (e) {
         console.error("[adminGate]", e);
         document.body.innerHTML = `
-          <div style="display:grid; place-items:center; min-height:100vh; padding:20px; text-align:center; font-family:'Noto Kufi Arabic',system-ui">
+          <div style="display:grid; place-items:center; min-height:100vh; padding:20px; text-align:center; font-family:'Tajawal',system-ui">
             <div style="background:#fff; border:1px solid #e4ecf7; border-radius:18px; box-shadow: 0 18px 52px rgba(2,6,23,.16); padding:24px; max-width:560px">
               <div style="font-size:1.2rem; font-weight:950; color:#a11; margin-bottom:10px">تعذّر التحقق من الصلاحيات</div>
               <div style="color:#6b7f9f; font-weight:800; margin-bottom:16px">يرجى إعادة تسجيل الدخول ثم المحاولة.</div>
