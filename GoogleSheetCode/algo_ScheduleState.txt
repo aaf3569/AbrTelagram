@@ -1,0 +1,430 @@
+/**
+ * algo_ScheduleState.js
+ *
+ * طبقة حالة الجدول في الذاكرة (الجلسة 16 — أوّل لبنة في المحرّك الجشِع).
+ *
+ * المسؤوليّة: بنية بيانات + استعلامات O(1) + تعديلات ذرّيّة فقط. لا تقرأ
+ * أوراقًا، لا تكتب، لا تعرض، ولا تقرّر «أين توضع الحصّة» (ذلك لحلقة الوضع
+ * لاحقًا). كلّ تعديل يمرّ حصرًا عبر place/unplace لضمان اتّساق العدّادات.
+ *
+ * ──────────────────────────────────────────────────────────────────────
+ * الاصطلاح (مهمّ): كلّ الإحداثيّات 0-based.
+ *   - اليوم:  0 .. days-1
+ *   - الحصّة: 0 .. periods-1   (الحصّة الأولى = 0، الأخيرة = periods-1)
+ * (ملاحظة: settings.deptMeeting.blockedPeriods قادمة من اللودر بترقيم
+ *  1-based؛ تحويلها مسؤوليّة حلقة الوضع، لا هذه الطبقة — الحالة لا تستهلكها.)
+ *
+ * مُعرّف الصفّ (classId) = displayName من model.classes (مثل '10/1') — وهو
+ * نفسه مفتاح className في ورقتَي المواد والتوزيع، فيتّسق الربط لاحقًا.
+ * مُعرّف المعلّم (civilId) = الرقم المدني نصًّا.
+ *
+ * ──────────────────────────────────────────────────────────────────────
+ * نموذج الخانة الموضوعة (slot) — بنية موحّدة تميّز الأنواع بحقل kind:
+ *   - حصّة تدريسيّة: { kind: 'LESSON', subjectKey, civilId }
+ *   - اجتماع:        { kind: 'MEETING', meeting: 'DEPT_HEADS' | 'DEPT',
+ *                      civilId, departmentName? }
+ *   - حجب حضور:      { kind: 'BLOCK', civilId }
+ *
+ * الحجب (BLOCK — الجلسة 53): خانة معلّمٍ ليس فيها بالمدرسة أصلًا، مشتقّةٌ من
+ * قواعد «أيام التفرّغ»/«الحصص المسموحة» (algo_TeacherBlocks.js) وموضوعةٌ قبل
+ * أيّ حصّة. لا تشغل خانة صفّ ولا تُكتب في _ScheduleData — وجودها في الشبكة
+ * وحدها هو ما يجعل isTeacherFree صادقةً في مواضعها كلّها. تُعامَل معاملة
+ * الاجتماع في place/unplace (المفتاح الأوّل = civilId) لأنّها من جنسه:
+ * إشغالٌ للمعلّم بلا صفّ.
+ *
+ * نمط الإشغال في الشبكتين:
+ *   - classGrid[classId][day][period]  → slot حصّة (LESSON) أو null.
+ *   - teacherGrid[civilId][day][period] → classId (مرجع خلفيّ لحصّة)،
+ *     أو slot اجتماع (MEETING) أو حجب (BLOCK)، أو null.
+ *   ⚠️ قرّاء «هل يدرّس؟» يميّزون بـtypeof cell === 'string' (المرجع الخلفيّ)،
+ *     فكائنا MEETING و BLOCK يسقطان منهم تلقائيًّا — وهو المقصود.
+ *
+ * اصطلاح المفتاح الأوّل في place/unplace (مهمّ):
+ *   - للحصّة (LESSON): المفتاح الأوّل = classId؛ والمعلّم من slot.civilId.
+ *   - للاجتماع (MEETING) والحجب (BLOCK): المفتاح الأوّل = civilId (كلاهما يشغل
+ *     لِحاظ المعلّم لا الصفّ). لا تصادم: classId مثل '10/1' لا يساوي رقمًا مدنيًّا.
+ * unplace يميّز النوع تلقائيًّا: إن وُجدت خانة في classGrid[key] فهي حصّة،
+ * وإلّا يُعامَل key كرقم مدنيّ ويُبحث عن اجتماعٍ أو حجبٍ في teacherGrid[key].
+ */
+
+// ============================================================
+// مصنع الحالة (Public)
+// ============================================================
+
+/**
+ * يبني حالة جدول فارغة مفهرسة من النموذج. كلّ الخانات null ابتداءً وكلّ
+ * العدّادات صفر، عدا freeSupervisorsByWing التي تبدأ = عدد مشرفي كلّ جناح.
+ *
+ * @param {Object} model ناتج loadScheduleData().
+ * @return {Object} كائن الحالة بدوالّه العامّة (place/unplace/استعلامات).
+ */
+function createScheduleState(model) {
+  const LESSON = 'LESSON';
+  const MEETING = 'MEETING';
+  const BLOCK = 'BLOCK';
+
+  // ---------- الأبعاد ----------
+  const days = model.settings.days;
+  const periods = model.settings.periods;
+  const firstIdx = 0;
+  const lastIdx = periods - 1;
+
+  // ---------- المفاتيح ----------
+  const classIds = [];
+  for (let i = 0; i < model.classes.length; i++) {
+    classIds.push(model.classes[i].displayName);
+  }
+  const civilIds = [];
+  for (let i = 0; i < model.teachers.length; i++) {
+    civilIds.push(String(model.teachers[i].civilId));
+  }
+  // مفاتيح المواد المختبريّة (لعدّاد التزامن) — من النموذج، لا اشتقاق محليّ.
+  const labKeys = Object.keys(model.labSubjectTotals || {});
+
+  // ---------- الأجنحة والمشرفون ----------
+  const supervisorsByWing = model.supervisorsByWing || {};
+  const wings = Object.keys(supervisorsByWing);
+  const supervisorWingByCivilId = {};   // civilId → wing
+  const supervisorCountByWing = {};     // wing → عدد المشرفين
+  for (let w = 0; w < wings.length; w++) {
+    const wing = wings[w];
+    const list = supervisorsByWing[wing] || [];
+    supervisorCountByWing[wing] = list.length;
+    for (let s = 0; s < list.length; s++) {
+      supervisorWingByCivilId[String(list[s].civilId)] = wing;
+    }
+  }
+
+  // ---------- بنّاء شبكة 2D (يوم × حصّة) معبّأة بقيمة ----------
+  const grid2D = function (fill) {
+    const g = new Array(days);
+    for (let d = 0; d < days; d++) {
+      const row = new Array(periods);
+      for (let p = 0; p < periods; p++) row[p] = fill;
+      g[d] = row;
+    }
+    return g;
+  };
+  const zeroDayArray = function () {
+    const a = new Array(days);
+    for (let d = 0; d < days; d++) a[d] = 0;
+    return a;
+  };
+
+  // ---------- البنى القابلة للتعديل (let لدعم restore) ----------
+  let classGrid = {};
+  for (let i = 0; i < classIds.length; i++) classGrid[classIds[i]] = grid2D(null);
+
+  let teacherGrid = {};
+  for (let i = 0; i < civilIds.length; i++) teacherGrid[civilIds[i]] = grid2D(null);
+
+  let labCount = {};
+  for (let i = 0; i < labKeys.length; i++) labCount[labKeys[i]] = grid2D(0);
+
+  let freeSupervisorsByWing = {};
+  for (let w = 0; w < wings.length; w++) {
+    freeSupervisorsByWing[wings[w]] = grid2D(supervisorCountByWing[wings[w]]);
+  }
+
+  let subjectDayCount = {};   // classId → subjectKey → [day] (تهيئة كسولة)
+
+  let lastPeriodCount = {};
+  let firstPeriodCount = {};
+  let placedPeriodsByCivilId = {};
+  for (let i = 0; i < civilIds.length; i++) {
+    lastPeriodCount[civilIds[i]] = 0;
+    firstPeriodCount[civilIds[i]] = 0;
+    placedPeriodsByCivilId[civilIds[i]] = 0;
+  }
+
+  // ============================================================
+  // مساعدات داخليّة (private)
+  // ============================================================
+
+  const assertDayPeriod = function (day, period) {
+    if (day < 0 || day >= days || period < 0 || period >= periods) {
+      throw new Error('إحداثيّات خارج النطاق: يوم ' + day + '، حصّة ' + period +
+        ' (المدى: يوم 0..' + (days - 1) + '، حصّة 0..' + (periods - 1) + ')');
+    }
+  };
+
+  const incSubjectDay = function (classId, subjectKey, day) {
+    if (!subjectDayCount[classId]) subjectDayCount[classId] = {};
+    if (!subjectDayCount[classId][subjectKey]) {
+      subjectDayCount[classId][subjectKey] = zeroDayArray();
+    }
+    subjectDayCount[classId][subjectKey][day]++;
+  };
+  const decSubjectDay = function (classId, subjectKey, day) {
+    if (subjectDayCount[classId] && subjectDayCount[classId][subjectKey]) {
+      subjectDayCount[classId][subjectKey][day]--;
+    }
+  };
+
+  // يشغل/يحرّر خانة مشرف جناح (تدريسًا أو اجتماعًا) إن كان المعلّم مشرفًا.
+  const occupySupervisor = function (civilId, day, period) {
+    const wing = supervisorWingByCivilId[civilId];
+    if (wing && freeSupervisorsByWing[wing]) freeSupervisorsByWing[wing][day][period]--;
+  };
+  const freeSupervisor = function (civilId, day, period) {
+    const wing = supervisorWingByCivilId[civilId];
+    if (wing && freeSupervisorsByWing[wing]) freeSupervisorsByWing[wing][day][period]++;
+  };
+
+  // ============================================================
+  // التعديلات الذرّيّة (Public)
+  // ============================================================
+
+  /**
+   * يضع خانة ويُحدّث كلّ العدّادات ذرّيًّا. حارس اتّساق فقط (لا قرار):
+   * يرمي خطأً واضحًا إن كانت الخانة (للصفّ أو المعلّم) مشغولة، أو إن كان
+   * المعرّف غير معروف، أو الإحداثيّات خارج النطاق.
+   *
+   * @param {string} key للحصّة: classId؛ للاجتماع: civilId (انظر رأس الملفّ).
+   * @param {number} day اليوم (0-based).
+   * @param {number} period الحصّة (0-based).
+   * @param {Object} slot الخانة الموحّدة (kind 'LESSON' | 'MEETING' | 'BLOCK').
+   */
+  const place = function (key, day, period, slot) {
+    assertDayPeriod(day, period);
+    if (!slot || (slot.kind !== LESSON && slot.kind !== MEETING && slot.kind !== BLOCK)) {
+      throw new Error('خانة غير صالحة: نوع (kind) غير معروف');
+    }
+
+    if (slot.kind === LESSON) {
+      const classId = key;
+      const civilId = String(slot.civilId);
+      if (!classGrid[classId]) throw new Error('صفّ غير معروف: ' + classId);
+      if (!teacherGrid[civilId]) throw new Error('معلّم غير معروف: ' + civilId);
+      if (classGrid[classId][day][period] !== null) {
+        throw new Error('الخانة مشغولة للصفّ «' + classId + '» عند (' + day + ', ' + period + ')');
+      }
+      if (teacherGrid[civilId][day][period] !== null) {
+        throw new Error('المعلّم «' + civilId + '» مشغول عند (' + day + ', ' + period + ')');
+      }
+      // الوضع
+      classGrid[classId][day][period] = slot;
+      teacherGrid[civilId][day][period] = classId;
+      // العدّادات
+      placedPeriodsByCivilId[civilId]++;
+      if (period === firstIdx) firstPeriodCount[civilId]++;
+      if (period === lastIdx) lastPeriodCount[civilId]++;
+      incSubjectDay(classId, slot.subjectKey, day);
+      if (labCount[slot.subjectKey]) labCount[slot.subjectKey][day][period]++;
+      occupySupervisor(civilId, day, period);
+      return;
+    }
+
+    // MEETING / BLOCK — المفتاح الأوّل هو civilId (كلاهما يشغل المعلّم بلا صفّ)
+    const civilId = String(key);
+    if (!teacherGrid[civilId]) throw new Error('معلّم غير معروف: ' + civilId);
+    if (teacherGrid[civilId][day][period] !== null) {
+      throw new Error('المعلّم «' + civilId + '» مشغول عند (' + day + ', ' + period + ')');
+    }
+
+    if (slot.kind === BLOCK) {
+      // حجب حضور: خانةٌ خارج نافذة المعلّم. تشغل لِحاظه كالاجتماع — بما في ذلك
+      // إخراجه من عدّاد المشرفين الأحرار: من ليس بالمدرسة لا يُغطّي جناحًا.
+      teacherGrid[civilId][day][period] = { kind: BLOCK, civilId: civilId };
+      occupySupervisor(civilId, day, period);
+      return;
+    }
+
+    // نخزّن نسخة موسومة بـ civilId لتماسك السجلّ (دون كسر slot الأصليّ)
+    const meetingSlot = {
+      kind:           MEETING,
+      meeting:        slot.meeting,
+      civilId:        civilId,
+      departmentName: slot.departmentName,
+    };
+    teacherGrid[civilId][day][period] = meetingSlot;
+    occupySupervisor(civilId, day, period);
+  };
+
+  /**
+   * يُزيل خانة ويعكس كلّ العدّادات. يميّز النوع تلقائيًّا (انظر رأس الملفّ):
+   * classGrid[key] مشغولة → حصّة؛ وإلّا key=civilId واجتماعٌ أو حجبٌ في teacherGrid.
+   * يرمي خطأً إن لم توجد خانة، أو إن مُرِّر رقم مدنيّ لإزالة حصّة تدريسيّة.
+   *
+   * @param {string} key للحصّة: classId؛ للاجتماع: civilId.
+   * @param {number} day اليوم (0-based).
+   * @param {number} period الحصّة (0-based).
+   */
+  const unplace = function (key, day, period) {
+    assertDayPeriod(day, period);
+
+    // (1) حصّة تدريسيّة — key = classId
+    if (classGrid[key] && classGrid[key][day][period] !== null) {
+      const slot = classGrid[key][day][period];
+      const civilId = String(slot.civilId);
+      classGrid[key][day][period] = null;
+      teacherGrid[civilId][day][period] = null;
+      placedPeriodsByCivilId[civilId]--;
+      if (period === firstIdx) firstPeriodCount[civilId]--;
+      if (period === lastIdx) lastPeriodCount[civilId]--;
+      decSubjectDay(key, slot.subjectKey, day);
+      if (labCount[slot.subjectKey]) labCount[slot.subjectKey][day][period]--;
+      freeSupervisor(civilId, day, period);
+      return;
+    }
+
+    // (2) اجتماع أو حجب — key = civilId
+    if (teacherGrid[key] && teacherGrid[key][day][period] !== null) {
+      const cell = teacherGrid[key][day][period];
+      if (cell && typeof cell === 'object' &&
+          (cell.kind === MEETING || cell.kind === BLOCK)) {
+        teacherGrid[key][day][period] = null;
+        freeSupervisor(String(key), day, period);
+        return;
+      }
+      // خانة معلّم مشغولة بمرجع حصّة (classId) — يلزم معرّف الصفّ للإزالة
+      throw new Error('لإزالة حصّة تدريسيّة استخدم معرّف الصفّ لا الرقم المدني (' + key + ')');
+    }
+
+    throw new Error('لا توجد خانة لإزالتها عند المفتاح «' + key + '» (' + day + ', ' + period + ')');
+  };
+
+  // ============================================================
+  // الاستعلامات (Public — O(1))
+  // ============================================================
+
+  const isClassFree = function (classId, day, period) {
+    assertDayPeriod(day, period);
+    return !!classGrid[classId] && classGrid[classId][day][period] === null;
+  };
+  const isTeacherFree = function (civilId, day, period) {
+    assertDayPeriod(day, period);
+    const cid = String(civilId);
+    return !!teacherGrid[cid] && teacherGrid[cid][day][period] === null;
+  };
+  const getCell = function (classId, day, period) {
+    assertDayPeriod(day, period);
+    return classGrid[classId] ? classGrid[classId][day][period] : null;
+  };
+  /**
+   * خليّة المعلّم كما يراها القرّاء: classId (درس) أو كائن اجتماع أو null.
+   *
+   * ⚠️ خانة الحجب (BLOCK) **تُخفى هنا وتُعاد null**. الحجب غيابٌ لا إشغال، وهذا
+   * هو التمييز الذي يصنعه هذا السطر: أثرُه يبقى في isTeacherFree وحدها (حيث
+   * معناه «لا تضع هنا»)، ويسقط عن كلّ من يسأل «ماذا يفعل المعلّم في هذه
+   * الخانة؟» — والجواب: لا شيء، فهو ليس في المدرسة.
+   *
+   * وُجد بعد عطبٍ حقيقيّ: عشرات القرّاء يعدّون «أيّ خليّة حقّة» إشغالًا (أخفّ
+   * يوم للمراجعة، الثلاثيّات، الفجوات، حمل اليوم)، فقرأت خانةَ الحجب درسًا
+   * وأنتجت «أخفّ أيّامه ينتهي بالسابعة» لمعلّمٍ لا يدرّس بعد الثانية. إخفاؤها
+   * في المصدر يُصلح المواضع كلّها دفعةً واحدة — ولا يترك موضعًا تاسعًا يُكتَب
+   * غدًا فيقع في الفخّ نفسه.
+   */
+  const getTeacherCell = function (civilId, day, period) {
+    assertDayPeriod(day, period);
+    const cid = String(civilId);
+    if (!teacherGrid[cid]) return null;
+    const cell = teacherGrid[cid][day][period];
+    if (cell !== null && typeof cell === 'object' && cell.kind === BLOCK) return null;
+    return cell;
+  };
+
+  // قُرّاء العدّادات (رخيصة)
+  const getLabCount = function (subjectKey, day, period) {
+    assertDayPeriod(day, period);
+    return labCount[subjectKey] ? labCount[subjectKey][day][period] : 0;
+  };
+  const getFreeSupervisors = function (wing, day, period) {
+    assertDayPeriod(day, period);
+    return freeSupervisorsByWing[wing] ? freeSupervisorsByWing[wing][day][period] : 0;
+  };
+  const getSubjectDayCount = function (classId, subjectKey, day) {
+    if (day < 0 || day >= days) throw new Error('يوم خارج النطاق: ' + day);
+    return (subjectDayCount[classId] && subjectDayCount[classId][subjectKey])
+      ? subjectDayCount[classId][subjectKey][day] : 0;
+  };
+  const getLastPeriodCount = function (civilId) {
+    return lastPeriodCount[String(civilId)] || 0;
+  };
+  const getFirstPeriodCount = function (civilId) {
+    return firstPeriodCount[String(civilId)] || 0;
+  };
+  const getPlacedPeriods = function (civilId) {
+    return placedPeriodsByCivilId[String(civilId)] || 0;
+  };
+
+  /**
+   * أبعاد الحالة ومفاتيحها (لأغراض التشخيص والتكرار في حلقة الوضع).
+   * @return {Object} {days, periods, classCount, teacherCount, classIds,
+   *                   civilIds, wings}
+   */
+  const getDimensions = function () {
+    return {
+      days:         days,
+      periods:      periods,
+      classCount:   classIds.length,
+      teacherCount: civilIds.length,
+      classIds:     classIds.slice(),
+      civilIds:     civilIds.slice(),
+      wings:        wings.slice(),
+    };
+  };
+
+  // ============================================================
+  // لقطة/استرجاع (Public — نسخ عميق كامل، لنقاط تفتيش خشنة)
+  // ============================================================
+
+  /**
+   * لقطة عميقة لكلّ البنى القابلة للتعديل. نسخ كامل O(n) — مخصَّصة لنقاط
+   * تفتيش خشنة (حفظ/تراجع على مستوى مرحلة)، لا للتراجع الخليّ (استخدم
+   * unplace لذلك). كلّ البنى بيانات صرفة (لا دوالّ) فالنسخ عبر JSON آمن.
+   * @return {Object} اللقطة.
+   */
+  const snapshot = function () {
+    return JSON.parse(JSON.stringify({
+      classGrid:              classGrid,
+      teacherGrid:            teacherGrid,
+      labCount:               labCount,
+      freeSupervisorsByWing:  freeSupervisorsByWing,
+      subjectDayCount:        subjectDayCount,
+      lastPeriodCount:        lastPeriodCount,
+      firstPeriodCount:       firstPeriodCount,
+      placedPeriodsByCivilId: placedPeriodsByCivilId,
+    }));
+  };
+
+  /**
+   * يستعيد الحالة من لقطة (يستبدل البنى القابلة للتعديل بنسخ من اللقطة).
+   * @param {Object} snap ناتج snapshot().
+   */
+  const restore = function (snap) {
+    const c = JSON.parse(JSON.stringify(snap));
+    classGrid              = c.classGrid;
+    teacherGrid            = c.teacherGrid;
+    labCount               = c.labCount;
+    freeSupervisorsByWing  = c.freeSupervisorsByWing;
+    subjectDayCount        = c.subjectDayCount;
+    lastPeriodCount        = c.lastPeriodCount;
+    firstPeriodCount       = c.firstPeriodCount;
+    placedPeriodsByCivilId = c.placedPeriodsByCivilId;
+  };
+
+  // ============================================================
+  // الواجهة العامّة
+  // ============================================================
+  return {
+    // تعديلات ذرّيّة
+    place:               place,
+    unplace:             unplace,
+    // استعلامات
+    isClassFree:         isClassFree,
+    isTeacherFree:       isTeacherFree,
+    getCell:             getCell,
+    getTeacherCell:      getTeacherCell,
+    getLabCount:         getLabCount,
+    getFreeSupervisors:  getFreeSupervisors,
+    getSubjectDayCount:  getSubjectDayCount,
+    getLastPeriodCount:  getLastPeriodCount,
+    getFirstPeriodCount: getFirstPeriodCount,
+    getPlacedPeriods:    getPlacedPeriods,
+    getDimensions:       getDimensions,
+    // لقطة/استرجاع
+    snapshot:            snapshot,
+    restore:             restore,
+  };
+}

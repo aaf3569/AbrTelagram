@@ -21,6 +21,9 @@
 <link rel="modulepreload" href="/shared/notification-popup.js">
 <link rel="modulepreload" href="/shared/presence.js">
 <link rel="modulepreload" href="/shared/telegram-settings.js">
+<!-- The غياب اليوم sheet is import()ed on first open; this fetches and parses
+     it during page load (without running it) so that first open is quick. -->
+<link rel="modulepreload" href="/admins/newabsence.js">
   <title>لوحة الإدارة - ثانوية أحمد البشر الرومي</title>
 
   <!-- Tajawal -->
@@ -231,6 +234,18 @@
 
     .sheet{ position:fixed; inset:0; z-index:50; background:var(--page); display:flex; flex-direction:column; transform: translateX(100%); transition: transform .28s cubic-bezier(.22,.7,.25,1); }
     .sheet.open{ transform: translateX(0) }
+
+    /* غياب اليوم sheet (/admins/newabsence.js renders into a shadow root on
+       #todayAbsenceHost). No `display` here on purpose: a host's own :host
+       rule loses to any outside rule for the same property, and the sheet
+       needs its :host{display:flex} to lay its header and table out. */
+    #todayAbsenceHost{ flex:1 1 auto; min-height:0; }
+
+    /* Scroll locks toggled on the real <body> by the غياب اليوم sheet's own
+       popups (modal-open) and by the shared attendance sheet (no-scroll) —
+       newabsence.html used to define these itself. */
+    body.modal-open{ overflow:hidden; position:fixed; width:100%; }
+    html.no-scroll, body.no-scroll{ position:fixed; overflow:hidden; width:100%; inset:0; overscroll-behavior:none; }
     .sheet-header{ background:#ffffff; border-bottom:1px solid var(--border); padding:14px 12px; display:flex; align-items:center; gap:10px; position:sticky; top:0; z-index:10 }
     .back-btn{ height:40px; padding:0 14px; border-radius:12px; border:1px solid rgba(3,60,84,.25); background:#fff; color:#033C54; font-weight:900; cursor:pointer; box-shadow: var(--shadow-1); transition: transform .12s ease }
     .back-btn:hover{ transform:translateY(-1px) }
@@ -808,7 +823,7 @@
 
     <nav class="sidebar-nav">
       <div class="sidebar-group">
-        <button id="sidebarHome" class="sidebar-link" type="button">
+        <button id="sidebarHome" class="sidebar-link is-current" type="button">
           <i class="fas fa-house" aria-hidden="true"></i>
           <span>الرئيسية</span>
         </button>
@@ -904,6 +919,19 @@
       document.addEventListener('keydown', function(e){
         if (e.key === 'Escape' && sidebar.classList.contains('open')) closeSidebar();
       });
+
+      // Moves the "you are here" highlight (is-current) to another link —
+      // used by the page's module script when a sheet like غياب اليوم opens
+      // or closes, since that's a different section without a page load.
+      function setCurrent(id){
+        var links = sidebar.querySelectorAll('.sidebar-link.is-current');
+        for (var i = 0; i < links.length; i++) links[i].classList.remove('is-current');
+        var el = document.getElementById(id);
+        if (el) el.classList.add('is-current');
+      }
+
+      // The module script (which owns the sheets) runs after this one.
+      window.adminSidebar = { open: openSidebar, close: closeSidebar, setCurrent: setCurrent };
     })();
   </script>
 
@@ -1360,6 +1388,13 @@
     </div>
   </section>
 
+  <!-- غياب اليوم — what used to be admins/newabsence.html, now a sheet on
+       this page. /admins/newabsence.js renders it (header, date picker,
+       table and all) into #todayAbsenceHost the first time it's opened. -->
+  <section id="todayAbsenceSheet" class="sheet" aria-hidden="true">
+    <div id="todayAbsenceHost"></div>
+  </section>
+
   <script type="module">
     import { firebaseConfig } from "/shared/firebase.js";
     /* ========= Firebase ========= */
@@ -1427,7 +1462,16 @@
       : initializeApp(firebaseConfig, "AdminHelper");
     const helperAuth = getAuth(helperApp);
 
-    const attendance = mountAttendanceSheet({ db, auth });
+    // The one attendance sheet for this whole page — the غياب اليوم sheet
+    // uses this same instance rather than mounting its own, since a second
+    // mountAttendanceSheet() would wire every button in its shared DOM twice.
+    // isPrivilegedEdit is what that sheet always mounted with (this page is
+    // admin-only), and onSaved fans out to whoever subscribed.
+    const attendanceSavedListeners = new Set();
+    const attendance = mountAttendanceSheet({
+      db, auth, isPrivilegedEdit: true,
+      onSaved: () => attendanceSavedListeners.forEach(fn => { try { fn(); } catch (e) { console.error(e); } }),
+    });
 
     /* ========= UI refs ========= */
     const sLoading = document.getElementById('stateLoading');
@@ -2072,7 +2116,90 @@
         clearHash();
       }
     }
-    
+
+    /* ========= غياب اليوم sheet ========= */
+    // Opened from "الغياب اليوم" in the الغياب popup and from the sidebar's
+    // "غياب اليوم". Same #hash pattern as the notifications sheet, so the
+    // phone's back button closes it (see the hashchange listener below).
+    const TODAY_ABSENCE_HASH = '#today-absence';
+    const todayAbsenceSheet = document.getElementById('todayAbsenceSheet');
+    const todayAbsenceHost = document.getElementById('todayAbsenceHost');
+    let adminSession = null;   // { user, data, classList } — set once signed in
+    let todayAbsenceMount = null;
+    let todayAbsenceApi = null; // { refresh } once mounted
+
+    // Builds the sheet and starts loading today's grid — once. It stays
+    // mounted afterwards (keeping its selected date), and later opens just
+    // slide it back in.
+    function mountTodayAbsence(){
+      if(!todayAbsenceMount){
+        todayAbsenceMount = import('/admins/newabsence.js')
+          .then(({ mountTodayAbsenceSheet }) => mountTodayAbsenceSheet(todayAbsenceHost, {
+            close: () => closeTodayAbsenceSheet(),
+            attendance,
+            onAttendanceSaved: (fn) => attendanceSavedListeners.add(fn),
+            getSession: () => adminSession,
+          }))
+          .then((api) => { todayAbsenceApi = api; return api; })
+          .catch((e) => { todayAbsenceMount = null; throw e; });
+      }
+      return todayAbsenceMount;
+    }
+
+    // So the grid is already there the moment "غياب اليوم" is tapped, the
+    // sheet is built and its data loaded in the background once the
+    // dashboard itself has finished loading (while the browser is idle).
+    // A failure here is silent — opening it tries again and reports then.
+    function preloadTodayAbsence(){
+      const idle = window.requestIdleCallback || ((cb) => setTimeout(cb, 200));
+      idle(() => { mountTodayAbsence().catch(() => {}); }, { timeout: 1500 });
+    }
+
+    function openTodayAbsenceSheet(updateHash = true){
+      // Already loaded (the usual case, thanks to the preload): it shows
+      // what it has immediately and quietly swaps in fresh data a moment
+      // later, without a loading state. Still loading: its own loading
+      // state is showing, and that load is fresh anyway.
+      todayAbsenceApi?.refresh();
+      openSheet(todayAbsenceSheet);
+      window.adminSidebar?.setCurrent('sidebarTodayAbsence');
+      if(updateHash && window.location.hash !== TODAY_ABSENCE_HASH){
+        window.location.hash = 'today-absence';
+      }
+      mountTodayAbsence().catch(async (e) => {
+        console.error('[today-absence] failed to load', e);
+        closeTodayAbsenceSheet();
+        const retry = await showActionPopup({
+          variant: 'danger',
+          title: 'تعذّر فتح غياب اليوم',
+          message: 'تحقّق من الاتصال وحاول مرة أخرى.',
+          confirmText: 'إعادة المحاولة',
+          cancelText: 'إغلاق',
+          icon: '!'
+        });
+        if(retry) openTodayAbsenceSheet();
+      });
+    }
+    function closeTodayAbsenceSheet(clearHashOnClose = true){
+      closeSheet(todayAbsenceSheet);
+      window.adminSidebar?.setCurrent('sidebarHome');
+      if(clearHashOnClose && window.location.hash === TODAY_ABSENCE_HASH){
+        clearHash();
+      }
+    }
+
+    // Sidebar: "غياب اليوم" opens the sheet; "الرئيسية" brings you back out
+    // of it (otherwise it'd be a dead button while the sheet is showing).
+    // The sidebar's other buttons aren't wired up yet.
+    document.getElementById('sidebarTodayAbsence').addEventListener('click', ()=>{
+      window.adminSidebar?.close();
+      openTodayAbsenceSheet();
+    });
+    document.getElementById('sidebarHome').addEventListener('click', ()=>{
+      window.adminSidebar?.close();
+      if(todayAbsenceSheet.classList.contains('open')) closeTodayAbsenceSheet();
+    });
+
     // Modal functions
     const openModal = (modal) => {
       document.body.style.overflow = 'hidden';
@@ -2251,13 +2378,21 @@
         adminName.textContent = data?.name || (user.email ? user.email.split('@')[0] : 'مشرف');
         avatarUserUid = user.uid;
         loadStoredAvatar(user.uid);
-        classOptions = sortClassList(await fetchClassList(db));
+        // Kept raw (and alongside the user/role) for the غياب اليوم sheet,
+        // so it can skip straight to its own data instead of repeating this
+        // role check and class-list read. fetchClassList() is one-shot, so
+        // the sheet couldn't get this list back from it anyway.
+        const classList = await fetchClassList(db);
+        adminSession = { user, data, classList };
+        classOptions = sortClassList(classList);
         renderMyClasses(data?.classes);
         show(sAdmin);
         initNotificationPopup(db, { uid: user.uid, name: data?.name || '' });
         startPresenceHeartbeat(db, user.uid);
         if(window.location.hash === '#admins') openAdminsPanel();
         if(window.location.hash === NOTIFICATIONS_HASH) openNotificationsPanel(false);
+        if(window.location.hash === TODAY_ABSENCE_HASH) openTodayAbsenceSheet(false);
+        else preloadTodayAbsence();
       }catch(e){ console.error(e); show(sDenied); }
     });
 
@@ -2278,7 +2413,8 @@
     
     // Absence modal button actions
     todayAbsenceBtn.addEventListener('click', ()=>{
-      window.location.href = '/admins/newabsence.html';
+      closeModal(absenceModal);
+      openTodayAbsenceSheet();
     });
 
     overallAbsenceBtn.addEventListener('click', ()=>{ 
@@ -2670,6 +2806,15 @@
       if(notificationsSheet.classList.contains('open')){
         closeNotificationsPanel(false);
       }
+      // Same for غياب اليوم: the phone's back button drops the hash, and
+      // that closes the sheet.
+      if(window.location.hash === TODAY_ABSENCE_HASH){
+        if(sAdmin.classList.contains('active')) openTodayAbsenceSheet(false);
+        return;
+      }
+      if(todayAbsenceSheet.classList.contains('open')){
+        closeTodayAbsenceSheet(false);
+      }
     });
 
     // إدارة المشرفين
@@ -2680,8 +2825,11 @@
     if(openAdmins) openAdmins.addEventListener('click', openAdminsPanel);
     closeAdmins.addEventListener('click', ()=> closeSheet(adminsSheet));
 
-    document.addEventListener('keydown', (e)=>{ 
+    document.addEventListener('keydown', (e)=>{
       if(e.key==='Escape'){
+        // todayAbsenceSheet is left out on purpose: inside it, Escape
+        // already closes its own popover/modals, and this listener would
+        // otherwise close the whole sheet out from under them.
         [teachersSheet,subjectSheet,teacherSheet,adminsSheet,adminSheet,notificationsSheet].forEach(closeSheet);
         if(window.location.hash === NOTIFICATIONS_HASH) clearHash();
         closeModal(absenceModal);

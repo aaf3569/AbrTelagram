@@ -1,0 +1,500 @@
+/**
+ * algo_SeventhPlanner.js
+ *
+ * مخطِّط طبقة الحصّة السابعة (الجلسة 56).
+ *
+ * لماذا: السابعة أندر موردٍ في المسألة كلّها — (الصفوف × الأيّام) خانةً يجب
+ * ملؤها من عرضٍ تحدّه سقوف صلبة (رياضيات/إداريّ = 0، مواد مسقوفة = 1، مشرف =
+ * السقف، عامّ = LAST_HARD_MAX) وسلّمٌ ناعم (السابعة الثانية لغير الأولويّة).
+ * كان الباني يملؤها **أثرًا جانبيًّا** للحلقة الجشِعة، فتُكسر القواعد الغالية
+ * لأنّ من بقي حرًّا لمّا وصل الدور إلى الخانة هو من يأخذها. هنا تُخطَّط أوّلًا:
+ * مطابقةٌ بأقلّ كلفة (تدفّق بأدنى كلفة) بين خانات (صفّ، يوم) والمعلّمين المؤهّلين
+ * تحت سقوفهم — فتُوضع كلّ سابعةٍ يمكن وضعها بلا كسر، وتُحمَّل «السابعة الثانية»
+ * على من تقلّ عقوبته (نفس سلّم _np2lWeight)، ويُعرف ما لا يُملأ **قبل** أن يلمس
+ * الجشع الشبكة.
+ *
+ * دالّةٌ نقيّة على الشبكة: لا تكتب ورقةً ولا تعرض. وحدة الكلفة = أوزان الورقة
+ * عبر ctx.weights — لا رقمَ حرفيًّا هنا.
+ *
+ * شبكة التدفّق:
+ *   source → خانة(صفّ،يوم) [سعة 1] → (معلّم،يوم) [سعة 1] → معلّم → sink
+ *   حافّة معلّم→sink مجزّأة بالطبقات: الوحدة الأولى بكلفة 0 (والثانية للأولويّة
+ *   0 أيضًا)، ثمّ وحدات «السابعة الثانية» بكلفة وزنها، حتّى السقف الصلب.
+ */
+
+// ============================================================
+// تدفّق بأدنى كلفة (Private — مسارات أقصر متعاقبة، SPFA)
+// ============================================================
+
+/**
+ * يبني شبكةً بسيطة ويحلّها. الأحجام هنا صغيرة (~90 خانة، ~100 معلّم، ~1000 حافّة)
+ * فـSPFA كافٍ وحتميّ.
+ *
+ * @param {number} n عدد العقد.
+ * @return {{addEdge: function(number,number,number,number):number,
+ *           run: function(number,number,number):{flow:number,cost:number},
+ *           edges: Array}}
+ */
+function _createMinCostFlow(n) {
+  const head = new Array(n).fill(-1);
+  const edges = [];   // {to, cap, cost, next}
+  const addEdge = function (u, v, cap, cost) {
+    edges.push({ to: v, cap: cap, cost: cost, next: head[u] }); head[u] = edges.length - 1;
+    edges.push({ to: u, cap: 0, cost: -cost, next: head[v] }); head[v] = edges.length - 1;
+    return edges.length - 2;
+  };
+  const run = function (s, t, maxFlow) {
+    let flow = 0, cost = 0;
+    const INF = Number.MAX_SAFE_INTEGER;
+    while (flow < maxFlow) {
+      const dist = new Array(n).fill(INF);
+      const inQ = new Array(n).fill(false);
+      const prevE = new Array(n).fill(-1);
+      const queue = [s]; dist[s] = 0; inQ[s] = true;
+      let qi = 0;
+      while (qi < queue.length) {
+        const u = queue[qi++]; inQ[u] = false;
+        for (let e = head[u]; e !== -1; e = edges[e].next) {
+          const ed = edges[e];
+          if (ed.cap > 0 && dist[u] + ed.cost < dist[ed.to]) {
+            dist[ed.to] = dist[u] + ed.cost;
+            prevE[ed.to] = e;
+            if (!inQ[ed.to]) { inQ[ed.to] = true; queue.push(ed.to); }
+          }
+        }
+      }
+      if (dist[t] === INF) break;
+      // عنق الزجاجة على المسار
+      let aug = maxFlow - flow;
+      for (let v = t; v !== s; v = edges[prevE[v] ^ 1].to) aug = Math.min(aug, edges[prevE[v]].cap);
+      for (let v = t; v !== s; v = edges[prevE[v] ^ 1].to) {
+        edges[prevE[v]].cap -= aug;
+        edges[prevE[v] ^ 1].cap += aug;
+      }
+      flow += aug;
+      cost += aug * dist[t];
+    }
+    return { flow: flow, cost: cost };
+  };
+  return { addEdge: addEdge, run: run, edges: edges };
+}
+
+// ============================================================
+// التخطيط (Public — نقيّ على الحالة)
+// ============================================================
+
+/**
+ * السقف الصلب المتبقّي لسوابع معلّمٍ على الحالة الراهنة: الفرديّ (الجَبّ) يَجُبّ
+ * العامّ، والمشرف بسقفه، والإداريّ صفر إن كان التجنّب مفعَّلًا، وصاحب قاعدة «لا
+ * أخيرة» صفر، ورئيس القسم صفر (قيد صلب مطلق في طبقة الإصلاح). يُطرح ما وُضع له
+ * من سوابع قبل هذه المرحلة.
+ */
+function _seventhRemainingCap(state, ctx, cid) {
+  const t = ctx.teacherByCivilId[cid];
+  const capOv = ctx.lastCapByTeacher[cid];
+  let cap = (typeof capOv === 'number') ? capOv : ctx.params.lastHard;
+  if (t && t.isWingSupervisor === true) cap = Math.min(cap, ctx.params.lastSupervisorMax);
+  if (ctx.adminAvoidLast && t && t.category === ctx.adminCategoryName) cap = 0;
+  const indiv = ctx.indivByCivilId[cid];
+  if (indiv && indiv.noLast) cap = 0;
+  if (t && isHeadOfDepartment(t)) cap = 0;
+  return Math.max(0, cap - state.getLastPeriodCount(cid));
+}
+
+
+/**
+ * كلفة «النثر» (الجلسة 58): فارقٌ صغير يجعل لكلّ مجموعةٍ من مادّةٍ **مسقوفة
+ * السعة** يومًا مفضَّلًا مختلفًا، فيوزّعها التدفّق على الأيّام بدل أن يكدّسها.
+ *
+ * لماذا: كلّ أيّام المجموعة متساوية الكلفة، فالتدفّق يكدّس كتل الفنية الستّ في
+ * يومٍ واحد (اختيارٌ حتميّ لا مقصود). ثمّ يأتي تقليم السعة فيقطع الزائد — وقطعُه
+ * يُخرج الكتلة من الطبقة كلّها لا إلى يومٍ آخر. فالعلاج أن تُنثَر **قبل** أن
+ * تُقلَّم: المجموعة رقم i تفضّل اليوم i، ثمّ i+1، وهكذا دورانًا.
+ *
+ * القيمة في [0، الأيّام−1] — أصغر بكثير من أيّ وزنٍ حقيقيّ (أدناها 100 في سلّم
+ * «السابعة الثانية»)، فهي ترتيبٌ لا قرار: لا تُزيح تعيينًا يوفّر سابعةً ثانية،
+ * وإنّما تحسم التساوي بين أيّام المجموعة الواحدة. والفهرس `_spreadIdx` يُسنَد
+ * مرّةً لكلّ مجموعةٍ بترتيب حتميّ (المادّة ثمّ اسم الصفّ) فالناتج لا يتبع ترتيب
+ * التدفّق ولا ترتيب الورقة.
+ */
+function _seventhSpreadCost(ctx, g, day, days) {
+  if (typeof g._spreadIdx !== 'number' || days <= 0) return 0;
+  return (((day - g._spreadIdx) % days) + days) % days;
+}
+
+/**
+ * يُسنِد `_spreadIdx` لمجموعات المواد المسقوفة بترتيب حتميّ (اسم الصفّ داخل
+ * المادّة). المواد غير المسقوفة بلا فهرس ⟹ كلفة نثرٍ صفر (السلوك كما كان).
+ */
+function _assignSpreadIndices(ctx, groupsByClass) {
+  const capBySubjectKey = ctx.capacityBySubjectKey || {};
+  const bySubject = {};
+  const classIds = Object.keys(groupsByClass).sort();
+  for (let c = 0; c < classIds.length; c++) {
+    const gs = groupsByClass[classIds[c]];
+    for (let j = 0; j < gs.length; j++) {
+      const g = gs[j];
+      if (typeof capBySubjectKey[g.subjectKey] !== 'number') continue;
+      if (!bySubject[g.subjectKey]) bySubject[g.subjectKey] = [];
+      bySubject[g.subjectKey].push(g);
+    }
+  }
+  const keys = Object.keys(bySubject).sort();
+  for (let k = 0; k < keys.length; k++) {
+    const list = bySubject[keys[k]];
+    list.sort(function (a, b) {
+      return a.classId < b.classId ? -1 : (a.classId > b.classId ? 1 : 0);
+    });
+    for (let i = 0; i < list.length; i++) list[i]._spreadIdx = i;
+  }
+}
+
+/**
+ * كلفة الوحدة k (1-based، على مجمل سوابع المعلّم) — نفس سلّم الإصلاح: الأولى
+ * مجّانيّة؛ ما بعدها مجّانيّ لقسم الأولويّة وللمعفى، وإلّا وزن «السابعة الثانية»
+ * المتدرّج بالنصاب (_np2lWeight).
+ *
+ * ⚠️ جُرّب في الجلسة 58 تفضيلُ أقسام الأولويّة بفارقٍ صغير حتّى في الوحدة الأولى
+ * (10)، فكلّف **295 نقطة** ولم يُنقص «السابعة الثانية» وحدةً واحدة (17 في
+ * الحالين): كلفةُ النثر أدناه تكفي وحدها. فأُلغي — نظير درس الوزن الناعم في
+ * [[prefer-different-last]]: ما لا يُقاس أثرُه لا يبقى.
+ */
+function _seventhUnitCost(ctx, cid, k) {
+  const t = ctx.teacherByCivilId[cid];
+  const preferred = _isPriorityDept(ctx, t) || _seventhExempt(ctx, cid);
+  if (k <= 1) {
+    // الوحدة الأولى: مجّانيّة لأقسام الأولويّة، وبوزن الورقة لغيرها (0 = مطفأ).
+    // بهذا تتقدّم سابعةُ معلّم مادّةٍ غير أكاديميّة — ولو كانت ثانيته — على
+    // سابعةٍ أولى لمعلّمٍ أكاديميّ، وهو نصّ قاعدة المالك (١٠ سبتمبر).
+    if (preferred) return 0;
+    const w = (ctx.weights && typeof ctx.weights.W_SEVENTH_PRIORITY_FIRST === 'number')
+      ? ctx.weights.W_SEVENTH_PRIORITY_FIRST : 0;
+    return w;
+  }
+  if (preferred) return 0;
+  return _np2lWeight(cid, ctx);
+}
+
+/**
+ * يخطّط طبقة السابعة على الحالة الراهنة (بعد الحجب والاجتماعات وحجز رؤساء
+ * الأقسام). لا يضع شيئًا — يُرجع الخطّة وما تعذّر.
+ *
+ * @param {Object} state حالة الجدول.
+ * @param {Object} ctx سياق الباني.
+ * @param {Object[]} groups مجموعات الإسناد (remaining حيّ).
+ * @return {{plan: Array<{classId:string, day:number, group:Object}>,
+ *           unfilled: Array<{classId:string, day:number, candidates:number}>,
+ *           demand:number, supplyFree:number, supplyTotal:number, cost:number}}
+ */
+function planSeventhLayer(state, ctx, groups) {
+  const lastIdx = ctx.lastIdx;
+  const days = ctx.days;
+
+  // (1) الخانات المطلوبة: (صفّ، يوم) وخليّته الأخيرة حرّة.
+  const classIds = state.getDimensions().classIds;
+  const slots = [];
+  for (let c = 0; c < classIds.length; c++) {
+    for (let d = 0; d < days; d++) {
+      if (state.isClassFree(classIds[c], d, lastIdx)) slots.push({ classId: classIds[c], day: d });
+    }
+  }
+
+  // (2) المعلّمون المؤهّلون وسعاتهم.
+  const groupsByClass = {};
+  for (let i = 0; i < groups.length; i++) {
+    const g = groups[i];
+    if (g.remaining <= 0) continue;
+    if (ctx.bannedLastSubjectKeys[g.subjectKey]) continue;          // رياضيات وأخواتها
+    // مادّة كتلةٍ مزدوجة: مرشَّحة كزوجٍ (السادسة+السابعة) لا كحصّة مفردة — فلا
+    // يُهدَر عرضُ معلّميها (الفنية قسم أولويّة: 11 وحدة) ولا تُكسر الكتلة.
+    const isBlock = !!(ctx.consecutiveSubjects || {})[g.subjectKey];
+    if (isBlock && (g.remaining < 2 || lastIdx < 1)) continue;
+    g._seventhBlock = isBlock;
+    if (!groupsByClass[g.classId]) groupsByClass[g.classId] = [];
+    groupsByClass[g.classId].push(g);
+  }
+
+  _assignSpreadIndices(ctx, groupsByClass);
+
+  // عقد الشبكة: 0=source, 1=sink, ثمّ الخانات، ثمّ (معلّم،يوم)، ثمّ المعلّمون.
+  const teacherNode = {};      // cid → node
+  const teacherDayNode = {};   // cid#day → node
+  let n = 2 + slots.length;
+  const slotNode = function (i) { return 2 + i; };
+  const cids = [];
+  const remainingCap = {};
+  const candidateEdges = [];   // {edge, slotIdx, group}
+  const pending = [];          // حوافّ خانة→(معلّم،يوم) تُضاف بعد معرفة n
+
+  for (let i = 0; i < slots.length; i++) {
+    const s = slots[i];
+    const gs = groupsByClass[s.classId] || [];
+    for (let j = 0; j < gs.length; j++) {
+      const g = gs[j];
+      const cid = String(g.civilId);
+      if (!(cid in remainingCap)) {
+        remainingCap[cid] = _seventhRemainingCap(state, ctx, cid);
+        if (remainingCap[cid] > 0) { teacherNode[cid] = n++; cids.push(cid); }
+      }
+      if (remainingCap[cid] <= 0) continue;
+      if (!state.isTeacherFree(cid, s.day, lastIdx)) continue;
+      if (isCellBlockedFor(ctx.teacherBlocks, cid, s.day, lastIdx)) continue;
+      if (g._seventhBlock) {
+        // الزوج: السادسة أيضًا حرّة للصفّ والمعلّم وغير محجوبة. السقف اليوميّ لا
+        // يُفحص للكتلة (الورقة تسقّفها 1 والنمط يطلب 2 في يومٍ واحد — تناقضٌ يُبلَّغ
+        // للمالك، ومرحلة الكتل تتجاوزه بالمثل).
+        if (!state.isClassFree(s.classId, s.day, lastIdx - 1)) continue;
+        if (!state.isTeacherFree(cid, s.day, lastIdx - 1)) continue;
+        if (isCellBlockedFor(ctx.teacherBlocks, cid, s.day, lastIdx - 1)) continue;
+      } else if (state.getSubjectDayCount(s.classId, g.subjectKey, s.day) >= g.dailyCap) continue;
+      const tdKey = cid + '#' + s.day;
+      if (!(tdKey in teacherDayNode)) teacherDayNode[tdKey] = n++;
+      // 🔴 (الجلسة 62) أفضليّة موادّ النشاط في طبقة السابعة.
+      //
+      // الدرس الذي كشفه توليد ١٢ سبتمبر: مكافأةُ الذيل في `_softScore` **لا
+      // تكفي وحدها**، لأنّ هذه الطبقة تُخطَّط أوّلًا وتملأ الحصّة الأخيرة لكلّ
+      // (صفّ، يوم) قبل أن تصل مرحلةُ الكتل — فلا تجد الكتلةُ ذيلًا حرًّا تشتريه
+      // بنقاطها مهما علت. فالأفضليّة يجب أن تُقال هنا، في كلفة التدفّق نفسها.
+      //
+      // وتُقال **زيادةً على غير المفضَّل** لا خصمًا من المفضَّل: الكلفة في شبكة
+      // التدفّق لا تقبل السالب. وقيمتها تفوق أقصى كلفة نثرٍ (days−1) فتحسم
+      // الترجيح في كلّ الأيّام، وتقلّ كثيرًا عن أصغر وزنٍ حقيقيّ (≥100) فلا
+      // تقلب ترتيب الأولويّة/السقوف. وهي ثابتةٌ على كلّ الحوافّ غير المفضَّلة،
+      // فلا تُنقص عدد الخانات المملوءة — التدفّق يُعظّم التدفّق أوّلًا ثمّ يُصغّر
+      // الكلفة.
+      // 🔴 رئيس القسم مستثنًى من الأفضليّة (قرار المالك ١٢ سبتمبر). وهو عمليًّا
+      // مستثنًى سلفًا (سقف سابعاته صفر في _seventhRemainingCap فلا يبلغ هذا
+      // السطر أصلًا)، والشرط هنا **تصريحٌ بالنيّة** لا أثرَ له اليوم: إن رُفع
+      // الصفر يومًا بقي الاستثناء قائمًا بنصّه لا بأثرٍ جانبيّ.
+      const tailBonus = ctx.tailSubjectKeys && ctx.tailSubjectKeys[g.subjectKey] &&
+        !isHeadOfDepartment(ctx.teacherByCivilId[cid] || {});
+      pending.push({ slotIdx: i, tdNode: teacherDayNode[tdKey], group: g,
+        cost: _seventhSpreadCost(ctx, g, s.day, days) + (tailBonus ? 0 : days) });
+    }
+  }
+
+  // نصاب المجموعة (remaining) قيدٌ لا تعبّر عنه شبكة التدفّق مباشرةً (يقطع عقد
+  // (معلّم،يوم) عرضيًّا)، فيُنفَّذ بالتقليم التكراريّ: يُحلّ التدفّق، وأيّ مجموعةٍ
+  // نالت فوق نصابها تُحذف حوافّها الزائدة (بترتيب اليوم الحتميّ) ويُعاد الحلّ.
+  // يتقارب في جولاتٍ قليلة (كلّ جولة تحذف حافّةً على الأقلّ).
+  let plan = [], filled = {}, supplyFree = 0, supplyTotal = 0, res = { flow: 0, cost: 0 };
+  const excluded = {};   // group-key#day → true
+  for (let iter = 0; iter < 20; iter++) {
+    const net = _createMinCostFlow(n);
+    candidateEdges.length = 0;
+    for (let i = 0; i < slots.length; i++) net.addEdge(0, slotNode(i), 1, 0);
+    for (let k = 0; k < pending.length; k++) {
+      const p = pending[k];
+      const gk = p.group.classId + '|' + p.group.subjectKey + '|' + String(p.group.civilId);
+      if (excluded[gk + '#' + slots[p.slotIdx].day]) continue;
+      const e = net.addEdge(slotNode(p.slotIdx), p.tdNode, 1, p.cost || 0);
+      candidateEdges.push({ edge: e, slotIdx: p.slotIdx, group: p.group, gk: gk });
+    }
+    const tdKeys = Object.keys(teacherDayNode);
+    for (let k = 0; k < tdKeys.length; k++) {
+      const cid = tdKeys[k].split('#')[0];
+      net.addEdge(teacherDayNode[tdKeys[k]], teacherNode[cid], 1, 0);
+    }
+    supplyFree = 0; supplyTotal = 0;
+    for (let k = 0; k < cids.length; k++) {
+      const cid = cids[k];
+      const already = state.getLastPeriodCount(cid);
+      for (let u = 1; u <= remainingCap[cid]; u++) {
+        const cost = _seventhUnitCost(ctx, cid, already + u);
+        net.addEdge(teacherNode[cid], 1, 1, cost);
+        supplyTotal++;
+        if (cost === 0) supplyFree++;
+      }
+    }
+
+    res = net.run(0, 1, slots.length);
+
+    // (3) قراءة الخطّة من التدفّق، وفحص نصاب المجموعات.
+    plan = []; filled = {};
+    const perGroup = {};
+    for (let k = 0; k < candidateEdges.length; k++) {
+      const ce = candidateEdges[k];
+      if (net.edges[ce.edge].cap === 0) {       // استُهلكت السعة ⟹ مُختارة
+        plan.push({ classId: slots[ce.slotIdx].classId, day: slots[ce.slotIdx].day, group: ce.group, gk: ce.gk, block: !!ce.group._seventhBlock });
+        filled[ce.slotIdx] = true;
+        if (!perGroup[ce.gk]) perGroup[ce.gk] = [];
+        perGroup[ce.gk].push(slots[ce.slotIdx].day);
+      }
+    }
+    let pruned = 0;
+    const gks = Object.keys(perGroup);
+    for (let k = 0; k < gks.length; k++) {
+      const gk = gks[k];
+      const days = perGroup[gk].slice().sort(function (a, b) { return a - b; });
+      const g0 = plan.filter(function (x) { return x.gk === gk; })[0].group;
+      const perUnit = g0._seventhBlock ? 2 : 1;
+      const allowed = Math.floor(g0.remaining / perUnit);
+      for (let j = allowed; j < days.length; j++) { excluded[gk + '#' + days[j]] = true; pruned++; }
+    }
+
+    // (3.5) سعة القاعات/المختبرات (الجلسة 58): قيدٌ آخر لا تعبّر عنه شبكة التدفّق
+    // مباشرةً — يقطع عقد (معلّم،يوم) عرضيًّا كنصاب المجموعة سواء — فيُنفَّذ
+    // بالتقليم التكراريّ نفسه: ما زاد عن السعة في (مادّة، يوم) تُحذف حوافّه
+    // ويُعاد الحلّ، فيوزّع التدفّق نفسه المادّة على الأيّام بأقلّ كلفة.
+    //
+    // لماذا هنا لا في الإصلاح: معلّمو المواد ذات القاعات (الفنية/الموسيقية/
+    // البدنية) خفافُ النصاب فهم أوّل من تختاره هذه الطبقة، فتكدّست أربع كتل
+    // فنية في الأحد ح6-ح7 (بلاغ المالك ٩ سبتمبر) — والإصلاح لا يفكّها لأنّ
+    // الكتلة المزدوجة مجمَّدة بحارس BROKEN_CONSEC_HARD (100000): أيّ تبديلٍ
+    // مفردٍ يشقّها أغلى من كسر السعة نفسه.
+    //
+    // الوحدة المفردة تشغل الخانة الأخيرة وحدها؛ والكتلة تشغل السادسة معها —
+    // فلكلّ خانةٍ حسابُها، وما وُضع على الشبكة قبل هذه الطبقة يُطرح من السعة.
+    const capBySubjectKey = ctx.capacityBySubjectKey || {};
+    const bySubjectDay = {};
+    for (let k = 0; k < plan.length; k++) {
+      const p = plan[k];
+      if (typeof capBySubjectKey[p.group.subjectKey] !== 'number') continue;
+      const sdKey = p.group.subjectKey + '#' + p.day;
+      if (!bySubjectDay[sdKey]) bySubjectDay[sdKey] = [];
+      bySubjectDay[sdKey].push(p);
+    }
+    const sdKeys = Object.keys(bySubjectDay).sort();
+    for (let k = 0; k < sdKeys.length; k++) {
+      const units = bySubjectDay[sdKeys[k]];
+      const sKey = units[0].group.subjectKey;
+      const d = units[0].day;
+      const cap = capBySubjectKey[sKey];
+      const roomLast = Math.max(0, cap - state.getLabCount(sKey, d, lastIdx));
+      const roomPrev = (lastIdx >= 1)
+        ? Math.max(0, cap - state.getLabCount(sKey, d, lastIdx - 1)) : units.length;
+      // ترتيب القطع (روح MRV): **الأقلّ خياراتٍ يبقى، والأكثر خياراتٍ يُقلَّم**.
+      // التقليم تراكميّ عبر الجولات (excluded لا يُفرَّغ)، فقطعُ الأضعف خيارًا
+      // يستنزف أيّامه واحدًا تلو آخر حتّى يخرج من الطبقة كلّها — وهو ما وقع
+      // فعلًا: كتلة 12ع4 الفنية قُلّمت من الأيّام الخمسة جميعًا فسقطت إلى وسط
+      // اليوم، وورث سابعتَها معلّمُ مادّةٍ علميّة (بلاغ المالك ١٠ سبتمبر).
+      // بهذا الترتيب يُقلَّم مَن له بديل، فينتقل إلى يومٍ آخر ويبقى في السابعة.
+      const daysLeft = function (gk) {
+        let n = 0;
+        for (let dd = 0; dd < days; dd++) if (!excluded[gk + '#' + dd]) n++;
+        return n;
+      };
+      units.sort(function (a, b) {
+        const da = daysLeft(a.gk), db = daysLeft(b.gk);
+        if (da !== db) return da - db;
+        return a.classId < b.classId ? -1 : (a.classId > b.classId ? 1 : 0);
+      });
+      let kept = 0, keptBlocks = 0;
+      for (let j = 0; j < units.length; j++) {
+        const u = units[j];
+        const fitsLast = kept < roomLast;
+        const fitsPrev = !u.block || keptBlocks < roomPrev;
+        if (fitsLast && fitsPrev) { kept++; if (u.block) keptBlocks++; continue; }
+        // حارس اليوم الأخير: لا يُقلَّم مَن لم يبقَ له إلّا هذا اليوم — قطعُه
+        // يُخرجه من الطبقة كلّها لا إلى يومٍ آخر، وهذا هو بعينه ما شكا منه
+        // المالك. تجاوزُ سعةٍ بوحدةٍ في خانةٍ أهونُ من كتلة فنيةٍ تهبط إلى وسط
+        // اليوم ويرث سابعتَها معلّمُ مادّةٍ علميّة — والزائد يبقى مرئيًّا في
+        // تقرير الكسور (BROKEN_LAB) فيقرّر المالك فيه بتبديلٍ يدويّ.
+        // لا حارسَ لليوم الأخير هنا عمدًا: كلفة النثر أعلاه تمنع التكديس
+        // من أصله، فنادرًا ما تُستنزف أيّام مجموعة. وحين تُستنزف فالسعة تفوز —
+        // لأنّ فائض الكتلة بعد البناء **لا يُصلَح** (الكتلة مجمَّدة بحارس التتالي
+        // 100000)، بينما الكتلة الهابطة إلى وسط اليوم كلفتها سابعةٌ ثانية واحدة
+        // على معلّمٍ آخر. مقيسٌ: بالحارس 4,845 كسرًا (فائض سعة 2)، وبدونه 3,520
+        // وصفر فائض.
+        excluded[u.gk + '#' + d] = true;
+        pruned++;
+      }
+    }
+
+    if (pruned === 0) break;
+  }
+  const unfilled = [];
+  const candCount = {};
+  for (let k = 0; k < candidateEdges.length; k++) candCount[candidateEdges[k].slotIdx] = (candCount[candidateEdges[k].slotIdx] || 0) + 1;
+  for (let i = 0; i < slots.length; i++) {
+    if (!filled[i]) unfilled.push({ classId: slots[i].classId, day: slots[i].day, candidates: candCount[i] || 0 });
+  }
+
+  // (الجلسة 62) سطرٌ يُصدّق قاعدة «موادّ النشاط في آخر اليوم» بالعدّ لا بالنظر:
+  // كم كتلةً منها نالت الذيل فعلًا، وكم بقي منها خارجه.
+  if (ctx.tailSubjectKeys) {
+    let tailPlanned = 0;
+    const named = [];
+    for (let i = 0; i < plan.length; i++) {
+      if (!ctx.tailSubjectKeys[plan[i].group.subjectKey]) continue;
+      tailPlanned++;
+      named.push(plan[i].classId + '/' + plan[i].group.subjectKey +
+        (plan[i].block ? ' (كتلة 6+7)' : ' (مفردة 7)'));
+    }
+    Logger.log('TAIL_SUBJECTS: نالت طبقةَ السابعة ' + tailPlanned + ' وحدةً من موادّ النشاط' +
+      (named.length > 0 ? ' — ' + named.join(' · ') : ' (ولا واحدة!)'));
+
+    // (الجلسة 62) **المتخلّفون** — ولماذا. سطرٌ لكلّ مجموعة نشاطٍ لم تنل خانة،
+    // يفصل بين ثلاثة أسباب لا يجوز الخلط بينها ولكلٍّ علاجٌ مختلف:
+    //   • «بلا ترشيح» ⟹ لم تدخل المطابقة أصلًا: سقف سابعات المعلّم صفر (رئيس
+    //     قسم/إداريّ)، أو ليس حرًّا في الذيل، أو السادسة مشغولة لصفّه.
+    //   • «رُشِّحت ثمّ قُلّمت» ⟹ سعة القاعة أو نصاب المجموعة أخرجتها من أيّامها.
+    //   • «رُشِّحت ولم تفز» ⟹ خسرت المطابقة لمرشَّحٍ أرخص (لا ينبغي بعد هامش
+    //     الأفضليّة — فظهورُه يعني خللًا في الكلفة يستحقّ النظر).
+    const wonGk = {};
+    for (let i = 0; i < plan.length; i++) wonGk[plan[i].gk] = true;
+    const candDays = {}, excDays = {};
+    for (let i = 0; i < pending.length; i++) {
+      const g = pending[i].group;
+      if (!ctx.tailSubjectKeys[g.subjectKey]) continue;
+      const gk = g.classId + '|' + g.subjectKey + '|' + String(g.civilId);
+      candDays[gk] = (candDays[gk] || 0) + 1;
+      if (excluded[gk + '#' + slots[pending[i].slotIdx].day]) excDays[gk] = (excDays[gk] || 0) + 1;
+    }
+    const seenGk = {};
+    for (let i = 0; i < groups.length; i++) {
+      const g = groups[i];
+      if (!ctx.tailSubjectKeys[g.subjectKey] || g.remaining <= 0) continue;
+      const gk = g.classId + '|' + g.subjectKey + '|' + String(g.civilId);
+      if (wonGk[gk] || seenGk[gk]) continue;
+      seenGk[gk] = true;
+      const cand = candDays[gk] || 0;
+      const exc = excDays[gk] || 0;
+      const why = (cand === 0) ? 'بلا ترشيح (سقفٌ صفر أو الذيل مشغول)'
+        : (exc >= cand ? 'رُشِّحت ثمّ قُلّمت من كلّ أيّامها' : 'رُشِّحت ولم تفز بالمطابقة');
+      Logger.log('TAIL_MISS: ' + g.classId + '/' + g.subjectKey +
+        ' (معلّم ' + g.civilId + ') — أيّام مرشَّحة=' + cand +
+        '، مقلَّمة=' + exc + ' ⟹ ' + why);
+    }
+  }
+
+  return { plan: plan, unfilled: unfilled, demand: slots.length,
+           supplyFree: supplyFree, supplyTotal: supplyTotal, cost: res.cost };
+}
+
+// ============================================================
+// الحجز (Public — يضع الخطّة على الحالة)
+// ============================================================
+
+/**
+ * يضع طبقة السابعة المخطَّطة على الحالة: كلّ عنصر خطّة ← حصّة في الخليّة
+ * الأخيرة، ويُنقص remaining مجموعته (فتراه المراحل بعده). ما تعذّر يُسجَّل
+ * استثناءً بنيويًّا SEVENTH_UNPLANNED (لا كسرًا): الحلقة الجشِعة ستملؤه لاحقًا
+ * بما تجد، وقد تكسر — فيظهر الكسر في موضعه المعتاد.
+ *
+ * @return {{placed:number, unfilled:number, demand:number, supplyFree:number,
+ *           supplyTotal:number, cost:number}}
+ */
+function _reserveSeventhLayer(state, ctx, groups, exceptions) {
+  const res = planSeventhLayer(state, ctx, groups);
+  for (let i = 0; i < res.plan.length; i++) {
+    const p = res.plan[i];
+    const slot = { kind: 'LESSON', subjectKey: p.group.subjectKey, civilId: String(p.group.civilId) };
+    if (p.block) {
+      state.place(p.classId, p.day, ctx.lastIdx - 1, slot);
+      p.group.remaining--;
+    }
+    state.place(p.classId, p.day, ctx.lastIdx, slot);
+    p.group.remaining--;
+  }
+  for (let i = 0; i < res.unfilled.length; i++) {
+    const u = res.unfilled[i];
+    exceptions.push({ type: 'SEVENTH_UNPLANNED', severity: 'STRUCTURAL',
+      classId: u.classId, day: u.day, candidates: u.candidates });
+  }
+  Logger.log('تخطيط السابعة: مطلوب=' + res.demand + '، موضوع=' + res.plan.length +
+    '، متعذّر=' + res.unfilled.length + '، عرضٌ مجّانيّ=' + res.supplyFree +
+    '، عرضٌ كلّيّ=' + res.supplyTotal + '، كلفة=' + res.cost);
+  return { placed: res.plan.length, unfilled: res.unfilled.length, demand: res.demand,
+           supplyFree: res.supplyFree, supplyTotal: res.supplyTotal, cost: res.cost };
+}

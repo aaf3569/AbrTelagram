@@ -1,0 +1,285 @@
+/**
+ * algo_DeepImprove.js
+ *
+ * التحسين العميق (الجلسة 56): تلدينٌ محاكٍ (Simulated Annealing) على الجدول
+ * المبنيّ، بدالّة هدفٍ **موحَّدة** = عقوبة الكسور (نفس _computeChangeableBreaks
+ * التي يقرؤها الإصلاح والتقرير) + العقوبات الناعمة التي كان الباني وحده يراها
+ * ولا يراها الإصلاح (فجوات يوم المعلّم، الثلاثيّات، سقف الأولى، سادسة رئيس
+ * القسم المحمَّل). فلا تبقى طبقةٌ تحسّن ما تخرّبه الأخرى بصمت.
+ *
+ * لماذا التلدين لا تسلّق التلّ: التقرير المقيس (نتيجة 56) أثبت أنّ الإصلاح يبلغ
+ * قاعًا محلّيًّا في ربع ميزانيّته — العائق الجوارُ والقبولُ لا الزمن. التلدين
+ * يقبل تراجعًا مؤقّتًا باحتمالٍ يتناقص مع البرودة فيهرب من القاع، ويحفظ
+ * الأفضل المطلق ويعيده في النهاية — فالجدول لا يسوء أبدًا.
+ *
+ * حتميّ: مولّد أرقامٍ ببذرة (mulberry32) — البذرة نفسها ⟹ المسار نفسه.
+ * الحارس الصلب نفسه: _attemptSwap(fast) عبر _swapDiffFeasible (تعارض المعلّم،
+ * نافذة الحضور، سعة المختبر وتغطية الجناح مقابل خطّ الأساس، رئيس القسم في
+ * الأخيرة). كلّ حركةٍ تُطبَّق تمرّ به. فضاء الحركة: تبديل خليّتين داخل الصفّ.
+ */
+
+// ============================================================
+// مولّد أرقامٍ حتميّ (Private)
+// ============================================================
+
+/** mulberry32 — مولّدٌ صغير حتميّ؛ يُرجع دالّة تعطي [0,1). */
+function _prng(seed) {
+  let a = (seed >>> 0) || 1;
+  return function () {
+    a = (a + 0x6D2B79F5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+// ============================================================
+// العقوبات الناعمة على مستوى الحالة (Private — مرآة _softScore)
+// ============================================================
+
+/**
+ * إشغال يوم المعلّم (درس أو اجتماع؛ خانة الحجب تُخفيها الحالة فلا تُحتسب) —
+ * نفس دلالة _teacherDayProfile في الباني.
+ */
+function _diOccupancy(state, ctx, cid, day) {
+  const occ = new Array(ctx.periods);
+  for (let p = 0; p < ctx.periods; p++) occ[p] = (state.getTeacherCell(cid, day, p) !== null);
+  return occ;
+}
+
+/**
+ * العقوبة الناعمة لمعلّمٍ على أيّامه كلّها: فجوات (W_GAP_EACH لكلّ فجوة +
+ * W_GAP_LARGE/HUGE للذيول) + ثلاثيّات (W_TRIPLE_FULL بلا فرصة داخلها /
+ * W_TRIPLE_LIGHT بفرصة، + W_TRIPLE_REPEAT لكلّ يومٍ إضافيّ فيه ثلاثيّة) + سقف
+ * الأولى (W_FIRST لكلّ أولى فوق سقفه؛ رؤساء الأقسام وأصحاب الحجب والمعفَون
+ * خارجه) + سادسة رئيس القسم المحمَّل (W_HOD_SIXTH_LOAD). الأوزان من ctx.weights
+ * حصرًا (الورقة).
+ */
+function _diTeacherSoftPenalty(state, ctx, cid) {
+  const EW = ctx.weights;
+  const recess = _recessBoundaries(ctx);
+  const t = ctx.teacherByCivilId[cid];
+  let pen = 0;
+  let tripleDays = 0;
+  for (let d = 0; d < ctx.days; d++) {
+    const occ = _diOccupancy(state, ctx, cid, d);
+    // فجوات — مرآةُ الباني حرفيًّا بعد الجلسة 59: العقوبة على سلاسل الفراغ **≥2**
+    // وحدها (`wide`)، والفجوة المفردة خارج الحساب. ⚠️ ولا يُضاف هنا حدُّ «شكل يوم
+    // المعلّم» (وزن التتابع/الفجوة): التلدين يراه عبر دالّة الكسور
+    // (_computeChangeableBreaks) فإضافته هنا ازدواجٌ — نظير W_FIRST_LAST_SAME_DAY.
+    const shp = _dayShapeFromOcc(occ, ctx.periods);
+    if (shp.wide > 0) {
+      pen += shp.wide * EW.W_GAP_EACH;
+      if (shp.max >= EW.GAP_LARGE_THRESHOLD) pen += EW.W_GAP_LARGE;
+      if (shp.max >= EW.GAP_HUGE_THRESHOLD)  pen += EW.W_GAP_HUGE;
+    }
+    // ثلاثيّات: كلّ نافذة {a,a+1,a+2} مشغولة
+    let dayHasTriple = false;
+    for (let a = 0; a + 2 < ctx.periods; a++) {
+      if (occ[a] && occ[a + 1] && occ[a + 2]) {
+        dayHasTriple = true;
+        pen += (recess[a] || recess[a + 1]) ? EW.W_TRIPLE_LIGHT : EW.W_TRIPLE_FULL;
+      }
+    }
+    if (dayHasTriple) tripleDays++;
+    // سادسة رئيس القسم المحمَّل: الحصّة secondBreakAfter درسٌ وحمله التدريسيّ
+    // قبلها ≥ الحدّ (مرآة شرط الباني الذي يُقيَّم قبل الوضع: الحمل − 1).
+    if (t && isHeadOfDepartment(t) && ctx.secondBreakAfter >= 1 &&
+        ctx.secondBreakAfter < ctx.periods) {
+      const c6 = state.getTeacherCell(cid, d, ctx.secondBreakAfter);
+      if (typeof c6 === 'string' &&
+          (_teacherDayLoad(state, ctx, cid, d) - 1) >= EW.HOD_SIXTH_MIN_LOAD) {
+        pen += EW.W_HOD_SIXTH_LOAD;
+      }
+    }
+  }
+  if (tripleDays >= 2) pen += EW.W_TRIPLE_REPEAT * (tripleDays - 1);
+  // سقف الأولى (غير رؤساء الأقسام)
+  if (t && !isHeadOfDepartment(t) && !isBlockedTeacher(ctx, cid) &&
+      !(ctx.firstExemptConstrained && t.category !== ctx.regularCategoryName)) {
+    const required = (typeof t.requiredLoad === 'number') ? t.requiredLoad : 0;
+    let firstCap = _roundBy(ctx.params.firstRoundMethod, ctx.params.firstMaxPct * required);
+    if (firstCap > ctx.params.firstHardMax) firstCap = ctx.params.firstHardMax;
+    const fc = state.getFirstPeriodCount(cid);
+    if (fc > firstCap) pen += EW.W_FIRST * (fc - firstCap);
+  }
+  return pen;
+}
+
+/**
+ * مخالفات قواعد السابعة **غير القابلة للمقايضة** لمعلّم (قرار المالك: رياضيات/
+ * إداريّ/رئيس قسم/«لا أخيرة» = صفر سوابع، مشرف ≤ سقفه، لا أحد فوق السقف
+ * الصلب). التلدين لا يقبل حركةً تزيدها — تنقص فقط أو تثبت — مهما ربح من
+ * الأوزان؛ فهي قيودٌ لا أثمان. (منع المادّة من الأخيرة يُفحص على الخليّة.)
+ */
+function _diSeventhHardViolations(state, ctx, cid) {
+  const t = ctx.teacherByCivilId[cid];
+  if (!t) return 0;
+  const L = state.getLastPeriodCount(cid);
+  const capOv = ctx.lastCapByTeacher[cid];
+  const hardCap = (typeof capOv === 'number') ? capOv : ctx.params.lastHard;
+  let v = Math.max(0, L - hardCap);
+  if (t.isWingSupervisor === true) v += Math.max(0, L - ctx.params.lastSupervisorMax);
+  if (ctx.adminAvoidLast && t.category === ctx.adminCategoryName) v += L;
+  const indiv = ctx.indivByCivilId[cid];
+  if (indiv && indiv.noLast) v += L;
+  if (isHeadOfDepartment(t)) v += L;
+  return v;
+}
+
+/** 1 إن كانت الخليّة درسًا لمادّةٍ ممنوعة من الأخيرة في الحصّة الأخيرة. */
+function _diBannedLastCell(state, ctx, cell) {
+  if (cell.period !== ctx.lastIdx) return 0;
+  const c = state.getCell(cell.classId, cell.day, cell.period);
+  return (c && c.kind === 'LESSON' && ctx.bannedLastSubjectKeys[c.subjectKey]) ? 1 : 0;
+}
+
+/** مجموع العقوبة الناعمة للمدرسة كلّها (للتقرير والتحقّق — لا للحلقة). */
+function _diSoftPenaltyAll(state, ctx) {
+  const dim = state.getDimensions();
+  let pen = 0;
+  for (let i = 0; i < dim.civilIds.length; i++) pen += _diTeacherSoftPenalty(state, ctx, dim.civilIds[i]);
+  return pen;
+}
+
+// ============================================================
+// جولة تلدين (Public — نقيّة على الحالة)
+// ============================================================
+
+/**
+ * يشغّل جولة تلدينٍ محاكٍ على الحالة (تُعدَّل في المكان ثمّ تُستردّ للأفضل).
+ *
+ * @param {Object} state الحالة (مبنيّة أو مُمَيَّهة من _ScheduleData).
+ * @param {Object} ctx السياق مع خرائط الإصلاح مُرفَقة (_attachRepairMaps).
+ * @param {Object} opts {seed, timeBudgetMs, t0, t1, brokenBias, reportEvery, onProgress}
+ * @return {Object} تقرير الجولة.
+ */
+function deepImproveRound(state, ctx, opts) {
+  opts = opts || {};
+  const seed = (typeof opts.seed === 'number') ? opts.seed : 1;
+  const TIME = (typeof opts.timeBudgetMs === 'number') ? opts.timeBudgetMs : 240000;
+  const rnd = _prng(seed);
+  const dim = state.getDimensions();
+
+  // خلايا الدروس بالصفّ — ثابتة: التبديل داخل الصفّ يبقي الخليّتين درسَين.
+  const cellsByClass = {};
+  const classList = [];
+  for (let c = 0; c < dim.classIds.length; c++) {
+    const classId = dim.classIds[c];
+    const cells = [];
+    for (let d = 0; d < dim.days; d++) for (let p = 0; p < dim.periods; p++) {
+      const cell = state.getCell(classId, d, p);
+      if (cell && cell.kind === 'LESSON') cells.push({ classId: classId, day: d, period: p });
+    }
+    if (cells.length >= 2) { cellsByClass[classId] = cells; classList.push(classId); }
+  }
+
+  // الهدف الموحَّد عند البداية
+  const ch0 = _computeChangeableBreaks(state, ctx);
+  const soft0 = _diSoftPenaltyAll(state, ctx);
+  let curBreak = ch0.penalty, curSoft = soft0;
+  let cur = curBreak + curSoft;
+  let best = cur, bestBreak = curBreak, bestSoft = curSoft;
+  let bestSnapshot = state.snapshot();
+
+  // درجة الحرارة: t0 من معايرةٍ على عيّنةٍ من الحركات المجدية إن لم تُعطَ.
+  let T0 = opts.t0, T1 = (typeof opts.t1 === 'number') ? opts.t1 : 2;
+  if (typeof T0 !== 'number') {
+    let sum = 0, n = 0;
+    for (let i = 0; i < 400 && n < 60; i++) {
+      const classId = classList[Math.floor(rnd() * classList.length)];
+      const cells = cellsByClass[classId];
+      const a = cells[Math.floor(rnd() * cells.length)], b = cells[Math.floor(rnd() * cells.length)];
+      if (a === b) continue;
+      const r = _attemptSwap(state, ctx, a, b, true);
+      if (r.feasible && r.deltaPenalty !== 0) { sum += Math.abs(r.deltaPenalty); n++; }
+    }
+    // المعايَرة تُسقَّف: الفروق الناعمة الكبيرة (فجوات) تُسخّن الحلقة فوق اللازم
+    // فتتبدّد الميزانيّة في التجوال (مقيس: T0=8011 أهدر ثلثَي الجولة).
+    T0 = n > 0 ? Math.min(Math.max(T1 * 4, (sum / n) * 0.5), 400) : 200;
+  }
+
+  const t0ms = Date.now();
+  let iters = 0, feasibleN = 0, accepted = 0, improvedBest = 0, hardRejected = 0, lastReport = t0ms;
+  const brokenBias = (typeof opts.brokenBias === 'number') ? opts.brokenBias : 0.5;
+  let broken = _brokenLessonCells(state, ctx);
+  let brokenRefreshAt = 0;
+  const log = [];
+
+  while (true) {
+    const now = Date.now();
+    const elapsed = now - t0ms;
+    if (elapsed > TIME) break;
+    iters++;
+    // تبريد هندسيّ على الزمن
+    const frac = elapsed / TIME;
+    const T = T0 * Math.pow(T1 / T0, frac);
+
+    // اختيار الحركة: بترجيحٍ لمرتكزٍ مكسور (يُحدَّث دوريًّا)
+    let a, b;
+    if (broken.length > 0 && rnd() < brokenBias) {
+      if (iters - brokenRefreshAt > 2000) {
+        broken = _brokenLessonCells(state, ctx); brokenRefreshAt = iters;
+        if (broken.length === 0) continue;
+      }
+      const an = broken[Math.floor(rnd() * broken.length)];
+      a = { classId: an.classId, day: an.day, period: an.period };
+      const cells = cellsByClass[a.classId]; if (!cells) continue;
+      b = cells[Math.floor(rnd() * cells.length)];
+    } else {
+      const classId = classList[Math.floor(rnd() * classList.length)];
+      const cells = cellsByClass[classId];
+      a = cells[Math.floor(rnd() * cells.length)];
+      b = cells[Math.floor(rnd() * cells.length)];
+    }
+    if (a.day === b.day && a.period === b.period) continue;
+
+    const sa = state.getCell(a.classId, a.day, a.period), sb = state.getCell(b.classId, b.day, b.period);
+    if (!sa || !sb || sa.kind !== 'LESSON' || sb.kind !== 'LESSON') continue;
+    const tA = String(sa.civilId), tB = String(sb.civilId);
+    if (tA === tB && sa.subjectKey === sb.subjectKey) continue;
+
+    const r = _attemptSwap(state, ctx, a, b, true);
+    if (!r.feasible) continue;
+    feasibleN++;
+
+    // حارس قواعد السابعة: لا تُزاد مخالفاتها بأيّ ثمن
+    const hvBefore = _diSeventhHardViolations(state, ctx, tA) + (tA !== tB ? _diSeventhHardViolations(state, ctx, tB) : 0) +
+                     _diBannedLastCell(state, ctx, a) + _diBannedLastCell(state, ctx, b);
+
+    // الفرق الناعم: المعلّمان المتأثّران قبل/بعد (التبديل يمسّ أيّامهما فقط)
+    const softBefore = _diTeacherSoftPenalty(state, ctx, tA) + (tA !== tB ? _diTeacherSoftPenalty(state, ctx, tB) : 0);
+    _applySwap(state, a, b);
+    const hvAfter = _diSeventhHardViolations(state, ctx, tA) + (tA !== tB ? _diSeventhHardViolations(state, ctx, tB) : 0) +
+                    _diBannedLastCell(state, ctx, a) + _diBannedLastCell(state, ctx, b);
+    if (hvAfter > hvBefore) { _applySwap(state, a, b); hardRejected++; continue; }
+    const softAfter = _diTeacherSoftPenalty(state, ctx, tA) + (tA !== tB ? _diTeacherSoftPenalty(state, ctx, tB) : 0);
+    const delta = r.deltaPenalty + (softAfter - softBefore);
+
+    if (delta <= 0 || rnd() < Math.exp(-delta / T)) {
+      accepted++;
+      curBreak += r.deltaPenalty; curSoft += (softAfter - softBefore); cur = curBreak + curSoft;
+      if (cur < best - 1e-9) {
+        best = cur; bestBreak = curBreak; bestSoft = curSoft; bestSnapshot = state.snapshot(); improvedBest++;
+      }
+    } else {
+      _applySwap(state, a, b);   // تراجُع: التبديل ذاتيّ العكس
+    }
+
+    if (typeof opts.reportEvery === 'number' && now - lastReport >= opts.reportEvery) {
+      lastReport = now;
+      log.push({ ms: elapsed, T: Math.round(T), cur: cur, best: best, iters: iters, accepted: accepted });
+      if (typeof opts.onProgress === 'function') opts.onProgress(log[log.length - 1]);
+    }
+  }
+
+  state.restore(bestSnapshot);
+  return {
+    seed: seed, t0: T0, t1: T1, timeBudgetMs: TIME, elapsedMs: Date.now() - t0ms,
+    iters: iters, feasible: feasibleN, accepted: accepted, improvedBest: improvedBest, hardRejected: hardRejected,
+    start: { total: ch0.penalty + soft0, breaks: ch0.penalty, soft: soft0 },
+    best:  { total: best, breaks: bestBreak, soft: bestSoft },
+    log: log,
+  };
+}

@@ -1,0 +1,609 @@
+/**
+ * algo_DataLoader.js
+ *
+ * طبقة تحميل البيانات في الذاكرة (المرحلة 9) — مجموعة دوال (لا classes)
+ * تجمع كلّ قُرّاء طبقة data_ وقُرّاء الإعدادات في نموذج واحد مُجهَّز،
+ * جاهز لفحص الجدوى ومحرّك التوليد لاحقًا.
+ *
+ * المسؤوليّة: تحميل وتجهيز فقط — لا منطق وضع، لا فحص جدوى، لا كتابة في
+ * أيّ ورقة، لا طباعة. تُرجع النموذج وحسب. كلّ المصادر تأتي من القُرّاء
+ * (readAll* / readConstraints / config_SchoolSettings) وكلّ المفاتيح
+ * والثوابت من CONSTANTS — لا أرقام مكتوبة يدويًّا ولا اشتقاق محليّ للتخطيط.
+ *
+ * النصاب الفعلي يُحسَب على نمط صيغة MMULT في _TeacherLoadData نفسه: لكلّ
+ * سجلّ توزيع (className + subjectKey + اسم قصير) نأخذ عدد حصص تلك المادّة
+ * لذلك الصفّ من periods في ورقة المواد، ونُسنده للمعلّم عبر مطابقة الاسم
+ * القصير ← الرقم المدني. فيتطابق الحساب مع العمود F الحيّ.
+ */
+
+// ============================================================
+// تحميل (Public)
+// ============================================================
+
+/**
+ * يحمّل كلّ بيانات الجدولة في نموذج واحد ويحسب مشتقّاته ويعالج الحالات
+ * الشاذّة (قرارات الجلسة). قراءة بحتة — لا يكتب ولا يطبع.
+ *
+ * @return {{
+ *   teachers: Object[],
+ *   subjects: Object[],
+ *   classes: Object[],
+ *   assignments: Object[],
+ *   constraints: {params:Object, departments:Object[], labs:Object[], rules:Object[]},
+ *   settings: Object,
+ *   shortNameByCivilId: Object,
+ *   civilIdByShortName: Object,
+ *   actualLoadByCivilId: Object,
+ *   supervisorsByWing: Object,
+ *   labSubjectTotals: Object,
+ *   dataErrors: Object[],
+ *   unresolvedAssignments: Object[]
+ * }} النموذج المُجمَّع.
+ *
+ * شكل المعلّم المُحمَّل = كائن readAllTeachers + الحقول المشتقّة:
+ *   shortName, requiredLoad, actualLoad, skipped.
+ *
+ * معالجة الحالات:
+ * - معلّم نصابه 0 وله قسم → skipped=true (لا يحتاج خانات) ويبقى في النموذج.
+ * - معلّم بلا قسم (أيًّا كان نصابه) → يُجمَّع في dataErrors (خطأ بيانات).
+ * - اسم قصير في التوزيع لا يُطابق أيّ معلّم → يُجمَّع في unresolvedAssignments.
+ */
+function loadScheduleData() {
+  // ---------- (1) المصادر الخام ----------
+  const teachers = readAllTeachers();
+  const subjects = readAllSubjectRows();
+  const classes = readAllClassRooms();
+  const assignments = readAllAssignments();
+  const constraints = readConstraints();
+
+  const MT = CONSTANTS.MEETING_TYPES;
+
+  // يُقرأ مرّةً ويُعاد استخدامه (booleans الاجتماعات + عدد الحصص لتحليل
+  // «الأخيرة» الديناميكيّة في الحصص المحظورة).
+  const periods = getNumberOfPeriods();
+  const deptHeadsEnabled = isMeetingEnabled(MT.DEPARTMENT_HEADS);
+  const deptEnabled = isMeetingEnabled(MT.DEPARTMENT);
+
+  const settings = {
+    mode:                    getCurrentMode(),
+    days:                    getNumberOfDays(),
+    periods:                 periods,
+    firstBreakAfter:         getFirstBreakAfterPeriod(),
+    secondBreakAfter:        getSecondBreakAfterPeriod(),
+    // الحقول البوليّة القائمة — تبقى دون كسر (مستهلَكة في checkFeasibility).
+    deptHeadsMeetingEnabled: deptHeadsEnabled,
+    deptMeetingEnabled:      deptEnabled,
+    // تفاصيل الاجتماعات المُحلَّلة (الجلسة 16 — لحجز خانات الاجتماعات في
+    // حالة الجدول). day نصّ عربيّ (اسم اليوم)، period رقم، blockedPeriods
+    // مصفوفة أرقام حصص (1-based).
+    deptHeadsMeeting: {
+      enabled: deptHeadsEnabled,
+      day:     _meetingDay(getSetting('MEETING_DEPT_HEADS_DAY')),
+      period:  _meetingPeriod(getSetting('MEETING_DEPT_HEADS_PERIOD')),
+    },
+    deptMeeting: {
+      enabled:        deptEnabled,
+      blockedPeriods: _parseBlockedPeriods(getSetting('MEETING_DEPT_BLOCKED'), periods),
+      // عدد اجتماعات كلّ قسم أسبوعيًّا (اسم القسم ← عدد) من القسم الثالث في ورقة
+      // القيود. القسم الغائب عن الخريطة = اجتماعٌ واحد (DEPT_MEETING_DEFAULT_COUNT).
+      countByDept:    _deptMeetingCountsFromRules(constraints),
+      // أيّام اجتماع كلّ قسم (اسم القسم ← {days, hard, weight}) من القسم الثالث.
+      // القسم الغائب = بلا تفضيل، يختار له المحرّك كما كان.
+      dayRulesByDept: _deptMeetingDayRulesFromRules(constraints),
+      // وزن انحراف الفجوة بين اجتماعَي القسم عن يومين (من ورقة الإعدادات).
+      gapWeight:      getMeetingGapWeight(),
+    },
+    govtDay:                 getGovtDaySettings(),
+    dayBalance:              getDayBalanceSettings(),
+    reportThresholds:        getReportThresholds(),
+  };
+
+  // ---------- (2) المشتقّات ----------
+
+  // خريطة الاسم القصير: الرقم المدني ← الاسم القصير (مصدر الحقيقة الموحَّد)
+  const shortNameByCivilId = buildUniqueShortNames(teachers);
+
+  // الخريطة العكسيّة: الاسم القصير ← الرقم المدني
+  const civilIdByShortName = {};
+  const civilIds = Object.keys(shortNameByCivilId);
+  for (let i = 0; i < civilIds.length; i++) {
+    civilIdByShortName[shortNameByCivilId[civilIds[i]]] = civilIds[i];
+  }
+
+  // فهرس سريع: اسم الصفّ ← periods (لحساب النصاب الفعلي)
+  const periodsByClassName = {};
+  for (let i = 0; i < subjects.length; i++) {
+    periodsByClassName[subjects[i].className] = subjects[i].periods;
+  }
+
+  // النصاب الفعلي لكلّ معلّم + سجلّات التوزيع غير المحلولة
+  const actualLoadByCivilId = {};
+  for (let i = 0; i < civilIds.length; i++) {
+    actualLoadByCivilId[civilIds[i]] = 0;  // تهيئة لكلّ معلّم محمَّل
+  }
+  const unresolvedAssignments = [];
+
+  for (let i = 0; i < assignments.length; i++) {
+    const rec = assignments[i];
+    const periods = periodsByClassName[rec.className];
+    const count = (periods && typeof periods[rec.subjectKey] === 'number')
+      ? periods[rec.subjectKey] : 0;
+
+    const civilId = civilIdByShortName[rec.teacherShortName];
+    if (civilId === undefined) {
+      // اسم قصير لا يُطابق أيّ معلّم
+      unresolvedAssignments.push({
+        className:        rec.className,
+        subjectKey:       rec.subjectKey,
+        teacherShortName: rec.teacherShortName,
+        rowNumber:        rec.rowNumber,
+        periods:          count,
+      });
+      continue;
+    }
+    actualLoadByCivilId[civilId] += count;
+  }
+
+  // إثراء المعلّمين بالحقول المشتقّة + جمع أخطاء البيانات
+  const loadedTeachers = [];
+  const dataErrors = [];
+  for (let i = 0; i < teachers.length; i++) {
+    const t = teachers[i];
+    const cid = String(t.civilId);
+    const requiredLoad = t.weeklyLoad;
+    const actualLoad = actualLoadByCivilId[cid] || 0;
+    const hasDept = t.department !== '' && t.department !== null &&
+                    t.department !== undefined;
+
+    // معلّم بلا قسم → خطأ بيانات (أيًّا كان نصابه)
+    if (!hasDept) {
+      dataErrors.push({
+        civilId:   t.civilId,
+        fullName:  t.fullName,
+        rowNumber: t.rowNumber,
+        reason:    'MISSING_DEPARTMENT',
+      });
+    }
+
+    // معلّم نصابه 0 وله قسم → مُتخطّى (لا يحتاج خانات)، يبقى في النموذج
+    const skipped = hasDept && requiredLoad === 0;
+
+    const enriched = {};
+    const keys = Object.keys(t);
+    for (let k = 0; k < keys.length; k++) enriched[keys[k]] = t[keys[k]];
+    enriched.shortName = shortNameByCivilId[cid];
+    enriched.requiredLoad = requiredLoad;
+    enriched.actualLoad = actualLoad;
+    enriched.skipped = skipped;
+    loadedTeachers.push(enriched);
+  }
+
+  // قائمة المشرفين لكلّ جناح (تصفية isWingSupervisor، تجميع بالجناح)
+  const supervisorsByWing = {};
+  const wings = getAllWingNames();
+  for (let i = 0; i < wings.length; i++) supervisorsByWing[wings[i]] = [];
+  for (let i = 0; i < teachers.length; i++) {
+    const t = teachers[i];
+    if (t.isWingSupervisor !== true) continue;
+    if (!supervisorsByWing[t.wing]) supervisorsByWing[t.wing] = [];  // جناح شاذّ يُحفَظ كما هو
+    supervisorsByWing[t.wing].push({
+      civilId:   t.civilId,
+      shortName: shortNameByCivilId[String(t.civilId)],
+      fullName:  t.fullName,
+    });
+  }
+
+  // مجموع حصص كلّ مادّة مختبريّة عبر كلّ الصفوف.
+  // مفاتيح المواد المختبريّة تُشتقّ من LAB_CONSTRAINTS (نمط <KEY>_MAX_CONCURRENT)
+  // — نفس اشتقاق الباني (_readLabSeedRows) — فتطابق مفاتيح periods.
+  const labSubjectKeys = _labSubjectKeysFromConstraints();
+  const labSubjectTotals = {};
+  for (let i = 0; i < labSubjectKeys.length; i++) {
+    labSubjectTotals[labSubjectKeys[i]] = 0;
+  }
+  for (let i = 0; i < subjects.length; i++) {
+    const periods = subjects[i].periods;
+    if (!periods) continue;
+    for (let j = 0; j < labSubjectKeys.length; j++) {
+      const key = labSubjectKeys[j];
+      if (typeof periods[key] === 'number') labSubjectTotals[key] += periods[key];
+    }
+  }
+
+  // ---------- النموذج المُجمَّع ----------
+  return {
+    // المصادر الخام
+    teachers:              loadedTeachers,
+    subjects:              subjects,
+    classes:               classes,
+    assignments:           assignments,
+    constraints:           constraints,
+    settings:              settings,
+    // المشتقّات
+    shortNameByCivilId:    shortNameByCivilId,
+    civilIdByShortName:    civilIdByShortName,
+    actualLoadByCivilId:   actualLoadByCivilId,
+    supervisorsByWing:     supervisorsByWing,
+    labSubjectTotals:      labSubjectTotals,
+    // الحالات الشاذّة
+    dataErrors:            dataErrors,
+    unresolvedAssignments: unresolvedAssignments,
+  };
+}
+
+/**
+ * يُحوّل هدفَ قاعدةٍ من القسم الثالث (اسم مادّة أو اسم قسم) إلى اسم القسم
+ * العربيّ. مصدر الحقيقة الوحيد لهذا التحويل — يستعمله اللودر وفاحص التعارضات
+ * معًا فلا ينحرف تفسير الهدف بين السطحَين.
+ *
+ * الترتيب: اسم قسمٍ صريح أوّلًا (getAllDepartmentNames)، وإلّا اسم مادّة
+ * ⟸ departmentCode ⟸ اسم القسم. فـ«الرياضيات» (اسمٌ للقسم وللمادّة معًا) تُحلّ
+ * إلى القسم مباشرةً، و«الفيزياء» تُحلّ إلى «الفيزياء والكيمياء».
+ *
+ * @param {*} targetName قيمة العمود B كما كتبها المالك.
+ * @return {string} اسم القسم العربيّ، أو '' إن لم يُطابق شيئًا.
+ */
+function deptNameForRuleTarget(targetName) {
+  const name = (targetName === null || targetName === undefined)
+    ? '' : String(targetName).trim();
+  if (name === '') return '';
+
+  if (getAllDepartmentNames().indexOf(name) >= 0) return name;
+
+  const subjKeys = Object.keys(CONSTANTS.SUBJECTS);
+  for (let i = 0; i < subjKeys.length; i++) {
+    const subj = CONSTANTS.SUBJECTS[subjKeys[i]];
+    if (subj.name !== name) continue;
+    const dept = CONSTANTS.DEPARTMENTS[subj.departmentCode];
+    return (dept && dept.name) ? dept.name : '';
+  }
+  return '';
+}
+
+/**
+ * قاعدة «يوم اجتماع القسم» لقسمٍ بعينه، أو null إن لا صفّ له (فيختار المحرّك
+ * يومه كما كان). القارئ الوحيد لخريطة الأيّام — يستدعيه الباني.
+ *
+ * @param {Object} settings model.settings.
+ * @param {string} deptName اسم القسم العربيّ.
+ * @return {{days:number[], hard:boolean, weight:number, raw:string}|null}
+ */
+function getDeptMeetingDayRule(settings, deptName) {
+  const dm = (settings && settings.deptMeeting) ? settings.deptMeeting : null;
+  if (!dm || !dm.enabled) return null;
+  const map = dm.dayRulesByDept || {};
+  return map[deptName] || null;
+}
+
+/**
+ * عدد اجتماعات قسمٍ بعينه أسبوعيًّا: من خريطة الإعدادات إن وُجد له صفّ، وإلّا
+ * الافتراض (اجتماع واحد). القارئ الوحيد لهذه الخريطة — يستدعيه الباني
+ * (_placeMeetingsPhase) وفاحص الجدوى (checkFeasibility) معًا.
+ *
+ * @param {Object} settings model.settings.
+ * @param {string} deptName اسم القسم العربيّ.
+ * @return {number} عدد الاجتماعات (≥ 0).
+ */
+function getDeptMeetingCount(settings, deptName) {
+  const dm = (settings && settings.deptMeeting) ? settings.deptMeeting : null;
+  if (!dm || !dm.enabled) return 0;
+  const map = dm.countByDept || {};
+  const v = map[deptName];
+  return (typeof v === 'number') ? v : CONSTANTS.DEPT_MEETING_DEFAULT_COUNT;
+}
+
+/**
+ * يحلّل نصّ أيّام (مثل 'الإثنين' أو 'الإثنين، الأربعاء') إلى فهارس أيّام
+ * (0-based في WEEK_DAYS)، مرتّبة فريدة. يفصل على الفاصلة العربيّة (،) أو
+ * اللاتينيّة (,) — نظير _parseBlockedPeriods حرفًا بحرف. الرمز المجهول يُتجاهَل
+ * ويُذكَر في unknown ليصرخ به المستدعي (لا يسقط صامتًا).
+ *
+ * عامّةٌ لا خاصّة (نظير deptNameForRuleTarget): يستعملها اللودر وفاحص التعارضات
+ * (main_Triggers) معًا — فما يقبله المحرّك هو نفسه ما يقبله الفحص، حرفًا بحرف.
+ *
+ * @param {*} text النصّ الخام من العمود «القيمة».
+ * @return {{days:number[], unknown:string[]}}
+ */
+function parseMeetingDayNames(text) {
+  const out = { days: [], unknown: [] };
+  if (text === null || text === undefined) return out;
+  const s = String(text).trim();
+  if (s === '' || s === CONSTANTS.NOT_APPLICABLE) return out;
+
+  // مطابقةٌ متسامحة مع الهمزة: «الاثنين» و«الإثنين» سواء، وكذلك «الاحد»/«الأحد».
+  // الفرق محضُ إملاءٍ لا دلالة، ورفضُه يُضيّع يومًا على المالك بلا سبب.
+  const norm = function (t) {
+    return String(t).replace(/[أإآٱ]/g, 'ا').replace(/\u0640/g, '')
+      .replace(/\s+/g, ' ').trim();
+  };
+  const dayIdxByNorm = {};
+  for (let k = 0; k < CONSTANTS.WEEK_DAYS.length; k++) {
+    dayIdxByNorm[norm(CONSTANTS.WEEK_DAYS[k])] = k;
+  }
+
+  const seen = {};
+  const parts = s.split(/[،,]/);
+  for (let i = 0; i < parts.length; i++) {
+    const token = parts[i].trim();
+    if (token === '') continue;
+    const found = dayIdxByNorm[norm(token)];
+    const idx = (found === undefined) ? -1 : found;
+    if (idx < 0) { out.unknown.push(token); continue; }
+    if (seen[idx]) continue;
+    seen[idx] = true;
+    out.days.push(idx);
+  }
+  out.days.sort(function (a, b) { return a - b; });
+  return out;
+}
+
+// ============================================================
+// المساعدات الخاصة (Private)
+// ============================================================
+
+/**
+ * يشتقّ مفاتيح المواد المختبريّة من CONSTANTS.LAB_CONSTRAINTS: كلّ مفتاح
+ * بنمط <KEY>_MAX_CONCURRENT يُنتج المفتاح KEY (مطابق لمفاتيح
+ * SUBJECTS_SHEET.COLUMNS وبالتالي مفاتيح periods)، وتُتخطّى المفاتيح
+ * الأخرى (مثل ENFORCE_AS_HARD). يماثل _readLabSeedRows في الباني.
+ *
+ * @return {string[]} مفاتيح المواد المختبريّة (مثل PHYSICS/CHEMISTRY/GEOLOGY).
+ */
+function _labSubjectKeysFromConstraints() {
+  const lab = CONSTANTS.LAB_CONSTRAINTS;
+  const keys = Object.keys(lab);
+  const result = [];
+  for (let i = 0; i < keys.length; i++) {
+    const m = keys[i].match(/^(.+)_MAX_CONCURRENT$/);
+    if (m) result.push(m[1]);
+  }
+  return result;
+}
+
+/**
+ * يشتقّ عدد اجتماعات كلّ قسم أسبوعيًّا من صفوف القسم الثالث (نوع القيد
+ * 'عدد حصص اجتماع القسم'، نوع الهدف 'مادّة'). القسم الغائب عن الناتج يأخذ
+ * الافتراض CONSTANTS.DEPT_MEETING_DEFAULT_COUNT عند الاستهلاك — فالخريطة
+ * تحمل الاستثناءات وحدها لا الأقسام الستّة عشر.
+ *
+ * الترشيح نظير سائر قرّاء القواعد: مفعَّل='نعم' ومستوى الإلزام ≠ 'معطَّل'.
+ * القيمة عدد صحيح ≥ 0 (0 = لا اجتماع لهذا القسم)؛ غير ذلك تحذيرٌ وتخطٍّ.
+ * تصادم صفَّين على القسم نفسه (مثل «الفيزياء» و«الكيمياء» وكلاهما قسم
+ * «الفيزياء والكيمياء») يُحسم بالأكبر مع تحذير — الأكبر يُرضي الطلبَين معًا،
+ * والحسم حتميّ لا يتبع ترتيب الورقة.
+ *
+ * @param {Object} constraints ناتج readConstraints().
+ * @return {Object} اسم القسم ← عدد الاجتماعات.
+ */
+function _deptMeetingCountsFromRules(constraints) {
+  const CS = CONSTANTS.CONSTRAINTS_SHEET;
+  const RT_DEPT_MEET = CS.RULE_TYPES_VOCAB[6];      // 'عدد حصص اجتماع القسم'
+  const TT_SUBJECT   = CS.TARGET_TYPE_VOCAB[1];     // 'مادّة'
+  const DISABLED     = CS.ENFORCEMENT_LEVELS[2];    // 'معطَّل'
+  const out = {};
+
+  const rules = (constraints && constraints.rules) ? constraints.rules : [];
+  for (let i = 0; i < rules.length; i++) {
+    const r = rules[i];
+    if (String(r.ruleType).trim() !== RT_DEPT_MEET) continue;
+    if (String(r.enabled).trim() !== CONSTANTS.YES) continue;
+    if (String(r.enforcement).trim() === DISABLED) continue;
+
+    if (String(r.targetType).trim() !== TT_SUBJECT) {
+      _screamSilent('DataLoader._deptMeetingCountsFromRules',
+        'نوع الهدف «' + r.targetType + '» غير مدعوم للقيد «' + RT_DEPT_MEET +
+        '» في الصفّ ' + r.rowNumber + ' — المدعوم «' + TT_SUBJECT + '». تجاهُل الصفّ.');
+      continue;
+    }
+
+    const deptName = deptNameForRuleTarget(r.target);
+    if (deptName === '') {
+      _screamSilent('DataLoader._deptMeetingCountsFromRules',
+        'الهدف «' + r.target + '» في الصفّ ' + r.rowNumber +
+        ' لا يُطابق مادّةً ولا قسمًا معروفًا — تجاهُل الصفّ.');
+      continue;
+    }
+
+    const v = Number(r.value);
+    if (isNaN(v) || v < 0 || Math.floor(v) !== v) {
+      _screamSilent('DataLoader._deptMeetingCountsFromRules',
+        'قيمة «' + r.value + '» في الصفّ ' + r.rowNumber + ' للقسم «' + deptName +
+        '» ليست عددًا صحيحًا ≥ 0 — تجاهُل الصفّ.');
+      continue;
+    }
+
+    const prev = out[deptName];
+    if (typeof prev === 'number' && prev !== v) {
+      _screamSilent('DataLoader._deptMeetingCountsFromRules',
+        'للقسم «' + deptName + '» صفّان بعددَين مختلفَين (' + prev + ' و' + v +
+        '، آخرهما الصفّ ' + r.rowNumber + ') — يُعتمَد الأكبر (' +
+        Math.max(prev, v) + ').');
+    }
+    out[deptName] = (typeof prev === 'number') ? Math.max(prev, v) : v;
+  }
+
+  return out;
+}
+
+/**
+ * يشتقّ أيّام اجتماع كلّ قسم من صفوف القسم الثالث (نوع القيد 'يوم اجتماع
+ * القسم'، نوع الهدف 'مادّة'). القسم الغائب عن الناتج بلا تفضيل — يختار له
+ * المحرّك يومه كما كان (قرار المالك).
+ *
+ * لكلّ قسم: { days: فهارس الأيّام، hard: ترشيحٌ لا تفضيل، weight: وزن المخالفة
+ * حين مرن موزون، raw: النصّ كما كُتب (للرسائل) }.
+ *
+ * ⚠️ اليوم الثاني لقسمٍ له اجتماعان لا يُشتقّ هنا: تدفعه إليه قاعدةُ الفجوة في
+ * نقطة المرشّح (MEETING_PLACEMENT.IDEAL_DAY_GAP). فصفٌّ واحد بيومٍ واحد يكفي.
+ *
+ * تصادم صفَّين على القسم نفسه: تُوحَّد الأيّام (اتّحاد)، ويغلب 'صلب'، ويُؤخَذ
+ * أكبر وزن — حسمٌ حتميّ لا يتبع ترتيب الورقة، مع تحذير مسموع.
+ *
+ * @param {Object} constraints ناتج readConstraints().
+ * @return {Object} اسم القسم ← {days, hard, weight, raw}.
+ */
+function _deptMeetingDayRulesFromRules(constraints) {
+  const CS = CONSTANTS.CONSTRAINTS_SHEET;
+  const RT_DEPT_DAY = CS.RULE_TYPES_VOCAB[7];       // 'يوم اجتماع القسم'
+  const TT_SUBJECT  = CS.TARGET_TYPE_VOCAB[1];      // 'مادّة'
+  const ENF_HARD    = CS.ENFORCEMENT_LEVELS[0];     // 'صلب'
+  const DISABLED    = CS.ENFORCEMENT_LEVELS[2];     // 'معطَّل'
+  const out = {};
+
+  const rules = (constraints && constraints.rules) ? constraints.rules : [];
+  for (let i = 0; i < rules.length; i++) {
+    const r = rules[i];
+    if (String(r.ruleType).trim() !== RT_DEPT_DAY) continue;
+    if (String(r.enabled).trim() !== CONSTANTS.YES) continue;
+    if (String(r.enforcement).trim() === DISABLED) continue;
+
+    if (String(r.targetType).trim() !== TT_SUBJECT) {
+      _screamSilent('DataLoader._deptMeetingDayRulesFromRules',
+        'نوع الهدف «' + r.targetType + '» غير مدعوم للقيد «' + RT_DEPT_DAY +
+        '» في الصفّ ' + r.rowNumber + ' — المدعوم «' + TT_SUBJECT + '». تجاهُل الصفّ.');
+      continue;
+    }
+
+    const deptName = deptNameForRuleTarget(r.target);
+    if (deptName === '') {
+      _screamSilent('DataLoader._deptMeetingDayRulesFromRules',
+        'الهدف «' + r.target + '» في الصفّ ' + r.rowNumber +
+        ' لا يُطابق مادّةً ولا قسمًا معروفًا — تجاهُل الصفّ.');
+      continue;
+    }
+
+    const parsed = parseMeetingDayNames(r.value);
+    if (parsed.unknown.length > 0) {
+      _screamSilent('DataLoader._deptMeetingDayRulesFromRules',
+        'أيّام مجهولة في الصفّ ' + r.rowNumber + ' للقسم «' + deptName + '»: «' +
+        parsed.unknown.join('» و«') + '» — تُتجاهَل. المعروف: ' +
+        CONSTANTS.WEEK_DAYS.join('، ') + '.');
+    }
+    if (parsed.days.length === 0) {
+      _screamSilent('DataLoader._deptMeetingDayRulesFromRules',
+        'القيمة «' + r.value + '» في الصفّ ' + r.rowNumber + ' للقسم «' + deptName +
+        '» لا تحوي يومًا صالحًا — تجاهُل الصفّ.');
+      continue;
+    }
+
+    const isHard = (String(r.enforcement).trim() === ENF_HARD);
+    const wRaw = Number(r.weight);
+    const weight = (!isNaN(wRaw) && wRaw > 0) ? wRaw : 0;
+    const raw = String(r.value === null || r.value === undefined ? '' : r.value).trim();
+
+    const prev = out[deptName];
+    if (!prev) {
+      out[deptName] = { days: parsed.days, hard: isHard, weight: weight, raw: raw };
+      continue;
+    }
+
+    // صفّان للقسم نفسه = الطريقة المقصودة لتثبيت يومَين (منسدلة «القيمة» تحمل
+    // يومًا واحدًا). فالاتّحاد سلوكٌ عاديّ لا شذوذ — ولا يُصرَخ به إلّا إن اختلف
+    // مستوى الإلزام أو الوزن، فحينها يُحسم بالأصلب/الأكبر ويستحقّ المالك أن يعلم.
+    if (prev.hard !== isHard || prev.weight !== weight) {
+      _screamSilent('DataLoader._deptMeetingDayRulesFromRules',
+        'للقسم «' + deptName + '» صفّا «' + RT_DEPT_DAY + '» بإلزامٍ أو وزنٍ مختلف ' +
+        '(آخرهما الصفّ ' + r.rowNumber + ') — يغلب «' + ENF_HARD + '» ويُؤخَذ أكبر وزن.');
+    }
+    const merged = {};
+    for (let a = 0; a < prev.days.length; a++)   merged[prev.days[a]] = true;
+    for (let b = 0; b < parsed.days.length; b++) merged[parsed.days[b]] = true;
+    const days = Object.keys(merged).map(Number);
+    days.sort(function (x, y) { return x - y; });
+    out[deptName] = {
+      days:   days,
+      hard:   prev.hard || isHard,
+      weight: Math.max(prev.weight, weight),
+      raw:    prev.raw + '، ' + raw,
+    };
+  }
+
+  return out;
+}
+
+/**
+ * يُطبّع قيمة «يوم اجتماع رؤساء الأقسام» إلى نصّ اسم اليوم. الفارغ/المعدوم
+ * يتراجع للافتراض الحضوري (نمط اللودر: افتراض دون رمي خطأ). يُبقي '—'
+ * كما هي (دلالة «لا ينطبق» في الوضع الأونلاين).
+ *
+ * @param {*} v القيمة الخام من getSetting.
+ * @return {string} اسم اليوم العربيّ (أو الافتراض عند الفراغ).
+ */
+function _meetingDay(v) {
+  if (v === null || v === undefined || String(v).trim() === '') {
+    _screamSilent('DataLoader._meetingDay',
+      'يوم اجتماع رؤساء الأقسام فارغ — استُعمل الافتراض «' +
+      CONSTANTS.DEFAULTS.IN_PERSON.MEETING_DEPT_HEADS_DAY + '»');
+    return CONSTANTS.DEFAULTS.IN_PERSON.MEETING_DEPT_HEADS_DAY;
+  }
+  return String(v).trim();
+}
+
+/**
+ * يُحوّل قيمة «حصة اجتماع رؤساء الأقسام» إلى رقم حصّة موجب. غير الرقميّ
+ * (مثل '—' في الأونلاين) أو غير الموجب يتراجع للافتراض الحضوري — قيمة
+ * عاقلة دائمًا (enabled=false يجعلها غير مؤثّرة على أيّ حال).
+ *
+ * @param {*} v القيمة الخام من getSetting.
+ * @return {number} رقم الحصّة (1-based).
+ */
+function _meetingPeriod(v) {
+  const n = Number(v);
+  if (isNaN(n) || n <= 0) {
+    // «—»/الفراغ (وضعٌ غير فعّال) تراجعٌ مشروع؛ غيرهما (نصّ/صفر/سالب) افتراضٌ صامت.
+    if (v !== null && v !== undefined && String(v).trim() !== '' &&
+        String(v).trim() !== CONSTANTS.NOT_APPLICABLE) {
+      _screamSilent('DataLoader._meetingPeriod',
+        'حصّة اجتماع رؤساء الأقسام «' + v + '» غير صالحة — استُعمل الافتراض');
+    }
+    return CONSTANTS.DEFAULTS.IN_PERSON.MEETING_DEPT_HEADS_PERIOD;
+  }
+  return n;
+}
+
+/**
+ * يحلّل نصّ «الحصص المحظورة لاجتماع القسم» (مثل 'الأولى، الأخيرة') إلى
+ * مصفوفة أرقام حصص فعليّة (1-based)، مرتّبة وفريدة. يفصل على الفاصلة
+ * العربيّة (،) أو اللاتينيّة (,). 'الأولى'..'الثامنة' من PERIOD_ORDINALS،
+ * و'الأخيرة' = periods ديناميكيًّا. الرموز غير المعروفة أو الخارجة عن
+ * المدى [1..periods] تُتجاهَل بصمت (نمط اللودر). الفارغ أو '—' → [].
+ *
+ * @param {*} text النصّ الخام من getSetting (MEETING_DEPT_BLOCKED).
+ * @param {number} periods عدد الحصص في الوضع الحالي (= قيمة 'الأخيرة').
+ * @return {number[]} أرقام الحصص المحظورة (1-based)، مرتّبة فريدة.
+ */
+function _parseBlockedPeriods(text, periods) {
+  if (text === null || text === undefined) return [];
+  const s = String(text).trim();
+  if (s === '' || s === CONSTANTS.NOT_APPLICABLE) return [];
+
+  const ordinals = CONSTANTS.PERIOD_ORDINALS;
+  const lastName = CONSTANTS.LAST_PERIOD_NAME;
+  const parts = s.split(/[،,]/);
+  const seen = {};
+  const result = [];
+  for (let i = 0; i < parts.length; i++) {
+    const token = parts[i].trim();
+    if (token === '') continue;
+
+    let num = 0;
+    let recognized = false;
+    if (token === lastName) {
+      num = periods; recognized = true;      // «الأخيرة» = آخر حصّة فعليّة
+    } else {
+      const idx = ordinals.indexOf(token);   // 'الأولى'=0 → الحصّة 1
+      if (idx >= 0) { num = idx + 1; recognized = true; }
+    }
+
+    if (recognized && num >= 1 && num <= periods) {
+      if (!seen[num]) { seen[num] = true; result.push(num); }
+      // تكرارٌ لرمزٍ صالح → تجاهُلٌ صامت مقبول (لا صرخة)
+    } else {
+      // رمزٌ مجهول أو خارج المدى كان يُسقَط صامتًا ⟹ صرخة (المسح 3).
+      _screamSilent('DataLoader._parseBlockedPeriods',
+        'رمز حصّة محظورة مجهول أو خارج المدى [1..' + periods + ']: «' + token + '» — أُسقِط');
+    }
+  }
+  result.sort(function (a, b) { return a - b; });
+  return result;
+}

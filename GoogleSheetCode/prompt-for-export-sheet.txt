@@ -1,0 +1,65 @@
+Add a new, read-only export tab to this spreadsheet. Do not modify any
+existing sheet, tab, cell, formula, named range, Apps Script file, or
+trigger — this is purely additive. If anything about the request below
+turns out to require touching existing sheets or scripts to work, stop
+and tell me instead of doing it.
+
+GOAL
+A separate school website needs a CSV snapshot of the generated weekly
+schedule. It should reflect this sheet's actual output whenever someone
+downloads it, without me having to hand-build it each time.
+
+WHAT TO ADD
+One new sheet/tab (name it "تصدير_الجدول" or similar) that reads from
+_ScheduleData (the hidden sheet holding one row per placed lesson) and
+presents only these columns, in this exact order, with this exact header
+row (the target site matches on these header names, so please don't
+translate, reword, or reorder them):
+
+  الصف | اليوم | الحصة | المادة | الاسم | النوع
+
+Column-by-column, sourced from _ScheduleData:
+  الصف   <- _ScheduleData's "الصفّ" column, unchanged (e.g. "10/1", "11د1")
+  اليوم  <- _ScheduleData's "اليوم" column, unchanged — it's already the
+            integer 0-4 (0=الأحد), and that matches the target site's own
+            convention, so no conversion needed
+  الحصة  <- _ScheduleData's "الحصّة" column PLUS 1 — _ScheduleData stores
+            period 0-based, the target site expects 1-based (1=الحصة
+            الأولى), so this one column needs +1 applied
+  المادة <- _ScheduleData's "المادّة" column (the Arabic subject name,
+            not "مفتاح المادّة"), unchanged
+  الاسم  <- _ScheduleData's "الاسم القصير" column, unchanged
+  النوع  <- _ScheduleData's "النوع" column, unchanged
+
+FILTER
+Only include rows where النوع = "LESSON". Drop MEETING rows (department
+meetings, heads' meetings) and anything else that isn't a plain taught
+lesson — the target site has no use for them and they'd just be noise in
+the file.
+
+HOW
+Whatever's simplest and safest given how this sheet is built — a single
+QUERY/FILTER/ARRAYFORMULA reading the _ScheduleData range is preferred
+since it can't have side effects; only reach for Apps Script if a formula
+genuinely can't do this, and if so make it read-only (no writes to any
+other sheet). It should recalculate live whenever _ScheduleData changes,
+so a fresh download always matches the current generated schedule.
+
+BEFORE YOU FINISH
+Please double-check two things against the real, current _ScheduleData
+sheet rather than trusting my description above, since my own view of it
+was truncated and may be out of date or incomplete:
+  1. Confirm _ScheduleData's actual column names/order still match what
+     I described (الصفّ, اليوم, الحصّة, المادّة, الاسم القصير, النوع, in
+     whatever positions they're actually in) — column names or order may
+     have changed since I last saw them.
+  2. Confirm اليوم and الحصّة really are still stored 0-based the way I
+     described — if that's changed, adjust the +1 (or lack of it) on
+     الحصة accordingly so the new tab still ends up 1-based for الحصة and
+     0-based for اليوم regardless of what _ScheduleData itself now does.
+
+WHEN DONE
+Tell me: the exact name of the new tab, how many rows it produced, and
+confirm nothing else on the sheet was touched. I'll download it as CSV
+(File → Download → Comma-separated values, that tab only) and send that
+file over.

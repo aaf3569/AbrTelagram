@@ -935,9 +935,94 @@
       }
     }
 
+    // ---- Warm up the next page while the loader plays ----
+    // Once the destination is known, the loader holds for REDIRECT_DELAY_MS
+    // with the browser otherwise idle. That time now goes into fetching the
+    // destination page and every same-origin file it pulls in — its CSS,
+    // images, module scripts and everything those import — so they're
+    // already in the HTTP cache when it loads. /shared/* and /images/* are
+    // cacheable (see _headers), so the next page doesn't touch the network
+    // for those at all; the rest come back as cheap revalidations.
+    //
+    // Fire-and-forget: nothing here is awaited by the redirect, so the
+    // animation's timing is exactly what it was. Whatever hasn't finished
+    // when the page navigates is simply dropped. Same-origin only — the
+    // Firebase SDK and Font Awesome are already cached from this page, and
+    // this page's CSP wouldn't allow fetching other origins anyway.
+    const warmedUrls = new Set();
+    const MAX_WARMED_FILES = 60; // a safety cap; a page uses ~15-25
+
+    function sameOriginUrl(raw, base) {
+      if (!raw) return null;
+      try {
+        const u = new URL(raw, base);
+        return u.origin === location.origin ? u.href.split('#')[0] : null;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function warmUrl(url) {
+      if (!url || warmedUrls.has(url) || warmedUrls.size >= MAX_WARMED_FILES) return Promise.resolve(null);
+      warmedUrls.add(url);
+      return fetch(url, { credentials: 'same-origin' })
+        .then((res) => (res.ok ? res : null))
+        .catch(() => null);
+    }
+
+    // `import ... from "x"`, `export ... from "x"`, `import "x"`, `import("x")`.
+    // A stray match inside a string or comment only costs one extra fetch.
+    const IMPORT_SPECIFIER_RE = /(?:\bfrom\s*|\bimport\s*\(\s*|\bimport\s+)["']([^"']+)["']/g;
+    function importedUrls(jsText, baseUrl) {
+      const urls = [];
+      for (const m of jsText.matchAll(IMPORT_SPECIFIER_RE)) {
+        // Real module specifiers here are always paths; skipping anything else
+        // avoids 404s from ordinary strings like "... from 'online'".
+        if (!/^(?:\.{1,2}\/|\/)/.test(m[1])) continue;
+        const u = sameOriginUrl(m[1], baseUrl);
+        if (u) urls.push(u);
+      }
+      return urls;
+    }
+
+    async function warmModule(url) {
+      const res = await warmUrl(url);
+      if (!res) return;
+      const text = await res.text();
+      await Promise.all(importedUrls(text, url).map(warmModule));
+    }
+
+    async function warmDestination(route) {
+      const pageUrl = sameOriginUrl(route, location.href);
+      const res = await warmUrl(pageUrl);
+      if (!res) return;
+      const page = new DOMParser().parseFromString(await res.text(), 'text/html');
+      const attr = (el) => el.getAttribute('href') || el.getAttribute('src');
+      const jobs = [];
+
+      page.querySelectorAll('link[rel~="stylesheet"], link[rel~="preload"], link[rel~="icon"], img[src], script[src]:not([type="module"])')
+        .forEach((el) => jobs.push(warmUrl(sameOriginUrl(attr(el), pageUrl))));
+      page.querySelectorAll('link[rel="modulepreload"], script[type="module"][src]')
+        .forEach((el) => {
+          const u = sameOriginUrl(attr(el), pageUrl);
+          if (u) jobs.push(warmModule(u));
+        });
+      page.querySelectorAll('script[type="module"]:not([src])')
+        .forEach((el) => importedUrls(el.textContent, pageUrl).forEach((u) => jobs.push(warmModule(u))));
+
+      await Promise.all(jobs);
+    }
+
+    function warmNextPage(route) {
+      if (route) warmDestination(route).catch(() => {});
+    }
+
     const bootstrapAuth = getStoredAuthInfo();
     if (bootstrapAuth?.loggedIn) {
       showLoader(bootstrapAuth.name || '');
+      // Already signed in: the route this session last went to is known
+      // right now, before the profile lookup below confirms it.
+      warmNextPage(bootstrapAuth.route);
     }
 
     async function getUserProfile(uid) {
@@ -1052,6 +1137,7 @@
           await signOut(auth);
           throw { code: 'app/unauthorized-profile' };
         }
+        warmNextPage(route);
 
         const authInfo = {
           loggedIn: true,
@@ -1111,6 +1197,9 @@
         await signOut(auth).catch(() => {});
         return;
       }
+      // Usually a no-op (the bootstrap above already started on this
+      // route); covers a first visit or a role that changed since.
+      warmNextPage(route);
 
       const authInfo = {
         loggedIn: true,

@@ -1,0 +1,818 @@
+/**
+ * config_FieldRegistry.js
+ *
+ * سجلّ الحقول الواحد (Single Field Registry) — الحزمة 1.
+ *
+ * الغرض: مصدرٌ تصريحيّ واحد لكلّ خليّة ظاهرة في الأوراق الثلاث (الإعدادات،
+ * القيود، التفضيلات). يشتقّ منه الباني صفوفه (هذه الحزمة)، وسيشتقّ منه القارئ
+ * والمدقّق لاحقًا (الحزمتان 2+). الرابط الحقيقيّ هو `key` لا النصّ العربيّ —
+ * فتغيّر العنوان لا يكسر شيئًا حين تتحوّل القراءة إلى المفتاح.
+ *
+ * ⚠️ في هذه الحزمة القرّاء (getSetting/readConstraints) ما زالوا يطابقون النصّ
+ * العربيّ في العمود A؛ لذلك `label` هنا يُسحب حرفيًّا من CONSTANTS فيبني الباني
+ * العناوين نفسها التي يبحث عنها القارئ — فيتطابقان بلا كسر.
+ *
+ * ⚠️ البذور (`seed`/`seedOnline`) مأخوذة من الورقة الحيّة (المقيسة من Drive)،
+ * لا من ثوابت الكود؛ الحيّ هو الحقّ حيثما اختلفا. سابقًا كان يظهر سطرا دلتا
+ * (SECOND_BREAK_AFTER الحيّ 5/الثابت 4، وLAST_HARD_MAX الحيّ 2/الثابت 3)؛
+ * حُذف كلا الثابتين (الحزمتان 6/ج-2ب و6/ج-2ج) فصار تقرير الدلتا صفرًا.
+ * دالّة rebuildAllSheetsFromRegistry تُبلِّغ عن كلّ اختلافٍ بين البذرة والثابت.
+ *
+ * قاعدة صلبة: حقلٌ status:'LIVE' بلا `consumer` = خطأ يوقف البناء
+ * (_assertRegistryValid). لا يُعلَن حقلٌ حيًّا بلا مستهلكٍ مُثبَت.
+ *
+ * كلّ الدوالّ هنا تُقيَّم وقت الاستدعاء (لا في الأعلى) فيكون CONSTANTS متاحًا
+ * مهما كان ترتيب تحميل ملفّات Apps Script.
+ */
+
+/**
+ * السجلّ الكامل: مصفوفة حقول تصريحيّة.
+ * layout: 'MODE' | 'MODE_PAIR' | 'REPORT' | 'SINGLE' | 'PREF_COL'
+ *         (جداول DEPT/LAB/RULE تُبذَر عبر getConstraintDeptSeeds/…LabSeeds/getRuleSeeds).
+ * @return {Object[]}
+ */
+function getFieldRegistry() {
+  const SN  = CONSTANTS.SETTING_NAMES;
+  const CS  = CONSTANTS.CONSTRAINTS_SHEET;
+  const P   = CS.PARAM_NAMES;
+  const PC  = CONSTANTS.PREFERENCES_SHEET.COLUMNS;
+  const YN  = CONSTANTS.YES_NO;
+  const YES = CONSTANTS.YES;
+  const NA  = CONSTANTS.NOT_APPLICABLE;
+  const MODES = [CONSTANTS.MODES.IN_PERSON, CONSTANTS.MODES.ONLINE];
+  const WEEK  = CONSTANTS.WEEK_DAYS;
+  const ROUND = CS.ROUNDING_VOCAB;
+  const BW    = CONSTANTS.BREAK_WEIGHTS;   // مصدر بذور الحرّاس الصلبة (الحزمة 4)
+
+  const F = [];
+  const add = function (o) { F.push(o); };
+
+  // ================= ورقة الإعدادات =================
+  // ---- القسم: وضع الدراسة (MODE) ----
+  add({ key:'CURRENT_MODE', sheet:'SETTINGS', section:'MODE', label:SN.CURRENT_MODE,
+        layout:'MODE', type:'enum', domain:MODES, seed:CONSTANTS.MODES.IN_PERSON,
+        seedOnline:NA, status:'LIVE',
+        consumer:'config_SchoolSettings.js:37 getModeColumn / :53 getSetting', note:'' });
+
+  // ---- القسم: إعدادات الدوام (SCHEDULE) ----
+  add({ key:'PERIODS_PER_DAY', sheet:'SETTINGS', section:'SCHEDULE', label:SN.PERIODS_PER_DAY,
+        layout:'MODE_PAIR', type:'int', domain:{min:1,max:8}, seed:7, seedOnline:5, status:'LIVE',
+        consumer:'algo_ScheduleBuilder.js:357 (lastIdx=periods-1) + كامل حلقات الشبكة', note:'' });
+  add({ key:'DAYS_PER_WEEK', sheet:'SETTINGS', section:'SCHEDULE', label:SN.DAYS_PER_WEEK,
+        layout:'MODE_PAIR', type:'int', domain:{min:1,max:7}, seed:5, seedOnline:5, status:'LIVE',
+        consumer:'algo_RepairEngine.js:387 (ctx.days) + كامل حلقات الأيّام', note:'' });
+  // ⚠️ البذرة 3 من الورقة الحيّة (الجلسة 55): الفرصة الأولى بعد الحصّة الثالثة.
+  add({ key:'FIRST_BREAK_AFTER', sheet:'SETTINGS', section:'SCHEDULE', label:SN.FIRST_BREAK_AFTER,
+        layout:'MODE_PAIR', type:'int', domain:{min:0,max:8}, seed:3, seedOnline:0, status:'LIVE',
+        consumer:'algo_ScheduleBuilder.js:1255 _recessBoundaries', note:'' });
+  // ⚠️ البذرة 5 من الورقة الحيّة (كان الثابت المحذوف يقول 4 — الحزمة 6/ج-2ج).
+  add({ key:'SECOND_BREAK_AFTER', sheet:'SETTINGS', section:'SCHEDULE', label:SN.SECOND_BREAK_AFTER,
+        layout:'MODE_PAIR', type:'int', domain:{min:0,max:8}, seed:5, seedOnline:0, status:'LIVE',
+        consumer:'algo_ScheduleBuilder.js:1258 _recessBoundaries / :1139 (الحصّة السادسة لرئيس القسم)', note:'' });
+  add({ key:'PERIOD_DURATION', sheet:'SETTINGS', section:'SCHEDULE', label:SN.PERIOD_DURATION,
+        layout:'MODE_PAIR', type:'int', domain:{min:1,max:120}, seed:45, seedOnline:40, status:'PLANNED',
+        consumer:'', note:'مدّة الحصّة لا يقرؤها المحرّك (لا getter ولا مستهلك) — عرضٌ فقط.' });
+
+  // ---- القسم: الاجتماعات (MEETINGS) ----
+  add({ key:'MEETING_DEPT_HEADS_ENABLED', sheet:'SETTINGS', section:'MEETINGS', label:SN.MEETING_DEPT_HEADS_ENABLED,
+        layout:'MODE_PAIR', type:'bool_ar', domain:YN, seed:YES, seedOnline:CONSTANTS.NO, status:'LIVE',
+        consumer:'algo_ScheduleBuilder.js:396 _placeMeetingsPhase', note:'' });
+  add({ key:'MEETING_DEPT_HEADS_DAY', sheet:'SETTINGS', section:'MEETINGS', label:SN.MEETING_DEPT_HEADS_DAY,
+        layout:'MODE_PAIR', type:'enum', domain:WEEK, seed:'الإثنين', seedOnline:NA, status:'LIVE',
+        consumer:'algo_ScheduleBuilder.js:397 _placeMeetingsPhase', note:'' });
+  add({ key:'MEETING_DEPT_HEADS_PERIOD', sheet:'SETTINGS', section:'MEETINGS', label:SN.MEETING_DEPT_HEADS_PERIOD,
+        layout:'MODE_PAIR', type:'int', domain:{min:1,max:8}, seed:2, seedOnline:NA, status:'LIVE',
+        consumer:'algo_ScheduleBuilder.js:398-399 _placeMeetingsPhase', note:'' });
+  add({ key:'MEETING_DEPT_ENABLED', sheet:'SETTINGS', section:'MEETINGS', label:SN.MEETING_DEPT_ENABLED,
+        layout:'MODE_PAIR', type:'bool_ar', domain:YN, seed:YES, seedOnline:CONSTANTS.NO, status:'LIVE',
+        consumer:'algo_ScheduleBuilder.js:421 _placeMeetingsPhase', note:'' });
+  add({ key:'MEETING_DEPT_BLOCKED', sheet:'SETTINGS', section:'MEETINGS', label:SN.MEETING_DEPT_BLOCKED,
+        layout:'MODE_PAIR', type:'text', domain:null, seed:'الأولى، الأخيرة', seedOnline:NA, status:'LIVE',
+        consumer:'algo_ScheduleBuilder.js:424 (blockedSet)', note:'' });
+  add({ key:'MEETING_GAP_WEIGHT', sheet:'SETTINGS', section:'MEETINGS', label:SN.MEETING_GAP_WEIGHT,
+        layout:'MODE_PAIR', type:'number', domain:{min:0,max:100000}, seed:100, seedOnline:NA, status:'LIVE',
+        consumer:'algo_ScheduleBuilder.js _meetingCandidateScore (عبر settings.deptMeeting.gapWeight)',
+        note:'وزن انحراف الفجوة بين اجتماعَي القسم عن يومين. 0 = إطفاء القاعدة.' });
+
+  // ---- القسم: يوم المراجعات الحكومية (GOVT) ----
+  add({ key:'GOVT_DAY_ENABLED', sheet:'SETTINGS', section:'GOVT', label:SN.GOVT_DAY_ENABLED,
+        layout:'MODE_PAIR', type:'bool_ar', domain:YN, seed:YES, seedOnline:CONSTANTS.NO, status:'LIVE',
+        consumer:'algo_RepairEngine.js:331 _govtLightDayPenalty', note:'' });
+  add({ key:'GOVT_DAY_OPTIMAL_END', sheet:'SETTINGS', section:'GOVT', label:SN.GOVT_DAY_OPTIMAL_END,
+        layout:'MODE_PAIR', type:'int', domain:{min:1,max:8}, seed:3, seedOnline:NA, status:'LIVE',
+        consumer:'algo_RepairEngine.js:333 _govtLightDayPenalty', note:'' });
+  add({ key:'GOVT_DAY_MAX_END', sheet:'SETTINGS', section:'GOVT', label:SN.GOVT_DAY_MAX_END,
+        layout:'MODE_PAIR', type:'int', domain:{min:1,max:8}, seed:4, seedOnline:NA, status:'LIVE',
+        consumer:'algo_RepairEngine.js:334 _govtLightDayPenalty', note:'' });
+  add({ key:'GOVT_DAY_W_HARD', sheet:'SETTINGS', section:'GOVT', label:SN.GOVT_DAY_W_HARD,
+        layout:'MODE_PAIR', type:'number', domain:{min:0,max:100000}, seed:200, seedOnline:NA, status:'LIVE',
+        consumer:'algo_RepairEngine.js:335 _govtLightDayPenalty (عبر ScheduleBuilder:337)', note:'' });
+  add({ key:'GOVT_DAY_W_SOFT', sheet:'SETTINGS', section:'GOVT', label:SN.GOVT_DAY_W_SOFT,
+        layout:'MODE_PAIR', type:'number', domain:{min:0,max:100000}, seed:25, seedOnline:NA, status:'LIVE',
+        consumer:'algo_RepairEngine.js:334 _govtLightDayPenalty (عبر ScheduleBuilder:338)', note:'' });
+
+  // ---- القسم: موازنة حصص المعلّم (DAY_BALANCE) ----
+  add({ key:'DAY_BALANCE_ENABLED', sheet:'SETTINGS', section:'DAY_BALANCE', label:SN.DAY_BALANCE_ENABLED,
+        layout:'MODE_PAIR', type:'bool_ar', domain:YN, seed:YES, seedOnline:CONSTANTS.NO, status:'LIVE',
+        consumer:'algo_RepairEngine.js:406 _dayBalancePenalty / algo_ScheduleBuilder.js:1116', note:'' });
+  add({ key:'DAY_BALANCE_W_HARD', sheet:'SETTINGS', section:'DAY_BALANCE', label:SN.DAY_BALANCE_W_HARD,
+        layout:'MODE_PAIR', type:'number', domain:{min:0,max:100000}, seed:150, seedOnline:NA, status:'LIVE',
+        consumer:'algo_RepairEngine.js:411 _dayBalancePenalty', note:'' });
+  add({ key:'DAY_BALANCE_W_SOFT', sheet:'SETTINGS', section:'DAY_BALANCE', label:SN.DAY_BALANCE_W_SOFT,
+        layout:'MODE_PAIR', type:'number', domain:{min:0,max:100000}, seed:20, seedOnline:NA, status:'LIVE',
+        consumer:'algo_RepairEngine.js:410 _dayBalancePenalty', note:'' });
+  // ⚠️ البذرة 20 من الورقة الحيّة (الجلسة 55): رفعها المالك تجريبيًّا لحلّ تكدّسٍ
+  // في جدول معلّمٍ بعينه — انظر تعليق DAY_BALANCE_W_BUILDER في config_Constants.js.
+  add({ key:'DAY_BALANCE_W_BUILDER', sheet:'SETTINGS', section:'DAY_BALANCE', label:SN.DAY_BALANCE_W_BUILDER,
+        layout:'MODE_PAIR', type:'number', domain:{min:0,max:100000}, seed:20, seedOnline:NA, status:'LIVE',
+        consumer:'algo_ScheduleBuilder.js:1118 _softScore (wBuilder)', note:'' });
+  // عتبتا الفارق (الحزمة 5): ≤ okSpread بلا عقوبة، ≤ softSpread ناعمة، فوقها صلبة.
+  add({ key:'DAY_BALANCE_OK_SPREAD', sheet:'SETTINGS', section:'DAY_BALANCE', label:SN.DAY_BALANCE_OK_SPREAD,
+        layout:'MODE_PAIR', type:'int', domain:{min:0,max:8}, seed:1, seedOnline:NA, status:'LIVE',
+        consumer:'algo_RepairEngine.js:409/985/1419/2004 (ctx.dayBalance.okSpread)', note:'' });
+  add({ key:'DAY_BALANCE_SOFT_SPREAD', sheet:'SETTINGS', section:'DAY_BALANCE', label:SN.DAY_BALANCE_SOFT_SPREAD,
+        layout:'MODE_PAIR', type:'int', domain:{min:1,max:8}, seed:2, seedOnline:NA, status:'LIVE',
+        consumer:'algo_RepairEngine.js:410/986/1420/2006 (ctx.dayBalance.softSpread)', note:'' });
+
+  // ---- القسم: التقرير (REPORT) — قيمة مفردة B:C ----
+  add({ key:'REPORT_RED_ALERT', sheet:'SETTINGS', section:'REPORT', label:SN.REPORT_RED_ALERT,
+        layout:'REPORT', type:'int', domain:{min:0,max:100}, seed:30, seedOnline:null, status:'PLANNED',
+        consumer:'', note:'عتبات التقرير تُحمَّل (DataLoader:91) ولا تُستهلك — لا تقرير إرضاء فعّال بعد.' });
+  add({ key:'REPORT_MIN_SATISFACTION', sheet:'SETTINGS', section:'REPORT', label:SN.REPORT_MIN_SATISFACTION,
+        layout:'REPORT', type:'int', domain:{min:0,max:100}, seed:70, seedOnline:null, status:'PLANNED',
+        consumer:'', note:'عتبات التقرير تُحمَّل ولا تُستهلك بعد.' });
+  add({ key:'REPORT_IDEAL_SATISFACTION', sheet:'SETTINGS', section:'REPORT', label:SN.REPORT_IDEAL_SATISFACTION,
+        layout:'REPORT', type:'int', domain:{min:0,max:100}, seed:85, seedOnline:null, status:'PLANNED',
+        consumer:'', note:'عتبات التقرير تُحمَّل ولا تُستهلك بعد.' });
+
+  // ================= ورقة القيود — البارامترات (SINGLE) =================
+  // مجموعة: قيود الحصة الأخيرة
+  add({ key:'LAST_DESIRED_MAX', sheet:'CONSTRAINTS', section:'PARAMS', group:'قيود الحصة الأخيرة',
+        label:P.LAST_DESIRED_MAX, layout:'SINGLE', type:'int', domain:{min:0,max:8}, seed:1, status:'LIVE',
+        consumer:'algo_ScheduleBuilder.js:1076', note:'' });
+  add({ key:'LAST_ALLOWED_MAX', sheet:'CONSTRAINTS', section:'PARAMS', group:'قيود الحصة الأخيرة',
+        label:P.LAST_ALLOWED_MAX, layout:'SINGLE', type:'int', domain:{min:0,max:8}, seed:2, status:'LIVE',
+        consumer:'algo_ScheduleBuilder.js:1073', note:'' });
+  // ⚠️ البذرة 2 من الورقة الحيّة (كان الثابت المحذوف يقول 3 — الحزمة 6/ج-2ب).
+  add({ key:'LAST_HARD_MAX', sheet:'CONSTRAINTS', section:'PARAMS', group:'قيود الحصة الأخيرة',
+        label:P.LAST_HARD_MAX, layout:'SINGLE', type:'int', domain:{min:0,max:8}, seed:2, status:'LIVE',
+        consumer:'algo_ScheduleBuilder.js:1071 / algo_RepairEngine.js:608', note:'' });
+  add({ key:'LAST_SUPERVISOR_MAX', sheet:'CONSTRAINTS', section:'PARAMS', group:'قيود الحصة الأخيرة',
+        label:P.LAST_SUPERVISOR_MAX, layout:'SINGLE', type:'int', domain:{min:0,max:8}, seed:1, status:'LIVE',
+        consumer:'algo_ScheduleBuilder.js:1082', note:'' });
+  add({ key:'LAST_PREFER_DIFFERENT', sheet:'CONSTRAINTS', section:'PARAMS', group:'قيود الحصة الأخيرة',
+        label:P.LAST_PREFER_DIFFERENT, layout:'SINGLE', type:'bool_ar', domain:YN, seed:CONSTANTS.NO, status:'LIVE',
+        consumer:'ctx.lastPreferDifferent (builder:434) → algo_RepairEngine.js:451 _lastSameClassPenalty (الدلتا:690 · إعادة البناء:1056 · الترسية:2139)',
+        note:'البذرة «لا» = السلوك الحاليّ (لا حساب ولا قراءة وزن)؛ «نعم» كسرٌ ناعم تصاعديّ BROKEN_LAST_SAME_CLASS_SOFT في طبقة الإصلاح.' });
+  // مجموعة: قيود الحصة الأولى
+  add({ key:'FIRST_MAX_PERCENTAGE', sheet:'CONSTRAINTS', section:'PARAMS', group:'قيود الحصة الأولى',
+        label:P.FIRST_MAX_PERCENTAGE, layout:'SINGLE', type:'number', domain:{min:0,max:1}, seed:0.12, status:'LIVE',
+        consumer:'algo_ScheduleBuilder.js:1101', note:'' });
+  add({ key:'FIRST_ROUNDING_METHOD', sheet:'CONSTRAINTS', section:'PARAMS', group:'قيود الحصة الأولى',
+        label:P.FIRST_ROUNDING_METHOD, layout:'SINGLE', type:'enum', domain:ROUND, seed:'قياسي', status:'LIVE',
+        consumer:'ctx.params.firstRoundMethod (builder:353 _resolveFirstRounding) → algo_ScheduleBuilder.js:1182 _roundBy في _softScore',
+        note:'قياسي=Math.round · لأعلى=Math.ceil · لأسفل=Math.floor — من مصدرٍ واحد؛ قيمة خارج القائمة ترمي (لا سقوط صامت).' });
+  add({ key:'FIRST_HARD_MAX', sheet:'CONSTRAINTS', section:'PARAMS', group:'قيود الحصة الأولى',
+        label:P.FIRST_HARD_MAX, layout:'SINGLE', type:'int', domain:{min:0,max:8}, seed:3, status:'LIVE',
+        consumer:'algo_ScheduleBuilder.js:1152 (ctx.params.firstHardMax) عبر :352 numParam', note:'' });
+  add({ key:'FIRST_EXEMPT_CONSTRAINED', sheet:'CONSTRAINTS', section:'PARAMS', group:'قيود الحصة الأولى',
+        label:P.FIRST_EXEMPT_CONSTRAINED, layout:'SINGLE', type:'bool_ar', domain:YN, seed:CONSTANTS.NO, status:'LIVE',
+        consumer:'ctx.firstExemptConstrained (builder:431) → algo_ScheduleBuilder.js:1191 _softScore (إعفاء عقوبة تجاوز سقف الأولى)',
+        note:'البذرة «لا» = السلوك الحاليّ (لا إعفاء)؛ «نعم» يُعفي كلّ فئةٍ غير «بلا قيود صلبة» من عقوبة تجاوز سقف الأولى.' });
+  add({ key:'W_HOD_FIRST', sheet:'CONSTRAINTS', section:'PARAMS', group:'قيود الحصة الأولى',
+        label:P.W_HOD_FIRST, layout:'SINGLE', type:'int', domain:{min:0,max:100000},
+        seed:CONSTANTS.SCHEDULE_BUILDER.W_HOD_FIRST, status:'LIVE',
+        consumer:'algo_ScheduleBuilder.js:1125 _softScore (ctx.weights)', note:'' });
+  // مجموعة: الأولى والأخيرة في يومٍ واحد (الجلسة 57) — وزنٌ واحد يحكم الطبقتين:
+  // توجيهُ الباني في _softScore (خصمٌ عند وضع أولى/أخيرة لمعلّمٍ له الأخرى في اليوم
+  // نفسه) وكسرٌ ناعم BROKEN_FIRST_LAST_SAME_DAY في الإصلاح وحدته (معلّم، يوم).
+  // 0 = مطفأ في الطبقتين (لا حساب ولا ترسية). دروسٌ فقط — الاجتماعات لا تُحتسَب.
+  add({ key:'W_FIRST_LAST_SAME_DAY', sheet:'CONSTRAINTS', section:'PARAMS', group:'قيود الأولى والأخيرة في يومٍ واحد',
+        label:'وزن حصّةٍ أولى وأخيرة للمعلّم في يومٍ واحد', layout:'SINGLE', type:'int', domain:{min:0,max:100000},
+        seed:100, status:'LIVE',
+        consumer:'algo_ScheduleBuilder.js _softScore (ctx.weights.W_FIRST_LAST_SAME_DAY) + algo_RepairEngine.js _firstLastSameDayPenalty (الدلتا _localBreakPenalty · إعادة البناء _computeChangeableBreaks · السجلّ _enumerateBreakRecords · الترسية _brokenLessonCells (ح) · المَجَسّ _breakProbePlan)',
+        note:'وحدة الكسر (معلّم، يوم): كلّ يومٍ فيه للمعلّم حصّةٌ أولى وأخيرة معًا = كسرٌ واحد بهذا الوزن، في الباني والإصلاح معًا. 0 = القاعدة كأنّها غير موجودة.' });
+  // مجموعة: أولويّة أقسام «غير الأكاديميّ» لحمل الأخيرة (الجلسة 58 — طلب المالك)
+  // كلّ سابعةٍ **أولى** كانت مجّانيّة للجميع، فمخطِّطُ السابعة لا مبالٍ بين معلّم
+  // فنيةٍ يأخذ سابعتَه الثانية ومعلّم رياضياتٍ يأخذ أولاه — فتذهب السابعة لمن
+  // اتّفق. هذا الوزن يُكلّف **الوحدة الأولى لغير أقسام الأولويّة** فيرجّح كفّة
+  // من جدول الأقسام «أولويّة لتحمّل الأخيرة الثانية؟» = نعم (الفنية/الموسيقية/
+  // البدنية/المكتبات/الدراسات العملية/التجاري) حتّى في سابعتهم الثانية.
+  // 0 = مطفأ (السلوك السابق: الأولى مجّانيّة للجميع).
+  add({ key:'W_SEVENTH_PRIORITY_FIRST', sheet:'CONSTRAINTS', section:'PARAMS', group:'قيود الحصة الأخيرة',
+        label:'وزن تفضيل أقسام الأولويّة لحمل الحصّة الأخيرة', layout:'SINGLE', type:'int', domain:{min:0,max:100000},
+        seed:0, status:'LIVE',
+        consumer:'algo_SeventhPlanner.js _seventhUnitCost (كلفة الوحدة الأولى في شبكة التدفّق)',
+        note:'يُكلّف السابعة الأولى لمعلّمي الأقسام غير المرشَّحة فيقدّم المخطِّطُ معلّمي المواد غير الأكاديميّة عليهم — حتّى في سابعتهم الثانية. البذرة 0 (مطفأ) بالقياس: على نموذج ٥ سبتمبر تحمل أقسامُ الأولويّة 21 سابعةً من 90 بالقيمتين 0 و10 سواء (عرضها مستنفَد أصلًا: كتلةُ معلّمٍ نصابُه حصّتان تستهلك نصابه كلّه)، بينما تُكلّف 10 نحو 295 نقطة. اجعلها 10 إن رأيت في جدولك معلّم مادّةٍ غير أكاديميّة بسابعةٍ واحدة وهو قادر على ثانية، ثمّ قارن.' });
+
+  // مجموعة: شكل يوم المعلّم (الجلسة 59 — قرار المالك ١٠ سبتمبر)
+  // ---------------------------------------------------------------------------
+  // كان المحرّك يعاقب **كلّ** خانة فراغٍ في يوم المعلّم خطّيًّا (W_GAP_EACH)، فكان
+  // سلّمه: حصّتان متتاليتان = 0 (مجّانيّ) · فجوة مفردة = −8 · ثلاثيّة = −300 — أي
+  // أنّ أحبّ الأشكال إلى المعلّم (أولى وثالثة، ثالثة وخامسة…) مُغرَّم، وأكرهها
+  // مجّانيّ. المقيس على نموذج ٥ سبتمبر: 65% من وصلات أيّام المعلّمين متتالية.
+  //
+  // الإصلاح شقّان: (أ) سلاسل الفراغ **طولها واحد** خرجت من عقوبة W_GAP_EACH نهائيًّا
+  // (لا وزنَ يحكمها — «لا يعاقب النظام على وجود فجوة مفردة»)، والسلاسل ≥2 بقيت كما
+  // كانت بعقوبتها وذيولها. (ب) الوزنان أدناه يعبّران عن **التفضيل** لا العقوبة.
+  //
+  // ⚠️ لماذا وزنٌ على التتابع لا مكافأةٌ على الفجوة: جُرّب `W_GAP_EACH` سالبًا
+  // (مكافأة) فحوّل الأزواج إلى **فجواتٍ واسعة** لا مفردة (22 ⟶ 74 عند −8، و92 عند
+  // −15) — لأنّ العدّاد يجمع كلّ خانات الفراغ فيكافئ «أولى + سابعة» خمسةَ أضعاف
+  // «أولى + ثالثة». فالتعبير الصحيح: عقوبةٌ على الزوج المتتالي، وصفرٌ على المفردة.
+  const G_SHAPE = 'شكل يوم المعلّم';
+  add({ key:'W_ADJACENT_PAIR', sheet:'CONSTRAINTS', section:'PARAMS', group:G_SHAPE,
+        label:'وزن حصّتين متتاليتين للمعلّم (تفضيل الفجوة المفردة)', layout:'SINGLE',
+        type:'int', domain:{min:0,max:100000}, seed:5, status:'LIVE',
+        consumer:'algo_ScheduleBuilder.js _softScore (_dayShapePenaltyFromShape) + algo_RepairEngine.js _dayShapePenalty (الدلتا _localBreakPenalty · إعادة البناء _computeChangeableBreaks · السجلّ _enumerateBreakRecords · الترسية _brokenLessonCells (ط) · المَجَسّ _breakProbePlan)',
+        note:'وحدة الكسر (معلّم، يوم): كلّ زوجٍ متجاورٍ مشغول = وحدة بهذا الوزن. 0 = مطفأ (عودةٌ إلى السلوك القديم: التتابع والفجوة المفردة سواء). ⚠️ يوم المراجعات له الأولويّة بالسعر لا بالإعفاء: كسر يومٍ خفيف يكلّف 25 ناعمًا أو 200 صلبًا مقابل 10 للزوج، فالمقايسة تحسم له. (الإعفاء الصريح جُرّب فضاعف الثلاثيّات وأُزيل.)' });
+  add({ key:'W_PREFER_CONSEC_GAP', sheet:'CONSTRAINTS', section:'PARAMS', group:G_SHAPE,
+        label:'وزن الفجوة المفردة لمن يفضّل الحصص المتتابعة', layout:'SINGLE',
+        type:'int', domain:{min:0,max:100000}, seed:10, status:'LIVE',
+        consumer:'algo_ScheduleBuilder.js _softScore (_dayShapePenaltyFromShape) + algo_RepairEngine.js _dayShapePenalty (المواضع الخمسة نفسها)',
+        note:'لا يسري إلّا على معلّمٍ له صفٌّ من نوع «يفضّل الحصص المتتابعة» في القسم الثالث — وهو استثناءٌ يقلب الافتراض له وحده. بلا صفوفٍ من ذلك النوع فالحقل خامدٌ تمامًا مهما كانت قيمته. 0 = مطفأ.' });
+
+  // تدرُّج سعر الزوج (الجلسة 61 — قرار المالك ١١ سبتمبر)
+  // ---------------------------------------------------------------------------
+  // كان كلّ زوجٍ متجاور يُسعَّر بـW_ADJACENT_PAIR سواءً، والمصفوفة التي يُحسَب عليها
+  // لا تعرف الفرصة ولا تميّز الاجتماع من الدرس. فكان يُغرَّم على «الثالثة والرابعة»
+  // (وبينهما جرس الفرصة) كما يُغرَّم على «الأولى والثانية»، وعلى «درسٌ يلي اجتماعًا»
+  // كما على درسَين متلاصقَين. والمقيس على جدولٍ كامل: من 73 زوجًا مُحتسَبًا 14 يتخلّلها
+  // فرصة و36 أحد طرفيها اجتماع — أي أنّ 41% فقط تتابعُ تدريسٍ حقيقيّ.
+  //
+  // القرار: **تدرُّجٌ في السعر لا إعفاء** (نصّ المالك: «كسره أقلّ» لا «بلا كسر»).
+  // الإعفاء المطلق مرفوضٌ بسابقةٍ مقيسة في هذا المشروع: إعفاء يوم المراجعة صنع
+  // منطقةً مجّانيّة تكدّست فيها الحصص فتضاعفت الثلاثيّات — انظر _dayShapePenaltyFromShape.
+  //
+  // سعر الزوج = أخفّ ما ينطبق عليه: فرصةٌ بينهما ⟸ RECESS، وأحد طرفيه اجتماع ⟸
+  // MEETING، واجتماعُهما ⟸ الأصغر. صفرٌ في أيٍّ منهما يُعيد ذلك النوع مجّانيًّا.
+  add({ key:'W_ADJACENT_PAIR_RECESS', sheet:'CONSTRAINTS', section:'PARAMS', group:G_SHAPE,
+        label:'وزن حصّتين متتاليتين تتخلّلهما الفرصة', layout:'SINGLE',
+        type:'int', domain:{min:0,max:100000}, seed:2, status:'LIVE',
+        consumer:'algo_ScheduleBuilder.js _dayShapePenaltyFromShape (الباني والإصلاح والتقرير معًا)',
+        note:'يسري على الزوج الذي يقع بين طرفيه جرسُ فرصة (يُشتقّ من «موضع الفرصة الأولى/الثانية» في الإعدادات). البذرة 2 مقابل 5 للتتابع الصرف: الفرصة راحةٌ حقيقيّة لكنّها قصيرة، فالزوج يبقى مذمومًا وأخفّ. 0 = مجّانيّ تمامًا (إعفاء — غير موصًى به، انظر الشرح أعلاه).' });
+  add({ key:'W_ADJACENT_PAIR_MEETING', sheet:'CONSTRAINTS', section:'PARAMS', group:G_SHAPE,
+        label:'وزن التجاور حين يكون أحد طرفيه اجتماعًا', layout:'SINGLE',
+        type:'int', domain:{min:0,max:100000}, seed:1, status:'LIVE',
+        consumer:'algo_ScheduleBuilder.js _dayShapePenaltyFromShape (الباني والإصلاح والتقرير معًا)',
+        note:'خانة الاجتماع ليست تدريسًا: المعلّم فيها مستمعٌ أغلب الوقت (قرار المالك). فالدرسُ الذي يليها أو يسبقها لا يُسعَّر كدرسَين متلاصقَين. البذرة 1 — أخفّ من الفرصة لأنّ الاجتماع حصّةٌ كاملة لا دقائق. 0 = مجّانيّ تمامًا. لا علاقة له بخانة الحجب (غياب المعلّم) فتلك تُخفى أصلًا وتُعَدّ فراغًا.' });
+
+  // مجموعة: قيود المعلم الإداري
+  add({ key:'ADMIN_AVOID_LAST', sheet:'CONSTRAINTS', section:'PARAMS', group:'قيود المعلم الإداري',
+        label:P.ADMIN_AVOID_LAST, layout:'SINGLE', type:'bool_ar', domain:YN, seed:YES, status:'LIVE',
+        consumer:'ctx.adminAvoidLast (builder:424) → algo_ScheduleBuilder.js:1135 _softScore / :1070 _collectHardBreaks / algo_RepairEngine.js:632/954/1381/1928',
+        note:'زرٌّ حيّ: «نعم» = السلوك الحاليّ، «لا» يُطفئ عقوبتَي الإداريّ في الأخيرة معًا (W_ADMIN_LAST الناعمة وBROKEN_ADMIN_LAST الكسر) في كلّ مواضعهما.' });
+  // مجموعة: رصيد المرونة
+  add({ key:'FLEX_PRIORITY_BUDGET', sheet:'CONSTRAINTS', section:'PARAMS', group:'رصيد المرونة',
+        label:P.FLEX_PRIORITY_BUDGET, layout:'SINGLE', type:'number', domain:{min:0,max:100}, seed:1, status:'PLANNED',
+        consumer:'', note:'خوارزميّة مكافأة المرونة غير منفَّذة؛ ورقة التفضيلات غير مقروءة (الحزمة 5).' });
+  // مجموعة: قيود التغطية اليوميّة (أُلحقت بذيل القسم الأوّل فلا تُزحزح أرقام صفوفه القائمة)
+  add({ key:'ENFORCE_DAILY_COVERAGE', sheet:'CONSTRAINTS', section:'PARAMS', group:'قيود التغطية اليوميّة',
+        label:P.ENFORCE_DAILY_COVERAGE, layout:'SINGLE', type:'bool_ar', domain:YN, seed:YES, status:'LIVE',
+        consumer:'ctx.params.enforceDailyCoverage → algo_ScheduleBuilder.js _coverageEligibleSubject، المستهلَك في _reserveDailyCoverage (حجز الباني) و algo_RepairEngine.js _buildFloorMap (العدّ والترسية) و algo_FeasibilityChecker.js',
+        note:'البذرة «نعم». زرٌّ واحد يحكم الطبقات الثلاث: حجز الباني (بنيويّ)، ووزن BROKEN_DAILY_FLOOR في دفتر العقوبات (اقتصاديّ)، وترسية النوع في مولّد الحركات (علاجيّ). لا حارس صلب — حُذف DAILY_FLOOR_BREACH لأنّ البولياني يَجُبّ كلّ وزنٍ فلا يُقايَس. «لا» ⟹ القاعدة كأنّها غير موجودة.' });
+  add({ key:'DAILY_COVERAGE_MIN_WEEKLY', sheet:'CONSTRAINTS', section:'PARAMS', group:'قيود التغطية اليوميّة',
+        label:P.DAILY_COVERAGE_MIN_WEEKLY, layout:'SINGLE', type:'int', domain:{min:0,max:40}, seed:5, status:'LIVE',
+        consumer:'ctx.params.dailyCoverageMinWeekly → algo_ScheduleBuilder.js _coverageEligibleSubject (المستهلَك في _reserveDailyCoverage) + algo_RepairEngine.js _buildFloorMap + algo_FeasibilityChecker.js (DAILY_COVERAGE_TEACHER_SATURATED)',
+        note:'البذرة 5: مادّةٌ نصابها الأسبوعيّ ≥5 تستحقّ التغطية اليوميّة. مواد التتالي (النمط «متتاليتان») مستثناةٌ دومًا مهما كان النصاب — الكتلة المزدوجة تناقض النشر.' });
+
+  // ================= أوزان المحرّك (الحزمة 3) — SINGLE في ورقة القيود =================
+  // كلّها البذرة = قيمة الثابت الحاليّة بالضبط (الحقن عبر getEngineWeights → ctx.weights).
+  const addWeight = function (key, label, group, seed, domain, type, consumer, status, note) {
+    add({ key:key, sheet:'CONSTRAINTS', section:'PARAMS', group:group, label:label,
+          layout:'SINGLE', type:type || 'int', domain:domain || {min:0,max:100000},
+          seed:seed, status:status || 'LIVE', consumer:consumer || '', note:note || '' });
+  };
+
+  // القسم الرابع: أوزان السابعة الثانية (⚠️ القارئ اليتيم — المفاتيح تطابق numParam:315-317)
+  const G4 = 'أوزان السابعة الثانية';
+  addWeight('LAST_2ND_LIGHT_THRESHOLD', P.LAST_2ND_LIGHT_THRESHOLD, G4, 10, {min:1,max:40}, 'int',
+    'algo_ScheduleBuilder.js:315 numParam → algo_RepairEngine.js:430 _np2lWeight');
+  addWeight('LAST_2ND_WEIGHT_LIGHT', P.LAST_2ND_WEIGHT_LIGHT, G4, 100, {min:0,max:100000}, 'int',
+    'algo_ScheduleBuilder.js:316 numParam → algo_RepairEngine.js:431 _np2lWeight');
+  addWeight('LAST_2ND_WEIGHT_HEAVY', P.LAST_2ND_WEIGHT_HEAVY, G4, 350, {min:0,max:100000}, 'int',
+    'algo_ScheduleBuilder.js:317 numParam → algo_RepairEngine.js:432 _np2lWeight');
+
+  // القسم الخامس: أوزان الباني الناعمة (_softScore عبر ctx.weights)
+  const G5 = 'أوزان الباني الناعمة';
+  const SB = 'algo_ScheduleBuilder.js:_softScore (ctx.weights)';
+  addWeight('W_SUPERVISOR',        'وزن نقص تغطية المشرف',            G5, 1000, {min:0,max:100000}, 'int', 'algo_ScheduleBuilder.js:1078 _softScore');
+  addWeight('W_LAST_HARD',         'وزن تجاوز سقف الأخيرة الصلب',     G5, 120,  {min:0,max:100000}, 'int', 'algo_ScheduleBuilder.js:1091 _softScore');
+  addWeight('W_SUP_LAST',          'وزن تجاوز مشرف الجناح للأخيرة',   G5, 80,   {min:0,max:100000}, 'int', 'algo_ScheduleBuilder.js:1106 _softScore');
+  addWeight('W_ADMIN_LAST',        'وزن الإداريّ في الأخيرة (ناعم)',  G5, 60,   {min:0,max:100000}, 'int', 'algo_ScheduleBuilder.js:1104 _softScore');
+  addWeight('W_LAST_ALLOWED',      'وزن الأخيرة الثانية (المسموح)',   G5, 40,   {min:0,max:100000}, 'int', 'algo_ScheduleBuilder.js:1098 _softScore');
+  addWeight('W_FIRST',             'وزن تجاوز سقف الأولى',            G5, 25,   {min:0,max:100000}, 'int', 'algo_ScheduleBuilder.js:1126 _softScore');
+  addWeight('W_LAST_DESIRED',      'وزن الأخيرة الأولى (المرغوب)',    G5, 10,   {min:0,max:100000}, 'int', 'algo_ScheduleBuilder.js:1100 _softScore');
+  addWeight('W_LAST_SAME_CLASS',   'وزن الأخيرتين في صفٍّ واحد',      G5, 40,   {min:0,max:100000}, 'int', 'algo_RepairEngine.js:451 _lastSameClassPenalty (ctx.lastPreferDifferent) — يُقرأ شرطيًّا في getEngineWeights');
+  addWeight('W_SPREAD',            'وزن نثر المادّة في اليوم',        G5, 5,    {min:0,max:100000}, 'int', 'algo_ScheduleBuilder.js:1131 _softScore');
+  addWeight('W_TRIPLE_FULL',       'وزن الثلاثيّة بلا فرصة',          G5, 300,  {min:0,max:100000}, 'int', 'algo_ScheduleBuilder.js:1151 _softScore');
+  addWeight('W_TRIPLE_LIGHT',      'وزن الثلاثيّة بفرصة داخليّة',     G5, 150,  {min:0,max:100000}, 'int', 'algo_ScheduleBuilder.js:1150 _softScore');
+  addWeight('W_TRIPLE_REPEAT',     'وزن تكرار الثلاثيّة في يومٍ آخر', G5, 300,  {min:0,max:100000}, 'int', 'algo_ScheduleBuilder.js:1154 _softScore');
+  addWeight('W_HOD_SIXTH_LOAD',    'وزن السادسة لرئيس قسمٍ محمَّل',   G5, 250,  {min:0,max:100000}, 'int', 'algo_ScheduleBuilder.js:1165 _softScore');
+  addWeight('W_TAIL_SUBJECT',      'وزن جذب موادّ النشاط إلى آخر اليوم', G5, 250, {min:0,max:100000}, 'int', 'algo_ScheduleBuilder.js _softScore (طبقة الوضع وحدها — الكتلة الصلبة لا يحرّكها الإصلاح)');
+  addWeight('W_GAP_EACH',          'وزن كلّ فجوة في يوم المعلّم',     G5, 8,    {min:0,max:100000}, 'int', 'algo_ScheduleBuilder.js:1171 _softScore');
+  addWeight('W_GAP_LARGE',         'وزن الفجوة الكبيرة (≥3)',         G5, 50,   {min:0,max:100000}, 'int', 'algo_ScheduleBuilder.js:1173 _softScore');
+  addWeight('W_GAP_HUGE',          'وزن الفجوة الضخمة (≥4)',          G5, 100,  {min:0,max:100000}, 'int', 'algo_ScheduleBuilder.js:1176 _softScore');
+  addWeight('W_DEPT_RESERVE',      'وزن استنزاف احتياط القسم',        G5, 300,  {min:0,max:100000}, 'int', 'algo_ScheduleBuilder.js:1200 _softScore');
+  addWeight('W_DEPT_HEAVY_BALANCE','وزن اليوم الثقيل للقسم',          G5, 250,  {min:0,max:100000}, 'int', 'algo_ScheduleBuilder.js:1224 _softScore');
+  addWeight('BONUS_LOW_QUOTA_2ND_LAST', 'مكافأة النصاب الأقلّ (السابعة الثانية)', G5, 5, {min:0,max:100000}, 'int', 'algo_ScheduleBuilder.js:1113 _softScore');
+  addWeight('BONUS_LOW_QUOTA_THRESHOLD','عتبة نصاب مكافأة السابعة الثانية',        G5, 15, {min:1,max:40},      'int', 'algo_ScheduleBuilder.js:1112 _softScore');
+
+  // القسم السادس: أوزان الكسور (BREAK_WEIGHTS — عدا الحارسَين الصلبَين وأوزان govt/dayBalance ذات الخلايا)
+  const G6 = 'أوزان الكسور';
+  addWeight('BROKEN_MATH_LAST',             'وزن كسر: الرياضيات في الأخيرة',      G6, 1000, {min:0,max:100000}, 'int', 'algo_RepairEngine.js:540 wOf / algo_ScheduleBuilder.js:1671');
+  addWeight('BROKEN_LAB',                   'وزن كسر: تجاوز سعة المختبر',         G6, 800,  {min:0,max:100000}, 'int', 'algo_RepairEngine.js:540 wOf');
+  addWeight('SUPERVISOR_DEFICIT',           'وزن كسر: عجز تغطية المشرف',          G6, 500,  {min:0,max:100000}, 'int', 'algo_RepairEngine.js:540 wOf / main_Main.js:1055');
+  // 1000 (لا 500): قيمة الورقة الحيّة التي ضبطها المالك؛ البذرة والثابت تبعاها معًا.
+  addWeight('BROKEN_ADMIN_LAST',            'وزن كسر: الإداريّ في الأخيرة',       G6, 1000, {min:0,max:100000}, 'int', 'algo_RepairEngine.js:540 wOf');
+  addWeight('BROKEN_SUP_LAST_OVER',         'وزن كسر: مشرف الجناح يتجاوز سقفه',   G6, 400,  {min:0,max:100000}, 'int', 'algo_RepairEngine.js:540 wOf');
+  addWeight('BROKEN_NON_PRIORITY_2ND_LAST', 'وزن كسر: سابعة ثانية لغير الأولويّة', G6, 200, {min:0,max:100000}, 'int', 'algo_RepairEngine.js:540 wOf');
+  addWeight('BROKEN_DEPT_HEAD_NOT_FIRST',   'وزن كسر: رئيس قسمٍ بلا حصّة أولى',   G6, 150,  {min:0,max:100000}, 'int', 'algo_RepairEngine.js:540 wOf');
+  addWeight('BROKEN_DAILY_CAP',             'وزن كسر: تجاوز السقف اليوميّ للمادّة', G6, 100, {min:0,max:100000}, 'int', 'algo_RepairEngine.js:540 wOf');
+  addWeight('BROKEN_TEACHER_RULE',          'وزن كسر: قاعدة معلّم (لا أخيرة/أولى)', G6, 50, {min:0,max:100000}, 'int', 'algo_RepairEngine.js:540 wOf');
+  addWeight('BROKEN_DAILY_FLOOR',           'وزن كسر: الحدّ الأدنى للتوزيع اليوميّ', G6, 700, {min:0,max:100000}, 'int', 'algo_RepairEngine.js:540 wOf');
+  // بوّابة الحياد انتهت: المالك اعتمد 300 وكتبها في الورقة، فتبعتها البذرة والثابت
+  // معًا (BREAK_WEIGHTS.BROKEN_DEPT_RESERVE) كي لا يُبلَّغ اختلافٌ بينهما.
+  // الوزن يُحقَن من الورقة عبر getEngineWeights كما كان.
+  addWeight('BROKEN_DEPT_RESERVE',          'وزن كسر: استنزاف احتياط القسم',        G6, 300,  {min:0,max:100000}, 'int', 'algo_RepairEngine.js _localBreakPenalty + _computeChangeableBreaks/_enumerateBreakRecords (المسح الختاميّ) عبر _deptReserveDeficit');
+
+  // القسم السابع: حدود التشغيل
+  const G7 = 'حدود التشغيل';
+  addWeight('TIME_BUDGET_MS',               'ميزانيّة زمن الإصلاح (ملّي ثانية)',   G7, 300000, {min:30000,max:600000}, 'int', 'algo_RepairEngine.js:2066 _repairHillClimb');
+  addWeight('MAX_LOCAL_BACKTRACK_ATTEMPTS', 'أقصى محاولات التراجُع الموضعيّ',      G7, 50,     {min:1,max:1000},       'int', 'algo_ScheduleBuilder.js:1398 _attemptBacktrack');
+  addWeight('REPAIR_MAX_MOVES',             'أقصى تبديلات الإصلاح',                G7, 100000, {min:1,max:1000000},    'int', 'algo_RepairEngine.js _repairHillClimb');
+  addWeight('REPAIR_MAX_SIDEWAYS',          'أقصى الخطوات الجانبيّة المتتالية',    G7, 40,     {min:0,max:1000},       'int', 'algo_RepairEngine.js _repairHillClimb');
+  addWeight('REPAIR_TABU_LEN',              'طول قائمة المحظور (tabu)',           G7, 12,     {min:0,max:200},        'int', 'algo_RepairEngine.js _repairHillClimb');
+  addWeight('RESERVE_PROBE_MAX_BUSY',       'أقصى مشغولي القسم لكلّ كسر احتياط',   G7, 4,      {min:0,max:40},         'int', 'algo_RepairEngine.js _reserveProbeAnchors (مرتكزات _brokenLessonCells + _breakProbePlan)');
+  addWeight('RESERVE_PROBE_MAX_DEST',       'أقصى وجهات التبديل لكلّ مشغول',       G7, 6,      {min:0,max:60},         'int', 'algo_RepairEngine.js _reserveProbeAnchors (وجهات _repairHillClimb + _probeOneBreak)');
+  // ⚠️ ENFORCE_AS_HARD بلا مستهلك في مسار القرار (المختبر يخضع للمرونة عبر BROKEN_LAB
+  //    دائمًا)؛ فلا يُعلَن LIVE (يرمي الحارس). يُبنى PLANNED صريحًا (مخزن نيّة).
+  add({ key:'ENFORCE_AS_HARD', sheet:'CONSTRAINTS', section:'PARAMS', group:G7,
+        label:'إلزام قيد المختبر صلبًا', layout:'SINGLE', type:'bool_ar', domain:CONSTANTS.YES_NO,
+        seed:(CONSTANTS.LAB_CONSTRAINTS.ENFORCE_AS_HARD ? CONSTANTS.YES : CONSTANTS.NO),
+        status:'PLANNED', consumer:'',
+        note:'لا مستهلك في المحرّك — سعة المختبر تُنفَّذ مرنةً عبر وزن الكسر BROKEN_LAB دائمًا.' });
+
+  // ================= الحرّاس الصلبة (عرض — القيمة من الكود) =================
+  // قيمُ نفيٍ لا أوزان: وظيفتها «∞» ورقمها اعتباطيّ يخدم الفرز لا القرار. مصدر
+  // الحقيقة الكود (BREAK_WEIGHTS)؛ والورقة مرآةٌ محميّة (status:'GUARD') يفرض
+  // المدقّق تطابقها فلا يُسقَط حارسٌ صلب بتحريرٍ خاطئ للخليّة. الباني يحميها فعليًّا.
+  const GG = 'الحرّاس الصلبة (عرض — القيمة من الكود)';
+  const guardNote = 'قيمة نفيٍ لا وزن — يقرأها المحرّك من الكود. الخليّة محميّة؛ يرفض المدقّق أيّ اختلاف.';
+  add({ key:'BROKEN_DEPT_HEAD_LAST', sheet:'CONSTRAINTS', section:'PARAMS', group:GG,
+        label:'حارس: رئيس قسمٍ في الحصّة الأخيرة', layout:'SINGLE', type:'int', domain:{min:0,max:100000},
+        seed:BW.BROKEN_DEPT_HEAD_LAST, status:'GUARD',
+        consumer:'algo_RepairEngine.js:594/915/1338', note:guardNote });
+  add({ key:'BROKEN_CONSEC_HARD', sheet:'CONSTRAINTS', section:'PARAMS', group:GG,
+        label:'حارس: متتاليتان بقاعدةٍ صلبة', layout:'SINGLE', type:'int', domain:{min:0,max:100000},
+        seed:BW.BROKEN_CONSEC_HARD, status:'GUARD',
+        consumer:'algo_RepairEngine.js:293/901/1314', note:guardNote });
+  add({ key:'BROKEN_LAST_OVER_HARD', sheet:'CONSTRAINTS', section:'PARAMS', group:GG,
+        label:'حارس: تجاوز السقف الصلب للأخيرة', layout:'SINGLE', type:'int', domain:{min:0,max:100000},
+        seed:BW.BROKEN_LAST_OVER_HARD, status:'GUARD',
+        consumer:'algo_RepairEngine.js:608/933/1352', note:guardNote });
+
+  // ================= العتبات البنيويّة (الحزمة 5) — SINGLE في ورقة القيود =================
+  // أرقامٌ تحكم *متى* يُطبَّق الوزن لا *كم* يزن (مقابضُ بنيويّة). البذور = القيم
+  // الحيّة بالضبط ⟹ السلوك مطابق. الحقن عبر getEngineWeights → ctx.weights (EW).
+  const G8 = 'العتبات البنيويّة';
+  addWeight('SUPERVISOR_MIN_FREE',      'أدنى عدد مشرفين أحرار في الجناح',                  G8, 1, {min:0,max:10}, 'int', 'algo_ScheduleBuilder.js:521 _placeMeetingsPhase + :1090 _softScore');
+  addWeight('BONUS_LOW_QUOTA_MIN_LOAD', 'أدنى نصابٍ لاستحقاق مكافأة السابعة الثانية',       G8, 5, {min:0,max:40}, 'int', 'algo_ScheduleBuilder.js:1119 _softScore');
+  addWeight('HOD_SIXTH_MIN_LOAD',       'أدنى حملٍ يوميّ لتفعيل قاعدة السادسة لرئيس القسم', G8, 2, {min:0,max:8},  'int', 'algo_ScheduleBuilder.js:1172 _softScore');
+  addWeight('GAP_LARGE_THRESHOLD',      'عتبة الفجوة الكبيرة (حصص)',                        G8, 3, {min:1,max:8},  'int', 'algo_ScheduleBuilder.js:1180 _softScore + :1566 _buildAuditState_FromState');
+  addWeight('GAP_HUGE_THRESHOLD',       'عتبة الفجوة الضخمة (حصص)',                         G8, 4, {min:1,max:8},  'int', 'algo_ScheduleBuilder.js:1183 _softScore + :1567 _buildAuditState_FromState');
+  addWeight('DEPT_RESERVE_LARGE_SIZE',  'حجم القسم الكبير (عدد مرشّحي الاحتياط)',           G8, 6, {min:1,max:40}, 'int', 'algo_ScheduleBuilder.js:1195 _softScore');
+  addWeight('DEPT_RESERVE_LARGE_MIN',   'الاحتياط المطلوب للقسم الكبير',                    G8, 3, {min:0,max:20}, 'int', 'algo_ScheduleBuilder.js:1195 _softScore');
+  addWeight('DEPT_RESERVE_MID_SIZE',    'حجم القسم المتوسّط (عدد مرشّحي الاحتياط)',         G8, 3, {min:1,max:40}, 'int', 'algo_ScheduleBuilder.js:1196 _softScore');
+  addWeight('DEPT_RESERVE_MID_MIN',     'الاحتياط المطلوب للقسم المتوسّط',                  G8, 1, {min:0,max:20}, 'int', 'algo_ScheduleBuilder.js:1196 _softScore');
+  addWeight('HEAVY_DAY_MIN_LESSONS',    'أدنى حصصٍ يُعدّ بها اليوم ثقيلًا',                 G8, 3, {min:1,max:8},  'int', 'algo_ScheduleBuilder.js:1220 _softScore + :1228');
+  addWeight('HEAVY_DAY_CAP_DIVISOR',    'مقسوم سقف الثقيلين في القسم (⌈العدد ÷ س⌉)',        G8, 2, {min:1,max:10}, 'int', 'algo_ScheduleBuilder.js:1223 _softScore');
+
+  // ================= ورقة التفضيلات — أعمدة (PREF_COL) =================
+  // الورقة كلّها غير مقروءة للمحرّك بعد (لافتة صريحة تُبنى فوق الرؤوس). للجرد فقط.
+  const prefKeys = ['CIVIL_ID','TEACHER_NAME','TIMING','ANNOYING_PERIOD','DISTRIBUTION',
+                    'TOP_PRIORITY','FLEXIBILITY_COUNT','NOTES','TIMESTAMP','MANUAL_LOCK','DATA_SOURCE'];
+  for (let i = 0; i < prefKeys.length; i++) {
+    const k = prefKeys[i];
+    add({ key:'PREF_'+k, sheet:'PREFERENCES', section:'PREFS', label:PC[k].header,
+          layout:'PREF_COL', type:'text', domain:null, seed:null, status:'PLANNED',
+          consumer:'', note:'ورقة التفضيلات لا يقرؤها المحرّك بعد (الحزمة 5).' });
+  }
+
+  return F;
+}
+
+/**
+ * نقطة الحقن الوحيدة لأوزان المحرّك (الحزمة 3): تُنتج خريطة الأوزان من قيم ورقة
+ * القيود (model.constraints.params) — قيمةُ الورقة إن وُجدت، وإلّا **رميُ خطأ**
+ * (لا تراجُع صامت للثابت؛ الحارس يمنع هذه الحالة أصلًا). يقرأ منها _softScore وwOf
+ * وسائر المستهلكين حصرًا، فلا يبقى رقمٌ حرفيّ في مسار القرار.
+ *
+ * الحرّاس الصلبة الثلاثة وأوزان govt/dayBalance (لها خلايا في الإعدادات) تُدرَج من
+ * الثوابت لاكتمال خريطة wOf فقط. الحرّاس مصدرُ حقيقتها الكود، والورقة مرآةٌ محميّة
+ * يفرض المدقّق (_assertGuardsMatchCode) تطابقها. W_HOD_FIRST صار من الورقة (الحزمة 4).
+ *
+ * @param {Object} model ناتج loadScheduleData().
+ * @return {Object} خريطة مفتاح الوزن → قيمته العدديّة.
+ */
+function getEngineWeights(model) {
+  const P = (model && model.constraints && model.constraints.params) || {};
+  const req = function (key) {
+    if (!Object.prototype.hasOwnProperty.call(P, key)) {
+      throw new Error('getEngineWeights: الوزن «' + key +
+        '» غائبٌ عن ورقة القيود — الورقة أقدم من الكود. شغّل rebuildAllSheetsFromRegistry.');
+    }
+    const n = Number(P[key]);
+    if (isNaN(n)) {
+      throw new Error('getEngineWeights: الوزن «' + key + '» قيمته غير رقميّة: «' + P[key] + '».');
+    }
+    return n;
+  };
+  const BW = CONSTANTS.BREAK_WEIGHTS;
+  const w = {};
+
+  // من الورقة (الأقسام 4-7 LIVE)
+  const sheetKeys = [
+    'LAST_2ND_LIGHT_THRESHOLD', 'LAST_2ND_WEIGHT_LIGHT', 'LAST_2ND_WEIGHT_HEAVY',
+    'W_SUPERVISOR', 'W_LAST_HARD', 'W_SUP_LAST', 'W_ADMIN_LAST', 'W_LAST_ALLOWED',
+    'W_FIRST', 'W_HOD_FIRST', 'W_LAST_DESIRED', 'W_SPREAD', 'W_TRIPLE_FULL', 'W_TRIPLE_LIGHT',
+    'W_TRIPLE_REPEAT', 'W_HOD_SIXTH_LOAD', 'W_TAIL_SUBJECT',
+    'W_GAP_EACH', 'W_GAP_LARGE', 'W_GAP_HUGE',
+    'W_DEPT_RESERVE', 'W_DEPT_HEAVY_BALANCE', 'BONUS_LOW_QUOTA_2ND_LAST', 'BONUS_LOW_QUOTA_THRESHOLD',
+    'W_FIRST_LAST_SAME_DAY', 'W_SEVENTH_PRIORITY_FIRST',
+    'W_ADJACENT_PAIR', 'W_PREFER_CONSEC_GAP',
+    'W_ADJACENT_PAIR_RECESS', 'W_ADJACENT_PAIR_MEETING',
+    'BROKEN_MATH_LAST', 'BROKEN_LAB', 'SUPERVISOR_DEFICIT', 'BROKEN_ADMIN_LAST',
+    'BROKEN_SUP_LAST_OVER', 'BROKEN_NON_PRIORITY_2ND_LAST', 'BROKEN_DEPT_HEAD_NOT_FIRST',
+    'BROKEN_DAILY_CAP', 'BROKEN_TEACHER_RULE', 'BROKEN_DAILY_FLOOR', 'BROKEN_DEPT_RESERVE',
+    'TIME_BUDGET_MS', 'MAX_LOCAL_BACKTRACK_ATTEMPTS',
+    'REPAIR_MAX_MOVES', 'REPAIR_MAX_SIDEWAYS', 'REPAIR_TABU_LEN',
+    'RESERVE_PROBE_MAX_BUSY', 'RESERVE_PROBE_MAX_DEST',
+    // العتبات البنيويّة (الحزمة 5) — عتبات «متى» لا أوزان «كم»
+    'SUPERVISOR_MIN_FREE', 'BONUS_LOW_QUOTA_MIN_LOAD', 'HOD_SIXTH_MIN_LOAD',
+    'GAP_LARGE_THRESHOLD', 'GAP_HUGE_THRESHOLD',
+    'DEPT_RESERVE_LARGE_SIZE', 'DEPT_RESERVE_LARGE_MIN', 'DEPT_RESERVE_MID_SIZE', 'DEPT_RESERVE_MID_MIN',
+    'HEAVY_DAY_MIN_LESSONS', 'HEAVY_DAY_CAP_DIVISOR',
+  ];
+  for (let i = 0; i < sheetKeys.length; i++) w[sheetKeys[i]] = req(sheetKeys[i]);
+
+  // W_LAST_SAME_CLASS يُقرأ شرطيًّا: فقط حين «تفضيل صفّين مختلفين للأخيرتين» = «نعم»
+  // (البناء المطفَأ الأثر — ما دام الزرّ «لا» فلا يُقرأ صفُّه أصلًا). req يرمي على الفراغ حين يُشغَّل.
+  const _preferDiffLast = String(P.LAST_PREFER_DIFFERENT != null ? P.LAST_PREFER_DIFFERENT : '')
+    .trim() === CONSTANTS.YES;
+  w.W_LAST_SAME_CLASS = _preferDiffLast ? req('W_LAST_SAME_CLASS') : 0;
+
+  // حرّاس: مصدر الحقيقة الكود، والورقة مرآةٌ محميّة يفرض المدقّق تطابقها.
+  w.BROKEN_DEPT_HEAD_LAST     = BW.BROKEN_DEPT_HEAD_LAST;
+  w.BROKEN_CONSEC_HARD        = BW.BROKEN_CONSEC_HARD;
+  w.BROKEN_LAST_OVER_HARD     = BW.BROKEN_LAST_OVER_HARD;
+
+  // govt/dayBalance (الحزمة 6/أ): تُشتقّ من نفس مصدر المستهلك الحقيقيّ
+  // (model.settings عبر getGovtDaySettings/getDayBalanceSettings) لا من ثابتٍ
+  // مُرمَّز — فلا نسخةٌ ثانية كاذبة في الخريطة. القيمة للعرض في تفكيك الكسور فقط
+  // (العقوبة الفعليّة من ctx.govtLightDay/ctx.dayBalance مباشرةً).
+  const gd  = (model && model.settings && model.settings.govtDay)    || {};
+  const dbs = (model && model.settings && model.settings.dayBalance) || {};
+  w.BROKEN_GOVT_LIGHTDAY_HARD = gd.wHard;
+  w.BROKEN_GOVT_LIGHTDAY_SOFT = gd.wSoft;
+  w.BROKEN_DAY_BALANCE_HARD   = dbs.wHard;
+  w.BROKEN_DAY_BALANCE_SOFT   = dbs.wSoft;
+
+  // «الأخيرتان في صفٍّ واحد» (نظير ما سبق): اسم الكسر يُشتقّ من نفس مصدر المستهلك
+  // (W_LAST_SAME_CLASS أعلاه) لا من رقمٍ ثانٍ — للعرض في تفكيك الكسور فقط
+  // (العقوبة الفعليّة من _lastSameClassPenalty مباشرةً). مطفأ ⟹ 0 كالوزن نفسه.
+  w.BROKEN_LAST_SAME_CLASS_SOFT = w.W_LAST_SAME_CLASS;
+  // شكل يوم المعلّم (الجلسة 59): اسما الكسرين مشتقّان من وزنَيهما — للعرض في تفكيك
+  // الكسور فقط، لا رقمَ ثانٍ يُصان.
+  // ⚠️ بعد تدرُّج السعر (الجلسة 61) صار هذا **سقفَ** الزوج لا سعرَه الفعليّ: الزوج
+  // الذي تتخلّله فرصة أو أحد طرفيه اجتماع أرخص. المساهمة الحقيقيّة تقرؤها التقارير
+  // من `_computeChangeableBreaks().shapePairs.penalty` لا من العدد × هذا الرقم.
+  w.BROKEN_ADJACENT_PAIR = w.W_ADJACENT_PAIR;
+  w.BROKEN_SINGLE_GAP    = w.W_PREFER_CONSEC_GAP;
+
+  // «أولى وأخيرة في يومٍ واحد» (الجلسة 57): اسم الكسر يُشتقّ من الوزن نفسه — للعرض
+  // في تفكيك الكسور فقط (العقوبة الفعليّة من _firstLastSameDayPenalty). 0 ⟹ مطفأ.
+  w.BROKEN_FIRST_LAST_SAME_DAY = w.W_FIRST_LAST_SAME_DAY;
+
+  return w;
+}
+
+/**
+ * بذور جدول أقسام القيود (16 صفًّا). الأسماء من getAllDepartmentNames (نفس مصدر
+ * القارئ فيتطابق المسح)، والعلَمان من الورقة الحيّة = الثوابت (لا انحراف):
+ * «ممنوع» = نعم للرياضيات وحدها؛ «أولويّة» = نعم للأقسام الستّة.
+ * @return {{name:string, banned:string, priority:string}[]}
+ */
+function getConstraintDeptSeeds() {
+  const names = getAllDepartmentNames();
+  const banned = CONSTANTS.LAST_PERIOD_RULES.BANNED_DEPARTMENTS;
+  const priority = CONSTANTS.LAST_PERIOD_RULES.PRIORITY_DEPARTMENTS_FOR_SECOND;
+  const out = [];
+  for (let i = 0; i < names.length; i++) {
+    out.push({
+      name:     names[i],
+      banned:   banned.indexOf(names[i]) >= 0 ? CONSTANTS.YES : CONSTANTS.NO,
+      priority: priority.indexOf(names[i]) >= 0 ? CONSTANTS.YES : CONSTANTS.NO,
+    });
+  }
+  return out;
+}
+
+/**
+ * بذور جدول المختبرات (7 صفوف: الفيزياء/الكيمياء/الجيولوجيا/الحاسوب/التربية
+ * البدنية/التربية الموسيقية/التربية الفنية — الثلاث الأخيرة قاعات لا مختبرات،
+ * والقيد واحد: سعة متزامنة). الأسماء
+ * والسعات من _readLabSeedRows (نفس مصدر
+ * الباني الأصليّ، أسماء SUBJECTS فتتطابق مع keyBySubjectName في المحرّك).
+ * @return {{name:string, capacity:number}[]}
+ */
+function getConstraintLabSeeds() {
+  const rows = _readLabSeedRows();
+  const out = [];
+  for (let i = 0; i < rows.length; i++) {
+    out.push({ name: rows[i].name, capacity: rows[i].capacity });
+  }
+  return out;
+}
+
+/**
+ * بذور جدول القواعد الفرديّة (24 صفًّا) — قتلًا لخطر المحو: كانت تُبنى فارغة فيمحوها
+ * rebuildConstraints. القيم من الورقة الحيّة. الأعمدة بترتيب A..I:
+ * targetType · target · ruleType · pattern · value · enforcement · weight · enabled · note.
+ *
+ * ⚠️ عمود «الوزن» (G) لصفوف المعلّمين السبعة يُبذَر فارغًا لا 0.5 — احترامًا لواجهة
+ * الصدق التي يفرضها الباني (تحقّق «الوزن يجب أن يكون فارغًا لعدد الحصص الأخيرة»،
+ * sheets_SheetBuilder:2577)؛ والقيمة محايدة سلوكيًّا (لا يقرؤها المحرّك للسقف
+ * الفرديّ — يُنفَّذ من العمود «القيمة» E وحده). ART/الحاسوب يحتفظان بوزنهما (0.5/100).
+ *
+ * @return {Object[]}
+ */
+function getRuleSeeds() {
+  const RTV = CONSTANTS.CONSTRAINTS_SHEET.RULE_TYPES_VOCAB;
+  const PAT = CONSTANTS.CONSTRAINTS_SHEET.PATTERN_VOCAB;
+  const ENF = CONSTANTS.CONSTRAINTS_SHEET.ENFORCEMENT_LEVELS;
+  const TT  = CONSTANTS.CONSTRAINTS_SHEET.TARGET_TYPE_VOCAB;
+  const YES = CONSTANTS.YES;
+  const S = CONSTANTS.SUBJECTS;
+
+  const RT_DAILY   = RTV[0];   // 'توزيع المادّة في اليوم'
+  const RT_LASTCAP = RTV[5];   // 'عدد الحصص الأخيرة'
+  const RT_DEPT_MEET = RTV[6]; // 'عدد حصص اجتماع القسم'
+  const CONSEC     = PAT[0];   // 'متتاليتان'
+  const HARD       = ENF[0];   // 'صلب'
+  const SOFT       = ENF[1];   // 'مرن موزون'
+  const SUBJ       = TT[1];    // 'مادّة'
+  const TEACHER    = TT[0];    // 'معلّم'
+
+  const seeds = [
+    // كلتاهما «صلب» في الورقة الحيّة، والصلب لا يقرأ عمود الوزن (الوزن ميكانيزميّ
+    // من BREAK_WEIGHTS.BROKEN_CONSEC_HARD) — فالوزنان هنا مرآةٌ للخليّة لا سلوك.
+    // ⚠️ القيمة 2 (الجلسة 58): كتبها المالك في الورقة إسكاتًا لخطأ فحص التعارضات
+    // («القيمة يجب أن تكون عددًا صحيحًا»). لا أثر لها في المحرّك — خريطة السقف
+    // اليوميّ ترفع كلّ مادّة نمطُها «متتاليتان» إلى max(المشتقّ، 2) أصلًا
+    // (algo_RepairEngine.js:221) — والبذرة تتبع الورقة لا الأثر.
+    { targetType:SUBJ, target:S.ART.name,      ruleType:RT_DAILY,   pattern:CONSEC, value:2, enforcement:HARD, weight:500, enabled:YES, note:'' },
+    { targetType:SUBJ, target:S.COMPUTER.name, ruleType:RT_DAILY,   pattern:CONSEC, value:2, enforcement:HARD, weight:100, enabled:YES, note:'' },
+  ];
+  // ⚠️ enabled = 'لا' (لا 'نعم'): السبعة خامدةٌ في الورقة الحيّة. إيقاظها يرفع سقف
+  // حصصهم الأخيرة إلى 3 عبر lastCapByTeacher فيتغيّر الجدول — فالبذرة تتبع الورقة.
+  const teacherNames = ['المقداد الزنكى','عباس الصفار','احمد احمد','محمد عاشور',
+                        'حيدر الهزيم'];
+  for (let i = 0; i < teacherNames.length; i++) {
+    seeds.push({ targetType:TEACHER, target:teacherNames[i], ruleType:RT_LASTCAP,
+      pattern:'', value:3, enforcement:SOFT, weight:'', enabled:CONSTANTS.NO, note:'' });
+  }
+
+  // ───────── الجلسة 62: مواءمة البذور للورقة الحيّة (فحص «⚖ مقارنة القيود») ─────────
+  // كان في السبعة أعلاه «عماد رضوان» و«السعيد يوسف» ببذرة (3، مرن موزون، لا)،
+  // وقد بدّلهما المالك في الورقة إلى سقفٍ **فعّال = 1**؛ فنُقلا إلى المجموعة
+  // الحيّة أدناه لتتبع البذرةُ الورقةَ كما هي السياسة. وشهادةُ ذلك مستقلّة عن
+  // الشاشة: سجلّ «فحص الجدوى» ١١ سبتمبر عدّ أصحاب السقف الفرديّ = 1 فذكرهما
+  // ومعهما فاضل خورشيد وجمال حرش (ومجدى مدكور المبذور سلفًا).
+  //
+  // الشكل مطابقٌ لبذرة «مجدى مدكور» (الجلسة 58): العمودان F وG لا يُقرآن لهذا
+  // النوع وهما فارغان في الورقة، فلا يُخترَع لهما شيء.
+  const activeLastCap1 = ['عماد رضوان','السعيد يوسف','فاضل خورشيد','جمال حرش'];
+  for (let i = 0; i < activeLastCap1.length; i++) {
+    seeds.push({ targetType:TEACHER, target:activeLastCap1[i], ruleType:RT_LASTCAP,
+      pattern:'', value:1, enforcement:'', weight:'', enabled:YES, note:'' });
+  }
+
+  // قيدا الجلسة 59 الشخصيّان لحيدر الهزيم — أضافهما المالك في الورقة بلا بذور.
+  // كلاهما ثنائيٌّ بلا قيمة، ومستوى إلزامهما «مرن موزون» في الورقة الحيّة.
+  // (قُرئا من مخرَج «⚖ مقارنة القيود بالسجلّ» ١٢ سبتمبر لا من تخمين: أوّل بذرةٍ
+  //  كتبتُها لهما حملت قيمة 1 ومستوًى فارغًا فأبانها الفحص، فصُحّحت.)
+  seeds.push({ targetType:TEACHER, target:'حيدر الهزيم', ruleType:RTV[11],
+    pattern:'', value:'', enforcement:SOFT, weight:'', enabled:YES, note:'' });
+  seeds.push({ targetType:TEACHER, target:'حيدر الهزيم', ruleType:RTV[12],
+    pattern:'', value:'', enforcement:SOFT, weight:'', enabled:YES, note:'' });
+
+  // إعفاء عبدالكريم الصفار من يوم المراجعات (الجلسة 59) — وله صفٌّ ثانٍ «لا
+  // حصّة أولى» مبذورٌ في ذيل الدالّة، فالمعلّم الواحد بقاعدتَين لا تعارض بينهما.
+  seeds.push({ targetType:TEACHER, target:'عبدالكريم الصفار', ruleType:RTV[12],
+    pattern:'', value:'', enforcement:SOFT, weight:'', enabled:YES, note:'' });
+
+  // «لا حصّة أولى» لفهد الوثيقي — **صلب** في الورقة. ⚠️ والمحرّك لا يقرأ عمود
+  // الإلزام لهذا النوع: يُنفَّذ بكسر BROKEN_TEACHER_RULE ووزنُه حقلٌ عامّ في
+  // القسم الأوّل. فالبذرة مرآةُ الخليّة، والتنبيه للمالك لا للمحرّك (نظير صفّ
+  // عبدالكريم الصفار أدناه).
+  seeds.push({ targetType:TEACHER, target:'فهد الوثيقي', ruleType:RTV[4],
+    pattern:'', value:'', enforcement:HARD, weight:'', enabled:YES, note:'' });
+
+  // صفوف الورقة الحيّة التي لم تكن في البذور (مطابقةٌ لها حرفًا بحرف حتّى تصير
+  // rebuildAllSheetsFromRegistry غير هادمة: تُعيد بناء ما هو قائم لا تحذفه).
+  //
+  // ثلاثة معطَّلة (enabled = 'لا'): موجودةٌ في الورقة ولا يقرؤها المحرّك
+  //   (readConstraints يُسقط المعطَّل)، فوجودها توثيقٌ لقرارٍ سابق لا سلوكٌ حيّ.
+  //   «ابو الفرج» بلا مستوى إلزام كما هي في الورقة — لا يُخترَع لها مستوى.
+  //
+  // ⚠️ «ابو» بألفٍ بلا همزة عمدًا: العمود B قائمةٌ منسدلة من أسماء ورقة المعلمين
+  //   (الاسم الكامل «ابو القاسم عبدالله خضير الفرج»)، والهمزة تُخرج القيمة عن
+  //   القائمة فتصير الخليّة غير صالحة ولا يطابقها القارئ.
+  const disabledLastCap = [
+    { target:'فيصل البلوشي', enforcement:SOFT },
+    { target:'حسين البناي',  enforcement:SOFT },
+    { target:'ابو الفرج',    enforcement:'' },
+  ];
+  for (let i = 0; i < disabledLastCap.length; i++) {
+    seeds.push({ targetType:TEACHER, target:disabledLastCap[i].target, ruleType:RT_LASTCAP,
+      pattern:'', value:2, enforcement:disabledLastCap[i].enforcement, weight:'',
+      enabled:CONSTANTS.NO, note:'' });
+  }
+
+  // صفّان بهدف «مادّة» ونوع «عدد الحصص الأخيرة» (توسيع السقف لكلّ معلّمي المادّة
+  // على حدة). الاسم من CONSTANTS.SUBJECTS لا نصًّا حرفيًّا — نظير صفَّي الفنية
+  // والحاسوب أعلاه، فتغيّر الاسم لا يكسر المطابقة.
+  const hardSubjectLastCap = [S.PHYSICS.name, S.CHEMISTRY.name];
+  for (let i = 0; i < hardSubjectLastCap.length; i++) {
+    seeds.push({ targetType:SUBJ, target:hardSubjectLastCap[i], ruleType:RT_LASTCAP,
+      pattern:'', value:1, enforcement:HARD, weight:'', enabled:YES, note:'' });
+  }
+
+  // اجتماعا قسم الرياضيات أسبوعيًّا (طلب القسم عبر الإدارة) — الافتراض للأقسام
+  // الأخرى اجتماعٌ واحد بلا صفّ. الهدف اسم المادّة «الرياضيات» ويُحلّ إلى قسمها
+  // عبر deptNameForRuleTarget. الوزن فارغ: العمود G لا يُقرأ لهذا النوع وتمنعه
+  // الـvalidation. ⚠️ هذه البذرة **تغيّر السلوك** عند إعادة البناء (بخلاف بقيّة
+  // البذور المرآتيّة): لتعطيلها اجعل «مفعَّل» = «لا» في الورقة أو احذف الصفّ.
+  seeds.push({ targetType:SUBJ, target:S.MATH.name, ruleType:RT_DEPT_MEET,
+    pattern:'', value:2, enforcement:HARD, weight:'', enabled:YES, note:'اجتماعان أسبوعيًّا' });
+
+  // ───────── قواعد الحضور (الجلسة 53) ─────────
+  // معلّمٌ بمهامّ خارجيّة: نصابه 6 على صفَّين، مفرَّغٌ يومين، وحصصه الأولى
+  // والثانية. الصفوف الثلاثة **تغيّر السلوك** عند إعادة البناء (كبذرة اجتماعَي
+  // الرياضيات) — وهي مقصودةٌ فعّالة.
+  //
+  // 🔁 تبديل المعلّم: العمود B منسدلةٌ من أسماء ورقة المعلمين، فغيّره في الورقة
+  //    مباشرةً للسنة القادمة. ⚠️ وغيّر الاسم هنا أيضًا، وإلّا أعادته
+  //    rebuildAllSheetsFromRegistry إلى BLOCKED_TEACHER أدناه (البذرة مرآةُ الورقة
+  //    الحيّة). الاسم هنا هو الموضع **الوحيد** في المشروع كلّه الذي يذكر معلّمًا
+  //    بعينه لهذه القواعد؛ المحرّك عامّ لا يعرف اسمًا ولا عددًا.
+  //    والاسم الذي لا يطابق اسمًا قصيرًا **يوقف التوليد** ببوّابة الجدوى
+  //    (TEACHER_BLOCK_UNRESOLVED) — لا يسقط صامتًا.
+  //
+  // ⚠️ الصفّ الثالث (إعفاء الاجتماع) ليس زينة: نافذته ستّ خانات ونصابه ستّ
+  //    حصص، فخانة الاجتماع السابعة لا موضع لها. حذفه يُنتج CRITICAL_UNPLACED.
+  const RT_FREE_DAYS  = RTV[8];    // 'أيام التفرّغ'
+  const RT_PERIODS    = RTV[9];    // 'الحصص المسموحة'
+  const RT_MEETING_EX = RTV[10];   // 'إعفاء من اجتماع القسم'
+  // الاسم القصير كما هو في منسدلة العمود B (لا الاسم الأوّل وحده) — الاسم الذي
+  // لا يطابق اسمًا قصيرًا يوقف التوليد ببوّابة TEACHER_BLOCK_UNRESOLVED.
+  const BLOCKED_TEACHER = 'مأمون الخطيب';
+  const attendanceSeeds = [
+    { ruleType:RT_FREE_DAYS,  value:'الإثنين، الأربعاء', note:'مهامّ خارجيّة — مفرَّغ يومين' },
+    // ⚠️ «1، 2» بفاصلة لا «1-2» بشرطة: الشرطة تُغري Sheets بقراءة الخليّة
+    //    تاريخًا (حسب لغة الجدول) فتصل المحرّكَ كائنَ Date لا نصًّا وتسقط
+    //    القاعدة. الفاصلة لا تحتمل هذا التأويل. المحلّل يقبل الشكلين.
+    { ruleType:RT_PERIODS,    value:'1، 2',              note:'الأولى والثانية فقط في أيّامه الحاضرة' },
+    { ruleType:RT_MEETING_EX, value:'',                  note:'نافذته لا تتّسع لخانة الاجتماع' },
+  ];
+  for (let i = 0; i < attendanceSeeds.length; i++) {
+    const a = attendanceSeeds[i];
+    seeds.push({ targetType:TEACHER, target:BLOCKED_TEACHER, ruleType:a.ruleType,
+      pattern:'', value:a.value, enforcement:'', weight:'', enabled:YES, note:a.note });
+  }
+
+  // ───────── الصفوف الستّة الأخيرة في الورقة الحيّة (الجلسة 57) ─────────
+  // مرآةٌ لنموذج ٥ سبتمبر: كانت في الورقة بلا بذور، فكانت إعادة البناء ستمحوها
+  // (التي كانت تلزم أصلًا لإسراء صفّ البدنية والحقل الجديد). ترتيبها ترتيبُ الورقة.
+  // (1) سقف السابعات = 1 لمعلّمي ثلاث موادّ أخرى (صلب) — نظير الفيزياء/الكيمياء.
+  const hardSubjectLastCap2 = [S.BIOLOGY.name, S.GEOLOGY.name, S.ENVIRONMENTAL_EDUCATION.name];
+  for (let i = 0; i < hardSubjectLastCap2.length; i++) {
+    seeds.push({ targetType:SUBJ, target:hardSubjectLastCap2[i], ruleType:RT_LASTCAP,
+      pattern:'', value:1, enforcement:HARD, weight:'', enabled:YES, note:'' });
+  }
+  // (2) يوم اجتماع القسم (صلب، الوزن 300 كما في الورقة): الرياضيات الإثنين،
+  //     الفيزياء والكيمياء الثلاثاء. الهدف اسم المادّة ويُحلّ إلى قسمه في القارئ.
+  const RT_MEETING_DAY = RTV[7];   // 'يوم اجتماع القسم'
+  const WEEK = CONSTANTS.WEEK_DAYS;
+  const meetingDaySeeds = [
+    { target:S.MATH.name,      day:WEEK[1] },   // الإثنين
+    { target:S.PHYSICS.name,   day:WEEK[2] },   // الثلاثاء
+    { target:S.CHEMISTRY.name, day:WEEK[2] },   // الثلاثاء
+  ];
+  for (let i = 0; i < meetingDaySeeds.length; i++) {
+    seeds.push({ targetType:SUBJ, target:meetingDaySeeds[i].target, ruleType:RT_MEETING_DAY,
+      pattern:'', value:meetingDaySeeds[i].day, enforcement:HARD, weight:300, enabled:YES, note:'' });
+  }
+
+  // ───────── الصفوف الثلاثة التي أضافها المالك (الجلسة 58، ٩–١٠ سبتمبر) ─────────
+  // مقروءةٌ من الورقة الحيّة حرفًا بحرف (قُرئت من المصنّف لا من الذاكرة)، فتبقى
+  // rebuildConstraints غير هادمة. ترتيبها ترتيبُ الورقة (26، 27، 28).
+  //
+  // (1) الموسيقية كتلةٌ مزدوجة كالفنية — صلب، والوزن 300 مرآةُ الخليّة لا سلوك
+  //     (الصلب لا يقرأ عمود الوزن؛ الوزن ميكانيزميّ من BROKEN_CONSEC_HARD).
+  seeds.push({ targetType:SUBJ, target:S.MUSIC.name, ruleType:RT_DAILY,
+    pattern:CONSEC, value:2, enforcement:HARD, weight:300, enabled:YES, note:'' });
+  // (2) سقف سابعاتٍ فرديّ لمعلّم بعينه = 1. العمودان F و G لا يُقرآن لهذا النوع،
+  //     وهما فارغان في الورقة — فلا يُخترَع لهما شيء.
+  seeds.push({ targetType:TEACHER, target:'مجدى مدكور', ruleType:RT_LASTCAP,
+    pattern:'', value:1, enforcement:'', weight:'', enabled:YES, note:'' });
+  // (3) «لا حصّة أولى» لمعلّم. ⚠️ الوزن 300 في الخليّة **لا يقرؤه المحرّك**: هذا
+  //     النوع يُنفَّذ بكسر BROKEN_TEACHER_RULE ووزنُه حقلٌ عامّ في القسم الأوّل
+  //     («وزن كسر: قاعدة معلّم (لا أخيرة/أولى)» = 50 في الورقة الحيّة). البذرة
+  //     مرآةُ الخليّة كما هي، والتنبيه للمالك لا للمحرّك.
+  seeds.push({ targetType:TEACHER, target:'عبدالكريم الصفار', ruleType:RTV[4],
+    pattern:'', value:'', enforcement:SOFT, weight:300, enabled:YES, note:'' });
+
+  return seeds;
+}
+
+/**
+ * خريطة المفتاح → قيمة الثابت المقابلة (للعرض في تقرير الاختلافات).
+ * تُقارَن ببذور السجلّ في rebuildAllSheetsFromRegistry فيُبلَّغ عن كلّ اختلاف.
+ * @return {Object}
+ */
+function getRegistryConstantRefs() {
+  const D  = CONSTANTS.DEFAULTS.IN_PERSON;
+  const R  = CONSTANTS.DEFAULTS.REPORT;
+  const FP = CONSTANTS.FIRST_PERIOD_RULES;
+  const AD = CONSTANTS.ADMIN_TEACHER_CONSTRAINTS;
+  const FL = CONSTANTS.FLEXIBILITY_REWARD_RULES;
+  const SB = CONSTANTS.SCHEDULE_BUILDER;
+  const BW = CONSTANTS.BREAK_WEIGHTS;
+  const LAB = CONSTANTS.LAB_CONSTRAINTS;
+  const yn = function (b) { return b ? CONSTANTS.YES : CONSTANTS.NO; };
+  return {
+    // الإعدادات
+    PERIODS_PER_DAY: D.PERIODS_PER_DAY, DAYS_PER_WEEK: D.DAYS_PER_WEEK,
+    FIRST_BREAK_AFTER: D.FIRST_BREAK_AFTER,
+    PERIOD_DURATION: D.PERIOD_DURATION,
+    MEETING_DEPT_HEADS_ENABLED: D.MEETING_DEPT_HEADS_ENABLED,
+    MEETING_DEPT_HEADS_DAY: D.MEETING_DEPT_HEADS_DAY,
+    MEETING_DEPT_HEADS_PERIOD: D.MEETING_DEPT_HEADS_PERIOD,
+    MEETING_DEPT_ENABLED: D.MEETING_DEPT_ENABLED, MEETING_DEPT_BLOCKED: D.MEETING_DEPT_BLOCKED,
+    MEETING_GAP_WEIGHT: D.MEETING_GAP_WEIGHT,
+    GOVT_DAY_ENABLED: D.GOVT_DAY_ENABLED, GOVT_DAY_OPTIMAL_END: D.GOVT_DAY_OPTIMAL_END,
+    GOVT_DAY_MAX_END: D.GOVT_DAY_MAX_END, GOVT_DAY_W_HARD: D.GOVT_DAY_W_HARD, GOVT_DAY_W_SOFT: D.GOVT_DAY_W_SOFT,
+    DAY_BALANCE_ENABLED: D.DAY_BALANCE_ENABLED, DAY_BALANCE_W_HARD: D.DAY_BALANCE_W_HARD,
+    DAY_BALANCE_W_SOFT: D.DAY_BALANCE_W_SOFT, DAY_BALANCE_W_BUILDER: D.DAY_BALANCE_W_BUILDER,
+    REPORT_RED_ALERT: R.RED_ALERT, REPORT_MIN_SATISFACTION: R.MIN_SATISFACTION,
+    REPORT_IDEAL_SATISFACTION: R.IDEAL_SATISFACTION,
+    // بارامترات القيود
+    FIRST_MAX_PERCENTAGE: FP.MAX_PERCENTAGE_OF_WORKLOAD,
+    FIRST_ROUNDING_METHOD: _roundingArabic(FP.ROUNDING_METHOD),
+    FIRST_EXEMPT_CONSTRAINED: yn(FP.EXEMPT_TEACHERS_WITH_CONSTRAINTS),
+    W_HOD_FIRST: SB.W_HOD_FIRST,
+    ADMIN_AVOID_LAST: yn(AD.AVOID_LAST_PERIOD),
+    ADMIN_BREAK_IF_IMPOSSIBLE: yn(AD.BREAK_ONLY_IF_WORKLOAD_IMPOSSIBLE),
+    FLEX_PRIORITY_BUDGET: FL.PRIORITY_BUDGET,
+    // أوزان المحرّك (الحزمة 3) — ذات الثابت المُسمَّى فقط (للمقارنة). الثمانية inline
+    // في _softScore بلا ثابت مُسمَّى فتُتحقَّق في المحكّ لا هنا.
+    W_TRIPLE_FULL: SB.W_TRIPLE_FULL, W_TRIPLE_LIGHT: SB.W_TRIPLE_LIGHT, W_TRIPLE_REPEAT: SB.W_TRIPLE_REPEAT,
+    W_HOD_SIXTH_LOAD: SB.W_HOD_SIXTH_LOAD, W_TAIL_SUBJECT: SB.W_TAIL_SUBJECT,
+    W_GAP_EACH: SB.W_GAP_EACH, W_GAP_LARGE: SB.W_GAP_LARGE, W_GAP_HUGE: SB.W_GAP_HUGE,
+    W_DEPT_RESERVE: SB.W_DEPT_RESERVE, W_DEPT_HEAVY_BALANCE: SB.W_DEPT_HEAVY_BALANCE,
+    BONUS_LOW_QUOTA_2ND_LAST: SB.BONUS_LOW_QUOTA_2ND_LAST,
+    MAX_LOCAL_BACKTRACK_ATTEMPTS: SB.MAX_LOCAL_BACKTRACK_ATTEMPTS,
+    BROKEN_MATH_LAST: BW.BROKEN_MATH_LAST, BROKEN_LAB: BW.BROKEN_LAB,
+    SUPERVISOR_DEFICIT: BW.SUPERVISOR_DEFICIT, BROKEN_ADMIN_LAST: BW.BROKEN_ADMIN_LAST,
+    BROKEN_SUP_LAST_OVER: BW.BROKEN_SUP_LAST_OVER, BROKEN_NON_PRIORITY_2ND_LAST: BW.BROKEN_NON_PRIORITY_2ND_LAST,
+    BROKEN_DEPT_HEAD_NOT_FIRST: BW.BROKEN_DEPT_HEAD_NOT_FIRST, BROKEN_DAILY_CAP: BW.BROKEN_DAILY_CAP,
+    BROKEN_TEACHER_RULE: BW.BROKEN_TEACHER_RULE, BROKEN_DAILY_FLOOR: BW.BROKEN_DAILY_FLOOR,
+    BROKEN_DEPT_RESERVE: BW.BROKEN_DEPT_RESERVE,
+    ENFORCE_AS_HARD: yn(LAB.ENFORCE_AS_HARD),
+    // الحرّاس الصلبة (الحزمة 4) — مصدر الحقيقة الكود؛ يقارنها المدقّق بخلايا الورقة.
+    BROKEN_DEPT_HEAD_LAST: BW.BROKEN_DEPT_HEAD_LAST,
+    BROKEN_CONSEC_HARD: BW.BROKEN_CONSEC_HARD,
+    BROKEN_LAST_OVER_HARD: BW.BROKEN_LAST_OVER_HARD,
+  };
+}
+
+/**
+ * قاعدة صلبة: كلّ حقل LIVE (أو GUARD) يجب أن يحمل مستهلكًا مُثبَتًا. يرمي استثناءً
+ * يوقف البناء إن وُجد حقلٌ حيٌّ أو حارسٌ بلا consumer.
+ */
+function _assertRegistryValid() {
+  const reg = getFieldRegistry();
+  const bad = [];
+  for (let i = 0; i < reg.length; i++) {
+    const f = reg[i];
+    if ((f.status === 'LIVE' || f.status === 'GUARD') &&
+        (!f.consumer || String(f.consumer).trim() === '')) {
+      bad.push(f.key);
+    }
+  }
+  if (bad.length > 0) {
+    throw new Error('config_FieldRegistry: حقول أُعلِنت LIVE بلا مستهلك مُثبَت: ' + bad.join('، '));
+  }
+}

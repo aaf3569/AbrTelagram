@@ -1,0 +1,1286 @@
+/* غياب اليوم — styles for the sheet mounted by /admins/newabsence.js.
+
+   This used to be the <style> block of admins/newabsence.html. It now lives
+   inside that sheet's shadow root, which keeps every class and id below from
+   colliding with adminpage.html's own (both pages use .state, .panel,
+   .modal, #stateLoading, ...). Two things changed to make that work:
+   :root became :host (a shadow tree has no document root), and the old
+   body{} rule became :host too. Rules below that target the shared
+   attendance modals (#attConfirmModal, ...) no longer reach them — those
+   live in the real page, which styles them itself. */
+    :host{
+      --primary:#033C54;
+      --primary-2:#065372;
+
+      --page:#f6f8fb;
+      --text:#0f172a;
+      --muted:#6b7f9f;
+
+      --border:#e6edf7;
+      --shadow-1:0 8px 22px rgba(3,60,84,.10);
+      --shadow-2:0 18px 44px rgba(2,6,23,.14);
+
+      --radius:14px;
+      --radius-lg:18px;
+      --focus:#79b3c8;
+
+      --green:#10b981;
+      --yellow:#f59e0b;
+      --red:#ef4444;
+
+      --greenBg: rgba(16,185,129,.10);
+      --yellowBg: rgba(245,158,11,.10);
+      --redBg: rgba(239,68,68,.10);
+
+      --chip:#f1f5f9;
+
+      /* Header offset for sticky table head */
+      --headerH: 122px;
+    }
+
+    *{ box-sizing:border-box; margin:0; padding:0 }
+    /* Was the page's <body>. The sheet's host element fills the sheet
+       and scrolls on its own, the way the page used to scroll. */
+    :host{
+      display:flex; flex-direction:column; height:100%;
+      overflow-x:hidden; overflow-y:auto;
+      background: var(--page);
+      color:var(--text);
+      font-family:"Tajawal", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    @media (prefers-reduced-motion: reduce){
+      *{ animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.001ms !important; scroll-behavior:auto !important; }
+    }
+
+    /* Modal (centered popup) */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(2, 6, 23, 0.45);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      z-index: 1000;
+      display: none;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+
+    .modal-backdrop.open {
+      display: block;
+      opacity: 1;
+    }
+
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1001;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      pointer-events: none;
+    }
+
+    .modal.open {
+      display: flex;
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-card {
+      width: 100%;
+      max-width: 520px;
+      max-height: 85vh;
+      background: #fff;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+      box-shadow: 0 24px 48px rgba(2, 6, 23, 0.2);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transform: translateY(10px);
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .modal.open .modal-card {
+      transform: translateY(0);
+    }
+
+    .modal-head {
+      position: relative;
+      background: rgba(255, 255, 255, 0.98);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--border);
+      padding: 18px 20px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    .modal-title {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 4px;
+      flex: 1;
+    }
+
+    /* Compact single-line teacher display — was a full bordered .section
+       with a header row + pill chips, way more visual weight than "one
+       name" needs. */
+    .teacher-line {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 10px 14px;
+      border-radius: 12px;
+      background: var(--chip);
+      font-size: 0.92rem;
+      font-weight: 800;
+      color: var(--text);
+    }
+    .teacher-line .teacher-label {
+      color: var(--muted);
+      font-weight: 900;
+      flex-shrink: 0;
+    }
+    .teacher-line .teacher-name {
+      color: var(--primary);
+      font-weight: 900;
+    }
+
+    .modal-title b {
+      color: var(--primary);
+      font-size: 1.1rem;
+      font-weight: 900;
+      line-height: 1.3;
+    }
+
+    .modal-title span {
+      color: var(--muted);
+      font-weight: 900;
+      font-size: 0.9rem;
+    }
+
+    .modal-close {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #fff;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 22px;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.12s ease;
+      flex-shrink: 0;
+      box-shadow: 0 8px 16px rgba(2, 6, 23, 0.05);
+    }
+
+    .modal-close:hover {
+      background: var(--chip);
+      transform: translateY(-1px);
+      box-shadow: 0 12px 24px rgba(2, 6, 23, 0.08);
+      border-color: rgba(3, 60, 84, 0.2);
+    }
+
+    .modal-body {
+      padding: 20px;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      max-height: 400px;
+    }
+
+    .modal-footer {
+      padding: 16px 20px;
+      border-top: 1px solid var(--border);
+      background: rgba(248, 250, 252, 0.8);
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      flex-shrink: 0;
+    }
+
+    .modal-btn {
+      flex: 1;
+      min-width: 140px;
+      padding: 12px 16px;
+      border-radius: 12px;
+      border: 1px solid rgba(3, 60, 84, 0.2);
+      background: #fff;
+      color: var(--primary);
+      font-family: "Tajawal", sans-serif;
+      font-weight: 900;
+      font-size: 0.95rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.15s ease;
+      box-shadow: 0 6px 12px rgba(3, 60, 84, 0.06);
+    }
+
+    .modal-btn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(3, 60, 84, 0.1);
+      border-color: rgba(3, 60, 84, 0.3);
+      background: #f8fafc;
+    }
+
+    .modal-btn:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    .modal-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      background: #f1f5f9;
+    }
+
+    .modal-btn.warning {
+      background: rgba(245, 158, 11, 0.15);
+      border-color: rgba(245, 158, 11, 0.35);
+      color: #7c2d12;
+    }
+
+    .modal-btn.warning:hover:not(:disabled) {
+      background: rgba(245, 158, 11, 0.25);
+      border-color: rgba(245, 158, 11, 0.5);
+    }
+
+    .late-details-view {
+      display: none;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .late-details-view.active {
+      display: flex;
+    }
+
+    .late-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 12px;
+      border-bottom: 2px solid var(--border);
+    }
+
+    .late-header h4 {
+      color: var(--primary);
+      font-weight: 900;
+      font-size: 1.05rem;
+    }
+
+    .late-status {
+      padding: 14px;
+      border-radius: 14px;
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      background: rgba(245, 158, 11, 0.08);
+      text-align: center;
+      font-weight: 900;
+      color: #7c2d12;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .late-status.green {
+      border-color: rgba(16, 185, 129, 0.3);
+      background: rgba(16, 185, 129, 0.08);
+      color: #065f46;
+    }
+
+    .late-status .status-text {
+      font-size: 1rem;
+    }
+
+    .late-status .status-desc {
+      font-size: 0.9rem;
+      opacity: 0.9;
+    }
+
+    .late-info-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    .info-item {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      text-align: center;
+    }
+
+    .info-item .label {
+      font-size: 0.85rem;
+      color: var(--muted);
+      font-weight: 900;
+      margin-bottom: 6px;
+    }
+
+    .info-item .value {
+      font-weight: 900;
+      color: var(--text);
+      font-size: 1rem;
+    }
+
+    .back-button {
+      align-self: flex-start;
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: #fff;
+      color: var(--primary);
+      font-weight: 900;
+      font-size: 0.9rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.12s ease;
+    }
+
+    .back-button:hover {
+      background: #f1f5f9;
+      border-color: rgba(3, 60, 84, 0.3);
+    }
+
+    /* [hidden] must always win over any component class also present on the
+       element (author rules otherwise beat the UA [hidden] rule on a tie). */
+    [hidden] { display: none !important; }
+
+    .modal-btn.primary {
+      background: linear-gradient(180deg, var(--primary-2), var(--primary));
+      border-color: rgba(3, 60, 84, 0.4);
+      color: #fff;
+    }
+    .modal-btn.primary:hover:not(:disabled) {
+      background: linear-gradient(180deg, var(--primary), var(--primary-2));
+      color: #fff;
+    }
+    .modal-btn.loading {
+      position: relative;
+      color: transparent !important;
+      pointer-events: none;
+    }
+    .modal-btn.loading i, .modal-btn.loading span { visibility: hidden; }
+    .modal-btn.loading::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      margin: auto;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 3px solid rgba(255, 255, 255, .4);
+      border-top-color: #fff;
+      animation: spin .7s linear infinite;
+    }
+    .modal-btn.primary.loading::after {
+      border-color: rgba(255, 255, 255, .4);
+      border-top-color: #fff;
+    }
+    .modal-btn:not(.primary).loading::after {
+      border-color: rgba(3, 60, 84, .25);
+      border-top-color: var(--primary);
+    }
+
+    /* Download report modal */
+    .dl-card { max-width: 460px; }
+    .dl-section {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .dl-section-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 900;
+      color: var(--primary);
+      font-size: .92rem;
+    }
+    .dl-section-title i { font-size: .82rem; opacity: .85; }
+
+    .dl-seg {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      background: var(--chip);
+      padding: 4px;
+      border-radius: 12px;
+    }
+    .dl-seg-btn {
+      border: none;
+      background: transparent;
+      padding: 10px 8px;
+      border-radius: 9px;
+      font-family: inherit;
+      font-weight: 900;
+      font-size: .85rem;
+      color: var(--muted);
+      cursor: pointer;
+      transition: background .15s ease, color .15s ease, box-shadow .15s ease;
+    }
+    .dl-seg-btn.active {
+      background: #fff;
+      color: var(--primary);
+      box-shadow: 0 4px 10px rgba(3, 60, 84, .12);
+    }
+
+    .dl-single-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(3, 60, 84, .06);
+      border: 1px solid rgba(3, 60, 84, .14);
+      color: var(--primary);
+      border-radius: 12px;
+      padding: 11px 12px;
+      font-weight: 800;
+      font-size: .88rem;
+    }
+    .dl-single-info i { font-size: .8rem; opacity: .8; }
+
+    .dl-range-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .dl-field { display: grid; gap: 6px; }
+    .dl-field label { font-size: .78rem; font-weight: 900; color: var(--muted); }
+
+    .dl-date-input, .dl-select {
+      height: 46px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 0 12px;
+      font-family: inherit;
+      font-weight: 900;
+      font-size: .92rem;
+      color: var(--text);
+      background: #fff;
+      outline: none;
+      transition: box-shadow .12s ease, border-color .12s ease;
+    }
+    .dl-date-input:focus, .dl-select:focus {
+      border-color: var(--focus);
+      box-shadow: 0 0 0 3px rgba(121, 179, 200, .22);
+    }
+
+    .dl-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 11px 12px;
+      border-radius: 12px;
+      font-weight: 800;
+      font-size: .85rem;
+      line-height: 1.5;
+    }
+    .dl-status.info { background: rgba(3, 60, 84, .06); color: var(--primary); }
+    .dl-status.error { background: var(--redBg); color: #a11; }
+    .dl-status.ok { background: var(--greenBg); color: #065f46; }
+
+    /* Header */
+    .site-header{
+      position:sticky; top:0; z-index:30;
+      background: rgba(255,255,255,.86);
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      padding:14px 14px 12px;
+      border-bottom:1px solid rgba(3,60,84,.10);
+      box-shadow: 0 2px 10px rgba(3,60,84,.06);
+    }
+
+    .header-inner{
+      width:min(100%, 1200px);
+      margin:0 auto;
+      display:grid;
+      grid-template-columns: 44px 1fr 44px;
+      align-items:center;
+      gap:10px;
+    }
+
+    .header-center{
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap:2px;
+      text-align:center;
+      padding:2px 0;
+    }
+
+    .site-title{
+      margin:0;
+      font-weight:900;
+      letter-spacing:.2px;
+      font-size: clamp(1.05rem, 2.8vw, 1.5rem);
+      color: var(--primary);
+      line-height:1.25;
+      cursor: pointer;
+    }
+    .site-title:hover {
+      text-decoration: underline;
+    }
+
+    .icon-btn{
+      width:44px; height:44px;
+      border-radius:14px;
+      border:1px solid rgba(3,60,84,.12);
+      background:#fff;
+      color:var(--primary);
+      display:flex; align-items:center; justify-content:center;
+      cursor:pointer;
+      transition: transform .12s ease, box-shadow .12s ease, background .12s ease, border-color .12s ease;
+      box-shadow: var(--shadow-1);
+    }
+    .icon-btn:hover{ transform:translateY(-1px); box-shadow: var(--shadow-2); border-color: rgba(3,60,84,.22) }
+    .icon-btn:active{ transform:translateY(0) scale(.99) }
+    .icon-btn:focus-visible{ outline:3px solid var(--focus); outline-offset:2px }
+
+    /* Date selector chip (clickable) */
+    .date-chip{
+      margin-top:10px;
+      width:min(100%, 1200px);
+      margin-inline:auto;
+      display:flex;
+      justify-content:center;
+      gap:10px;
+      flex-wrap:wrap;
+      position:relative;
+    }
+    .date-btn{
+      border:none;
+      cursor:pointer;
+      font-family:"Tajawal", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      font-weight:900;
+      font-size:.95rem;
+      color:var(--primary);
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      padding:10px 14px;
+      border-radius:999px;
+      background: #fff;
+      border:1px solid var(--border);
+      box-shadow: var(--shadow-1);
+      transition: transform .12s ease, box-shadow .12s ease, background .12s ease, border-color .12s ease;
+      max-width: 95%;
+      position:relative;
+    }
+    .date-btn:hover{ transform: translateY(-1px); box-shadow: var(--shadow-2); border-color: rgba(3,60,84,.22) }
+    .date-btn:active{ transform: translateY(0) scale(.99) }
+    .date-btn:focus-visible{ outline:3px solid var(--focus); outline-offset:2px }
+    .date-btn span{ font-weight:900 }
+    .date-btn small{ color:var(--muted); font-weight:900; font-size:.82rem }
+
+    /*
+      FIX: Mobile date input must be allowed to receive events for some browsers to open the picker.
+      Keep it invisible, but do NOT block pointer-events.
+    */
+    .date-input-wrapper{
+      position:absolute;
+      inset:0;
+      opacity:0;
+      pointer-events:auto;
+    }
+    .mobile-date-input{
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
+      opacity:0;
+      pointer-events:auto;
+      font-size:16px; /* prevents iOS zoom */
+      border:0;
+      background:transparent;
+    }
+
+    /* Main */
+    main{
+      flex:1;
+      min-height:0;
+      padding:0;
+      display:flex;
+      flex-direction:column;
+      overflow:hidden;
+    }
+
+    .full-width{ width:100%; }
+
+    .panel{
+      width:min(100%, 1200px);
+      margin:14px auto 0;
+      background:#fff;
+      border:1px solid var(--border);
+      border-radius:var(--radius-lg);
+      padding:16px;
+      box-shadow: var(--shadow-1);
+    }
+
+    .state{ display:none }
+    .state.active{ display:block }
+    .loading{ display:grid; place-items:center; gap:12px; padding:24px }
+    .spinner{ width:40px; height:40px; border-radius:50%; border:4px solid rgba(3,60,84,.18); border-top-color:var(--primary); animation:spin 1s linear infinite; margin-inline:auto }
+    @keyframes spin{ to{ transform: rotate(360deg); } }
+    .msg{ font-size:.98rem; text-align:center }
+    .error{ color:#a11; background:#fde8e8; border:1px solid #f5c5c5; padding:12px; border-radius:14px }
+    .muted{ color:var(--muted) }
+
+    /* Table shell */
+    .table-shell{
+      width:100%;
+      height: calc(100vh - var(--headerH) - 20px);
+      background:#fff;
+      border-top:1px solid var(--border);
+      border-bottom:1px solid var(--border);
+      border-left:none;
+      border-right:none;
+      border-radius:0;
+      overflow:hidden;
+      box-shadow:none;
+    }
+
+    .table-scroll{
+      width:100%;
+      height:100%;
+      overflow:auto;
+      -webkit-overflow-scrolling:touch;
+      overscroll-behavior:contain;
+      touch-action:pan-x pan-y;
+      position:relative;
+    }
+
+    table{
+      width:100%;
+      border-collapse:separate;
+      border-spacing:0;
+      min-width:0;
+      direction:rtl;
+      table-layout:fixed;
+    }
+
+    thead{
+      position:sticky;
+      top:0;
+      z-index:20;
+      background:#fff;
+    }
+
+    thead th{
+      position:relative;
+      background:#fff;
+      border-bottom:2px solid var(--primary);
+      padding:16px 10px;
+      text-align:center;
+      font-weight:900;
+      color:var(--primary);
+      white-space:nowrap;
+      overflow:visible;
+      box-shadow: 0 4px 12px rgba(3,60,84,.08);
+    }
+
+    /* Full "الحصة الأولى"-style single-line label by default; a narrow
+       phone swaps to a two-line stack instead ("الحصة" on top, the ordinal
+       word bigger underneath) — see the mobile media query below.
+       aria-label on the <th> keeps the full name available to screen
+       readers either way. */
+    .th-stack{ display:none; }
+
+    /* الصف column - rightmost, frozen so it stays visible while the lesson
+       columns scroll horizontally underneath it. */
+    .class-col {
+      position: sticky;
+      background: #fff;
+      text-align: center;
+      padding: 12px 10px;
+      z-index: 15;
+      border-left: 2px solid var(--border);
+    }
+    th.class-col, td.class-col {
+      right: 0;
+      width: 104px;
+      min-width: 104px;
+      z-index: 16;
+    }
+    thead th.class-col {
+      z-index: 26;
+      box-shadow: 4px 0 12px rgba(3,60,84,.08);
+    }
+
+    /* الصبح column - a normal (non-frozen) column now; it scrolls away with
+       the rest of the table like every lesson column instead of staying
+       pinned in place. */
+    .morning-col {
+      background: #fff;
+      text-align: center;
+      padding: 12px 10px;
+      border-left: 2px solid var(--border);
+    }
+    th.morning-col, td.morning-col {
+      width: 80px;
+      min-width: 80px;
+    }
+
+    tbody td{
+      border-bottom:1px solid var(--border);
+      padding:10px 10px;
+      text-align:center;
+      vertical-align:middle;
+      background:#fff;
+    }
+
+    tbody tr:hover td{ background:#fbfdff; }
+    tbody tr:hover td.class-col,
+    tbody tr:hover td.morning-col { background:#fbfdff; }
+
+    .class-name{
+      font-weight:900;
+      color:var(--text);
+      font-size:1rem;
+      line-height:1.2;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      min-height:38px;
+    }
+
+    .cell-btn{
+      width:56px; height:38px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      border-radius:12px;
+      border:1px solid rgba(239,68,68,.25);
+      background: var(--redBg);
+      color: var(--red);
+      font-weight:900;
+      cursor:pointer;
+      transition: transform .12s ease, box-shadow .12s ease, filter .12s ease, border-color .12s ease;
+      box-shadow: 0 10px 20px rgba(239,68,68,.10);
+      font-family:"Tajawal", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+    .cell-btn:hover{ transform: translateY(-1px); box-shadow: 0 14px 26px rgba(239,68,68,.14); border-color: rgba(239,68,68,.35) }
+    .cell-btn:active{ transform: translateY(0) scale(.99) }
+    .cell-btn:focus-visible{ outline:3px solid var(--focus); outline-offset:2px }
+
+    .cell-missed{
+      width:56px; height:38px;
+      border-radius:12px;
+      border:1px solid rgba(245,158,11,0.35);
+      background: rgba(245, 158, 11, 0.15);
+      color: #7c2d12;
+      font-weight:900;
+      cursor:pointer;
+      font-family:"Tajawal", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      box-shadow: 0 10px 20px rgba(245,158,11,.12);
+      transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease, filter .12s ease;
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+    }
+    .cell-missed:hover{
+      transform: translateY(-1px);
+      box-shadow: 0 14px 26px rgba(245,158,11,.16);
+      border-color: rgba(245,158,11,.55);
+      filter: saturate(1.05);
+      background: rgba(245, 158, 11, 0.25);
+    }
+    .cell-missed:active{ transform: translateY(0) scale(.99) }
+    .cell-missed:focus-visible{ outline:3px solid var(--focus); outline-offset:2px }
+
+    .cell-empty{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width:56px; height:38px;
+      border-radius:12px;
+      border:1px solid rgba(3,60,84,.12);
+      background:#f8fafc;
+      color: rgba(100,116,139,.8);
+      font-weight:900;
+      user-select:none;
+    }
+
+    /* A lesson with zero absences but some late students — same shape as
+       .cell-btn (a count, not an exclamation glyph, so it never reads as
+       the "!" missed-attendance indicator) in the app-wide amber used for
+       "late" everywhere else (shared/attendance.js's late status/dot). */
+    .cell-late{
+      width:56px; height:38px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      border-radius:12px;
+      border:1px solid rgba(245,158,11,.35);
+      background: var(--yellowBg);
+      color: var(--yellow);
+      font-weight:900;
+      cursor:pointer;
+      transition: transform .12s ease, box-shadow .12s ease, filter .12s ease, border-color .12s ease;
+      box-shadow: 0 10px 20px rgba(245,158,11,.12);
+      font-family:"Tajawal", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+    .cell-late:hover{ transform: translateY(-1px); box-shadow: 0 14px 26px rgba(245,158,11,.18); border-color: rgba(245,158,11,.55) }
+    .cell-late:active{ transform: translateY(0) scale(.99) }
+    .cell-late:focus-visible{ outline:3px solid var(--focus); outline-offset:2px }
+
+    /* Missed indicator badge */
+    .missed-indicator {
+      position: absolute;
+      top: -6px;
+      left: -6px;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: rgba(245, 158, 11, 0.95);
+      border: 2px solid #fff;
+      color: #7c2d12;
+      font-weight: 900;
+      font-size: 0.8rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 3px 8px rgba(245, 158, 11, 0.4);
+      z-index: 5;
+    }
+
+    /* Popover */
+    .popover-backdrop{
+      position:fixed; inset:0;
+      background: rgba(2,6,23,.12);
+      display:none;
+      z-index:999;
+    }
+    .popover-backdrop.open{ display:block; }
+
+    .popover{
+      position:fixed;
+      z-index:1000;
+      width:min(520px, 92vw);
+      max-height:min(520px, 70vh);
+      overflow:auto;
+      background:#fff;
+      border:1px solid var(--border);
+      border-radius:18px;
+      box-shadow: 0 18px 44px rgba(2,6,23,.18);
+      display:none;
+    }
+    .popover.open{ display:block; }
+
+    .pop-head{
+      position:sticky; top:0;
+      background: rgba(255,255,255,.96);
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      border-bottom:1px solid var(--border);
+      padding:14px 14px;
+      display:flex; align-items:flex-start; justify-content:space-between; gap:10px;
+    }
+    .pop-title{ display:flex; flex-direction:column; gap:2px; }
+    .pop-title b{ color:var(--primary); font-size:1.02rem }
+    .pop-title span{ color:var(--muted); font-weight:900; font-size:.9rem }
+
+    .pop-close{
+      width:40px; height:40px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      background:#fff;
+      color:var(--muted);
+      cursor:pointer;
+      font-size:20px;
+      line-height:1;
+      transition: transform .12s ease, box-shadow .12s ease, background .12s ease;
+      box-shadow: 0 10px 20px rgba(2,6,23,.05);
+    }
+    .pop-close:hover{ background: var(--chip); transform: translateY(-1px); box-shadow: 0 14px 26px rgba(2,6,23,.08) }
+
+    .pop-body{ padding:14px 14px 16px 14px; display:flex; flex-direction:column; gap:12px; }
+
+    .section{
+      border:1px solid var(--border);
+      background:#fff;
+      border-radius:14px;
+      padding:12px;
+      box-shadow: 0 10px 22px rgba(2,6,23,.04);
+    }
+    .sec-title{
+      font-weight:900; color:var(--primary);
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      padding-bottom:10px;
+      border-bottom:1px solid var(--border);
+      margin-bottom:10px;
+    }
+    .chips{ display:flex; flex-wrap:wrap; gap:8px; }
+    .chip{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:8px 10px;
+      border-radius:999px;
+      background: var(--chip);
+      border:1px solid var(--border);
+      font-weight:900;
+      color: var(--text);
+      font-size:.9rem;
+    }
+
+    .alert{
+      display:flex; align-items:center; gap:10px;
+      padding:10px 12px;
+      border-radius:14px;
+      border:1px solid rgba(239,68,68,.28);
+      background: linear-gradient(180deg, rgba(239,68,68,.12), rgba(255,255,255,1));
+      color:#991b1b;
+      font-weight:900;
+    }
+    .alert .dot{
+      width:10px; height:10px; border-radius:999px;
+      background: var(--red);
+      box-shadow: 0 0 0 6px rgba(239,68,68,.12);
+      flex:0 0 auto;
+    }
+
+    .list{ display:flex; flex-direction:column; gap:8px; }
+    .li{
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      padding:10px 10px;
+      border-radius:12px;
+      border:1px solid rgba(3,60,84,.10);
+      background:#fbfdff;
+      font-weight:900;
+      cursor: pointer;
+      transition: all 0.12s ease;
+    }
+    .li:hover{
+      background: #f1f5f9;
+      border-color: rgba(3,60,84,.20);
+      transform: translateY(-1px);
+    }
+    .li .name{ color:var(--text) }
+    .li .meta{ color:var(--muted); font-weight:900; font-size:.86rem }
+
+    /* Warning level classes */
+    .li.warning-1 {
+      background-color: rgba(245, 158, 11, 0.08);
+      border-color: rgba(245, 158, 11, 0.25);
+      border-left-width: 3px;
+      border-left-color: #f59e0b;
+    }
+    
+    .li.warning-2 {
+      background-color: rgba(249, 115, 22, 0.10);
+      border-color: rgba(249, 115, 22, 0.30);
+      border-left-width: 3px;
+      border-left-color: #f97316;
+    }
+    
+    .li.warning-3 {
+      background-color: rgba(239, 68, 68, 0.10);
+      border-color: rgba(239, 68, 68, 0.35);
+      border-left-width: 3px;
+      border-left-color: #ef4444;
+    }
+
+    /* Tabs in confirm popup */
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 8px;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: #f8fafc;
+      color: var(--muted);
+      font-weight: 900;
+      cursor: pointer;
+      transition: all 0.12s ease;
+      text-align: center;
+    }
+    .tab-btn.active {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+    .tab-btn:hover:not(.active) {
+      background: #f1f5f9;
+      border-color: rgba(3,60,84,.20);
+    }
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    #originalModalContent {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+
+    /* ===== Student-based layout: الصف | الاسم | الحصص ===== */
+    th.name-col, td.name-col { width: 240px; min-width: 0; }
+    td.name-col {
+      text-align: right;
+      padding: 10px 14px;
+      border-left: 2px solid var(--border);
+    }
+    .student-link {
+      font-family: inherit; font-weight: 800; font-size: .95rem; line-height: 1.4;
+      color: var(--text); background: none; border: 0; padding: 0; cursor: pointer;
+      text-align: right; word-break: break-word;
+    }
+    .student-link:hover { color: var(--primary); text-decoration: underline; }
+    td.lessons-col { text-align: right; padding: 10px 14px; }
+    .lesson-dots { display: flex; flex-wrap: wrap; gap: 7px; align-items: center; }
+    .morning-chip {
+      font-family: inherit; font-weight: 900; font-size: .8rem; cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      box-sizing: border-box; max-width: 100%; min-height: 32px; padding: 5px 12px;
+      line-height: 1.3; text-align: center; white-space: normal; overflow-wrap: anywhere;
+      border-radius: 16px;
+      background: rgba(3,60,84,.08); color: var(--primary);
+      border: 1px solid rgba(3,60,84,.28);
+      transition: transform .12s ease, box-shadow .12s ease;
+    }
+    .morning-chip:hover { transform: translateY(-1px); box-shadow: 0 6px 14px rgba(3,60,84,.16); }
+    .morning-chip:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+    .edit-form { display: grid; gap: 12px; margin-top: 14px; }
+    .edit-form label { display: grid; gap: 6px; font-weight: 800; font-size: .86rem; color: var(--muted); }
+    .edit-form input {
+      font-family: inherit; font-size: 16px; font-weight: 700; color: var(--text);
+      min-height: 46px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--border); background: #f8fafc;
+    }
+    .edit-form input:focus-visible { outline: none; border-color: var(--primary); background: #fff; box-shadow: 0 0 0 3px rgba(3,60,84,.12); }
+    .lesson-dots .none { color: rgba(100,116,139,.55); font-weight: 800; }
+
+    /* The class label lives in a merged (rowspan) cell. JS keeps it centred
+       in whatever part of that cell is currently visible, so it stays
+       centred on screen while you scroll through a long class — the same
+       idea as the department bars in schoolschedule.html, but vertical. */
+    td.class-col.class-group { vertical-align: top; }
+    .class-label {
+      position: absolute; left: 0; right: 0; top: 50%;
+      transform: translateY(-50%);
+      padding: 0 4px; text-align: center;
+      font-weight: 900; font-size: 1rem; color: var(--text); line-height: 1.2;
+    }
+    tbody tr.class-first td { border-top: 2px solid var(--border); }
+    tbody tr:first-child.class-first td { border-top: 0; }
+
+    .lesson-dot {
+      width: 32px; height: 32px; border-radius: 50%;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-family: inherit; font-weight: 900; font-size: .88rem; line-height: 1;
+      cursor: pointer; padding: 0;
+      border: 1px solid transparent;
+      transition: transform .12s ease, box-shadow .12s ease;
+    }
+    .lesson-dot:hover { transform: translateY(-1px) scale(1.06); }
+    .lesson-dot:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+    .lesson-dot.absent { background: var(--redBg); color: var(--red); border-color: rgba(239,68,68,.35); box-shadow: 0 6px 14px rgba(239,68,68,.14); }
+    .lesson-dot.late { background: var(--yellowBg); color: var(--yellow); border-color: rgba(245,158,11,.45); box-shadow: 0 6px 14px rgba(245,158,11,.14); }
+
+
+    /* Mobile tweaks */
+    @media (max-width: 480px){
+      .header-inner{ grid-template-columns: 40px 1fr 40px; }
+      .icon-btn{ width:40px; height:40px; border-radius:12px; }
+
+      /* The full "الحصة الأولى" label used to be forced to wrap inside a
+         narrow column and still looked cut off; a phone stacks it into
+         two lines instead — "الحصة" small on top, the ordinal word
+         (الأولى، الثانية، …) bigger underneath — which reads clearly in
+         much less width than the single-line version did. aria-label on
+         the <th> keeps the full name available to screen readers either
+         way. */
+      .th-full{ display:none; }
+      .th-stack{
+        display:flex;
+        flex-direction:column;
+        align-items:center;
+        gap:2px;
+        line-height:1.15;
+      }
+      .th-word{ font-size:.68rem; font-weight:800; color:var(--muted); }
+      .th-ordinal{ font-size:1rem; font-weight:900; color:var(--primary); white-space:nowrap; }
+
+      table{ min-width: 0; }
+
+      /* Adjust widths for mobile */
+      th.class-col, td.class-col {
+        width: 86px;
+        min-width: 86px;
+        padding: 8px 4px;
+      }
+      .class-label { font-size: .92rem; white-space: nowrap; }
+      /* Narrow الحصص column: exactly three lesson circles per row, the
+         next three wrap underneath, and so on. */
+      th.name-col, td.name-col { width: auto; min-width: 0; padding: 8px 6px; }
+      thead th:last-child, td.lessons-col { width: 108px; min-width: 108px; }
+      td.lessons-col { padding: 8px 6px; }
+      /* Three per row (96px = 3 circles + 2 gaps), every row centred in the column. */
+      .lesson-dots { width: 96px; margin-inline: auto; gap: 6px; justify-content: center; }
+      .lesson-dots .morning-chip { flex: 0 0 100%; }
+      .lesson-dots .none { flex: 0 0 100%; text-align: center; }
+      .lesson-dot { width: 28px; height: 28px; font-size: .8rem; }
+      .morning-chip { font-size: .74rem; padding: 4px 9px; gap: 4px; }
+      .lesson-dots { min-width: 0; }
+
+      .table-shell{ height: calc(100vh - var(--headerH) - 10px); }
+
+      thead th{
+        padding:10px 4px;
+      }
+
+      .date-btn {
+        padding: 12px 16px;
+        min-height: 48px;
+      }
+
+      .modal {
+        padding: 12px;
+      }
+
+      .modal-card {
+        max-height: 90vh;
+      }
+
+      .modal-footer {
+        flex-direction: column;
+      }
+
+      .modal-btn {
+        min-width: 100%;
+      }
+
+      .late-info-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @supports (-webkit-touch-callout: none) {
+      .mobile-date-input { font-size: 16px !important; }
+      .modal-body {
+        max-height: 60vh;
+      }
+      /* iOS Safari: 100vh includes collapsed address bar, making the shell
+         too tall and trapping rows below the real visible area.
+         svh = "small viewport height" = always the safe, smaller value. */
+      .table-shell {
+        height: calc(100svh - var(--headerH) - 10px);
+      }
+    }
+
+    /* ===== Base chrome for shared/attendance.js — used only for the
+       "تعديل" button inside the cell-details popover, which opens the
+       shared attendance-edit sheet (attendance.openForEdit) with
+       isPrivilegedEdit so an admin can edit any past session regardless
+       of the normal lesson-time edit window. This page had no .sheet/
+       .btn conventions of its own before this, so they're added fresh;
+       the modal rules are scoped to attendance.js's specific #att* IDs
+       only, since a bare .modal class already exists here for this
+       page's own unrelated popups (#lessonModal, #confirmModal,
+       #downloadModal — a totally different .modal-backdrop+.modal-card
+       system) and must not collide with it. ===== */
+    html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%; inset: 0; overscroll-behavior: none; }
+
+    /* This page's own :root uses a brighter, more saturated palette for its
+       grid/table UI (--green:#10b981, --yellow:#f59e0b, --red:#ef4444, no
+       --primary-light/--transition at all) — fine for the table, but
+       shared/attendance.js's own styling assumes the muted palette every
+       other page defining these same variable names uses (Teachers/
+       user.html, admins/students.html, ...). Redefining them scoped to just
+       the attendance sheet + its modals matches the sheet's look everywhere
+       else without touching this page's own table colors at all. */
+    #attendanceSheet, #attConfirmModal, #attErrorModal, #attBlockedModal, #attSuccessModal, #attLessonDetailModal, #attCriticalErrorModal {
+      --primary-light: #065372;
+      --primary-extra-light: #eef5fb;
+      --green: #1a7f37;
+      --yellow: #a06d00;
+      --red: #b42318;
+      --greenBg: rgba(26,127,55,.08);
+      --yellowBg: rgba(160,109,0,.10);
+      --redBg: rgba(180,35,24,.10);
+      --chip: #eef5fb;
+      --transition: transform .12s ease, box-shadow .12s ease, background-color .12s ease, border-color .12s ease, color .12s ease, opacity .12s ease;
+    }
+
+    .btn{
+      font-family:"Tajawal", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      height:52px; border:none; border-radius:14px; cursor:pointer; font-weight:800; font-size:1rem;
+      transition: transform .14s ease, box-shadow .14s ease; display:inline-flex; align-items:center; justify-content:center; padding:0 20px;
+    }
+    .btn:active{ transform:translateY(0) scale(.995) }
+    .btn:focus-visible{ outline:3px solid var(--focus); outline-offset:2px }
+    .btn:disabled{ opacity:.5; cursor:not-allowed; box-shadow:none !important; transform:none !important; }
+    .btn.primary{ background: linear-gradient(180deg, var(--primary-2), var(--primary)); color:#fff; box-shadow: 0 12px 28px rgba(3,60,84,.26) }
+    .btn.primary:hover{ transform:translateY(-2px); box-shadow: 0 16px 36px rgba(3,60,84,.34) }
+    .btn.cancel{ background:#fff; color:var(--primary); border:1px solid rgba(3,60,84,.25) }
+    .btn.cancel:hover{ transform:translateY(-2px) }
+
+    .sheet{ position:fixed; inset:0; z-index:1050; background:var(--page); display:flex; flex-direction:column; transform: translateX(100%); transition: transform .3s cubic-bezier(.22,.7,.25,1); }
+    .sheet.open{ transform: translateX(0) }
+    .sheet-header{
+      background:#fff; border-bottom:1px solid var(--border); padding:18px 16px; display:flex; align-items:center; gap:12px;
+      position:sticky; top:0; z-index:10; box-shadow: 0 2px 10px rgba(0,0,0,.03);
+    }
+    .back-btn{
+      height:44px; padding:0 16px; border-radius:12px; border:1px solid rgba(3,60,84,.25); background:#fff; color:var(--primary); font-weight:800; cursor:pointer;
+      box-shadow: var(--shadow-1); transition: transform .14s ease; display:inline-flex; align-items:center; justify-content:center; text-decoration:none;
+    }
+    .sheet-title{ margin:0; font-size:1.1rem; font-weight:900; color:var(--primary) }
+    .sheet-body{ flex:1 1 auto; overflow:auto; padding:24px; width:min(880px,94vw); margin:0 auto; display:flex; flex-direction:column; gap:16px }
+
+    #attConfirmModal, #attErrorModal, #attBlockedModal, #attSuccessModal, #attLessonDetailModal, #attCriticalErrorModal {
+      position: fixed; inset: 0; z-index: 1100; display: none;
+      background: none; width: auto; max-width: none; max-height: none;
+      box-shadow: none; transform: none; transition: none; overflow: visible;
+    }
+    #attConfirmModal.open, #attErrorModal.open, #attBlockedModal.open, #attSuccessModal.open, #attLessonDetailModal.open, #attCriticalErrorModal.open {
+      display: grid; place-items: center;
+    }
+    #attConfirmModal .overlay, #attErrorModal .overlay, #attBlockedModal .overlay, #attSuccessModal .overlay, #attLessonDetailModal .overlay, #attCriticalErrorModal .overlay {
+      position: absolute; inset: 0; background: rgba(15,23,42,.35); backdrop-filter: blur(4px);
+    }
+    #attConfirmModal .card, #attErrorModal .card, #attLessonDetailModal .card {
+      position: relative; z-index: 1; width: min(560px,92vw); background: #fff;
+      border: 1px solid var(--border); border-radius: 20px;
+      box-shadow: 0 24px 60px rgba(3,60,84,.28); padding: 20px;
+    }
+    #attErrorModal .card.error { border-color: rgba(239,68,68,.25); box-shadow: 0 24px 60px rgba(239,68,68,.20); }
+    #attErrorModal .card.error h3 { color: var(--red); }
+    #attConfirmModal h3, #attErrorModal h3, #attLessonDetailModal h3 { margin: 0 0 8px; font-size: 1.15rem; color: var(--primary); font-weight: 900; }
+    #attConfirmModal p, #attErrorModal p, #attLessonDetailModal p { margin: 0 0 12px; color: var(--muted); font-weight: 800; }
+    #attConfirmModal .row, #attErrorModal .row, #attLessonDetailModal .row { display: flex; gap: 10px; justify-content: flex-start; margin-top: 16px; flex-wrap: wrap; }

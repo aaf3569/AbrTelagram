@@ -1,0 +1,3209 @@
+/**
+ * algo_RepairEngine.js — لبنات مرحلة الإصلاح (Hill-Climbing). الجلسة 25.
+ *
+ * يحوي حارس القيود الصلبة الفيزيائيّة _isGloballyFeasible وحاسبَ خطّ الأساس
+ * _computeBaselineDeficits. قراءة فقط على الحالة — لا يعدّل state ولا منطق
+ * البناء الجشِع، وسيُستهلَك لاحقًا في _attemptSwap/_attemptMove/_repairPhase.
+ *
+ * مفاتيح المجموعات/الخرائط نصّيّة "wing|d|p" و "subjectKey|d|p" (كائنات عاديّة
+ * تُستخدَم كمجموعات — رخيصة وآمنة على JSON والتمرير عبر ctx).
+ */
+
+/**
+ * يحسب خطّ أساس الانتهاكات «المقبولة» القائمة في الحالة المبنيّة قبل أيّ تحريك:
+ *   - عجز الأجنحة البنيويّ (مثل اجتماع الجغرافيا/التاريخ، الأربعاء/الثالثة،
+ *     جناح الثاني عشر — كلّ مشرفي الجناح هم القسم نفسه).
+ *   - أيّ تجاوز سعة مختبر كَسَره الباني عبر نظام البِركة (BROKEN_LAB ملتزَم).
+ *
+ * يُحسَب مرّةً واحدة في بداية مرحلة الإصلاح ويُمرَّر عبر ctx، فلا يُعاد الفحص
+ * في كلّ نداء حارس (تكلفة).
+ *
+ * @param {Object} state حالة الجدول المبنيّة (createScheduleState).
+ * @param {Object} ctx سياق المحرّك (_buildBuilderContext): wings،
+ *   supervisorCountByWing، capacityBySubjectKey.
+ * @return {{wingDeficits: Object, labOverflows: Object}}
+ *   wingDeficits: مجموعة مفاتيح "wing|d|p" لكلّ خانة عجز جناح قائمة.
+ *   labOverflows: خريطة "subjectKey|d|p" → العدد المتزامن القائم (> السعة).
+ */
+function _computeBaselineDeficits(state, ctx) {
+  const dim = state.getDimensions();
+  const days = dim.days;
+  const periods = dim.periods;
+  const wingDeficits = {};
+  const labOverflows = {};
+
+  // عجز الأجنحة القائم: جناح له مشرفون والمتاح فيه < 1.
+  for (let w = 0; w < ctx.wings.length; w++) {
+    const wing = ctx.wings[w];
+    if ((ctx.supervisorCountByWing[wing] || 0) <= 0) continue;
+    for (let d = 0; d < days; d++) {
+      for (let p = 0; p < periods; p++) {
+        if (state.getFreeSupervisors(wing, d, p) < 1) {
+          wingDeficits[wing + '|' + d + '|' + p] = true;
+        }
+      }
+    }
+  }
+
+  // تجاوز سعة المختبر القائم (كَسره الباني عند تعذّر مرشّح نظيف).
+  const labKeys = Object.keys(ctx.capacityBySubjectKey || {});
+  for (let i = 0; i < labKeys.length; i++) {
+    const key = labKeys[i];
+    const cap = ctx.capacityBySubjectKey[key];
+    if (typeof cap !== 'number') continue;
+    for (let d = 0; d < days; d++) {
+      for (let p = 0; p < periods; p++) {
+        const cnt = state.getLabCount(key, d, p);
+        if (cnt > cap) labOverflows[key + '|' + d + '|' + p] = cnt;
+      }
+    }
+  }
+
+  return { wingDeficits: wingDeficits, labOverflows: labOverflows };
+}
+
+/**
+ * حارس القيود الصلبة الفيزيائيّة لمرحلة الإصلاح. يُجيب «هل هذه الحالة ممكنة
+ * فيزيائيًّا؟» لا «هل هي جيّدة؟» — الجودة شأن penalty/Hill-Climbing.
+ *
+ * يفحص القيود الصلبة فقط:
+ *   (1) تعارض المعلّم في خانة (يدرّس صفّين، أو يدرّس + اجتماع، في آنٍ واحد).
+ *   (2) تجاوز سعة المختبر المتزامنة الجديد (يتجاوز السعة وخطّ الأساس معًا).
+ *   (3) عجز جناح جديد لم يكن في خطّ الأساس.
+ *
+ * لا يفحص الكسور الناعمة الموزونة (MATH_LAST / LAB القائم / NON_PRIORITY_2ND_LAST
+ * / ADMIN_LAST / SUP_LAST_OVER / DAILY_CAP) — تلك تكلفةٌ لا استحالة.
+ *
+ * المختبر باعتباره نسبيًّا لخطّ الأساس (لا مطلقًا): الباني قد يلتزم تجاوزًا عبر
+ * نظام البِركة، فالتجاوز القائم مقبول (في baselineLabOverflows) والجديد مرفوض —
+ * تمامًا كمعالجة عجز الجناح.
+ *
+ * خطّ الأساس يُمرَّر عبر ctx.baselineWingDeficits و ctx.baselineLabOverflows
+ * (انظر _computeBaselineDeficits)؛ غيابهما = «لا مقبول» (صرامة كاملة)، فعلى
+ * مستدعي مرحلة الإصلاح إرفاقهما مرّةً واحدة قبل أوّل نداء.
+ *
+ * يفحص كذلك — بعد البنود الثلاثة أعلاه — (4) رئيس قسمٍ في الحصّة الأخيرة
+ * (صلبٌ مطلق).
+ *
+ * ⚠️ لا حارس للتغطية اليوميّة هنا عمدًا (حُذف بند DAILY_FLOOR_BREACH): الحارس
+ * البولياني يَجُبّ كلّ وزنٍ مهما عظم، فلا يصلح للتعبير عن قاعدةٍ تُقايَس بغيرها —
+ * كان يحمي قاعدةً وزنها 700 بمنع تبديلٍ يشفي كسر كتلةٍ صلبة وزنه 100000. إنفاذ
+ * التغطية يبقى بثلاث طبقات: حجز الباني (بنيويّ)، ووزن BROKEN_DAILY_FLOOR في دفتر
+ * العقوبات (اقتصاديّ)، وترسية النوع في مولّد الحركات (علاجيّ).
+ *
+ * أداء: هذه اللبنة الأولى تفحص الحالة كاملةً
+ * (O(خانات × [أجنحة + مختبرات + صفوف + معلّمين])). النسخة التفاضليّة (الخانات
+ * المتأثّرة بالتحريك فقط) تأتي في برومبت لاحق.
+ *
+ * @param {Object} state حالة الجدول.
+ * @param {Object} ctx سياق المحرّك + خطّ الأساس المرفَق.
+ * @return {{feasible: boolean, violations: Array<{type: string, detail: string}>}}
+ */
+function _isGloballyFeasible(state, ctx) {
+  const dim = state.getDimensions();
+  const days = dim.days;
+  const periods = dim.periods;
+  const classIds = dim.classIds;
+  const civilIds = dim.civilIds;
+  const baseWing = ctx.baselineWingDeficits || {};
+  const baseLab = ctx.baselineLabOverflows || {};
+  const violations = [];
+
+  // (1) تعارض المعلّم: لكلّ خانة لا يظهر رقمٌ مدنيّ مرّتين (صفّان، أو صفّ+اجتماع).
+  for (let d = 0; d < days; d++) {
+    for (let p = 0; p < periods; p++) {
+      const seen = {};
+      for (let c = 0; c < classIds.length; c++) {
+        const cell = state.getCell(classIds[c], d, p);
+        if (cell && cell.civilId != null) {
+          const cid = String(cell.civilId);
+          if (seen[cid]) {
+            violations.push({ type: 'TEACHER_CONFLICT',
+              detail: 'المعلّم ' + cid + ' في أكثر من صفّ عند (' + d + ',' + p + ')' });
+          }
+          seen[cid] = true;
+        }
+      }
+      // اجتماعٌ متزامن مع حصّة لنفس المعلّم
+      for (let t = 0; t < civilIds.length; t++) {
+        const tc = state.getTeacherCell(civilIds[t], d, p);
+        if (tc && typeof tc === 'object' && tc.kind === 'MEETING') {
+          if (seen[civilIds[t]]) {
+            violations.push({ type: 'TEACHER_CONFLICT',
+              detail: 'المعلّم ' + civilIds[t] + ' في اجتماع وحصّة معًا عند (' + d + ',' + p + ')' });
+          }
+          seen[civilIds[t]] = true;
+        }
+      }
+    }
+  }
+
+  // (2) تجاوز سعة المختبر الجديد (> السعة و > خطّ الأساس).
+  const labKeys = Object.keys(ctx.capacityBySubjectKey || {});
+  for (let i = 0; i < labKeys.length; i++) {
+    const key = labKeys[i];
+    const cap = ctx.capacityBySubjectKey[key];
+    if (typeof cap !== 'number') continue;
+    for (let d = 0; d < days; d++) {
+      for (let p = 0; p < periods; p++) {
+        const cnt = state.getLabCount(key, d, p);
+        if (cnt <= cap) continue;
+        const allowed = baseLab[key + '|' + d + '|' + p] || cap;
+        if (cnt > allowed) {
+          violations.push({ type: 'LAB_OVERFLOW_NEW',
+            detail: key + ' عند (' + d + ',' + p + '): ' + cnt + ' > سعة ' + cap +
+              (allowed > cap ? ' (أساس ' + allowed + ')' : '') });
+        }
+      }
+    }
+  }
+
+  // (3) عجز جناح جديد لم يكن في خطّ الأساس.
+  for (let w = 0; w < ctx.wings.length; w++) {
+    const wing = ctx.wings[w];
+    if ((ctx.supervisorCountByWing[wing] || 0) <= 0) continue;
+    for (let d = 0; d < days; d++) {
+      for (let p = 0; p < periods; p++) {
+        if (state.getFreeSupervisors(wing, d, p) < 1 &&
+            !baseWing[wing + '|' + d + '|' + p]) {
+          violations.push({ type: 'WING_DEFICIT_NEW',
+            detail: 'جناح ' + wing + ' بلا مشرف عند (' + d + ',' + p + ') — خارج خطّ الأساس' });
+        }
+      }
+    }
+  }
+
+  // (4) رئيس قسم في الحصّة الأخيرة — قيد صلب مطلق (طبقة الإصلاح، متّسق مع المقيّم).
+  const lastIdx = ctx.lastIdx;
+  if (lastIdx >= 0 && lastIdx < periods) {
+    for (let c = 0; c < classIds.length; c++) {
+      for (let d = 0; d < days; d++) {
+        const cell = state.getCell(classIds[c], d, lastIdx);
+        if (cell && cell.kind === 'LESSON' &&
+            isHeadOfDepartment(ctx.teacherByCivilId[String(cell.civilId)] || {})) {
+          violations.push({ type: 'BROKEN_DEPT_HEAD_LAST',
+            detail: 'رئيس قسم ' + cell.civilId + ' عند الأخيرة (' +
+              classIds[c] + '، يوم ' + d + ')' });
+        }
+      }
+    }
+  }
+
+  return { feasible: violations.length === 0, violations: violations };
+}
+
+/**
+ * يبني خريطة السقف اليومي لكلّ (صفّ|مادّة) — نظير اشتقاق _deriveGroups تمامًا:
+ * override من القسم الثالث إن وُجد، وإلّا ceil(الحصص ÷ الأيّام). تُحسَب مرّةً
+ * وتُرفَق بـctx (ctx.dailyCapByClassSubject) ليستهلكها مقيِّم الكسور الموضعيّ.
+ *
+ * @param {Object} model النموذج (subjects, assignments).
+ * @param {Object} ctx سياق المحرّك (days, overrideCapBySubjectKey).
+ * @return {Object} خريطة "classId|subjectKey" → dailyCap.
+ */
+function _buildDailyCapMap(model, ctx) {
+  const periodsByClass = {};
+  for (let i = 0; i < model.subjects.length; i++) {
+    periodsByClass[model.subjects[i].className] = model.subjects[i].periods;
+  }
+  const map = {};
+  for (let i = 0; i < model.assignments.length; i++) {
+    const a = model.assignments[i];
+    const pm = periodsByClass[a.className];
+    const count = (pm && typeof pm[a.subjectKey] === 'number') ? pm[a.subjectKey] : 0;
+    if (count <= 0) continue;
+    const override = ctx.overrideCapBySubjectKey[a.subjectKey];
+    const derived = (typeof override === 'number') ? override : Math.ceil(count / ctx.days);
+    // مادّة النمط=متتاليتان تحتاج سقفًا ≥2 لتقع الكتلة المزدوجة في يومٍ واحد دون
+    // احتساب BROKEN_DAILY_CAP زائف. مقود بالورقة (consecutiveSubjects من قواعد النمط
+    // المفعَّلة؛ لا ثابت خاصّ بمادّة). «2» = حجم الكتلة الملازم لدلالة «متتاليتان».
+    // Math.max يصون أيّ override أكبر من خانة «القيمة» في الورقة.
+    const dailyCap = (ctx.consecutiveSubjects && ctx.consecutiveSubjects[a.subjectKey])
+      ? Math.max(derived, 2) : derived;
+    map[a.className + '|' + a.subjectKey] = dailyCap;
+  }
+  return map;
+}
+
+/**
+ * يبني خريطة الحدّ الأدنى اليومي floor(الحصص ÷ الأيّام) لكلّ (صفّ|مادّة) ذات
+ * floor ≥ 1 — نظير _reserveDailyCoverage. يستهلكها مقيّم الكسور لحساب
+ * BROKEN_DAILY_FLOOR قائمًا على الحالة (يومٌ بعدد مادّةٍ < الحدّ الأدنى).
+ *
+ * الاستحقاق مقصورٌ على _coverageEligibleSubject — نفس شرط حجز الباني
+ * (_reserveDailyCoverage) من مصدرٍ واحد: نصابٌ أسبوعيّ ≥ dailyCoverageMinWeekly
+ * ومادّةٌ ليست من مواد التتالي. فالخريطة لا تَعِد بما لم يحجزه الباني، ولا
+ * يُحاسَب المحرّك على تغطيةٍ لم تُطلَب أصلًا.
+ *
+ * @return {Object} خريطة "classId|subjectKey" → floorPerDay (≥1 فقط).
+ */
+function _buildFloorMap(model, ctx) {
+  const periodsByClass = {};
+  for (let i = 0; i < model.subjects.length; i++) {
+    periodsByClass[model.subjects[i].className] = model.subjects[i].periods;
+  }
+  const map = {};
+  for (let i = 0; i < model.assignments.length; i++) {
+    const a = model.assignments[i];
+    const pm = periodsByClass[a.className];
+    const count = (pm && typeof pm[a.subjectKey] === 'number') ? pm[a.subjectKey] : 0;
+    if (count <= 0) continue;
+    if (!_coverageEligibleSubject(ctx, a.subjectKey, count)) continue;
+    const floorPerDay = Math.floor(count / ctx.days);
+    if (floorPerDay >= 1) map[a.className + '|' + a.subjectKey] = floorPerDay;
+  }
+  return map;
+}
+
+/**
+ * قيد «الحصّتان المتتاليتان لنفس الصفّ» (مقود بالورقة). وحدة القيد = (صفّ، مادّة)
+ * على مستوى الأسبوع كاملًا (المرجع الصفّ لا المعلّم). التعريف العمليّ المعتمَد:
+ * حصص المادّة نفسها لذلك الصفّ يجب أن تقع في كتلةٍ واحدة — يومٌ واحد وحصصٌ متجاورة
+ * بفهارس متّصلة (كتلة مزدوجة حين تكون حصّتين). مكسورٌ إن توزّعت على أكثر من يوم،
+ * أو وقعت في يومٍ واحد بفجوةٍ بين الفهارس. حصّةٌ واحدة (أو صفر) ⟹ لا تزاوج ⟹ سليم.
+ *
+ * دالّة موضِعيّة مستقلّة عن ترتيب الوضع: تُقرأ من state كاملةً لذلك (صفّ،مادّة)،
+ * فتصلح لإعادة البناء وللفرق الموضعيّ على السواء (نظير getSubjectDayCount).
+ *
+ * @return {number} 1 إن كانت الكتلة غير محقَّقة، وإلّا 0.
+ */
+function _consecClassSubjectBroken(state, classId, subjectKey, days, periods) {
+  let count = 0, firstDay = -1, lastDay = -1;
+  for (let d = 0; d < days; d++) {
+    for (let p = 0; p < periods; p++) {
+      const cell = state.getCell(classId, d, p);
+      if (cell && cell.kind === 'LESSON' && cell.subjectKey === subjectKey) {
+        count++;
+        if (firstDay < 0) firstDay = d;
+        lastDay = d;
+      }
+    }
+  }
+  if (count <= 1) return 0;              // لا تزاوج
+  if (firstDay !== lastDay) return 1;    // موزّعة على أكثر من يوم ⟹ مكسورة
+  // يومٌ واحد: تحقّق تجاور الفهارس (لا فجوة).
+  let f = -1, l = -1, c = 0;
+  for (let p = 0; p < periods; p++) {
+    const cell = state.getCell(classId, firstDay, p);
+    if (cell && cell.kind === 'LESSON' && cell.subjectKey === subjectKey) {
+      if (f < 0) f = p; l = p; c++;
+    }
+  }
+  return ((l - f + 1) !== c) ? 1 : 0;
+}
+
+/**
+ * عقوبة قيد التتالي لزوج (صفّ، مادّة) في الحالة الراهنة: 0 إن كانت المادّة ليست
+ * ذات قاعدة تتالٍ مفعَّلة، أو الكتلة محقَّقة، أو القاعدة مرنة بلا وزن (خاملة).
+ * الصلب بوزنٍ هائل (BROKEN_CONSEC_HARD)؛ المرن بوزن الورقة (spec.weight). تُستعمَل
+ * في المقيّم الموضعيّ وإعادة البناء بلا فرق فيبقى ΣΔ==reconstruct.
+ *
+ * @return {number} العقوبة الموزونة (0 إن سليم/خامل).
+ */
+function _consecPairPenalty(state, ctx, classId, subjectKey, days, periods) {
+  const spec = (ctx.consecutiveSubjects || {})[subjectKey];
+  if (!spec) return 0;
+  const W = (ctx && ctx.weights) || CONSTANTS.BREAK_WEIGHTS || {};
+  let w;
+  if (spec.hard) {
+    // (الحزمة 6/ب) حارسٌ صلب: المفتاح موجودٌ في الخريطة أو خطأٌ صريح — لا احتياطيّ
+    // inline يلتفّ على المدقّق والحارس والسجلّ (نظير تصليب wOf في الحزمة 6/أ).
+    if (typeof W.BROKEN_CONSEC_HARD !== 'number') {
+      throw new Error('وزنٌ غير معرّف في خريطة الأوزان: BROKEN_CONSEC_HARD');
+    }
+    w = W.BROKEN_CONSEC_HARD;
+  } else {
+    w = spec.weight;                      // مرن: وزن الورقة (null ⟹ خامل)
+  }
+  if (typeof w !== 'number' || w <= 0) return 0;
+  return w * _consecClassSubjectBroken(state, classId, subjectKey, days, periods);
+}
+
+/**
+ * «يوم المراجعة الخفيف»: أخفّ يومٍ للمعلّم = أدنى (أعلى فهرس مشغولٍ بدرس أو اجتماع)
+ * عبر أيّامه الخمسة، بالترقيم 1-based (يومٌ فارغ ⟹ 0). getTeacherCell يعيد نصًّا
+ * (درس) أو كائنًا (اجتماع) أو null (فارغ — ومنه خانةُ الحجب، فهي غيابٌ لا إشغال
+ * وتُخفيها الحالة عن القرّاء) — فأيّ قيمةٍ حقّة = مشغول. دالّة موضِعيّة
+ * مستقلّة عن ترتيب الوضع (تُقرأ من الحالة الراهنة)، تصلح للدلتا وإعادة البناء معًا.
+ *
+ * @return {number} أخفّ يوم (1-based؛ 0 = يوم فارغ).
+ */
+function _teacherLightestOccupied(state, cid, days, periods) {
+  let lightest = periods;   // أكبر من أيّ فهرس ممكن (≤ periods−1)
+  for (let d = 0; d < days; d++) {
+    let latest = -1;
+    for (let p = periods - 1; p >= 0; p--) {
+      if (state.getTeacherCell(cid, d, p)) { latest = p; break; }   // حقّ = مشغول
+    }
+    if (latest < lightest) lightest = latest;
+    if (lightest === -1) break;   // لا أدنى من فارغ
+  }
+  return lightest + 1;   // 1-based (−1 ⟹ 0)
+}
+
+/**
+ * عقوبة كسر «يوم المراجعة الخفيف» لمعلّمٍ واحد في الحالة الراهنة (وحدة الكسر =
+ * المعلّم، مسطّحة لا متدرّجة). طبقتان تستعملان كلا حقلَي الإعدادات (فلا حقلٌ ميّت):
+ *   أخفّ ≤ optimal ⟹ 0 · optimal<أخفّ≤maxEnd ⟹ wSoft · أخفّ>maxEnd ⟹ wHard.
+ * العقوبتان مباشرتان من الورقة (بلا ×100). enabled=false ⟹ 0. مصدرٌ موحَّد
+ * (ctx.govtLightDay) يقرؤه المقيّم الموضعيّ وإعادة البناء بلا فرق ⟹ ΣΔ==reconstruct.
+ *
+ * @return {number} العقوبة (0 / wSoft / wHard).
+ */
+/**
+ * هل يُعفى هذا المعلّم من «يوم المراجعة الخفيف»؟ (الجلسة 59) — من له صفٌّ من نوع
+ * «يستثنى من يوم المراجعات» في القسم الثالث، هدفه «معلّم».
+ *
+ * ⚠️ **رفعُ قيدٍ لا إضافتُه**: القاعدة تكلّف wSoft/wHard لمن ليس له يومٌ ينتهي
+ * مبكّرًا، فإعفاءُ من لا يحتاجها (أو من يستحيل عليه استيفاؤها) يُنقص العقوبة
+ * ويحرّر الإصلاح من ملاحقة كسرٍ لا يريده أحد — نظير `_dayBalanceExempt` تمامًا.
+ *
+ * ⚠️ بوّابةٌ واحدة لخمسة مواضع: العقوبة (`_govtLightDayPenalty`) وعدّ إعادة البناء
+ * (`_computeChangeableBreaks`) وسجلّ الكسور (`_enumerateBreakRecords`) والترسية
+ * (`_brokenLessonCells` بند ج) والمَجَسّ (`_breakProbePlan`). أيّ موضعٍ سادسٍ
+ * يُضاف يجب أن يمرّ بها، وإلّا انفرقت الطبقتان وانكسر عقد ΣΔ==reconstruct.
+ *
+ * @return {boolean}
+ */
+function _govtExempt(ctx, cid) {
+  return !!(ctx && ctx.govtExempt && ctx.govtExempt[cid]);
+}
+
+function _govtLightDayPenalty(state, ctx, cid) {
+  const g = ctx.govtLightDay;
+  if (!g || !g.enabled) return 0;
+  if (_govtExempt(ctx, cid)) return 0;
+  const v = _teacherLightestOccupied(state, cid, ctx.days, ctx.periods);
+  if (v <= g.optimal) return 0;
+  if (v <= g.maxEnd) return g.wSoft;
+  return g.wHard;
+}
+
+/**
+ * حمل يوم المعلّم بمصطلح «موازنة حصص المعلّم»: حصص التدريس فقط (LESSON —
+ * الاجتماعات لا تُحتسَب)، مع عدّ الزوج المتجاور لنفس (الصفّ، المادّة) من مواد
+ * ctx.consecutiveSubjects حصّةً واحدة (الكتلة المزدوجة المقصودة). قاعدة التمييز:
+ * نصاب هذه المواد 2 لكلّ صفّ أسبوعيًّا فلا تجاور بالصدفة — أيّ تجاورٍ لنفس
+ * (الصفّ، المادّة) في يوم = الكتلة. يُكشَف التجاور ديناميكيًّا من الحالة الجارية
+ * (الأزواج تتحرّك أثناء الإصلاح)، لا من قائمة ثابتة. خليّة المعلّم النصيّة تحمل
+ * classId فقط، فتُقرأ المادّة من شبكة الصفّ (getCell) عند فحص الزوج.
+ *
+ * دالّة موضِعيّة مستقلّة عن ترتيب الوضع — تصلح للدلتا وإعادة البناء معًا.
+ *
+ * @return {number} عدد حصص التدريس المُوازَن في ذلك اليوم (الكتلة = 1).
+ */
+function _dayBalanceDayCount(state, ctx, cid, day) {
+  const periods = ctx.periods;
+  const consecSubs = ctx.consecutiveSubjects || {};
+  let count = 0;
+  for (let p = 0; p < periods; p++) {
+    const cell = state.getTeacherCell(cid, day, p);
+    if (typeof cell === 'string' && cell.length > 0) count++;
+  }
+  // خصم 1 عن كلّ زوج متجاور لنفس (الصفّ، المادّة) من مواد المتتاليات.
+  let p = 0;
+  while (p < periods - 1) {
+    const c1 = state.getTeacherCell(cid, day, p);
+    const c2 = state.getTeacherCell(cid, day, p + 1);
+    if (typeof c1 === 'string' && c1.length > 0 && c1 === c2) {
+      const s1 = state.getCell(c1, day, p);
+      const s2 = state.getCell(c1, day, p + 1);
+      if (s1 && s2 && s1.kind === 'LESSON' && s2.kind === 'LESSON' &&
+          s1.subjectKey === s2.subjectKey && consecSubs[s1.subjectKey]) {
+        count--;
+        p += 2;   // الزوج استُهلك — لا تراكب أزواج
+        continue;
+      }
+    }
+    p++;
+  }
+  return count;
+}
+
+/**
+ * هل يُعفى هذا المعلّم من «موازنة حصص المعلّم»؟ (الجلسة 53) — صاحب حجب الحضور
+ * وحده. الموازنة تقيس max−min على الأيّام الخمسة واليوم الفارغ يدخل بصفر، ومن
+ * فُرِض عليه التفرّغ يومين فارقُه ≥ عدد حصص أثقل أيّامه أبدًا وبلا إمكان إصلاح:
+ * كسرٌ شبحيّ دائم يُلوّث التقرير ويُنفق الإصلاحُ محاولاتٍ في ملاحقته. الإعفاء
+ * وجوديّ لا قيميّ — نُعفي من قصصنا شبكته لا من طالت أيّامه.
+ *
+ * ⚠️ بوّابةٌ واحدة لأربعة مواضع: _dayBalanceSpread يبتلع ثلاثةً منها (العقوبة
+ * والتجميع وسجلّ الكسور)، والرابع (مرتكزات الحركة) يحسب mx/mn بنفسه فيستدعيها
+ * صراحةً. أيّ موضعٍ خامسٍ يُضاف يجب أن يمرّ بها.
+ */
+function _dayBalanceExempt(ctx, cid) {
+  return isBlockedTeacher(ctx, cid);
+}
+
+/**
+ * فارق «موازنة حصص المعلّم» = max − min لحمل أيّامه (بمصطلح _dayBalanceDayCount:
+ * تدريس فقط، الكتلة المزدوجة = 1). اليوم الفارغ يدخل بقيمة 0 — لا استثناء.
+ * والمعفى (_dayBalanceExempt) يُرجع 0: فارقٌ مُحاسَب لا فارقٌ واقعيّ.
+ *
+ * @return {number} الفارق (0 فأكثر).
+ */
+function _dayBalanceSpread(state, ctx, cid) {
+  if (_dayBalanceExempt(ctx, cid)) return 0;
+  let mx = 0, mn = Infinity;
+  for (let d = 0; d < ctx.days; d++) {
+    const v = _dayBalanceDayCount(state, ctx, cid, d);
+    if (v > mx) mx = v;
+    if (v < mn) mn = v;
+  }
+  return mx - mn;
+}
+
+/**
+ * عقوبة كسر «موازنة حصص المعلّم» لمعلّمٍ واحد في الحالة الراهنة (وحدة الكسر =
+ * المعلّم، مسطّحة لا متدرّجة). طبقتان (العتبتان من الورقة، الحزمة 5):
+ *   فارق ≤ okSpread ⟹ 0 · فارق ≤ softSpread ⟹ wSoft · فوقها ⟹ wHard.
+ * العقوبتان مباشرتان من الورقة (بلا ×100). enabled=false ⟹ 0. مصدرٌ موحَّد
+ * (ctx.dayBalance) يقرؤه المقيّم الموضعيّ وإعادة البناء بلا فرق ⟹ ΣΔ==reconstruct.
+ * مستقلّ عن «يوم المراجعة الخفيف»: ذاك يقيس رقم آخر حصّة، وهذا عدد الحصص.
+ *
+ * @return {number} العقوبة (0 / wSoft / wHard).
+ */
+function _dayBalancePenalty(state, ctx, cid) {
+  const b = ctx.dayBalance;
+  if (!b || !b.enabled) return 0;
+  const spread = _dayBalanceSpread(state, ctx, cid);
+  if (spread <= b.okSpread) return 0;
+  if (spread <= b.softSpread) return b.wSoft;
+  return b.wHard;
+}
+
+/**
+ * عدد كسور «الأخيرتان في صفٍّ واحد» لمعلّمٍ واحد (وحدة الكسر = المعلّم، تصاعديّة):
+ * لكلّ صفٍّ وقعت فيه أكثر من حصّةٍ أخيرة له، كلّ حصّةٍ زائدة عن الأولى = كسرٌ واحد
+ * ⟹ Σ (n_صفّ − 1) لكلّ صفٍّ n ≥ 2. عددُ معلّمٍ دالّةُ خلاياه هو وحدها (صفّ الأخيرة
+ * في كلّ يوم) — دالّة موضِعيّة تصلح للدلتا وإعادة البناء معًا (نظير _dayBalanceSpread).
+ *
+ * @return {number} عدد التكرارات الصفّيّة في حصصه الأخيرة (0 فأكثر).
+ */
+function _lastSameClassCount(state, ctx, cid) {
+  const byClass = {};
+  for (let d = 0; d < ctx.days; d++) {
+    const tc = state.getTeacherCell(cid, d, ctx.lastIdx);
+    if (typeof tc === 'string' && tc.length > 0) byClass[tc] = (byClass[tc] || 0) + 1;
+  }
+  let n = 0;
+  const keys = Object.keys(byClass);
+  for (let i = 0; i < keys.length; i++) if (byClass[keys[i]] > 1) n += byClass[keys[i]] - 1;
+  return n;
+}
+
+/**
+ * عقوبة كسر «الأخيرتان في صفٍّ واحد» لمعلّمٍ واحد في الحالة الراهنة (وحدة الكسر =
+ * المعلّم، تصاعديّة: العدد × الوزن). الوزن من الحقل القائم W_LAST_SAME_CLASS عبر
+ * ctx.weights (لا رقم حرفيّ). مبوَّبة بـctx.lastPreferDifferent: «لا» ⟹ 0 بلا قراءة
+ * (getEngineWeights لا يقرأ صفّ الوزن أصلًا حينها). مصدرٌ موحَّد يقرؤه المقيّم
+ * الموضعيّ وإعادة البناء بلا فرق ⟹ ΣΔ==reconstruct.
+ *
+ * @return {number} العقوبة (0 فأكثر).
+ */
+function _lastSameClassPenalty(state, ctx, cid) {
+  if (!ctx.lastPreferDifferent) return 0;
+  const n = _lastSameClassCount(state, ctx, cid);
+  if (n <= 0) return 0;
+  return n * ctx.weights.W_LAST_SAME_CLASS;
+}
+
+/**
+ * إشغال يوم المعلّم (درس أو اجتماع؛ خانة الحجب تُخفيها الحالة فلا تُحتسب) —
+ * نفس دلالة _teacherDayProfile في الباني، مصفوفةً جاهزةً لـ_dayShapeFromOcc.
+ *
+ * @return {boolean[]}
+ */
+function _dayShapeOcc(state, ctx, cid, day) {
+  const occ = new Array(ctx.periods);
+  for (let p = 0; p < ctx.periods; p++) occ[p] = (state.getTeacherCell(cid, day, p) !== null);
+  return occ;
+}
+
+/**
+ * شكل يوم المعلّم كاملًا (الجلسة 61) — المصدر الموحَّد الذي يقرؤه العدّ والعقوبة
+ * والسجلّ والمَجَسّ، فلا يفترق سعرٌ عن عدّ. يمرّر إلى `_dayShapeFromOcc` ما تحتاجه
+ * لتفكيك الأزواج: أزواجَ الكتلة المفروضة، وخانات الاجتماع، وحدود الفرص.
+ *
+ * وضع 'GAP' (من يفضّل الحصص المتتابعة) لا يحتاج شيئًا من ذلك — وحدتُه الفجوة
+ * المفردة لا الزوج — فيُمرَّر null توفيرًا للحساب في الحلقة الساخنة.
+ *
+ * @return {Object} كائن الشكل من _dayShapeFromOcc.
+ */
+function _dayShapeDayShape(state, ctx, cid, day, mode) {
+  const isGap = (mode === 'GAP');
+  return _dayShapeFromOcc(
+    _dayShapeOcc(state, ctx, cid, day), ctx.periods,
+    isGap ? null : _dayShapeBlockPairs(state, ctx, cid, day),
+    isGap ? null : _teacherDayMeetings(state, ctx, cid, day),
+    isGap ? null : _ctxRecessMap(ctx));
+}
+
+/**
+ * عقوبة «شكل يوم المعلّم» ليومٍ واحد (الجلسة 61) — تفوّض التسعير إلى
+ * `_dayShapePenaltyFromShape` نفسها التي يستعملها الباني، فالمقيّم الموضعيّ
+ * وإعادة البناء والباني على سعرٍ واحد ⟹ ΣΔ==reconstruct.
+ *
+ * @return {number} عقوبة ذلك اليوم (0 فأكثر).
+ */
+function _dayShapeDayPenalty(state, ctx, cid, day, mode) {
+  return _dayShapePenaltyFromShape(ctx, cid, _dayShapeDayShape(state, ctx, cid, day, mode));
+}
+
+/**
+ * هل لهذا المعلّم حدُّ شكلٍ فعّال أصلًا؟ بوّابةٌ واحدة (نظير _firstLastSameDayWeight):
+ * صفرٌ ⟹ لا حساب ولا سجلّ ولا ترسية ولا مَجَسّ. تُرجع الوزن الفعّال ونوعه.
+ *
+ * @return {{w:number, mode:string}} mode: 'PAIR' (الافتراض) أو 'GAP' (يفضّل التتابع).
+ */
+function _dayShapeWeight(ctx, cid) {
+  const EW = (ctx && ctx.weights) || {};
+  if (ctx && ctx.prefersConsecutive && ctx.prefersConsecutive[cid]) {
+    const wg = Number(EW.W_PREFER_CONSEC_GAP);
+    return { w: (isNaN(wg) || wg <= 0) ? 0 : wg, mode: 'GAP' };
+  }
+  // ⚠️ بعد تدرُّج السعر (الجلسة 61) صار `w` **بوّابةً وسقفًا للعرض** لا سعرًا:
+  // أثقلُ ما قد يكلّفه زوجٌ واحد. البوّابة أوسعُ الثلاثة كي لا تُطفَأ القاعدة في
+  // الإصلاح بينما هي حيّةٌ في الباني (لو صُفِّر الأساس وبقي وزنُ الفرصة أو الاجتماع).
+  // السعر الحقيقيّ من `_dayShapeDayPenalty` حصرًا — نظير _np2lWeight.
+  const wp = Number(EW.W_ADJACENT_PAIR);
+  const wr = Number(EW.W_ADJACENT_PAIR_RECESS);
+  const wm = Number(EW.W_ADJACENT_PAIR_MEETING);
+  const top = Math.max(isNaN(wp) ? 0 : wp, isNaN(wr) ? 0 : wr, isNaN(wm) ? 0 : wm);
+  return { w: top > 0 ? top : 0, mode: 'PAIR' };
+}
+
+/**
+ * عدد وحدات «شكل يوم المعلّم» ليومٍ واحد (الجلسة 59) — الوحدة (معلّم، يوم).
+ * الافتراض: عدد الأزواج المتجاورة. ومن يفضّل التتابع: عدد فجواته المفردة.
+ *
+ * ⚠️ بلا إعفاءٍ ليوم المراجعة عمدًا — أولويّتُه بالسعر (25/200 مقابل 10) لا
+ * بالإعفاء؛ الإعفاء الصريح جُرّب فضاعف الثلاثيّات، انظر _dayShapePenaltyFromShape.
+ *
+ * دالّة موضِعيّة: عددُ معلّمٍ دالّةُ خلاياه هو وحدها ⟹ تصلح للدلتا وإعادة البناء معًا.
+ *
+ * @return {number} عدد الوحدات في ذلك اليوم.
+ */
+function _dayShapeDayCount(state, ctx, cid, day, mode) {
+  // ⚠️ أزواج الكتلة المزدوجة المفروضة (فنية/حاسوب/موسيقية) تُستثنى من عدّ التتابع —
+  // قاعدةٌ صلبة تفرضها فلا تُغرَّم بقاعدةٍ ناعمة. انظر _dayShapeFromOcc.
+  // ⚠️ هذا **عدّ عرضٍ وترسية** لا سعر: بعد الجلسة 61 تختلف أسعار الأزواج، فالعقوبة
+  // من _dayShapeDayPenalty وحدها. العدد يبقى مجموع الدلاء الأربعة كما كان.
+  const shape = _dayShapeDayShape(state, ctx, cid, day, mode);
+  if (shape.count < 2) return 0;
+  return (mode === 'GAP') ? shape.singles : shape.pairs;
+}
+
+/**
+ * عقوبة «شكل يوم المعلّم» لمعلّمٍ واحد في الحالة الراهنة. مصدرٌ موحَّد يقرؤه المقيّم
+ * الموضعيّ وإعادة البناء بلا فرق ⟹ ΣΔ==reconstruct (نظير _lastSameClassPenalty).
+ * الوزن من الورقة مباشرةً بلا أيّ مضاعِف.
+ *
+ * @return {number} العقوبة (0 فأكثر).
+ */
+function _dayShapePenalty(state, ctx, cid) {
+  const g = _dayShapeWeight(ctx, cid);
+  if (g.w <= 0) return 0;
+  let pen = 0;
+  for (let d = 0; d < ctx.days; d++) pen += _dayShapeDayPenalty(state, ctx, cid, d, g.mode);
+  return pen;
+}
+
+/**
+ * وزن «أولى وأخيرة في يومٍ واحد» (الجلسة 57) من الورقة عبر ctx.weights
+ * (W_FIRST_LAST_SAME_DAY). 0 أو غيابه أو شبكةٌ بحصّةٍ واحدة (lastIdx = 0 فالأولى
+ * هي الأخيرة) ⟹ 0 = القاعدة مطفأة في كلّ مواضعها (العقوبة والعدّ والسجلّ والترسية
+ * والمَجَسّ) — بوّابةٌ واحدة نظير _dayBalanceExempt.
+ *
+ * @return {number} الوزن الفعّال (0 = مطفأ).
+ */
+function _firstLastSameDayWeight(ctx) {
+  const w = (ctx && ctx.weights) ? ctx.weights.W_FIRST_LAST_SAME_DAY : 0;
+  if (typeof w !== 'number' || w <= 0) return 0;
+  if (!(ctx.lastIdx > 0)) return 0;
+  return w;
+}
+
+/**
+ * هل لهذا المعلّم في هذا اليوم حصّةٌ أولى وحصّةٌ أخيرة معًا؟ دروسٌ فقط: خليّة
+ * المعلّم النصّيّة = classId، والاجتماع/الحجب كائنٌ فلا يُحتسَب (الاجتماعات لا
+ * تتحرّك أصلًا، والقاعدة عن التدريس من أوّل اليوم إلى آخره).
+ */
+function _firstLastSameDayHit(state, ctx, cid, day) {
+  const a = state.getTeacherCell(cid, day, 0);
+  if (!(typeof a === 'string' && a.length > 0)) return false;
+  const b = state.getTeacherCell(cid, day, ctx.lastIdx);
+  return (typeof b === 'string' && b.length > 0);
+}
+
+/**
+ * عدد أيّام المعلّم التي له فيها أولى وأخيرة معًا (وحدة الكسر = (معلّم، يوم)،
+ * تصاعديّة: العدد × الوزن). عددُ معلّمٍ دالّةُ خلاياه هو وحدها — دالّة موضِعيّة
+ * تصلح للدلتا وإعادة البناء معًا (نظير _lastSameClassCount).
+ *
+ * @return {number} عدد الأيّام المخالفة (0 فأكثر).
+ */
+function _firstLastSameDayCount(state, ctx, cid) {
+  let n = 0;
+  for (let d = 0; d < ctx.days; d++) {
+    if (_firstLastSameDayHit(state, ctx, cid, d)) n++;
+  }
+  return n;
+}
+
+/**
+ * عقوبة «أولى وأخيرة في يومٍ واحد» لمعلّمٍ واحد في الحالة الراهنة = الوزن ×
+ * عدد أيّامه المخالفة. الوزن من الورقة مباشرةً (بلا ×100)؛ مطفأ ⟹ 0 بلا حساب.
+ * مصدرٌ موحَّد يقرؤه المقيّم الموضعيّ وإعادة البناء بلا فرق ⟹ ΣΔ==reconstruct.
+ *
+ * @return {number} العقوبة (0 إن سليم/مطفأ).
+ */
+function _firstLastSameDayPenalty(state, ctx, cid) {
+  const w = _firstLastSameDayWeight(ctx);
+  if (w <= 0) return 0;
+  return w * _firstLastSameDayCount(state, ctx, cid);
+}
+
+/**
+ * وزن كسر «السابعة الثانية» لغير الأولويّة، متدرّجًا بنصاب المعلّم المطلوب
+ * الأسبوعيّ (t.requiredLoad): نصاب < العتبة ⟵ الخفيف، وإلّا الثقيل. العتبة
+ * والوزنان من ورقة القيود (ctx.params). النصاب ثابتٌ لا يتغيّر بالتبديل ⟹ الوزن
+ * دالّةٌ في المعلّم لا في الحالة، فلا خطر على ΣΔ==reconstruct. مصدر الحقيقة
+ * الوحيد لهذا الوزن — يُستدعى من _localBreakPenalty و_computeChangeableBreaks
+ * و_enumerateBreakRecords و_RepairReport (لا تكرار للرقم).
+ *
+ * @param {string} teacherId civilId المعلّم.
+ * @param {Object} ctx السياق (params + teacherByCivilId).
+ * @return {number} الوزن الفعليّ (خفيف/ثقيل).
+ */
+function _np2lWeight(teacherId, ctx) {
+  const p = ctx.params || {};
+  const t = ctx.teacherByCivilId[String(teacherId)] || {};
+  const quota = (typeof t.requiredLoad === 'number') ? t.requiredLoad : 0;
+  // بعد 6/ج-1: numParam يضمن رقمًا أو يرمي، فالاحتياطيّ (10·100·200) ميّت —
+  // الغياب عطبٌ يُكشَف بصراحة لا يُغطّى بقيمةٍ صامتة.
+  if (typeof p.np2lThreshold !== 'number') {
+    throw new Error('_np2lWeight: الحقل «np2lThreshold» غائبٌ عن ctx.params.');
+  }
+  if (typeof p.np2lWeightLight !== 'number') {
+    throw new Error('_np2lWeight: الحقل «np2lWeightLight» غائبٌ عن ctx.params.');
+  }
+  if (typeof p.np2lWeightHeavy !== 'number') {
+    throw new Error('_np2lWeight: الحقل «np2lWeightHeavy» غائبٌ عن ctx.params.');
+  }
+  const threshold = p.np2lThreshold;
+  const wLight = p.np2lWeightLight;
+  const wHeavy = p.np2lWeightHeavy;
+  return (quota < threshold) ? wLight : wHeavy;
+}
+
+/**
+ * عجز «احتياط الغياب» لقسمٍ في خانةٍ بعينها (يوم، حصّة) — التعريف الوحيد للعجز
+ * في المشروع: يستهلكه حدُّ الإصلاح (_localBreakPenalty) والمسح الختاميّ
+ * (_computeChangeableBreaks / _enumerateBreakRecords) معًا، فلا منطقَ مكرَّر.
+ *
+ * رؤساء الأقسام خارج نظام الاحتياط بالبناء: العدّ من ctx.reserveCandidatesByDept
+ * حصرًا (بُني في _buildBuilderContext مستبعِدًا الرؤساء) — لا فهرسَ ثانٍ ولا
+ * إعادة بناءٍ هنا. العتبات من ctx.weights (نفس EW التي يقرؤها الباني): سلّم
+ * DEPT_RESERVE_LARGE_SIZE/LARGE_MIN ثمّ MID_SIZE/MID_MIN — لا رقمَ حاكمًا مكرَّرًا.
+ *
+ * ⚠️ فرقٌ مقصود عن كتلة الباني في _softScore (algo_ScheduleBuilder.js:1415-1437):
+ * الباني يقيس وضعًا **مرتقبًا** فيستثني المرشَّح الحاليّ من العدّ («ما سيتبقّى بعد
+ * الوضع»)، وهذه الدالّة تقيس جدولًا **قائمًا** فتعدّ كلّ المرشّحين بلا استثناء.
+ * لا تُوحَّدا: توحيدهما يفسد أحد القياسين. (تدريج عقوبة الباني بندٌ مؤجَّل يُقاس وحده.)
+ *
+ * ✦ قاعدة «لا درسَ للقسم ⟹ لا عجز» (الحزمة 46): القيد لا يسري في خانةٍ لا يُدرّس
+ * فيها أيٌّ من مرشّحي احتياط القسم. غرض الاحتياط زميلٌ حرٌّ يغطّي حصّة غائب؛ فحيث
+ * لا حصّةَ للقسم أصلًا فلا شيء يُغطَّى، والمطلب بلا موضوع. تُعالِج هذه الصياغة
+ * الدلاليّة خانةَ اجتماع القسم تلقائيًّا (كلّ الأعضاء مجتمعون ⟹ لا مدرِّس ⟹ إعفاء)
+ * دون مقارنة يوم/حصّة بالإعدادات — والاجتماع يضعه الباني ديناميكيًّا فالمقارنة هشّة.
+ * الكشف بنوع خليّة المعلّم: نصٌّ (classId) = درس · كائن = اجتماع · null = حرّ.
+ * وتبقى الفروق صحيحة: مدرِّسٌ واحد وبقيّة القسم في اجتماعٍ ⟹ القيد يسري كالمعتاد.
+ *
+ * @param {Object} state حالة الجدول (isTeacherFree + getTeacherCell).
+ * @param {Object} ctx السياق (reserveCandidatesByDept + weights).
+ * @param {string} dept اسم القسم.
+ * @param {number} day اليوم (0-based).
+ * @param {number} period الحصّة (0-based).
+ * @param {Object} [info] مخرَجٌ اختياريّ للتشخيص — تُملأ حقوله
+ *   {minReserve, free, teaching, exempt} بالوقائع المقيسة هنا. وجودها لا يغيّر
+ *   العائد. المستدعي يشتقّ منها «النقص الذي كان سيُنتَج لولا الإعفاء» =
+ *   max(0, minReserve − free) بلا إعادة تعريفٍ للقاعدة (تبقى هنا وحدها).
+ * @return {number} max(0, المطلوب − الأحرار)؛ وصفرٌ إن كان القسم بلا حدّ احتياط
+ *   أو لم يكن لأحدٍ من مرشّحيه درسٌ في الخانة.
+ */
+function _deptReserveDeficit(state, ctx, dept, day, period, info) {
+  if (info) { info.minReserve = 0; info.free = 0; info.teaching = 0; info.exempt = false; }
+  if (!dept) return 0;
+  const reserveCids = (ctx.reserveCandidatesByDept || {})[dept] || [];
+  const deptSize = reserveCids.length;
+  const EW = ctx.weights;
+  let minReserve = 0;
+  if (deptSize >= EW.DEPT_RESERVE_LARGE_SIZE) minReserve = EW.DEPT_RESERVE_LARGE_MIN;
+  else if (deptSize >= EW.DEPT_RESERVE_MID_SIZE) minReserve = EW.DEPT_RESERVE_MID_MIN;
+  if (minReserve <= 0) return 0;   // قسمٌ صغير: بلا قيد ⟹ بلا عجز
+
+  // مرورٌ واحد يُحصي الحرّ والمدرِّس معًا (لا كلفة إضافيّة تُذكر): عدّ الحرّ يبقى
+  // عبر isTeacherFree كما كان حرفيًّا، والمدرِّس بشرط النصّ الذي يستبعد الاجتماع.
+  let free = 0, teaching = 0;
+  for (let i = 0; i < reserveCids.length; i++) {
+    const cid = reserveCids[i];
+    if (state.isTeacherFree(cid, day, period)) { free++; continue; }
+    if (typeof state.getTeacherCell(cid, day, period) === 'string') teaching++;
+  }
+  if (info) {
+    info.minReserve = minReserve; info.free = free;
+    info.teaching = teaching; info.exempt = (teaching === 0);
+  }
+  if (teaching === 0) return 0;   // لا درسَ للقسم هنا ⟹ لا شيء يُغطَّى ⟹ لا عجز
+
+  return Math.max(0, minReserve - free);
+}
+
+/**
+ * مرشّحات ترقيع خانة احتياطٍ مستنزَفة — المصدر الوحيد لفضاء بحث هذا النوع:
+ * يستهلكه مولّد مرتكزات المحرّك (_brokenLessonCells) ومَجَسّ التقرير
+ * (_breakProbePlan) معًا، فلا منطقَ مكرَّر ولا فضاءان متباعدان.
+ *
+ * المنطق: كلّ مرشّح احتياطٍ للقسم مشغولٍ بدرسٍ في (يوم، حصّة) هو مرتكز — إخراجه
+ * من الخانة يُنقص العجز 1، والعقوبة متدرّجة (300 × النقص) فالمكسب حقيقيّ ولو بقي
+ * الكسر قائمًا. لا أوّليّة تحريكٍ جديدة: الوجهات خلايا درسٍ في **الصفّ نفسه**، أي
+ * تبديل الصفّ الداخليّ الذي تستعمله الحلقة أصلًا — فالنصاب وتغطية الصفّ والحرّاس
+ * الصلبة كلّها محفوظة بالبنية. الاجتماعات ليست مرتكزًا (لا تتحرّك): teacherGrid
+ * يحمل نصَّ classId للدرس وكائنًا للاجتماع، فشرط النصّ يستبعدها.
+ *
+ * ترتيب الوجهات حتميّ تمامًا (بلا عشوائيّة وبلا ترتيب مفاتيح كائن):
+ *   (1) وجهةٌ معلّمها ليس من مرشّحي احتياط القسم — وإلّا فالمقايضة عقيمة (يخرج
+ *       مشغولٌ ويدخل مكانه مشغولٌ من القسم نفسه فلا ينخفض النقص).
+ *   (2) يومٌ مختلف قبل نفس اليوم — يفكّ التكدّس بدل إزاحته داخل اليوم.
+ *   (3) ثمّ (يوم، حصّة) تصاعديًّا.
+ *
+ * الحدّان من ورقة القيود (لا رقم حاكم هنا): RESERVE_PROBE_MAX_BUSY مشغولين لكلّ
+ * كسر، وRESERVE_PROBE_MAX_DEST وجهةً لكلّ مشغول — سدُّ انفجار كلفة البحث.
+ *
+ * @return {Array<{classId,day,period,partners:Array<{classId,day,period}>}>}
+ */
+function _reserveProbeAnchors(state, ctx, dept, day, period) {
+  const W = (ctx && ctx.weights) || {};
+  if (typeof W.RESERVE_PROBE_MAX_BUSY !== 'number' ||
+      typeof W.RESERVE_PROBE_MAX_DEST !== 'number') {
+    throw new Error('_reserveProbeAnchors: ctx.weights.RESERVE_PROBE_MAX_BUSY/' +
+      'RESERVE_PROBE_MAX_DEST مطلوبةٌ (حقلا السجلّ الحيّان).');
+  }
+  const maxBusy = W.RESERVE_PROBE_MAX_BUSY, maxDest = W.RESERVE_PROBE_MAX_DEST;
+  if (maxBusy <= 0 || maxDest <= 0) return [];
+
+  const cands = (ctx.reserveCandidatesByDept || {})[dept] || [];
+  const inDept = {};
+  for (let i = 0; i < cands.length; i++) inDept[String(cands[i])] = true;
+
+  const dim = state.getDimensions();
+  const days = dim.days, periods = dim.periods;
+  const out = [];
+
+  // المشغولون بترتيب مرشّحي القسم كما بُني (من model.teachers — ثابتٌ حتميّ).
+  for (let i = 0; i < cands.length && out.length < maxBusy; i++) {
+    const cid = String(cands[i]);
+    const classId = state.getTeacherCell(cid, day, period);
+    if (typeof classId !== 'string' || classId.length === 0) continue;   // حرّ أو اجتماع
+    const cell = state.getCell(classId, day, period);
+    if (!cell || cell.kind !== 'LESSON') continue;   // _attemptSwap يشترط درسًا
+
+    const ranked = [];
+    for (let d = 0; d < days; d++) {
+      for (let p = 0; p < periods; p++) {
+        if (d === day && p === period) continue;
+        const oc = state.getCell(classId, d, p);
+        if (!oc || oc.kind !== 'LESSON') continue;
+        ranked.push({ r1: inDept[String(oc.civilId)] ? 1 : 0,
+                      r2: (d === day) ? 1 : 0, d: d, p: p });
+      }
+    }
+    ranked.sort(function (x, y) {
+      return (x.r1 - y.r1) || (x.r2 - y.r2) || (x.d - y.d) || (x.p - y.p);
+    });
+
+    const partners = [];
+    for (let k = 0; k < ranked.length && partners.length < maxDest; k++) {
+      partners.push({ classId: classId, day: ranked[k].d, period: ranked[k].p });
+    }
+    if (partners.length === 0) continue;   // بلا وجهة = بلا مرشّح
+    out.push({ classId: classId, day: day, period: period, partners: partners });
+  }
+  return out;
+}
+
+/**
+ * محلّل وزن الكسر — المصدر الموحَّد لوزن أيّ نوع كسر في العرض والتصدير
+ * (_enumerateBreakRecords و_RepairReport). لا يُختلق رقم: النوع الذي لا مصدر
+ * صريح لوزنه يُعاد له null فيَعرضه المستدعي «؟ غير معرَّف» بلا مساهمة (كشفٌ لا
+ * اختلاق)، بدل الافتراضيّ الصامت 50 القديم الذي زوّر وزن BROKEN_CONSEC_SOFT.
+ *
+ * - BROKEN_CONSEC_SOFT: وزن الورقة من ctx.consecutiveSubjects — نفس مصدر
+ *   _consecPairPenalty:294 وإعادة البناء:849 (لا تكرار للرقم). يُعاد الوزن فقط
+ *   إن اتّفقت كلّ المواد المرنة المفعَّلة عليه؛ اختلافها ⟹ null (التباسٌ يُكشَف
+ *   لا يُخفى بمتوسّطٍ مضلِّل).
+ * - الأنواع المعلنة في BREAK_WEIGHTS (شاملةً أوزان GOVT/BALANCE «للعرض»):
+ *   قيمتها منها كما كان.
+ * - غير ذلك: null (مجهول).
+ *
+ * ملاحظة: عقوبة النموذج (_localBreakPenalty/_computeChangeableBreaks) لها افتراضها
+ * الخاصّ (50) ولا تُمَسّ — هذا محلّل عرضٍ بحت.
+ *
+ * @param {string} type نوع الكسر.
+ * @param {Object} ctx السياق (consecutiveSubjects).
+ * @return {number|null} الوزن الفعليّ، أو null إن تعذّر تحديده من مصدرٍ صريح.
+ */
+function _breakTypeWeight(type, ctx) {
+  const W = (ctx && ctx.weights) || CONSTANTS.BREAK_WEIGHTS || {};
+  if (typeof W[type] === 'number') return W[type];
+  if (type === 'BROKEN_CONSEC_SOFT') {
+    const subs = (ctx && ctx.consecutiveSubjects) || {};
+    const keys = Object.keys(subs);
+    let w = null;
+    for (let i = 0; i < keys.length; i++) {
+      const spec = subs[keys[i]];
+      if (!spec || spec.hard) continue;
+      if (typeof spec.weight !== 'number' || spec.weight <= 0) continue;   // خامل
+      if (w === null) w = spec.weight;
+      else if (w !== spec.weight) return null;   // أوزان مرنة متضاربة — كشف صريح
+    }
+    return w;   // null إن لا مادّة مرنة مفعَّلة
+  }
+  return null;   // مجهول — لا يُختلق رقم
+}
+
+/**
+ * يبني وصف المنطقة المتأثّرة بتبديل خليّتَي درس A↔B: مفاتيح المختبر والسقف
+ * اليومي وخلايا MATH_LAST والمعلّمين الذين قد تتغيّر كسورهم. تُقيَّم هذه المنطقة
+ * نفسها قبل التبديل وبعده، فتُلغى الكسور غير المتأثّرة في الفرق.
+ *
+ * @return {{labSlots: Array, capKeys: Array, mathCells: Array, teacherIds: Array}}
+ */
+function _buildSwapRegion(cellA, slotA, cellB, slotB) {
+  const subjA = slotA.subjectKey, subjB = slotB.subjectKey;
+  const civilA = String(slotA.civilId), civilB = String(slotB.civilId);
+
+  // مفاتيح المختبر: كلّ مادّة من {A,B} في كلّ خانة من {A,B} (التزامن قد يتغيّر).
+  const labSeen = {};
+  const labSlots = [];
+  const addLab = function (key, d, p) {
+    const k = key + '|' + d + '|' + p;
+    if (!labSeen[k]) { labSeen[k] = true; labSlots.push([key, d, p]); }
+  };
+  addLab(subjA, cellA.day, cellA.period); addLab(subjB, cellA.day, cellA.period);
+  addLab(subjA, cellB.day, cellB.period); addLab(subjB, cellB.day, cellB.period);
+
+  // مفاتيح السقف اليومي: (صفّ|مادّة|يوم) للمادّتين في يومَي الخليّتين.
+  const capSeen = {};
+  const capKeys = [];
+  const addCap = function (classId, subjectKey, day) {
+    const k = classId + '|' + subjectKey + '|' + day;
+    if (!capSeen[k]) { capSeen[k] = true; capKeys.push([classId, subjectKey, day]); }
+  };
+  addCap(cellA.classId, subjA, cellA.day); addCap(cellA.classId, subjB, cellA.day);
+  addCap(cellB.classId, subjA, cellB.day); addCap(cellB.classId, subjB, cellB.day);
+
+  // خلايا MATH_LAST: موقعا الخليّتين (المادّة عندهما تتبدّل).
+  const mathCells = [
+    { classId: cellA.classId, day: cellA.day, period: cellA.period },
+    { classId: cellB.classId, day: cellB.day, period: cellB.period },
+  ];
+
+  // المعلّمون: معلّما الخليّتين (كسور السابعة/الفرديّة قد تتغيّر).
+  const teacherIds = (civilA === civilB) ? [civilA] : [civilA, civilB];
+
+  return { labSlots: labSlots, capKeys: capKeys, mathCells: mathCells, teacherIds: teacherIds };
+}
+
+/**
+ * مقيِّم الكسور الموزونة الموضعيّ: يجمع عقوبة الكسور القابلة للتغيّر بتبديل درسٍ
+ * داخل منطقة محدَّدة (_buildSwapRegion)، قراءةً من state الحاليّة. كلّ نوع يُعاد
+ * بناؤه بصيغة مستقلّة عن ترتيب الوضع فيطابق عدّ الباني:
+ *   - BROKEN_LAB:        Σ max(0, تزامن − سعة) لكلّ خانة مختبر.
+ *   - BROKEN_DAILY_CAP:  Σ max(0, عدد المادّة/اليوم − السقف) لكلّ (صفّ|مادّة|يوم).
+ *   - BROKEN_MATH_LAST:  1 لكلّ خليّة عند الأخيرة تحمل مادّةً ممنوعةً من الأخيرة.
+ *   - كسور السابعة لكلّ معلّم من عدد سابعاته L، وسقفه الصلب الفعّال hardCap =
+ *       lastCapByTeacher[cid] إن وُجد (الجَبّ) وإلا params.lastHard:
+ *       LAST_OVER_HARD max(0,L−hardCap)، SUP_LAST_OVER (مشرف) max(0,L−supMax)،
+ *       ADMIN_LAST (إداريّ) L، NON_PRIORITY_2ND_LAST (غير أولويّة) max(0,L−1).
+ *   - BROKEN_TEACHER_RULE (وزن افتراضيّ 50): noLast→L، noFirst→F.
+ *       (سقف الأخيرة الفرديّ لم يعد يُعاقَب هنا — إنفاذه عبر الجَبّ أعلاه.)
+ *   - BROKEN_DEPT_RESERVE: الوزن × النقص لكلّ (قسم، خانة) متأثّرة — أقسام معلّمي
+ *       المنطقة × خانتَي الحركة، بلا ازدواج. التعريف من _deptReserveDeficit.
+ *
+ * SUPERVISOR_DEFICIT غير مشمول: ثابتٌ تحت أيّ تبديل درس مجدٍ (الاجتماعات لا
+ * تتحرّك، والعجز الجديد يحجبه _isGloballyFeasible) فيُلغى في الفرق.
+ *
+ * @return {number} مجموع العقوبة الموزونة للمنطقة في الحالة الراهنة.
+ */
+function _localBreakPenalty(state, ctx, region) {
+  const W = (ctx && ctx.weights) || CONSTANTS.BREAK_WEIGHTS || {};
+  const wOf = function (name) {
+    if (typeof W[name] === 'number') return W[name];
+    // (الحزمة 6/أ) حائطٌ صريح: مفتاحٌ غير معروف = خطأٌ يوقف، لا صفرٌ صامتٌ يُفسد penalty.
+    throw new Error('وزنٌ غير معرّف في خريطة الأوزان: ' + name);
+  };
+  const lastIdx = ctx.lastIdx;
+  let pen = 0;
+
+  // BROKEN_LAB
+  for (let i = 0; i < region.labSlots.length; i++) {
+    const key = region.labSlots[i][0], d = region.labSlots[i][1], p = region.labSlots[i][2];
+    const cap = ctx.capacityBySubjectKey[key];
+    if (typeof cap !== 'number') continue;
+    pen += wOf('BROKEN_LAB') * Math.max(0, state.getLabCount(key, d, p) - cap);
+  }
+
+  // BROKEN_DAILY_CAP + BROKEN_DAILY_FLOOR (كلاهما لكلّ (صفّ|مادّة|يوم) في المنطقة)
+  const capMap = ctx.dailyCapByClassSubject || {};
+  const floorMap = ctx.floorByClassSubject || {};
+  for (let i = 0; i < region.capKeys.length; i++) {
+    const classId = region.capKeys[i][0], subjectKey = region.capKeys[i][1], day = region.capKeys[i][2];
+    const cnt = state.getSubjectDayCount(classId, subjectKey, day);
+    const dc = capMap[classId + '|' + subjectKey];
+    if (typeof dc === 'number') pen += wOf('BROKEN_DAILY_CAP') * Math.max(0, cnt - dc);
+    const fl = floorMap[classId + '|' + subjectKey];
+    if (typeof fl === 'number' && cnt < fl) pen += wOf('BROKEN_DAILY_FLOOR');
+  }
+
+  // BROKEN_CONSEC (تزاوج الكتلة المزدوجة لصفٍّ): وحدته (صفّ،مادّة) على الأسبوع.
+  // التبديل/النقل لا يغيّر إلا وضع مادّتَي المنطقة، فالأزواج المتأثّرة هي إسقاط
+  // region.capKeys على (صفّ،مادّة) المميَّزة — نفس مجموعة DAILY_CAP بإسقاط اليوم.
+  // كلّ زوجٍ آخر وضعُه ثابت ⟹ فرقه صفر، فيبقى ΣΔ==reconstruct (نظير إثبات DAILY_CAP).
+  const consecSubs = ctx.consecutiveSubjects || {};
+  if (region.capKeys.length > 0) {
+    const dim = state.getDimensions();
+    const seenPair = {};
+    for (let i = 0; i < region.capKeys.length; i++) {
+      const classId = region.capKeys[i][0], subjectKey = region.capKeys[i][1];
+      if (!consecSubs[subjectKey]) continue;
+      const pk = classId + '|' + subjectKey;
+      if (seenPair[pk]) continue;         // زوج مميَّز مرّةً واحدة (لا تكرار)
+      seenPair[pk] = true;
+      pen += _consecPairPenalty(state, ctx, classId, subjectKey, dim.days, dim.periods);
+    }
+  }
+
+  // BROKEN_MATH_LAST + BROKEN_DEPT_HEAD_LAST (كلاهما per-cell عند الأخيرة)
+  for (let i = 0; i < region.mathCells.length; i++) {
+    const c = region.mathCells[i];
+    if (c.period !== lastIdx) continue;
+    const s = state.getCell(c.classId, c.day, c.period);
+    if (!s || s.kind !== 'LESSON') continue;
+    if (ctx.bannedLastSubjectKeys[s.subjectKey]) pen += wOf('BROKEN_MATH_LAST');
+    if (isHeadOfDepartment(ctx.teacherByCivilId[String(s.civilId)] || {})) {
+      pen += wOf('BROKEN_DEPT_HEAD_LAST');
+    }
+  }
+
+  // كسور السابعة + الفرديّة لكلّ معلّم
+  for (let i = 0; i < region.teacherIds.length; i++) {
+    const cid = region.teacherIds[i];
+    const t = ctx.teacherByCivilId[cid] || {};
+    const L = state.getLastPeriodCount(cid);
+    const F = state.getFirstPeriodCount(cid);
+
+    // السقف الصلب الفعّال: الفرديّ (الجَبّ) إن وُجد، وإلا العامّ.
+    const capOv = ctx.lastCapByTeacher[cid];
+    const hardCap = (typeof capOv === 'number') ? capOv : ctx.params.lastHard;
+    pen += wOf('BROKEN_LAST_OVER_HARD') * Math.max(0, L - hardCap);
+    if (t.isWingSupervisor === true) {
+      pen += wOf('BROKEN_SUP_LAST_OVER') * Math.max(0, L - ctx.params.lastSupervisorMax);
+    }
+    if (ctx.adminAvoidLast && t.category === ctx.adminCategoryName) {
+      pen += wOf('BROKEN_ADMIN_LAST') * L;
+    }
+    const isPriority = !!(t.department && ctx.priorityDeptNames && ctx.priorityDeptNames.has(t.department));
+    if (!isPriority && !_seventhExempt(ctx, cid)) {
+      pen += _np2lWeight(cid, ctx) * Math.max(0, L - 1);   // وزن متدرّج بالنصاب
+    }
+    const indiv = ctx.indivByCivilId[cid];
+    if (indiv) {
+      if (indiv.noLast) pen += wOf('BROKEN_TEACHER_RULE') * L;
+      if (indiv.noFirst) pen += wOf('BROKEN_TEACHER_RULE') * F;
+    }
+    // «يوم المراجعة الخفيف» (وحدته المعلّم): التبديل ينقل درسَي معلّمَين فقط، فهما
+    // الوحيدان في region.teacherIds اللذان قد يتغيّر أخفّ يومهما ⟹ الدلتا هنا يطابق
+    // فرق إعادة البناء العموميّة (كلّ معلّمٍ آخر ثابت). العقوبة من الورقة مباشرةً.
+    pen += _govtLightDayPenalty(state, ctx, cid);
+    // «موازنة حصص المعلّم» (وحدته المعلّم): فارقُ معلّمٍ دالّةُ خلاياه هو وحدها،
+    // والتبديل/النقل لا يمسّ إلا خلايا معلّمَي المنطقة ⟹ الدلتا تطابق إعادة البناء
+    // (كلّ معلّمٍ آخر ثابت الفارق فيُلغى في الفرق). العقوبة من الورقة مباشرةً.
+    pen += _dayBalancePenalty(state, ctx, cid);
+    // «الأخيرتان في صفٍّ واحد» (وحدته المعلّم): تكراراتُ معلّمٍ دالّةُ خلاياه هو وحدها،
+    // والتبديل/النقل لا يمسّ إلا خلايا معلّمَي المنطقة ⟹ الدلتا تطابق إعادة البناء
+    // (كلّ معلّمٍ آخر ثابت العدد فيُلغى في الفرق). الوزن من الورقة مباشرةً.
+    pen += _lastSameClassPenalty(state, ctx, cid);
+    // «أولى وأخيرة في يومٍ واحد» (وحدته (معلّم، يوم)): عددُ معلّمٍ دالّةُ خلاياه هو
+    // وحدها، والتبديل/النقل لا يمسّ إلا خلايا معلّمَي المنطقة ⟹ الدلتا تطابق إعادة
+    // البناء (كلّ معلّمٍ آخر ثابت العدد فيُلغى في الفرق). الوزن من الورقة مباشرةً.
+    pen += _firstLastSameDayPenalty(state, ctx, cid);
+    // «شكل يوم المعلّم» (وحدته (معلّم، يوم)، الجلسة 59): عددُ معلّمٍ دالّةُ خلاياه هو
+    // وحدها (أزواجه أو فجواته المفردة في كلّ يوم)، والتبديل/النقل لا يمسّ إلا خلايا
+    // معلّمَي المنطقة ⟹ الدلتا تطابق إعادة البناء. الوزن من الورقة مباشرةً.
+    pen += _dayShapePenalty(state, ctx, cid);
+  }
+
+  // BROKEN_DEPT_HEAD_NOT_FIRST (per-teacher-per-day): تقييمٌ موضعيّ على الأزواج
+  // المتأثّرة فقط = معلّمو المنطقة × أيّام خليّتَي التبديل (region.mathCells).
+  // الأزواج غير المتغيّرة تُلغى في الفرق، والأزواج هنا تشمل كلّ المتأثّر فعلًا.
+  const headDaySeen = {};
+  for (let i = 0; i < region.teacherIds.length; i++) {
+    const cid = region.teacherIds[i];
+    if (!isHeadOfDepartment(ctx.teacherByCivilId[cid] || {})) continue;
+    for (let j = 0; j < region.mathCells.length; j++) {
+      const d = region.mathCells[j].day;
+      const key = cid + '|' + d;
+      if (headDaySeen[key]) continue;
+      headDaySeen[key] = true;
+      let hasLesson = false, hasFirst = false;
+      for (let p = 0; p <= lastIdx; p++) {
+        const tc = state.getTeacherCell(cid, d, p);
+        if (typeof tc === 'string') { hasLesson = true; if (p === 0) hasFirst = true; }
+      }
+      if (hasLesson && !hasFirst) pen += wOf('BROKEN_DEPT_HEAD_NOT_FIRST');
+    }
+  }
+
+  // BROKEN_DEPT_RESERVE (وحدته الخانة (قسم،يوم،حصّة) لا المعلّم): العقوبة متدرّجة
+  // = الوزن × النقص عبر التعريف الواحد _deptReserveDeficit.
+  //
+  // تماثل قبل/بعد: مجموعة الخانات المتأثّرة تُشتقّ من region وحده — أقسام معلّمَي
+  // المنطقة (region.teacherIds) × خانتَي التبديل/النقل (region.mathCells) — وregion
+  // كائنٌ واحد يُمرَّر لنداءَي before وafter بلا إعادة بناء (:843/:872 في
+  // _attemptSwap، :2490/:2504 في _attemptMove). فالمجموعة متطابقة حرفيًّا في
+  // الحالتين بالبنية لا بالاتّفاق.
+  // وهي المجموعة الصحيحة كاملةً: التبديل يُخلي معلّم A من خانته ويشغله بخانة B
+  // (والعكس)، فلا يتغيّر عدّ الأحرار إلا لقسمَي المتحرّكَين في هاتين الخانتين؛ وكلّ
+  // (قسم،خانة) سواها ثابتٌ فيُلغى في الفرق ⟹ ΣΔ == إعادة البناء.
+  //
+  // ازدواج العدّ حين يكون المعلّمان من قسمٍ واحد: seenDeptSlot يضمن تقييم كلّ
+  // (قسم#يوم#حصّة) مرّةً واحدة، فالخانة الواحدة لا تُعاقَب مرّتين.
+  //
+  // رئيس القسم خارج نظام الاحتياط: غيابه عن reserveCandidatesByDept يعني أنّ حركته
+  // لا تغيّر العدّ أصلًا — نتخطّاه توفيرًا للحساب، والنتيجة واحدة.
+  //
+  // الوزن صفرٌ ⟹ تخطٍّ كامل: الحدّ كلّه مضروبٌ في صفر، فبوّابة الحياد مجّانيّة زمنًا.
+  const wReserve = wOf('BROKEN_DEPT_RESERVE');
+  if (wReserve > 0) {
+    const seenDeptSlot = {};
+    for (let i = 0; i < region.teacherIds.length; i++) {
+      const cid = String(region.teacherIds[i]);
+      const dep = (ctx.teacherByCivilId[cid] || {}).department;
+      if (!dep) continue;
+      const cands = (ctx.reserveCandidatesByDept || {})[dep] || [];
+      if (cands.indexOf(cid) < 0) continue;   // رئيس قسم — حركته لا تغيّر العدّ
+      for (let j = 0; j < region.mathCells.length; j++) {
+        const d = region.mathCells[j].day, p = region.mathCells[j].period;
+        const k = dep + '#' + d + '#' + p;
+        if (seenDeptSlot[k]) continue;        // لا ازدواج عدّ حين يتّحد القسمان
+        seenDeptSlot[k] = true;
+        pen += wReserve * _deptReserveDeficit(state, ctx, dep, d, p);
+      }
+    }
+  }
+
+  return pen;
+}
+
+/**
+ * يُقيّم تبديل خليّتَي درس A↔B (تبادل المادّة/المعلّم بين الموقعين مع ثبات
+ * موقع كلّ خليّة) ويُرجع أثره — dry-run خالص: يحاكي، يقيس، يتراجع، يُرجع التقرير
+ * دون التزامٍ دائم. القبول الفعليّ قرارُ حلقة Hill-Climbing لاحقًا.
+ *
+ * التراجُع O(1): التبديل = unplace×2 + place×2، وعكسه إعادة الأصلَين. عند رمي
+ * place (تعارض معلّم فيزيائيّ) يُعاد الأصلان فورًا ويُرجَع feasible=false.
+ *
+ * deltaPenalty عبر المقيّم الموضعيّ (_localBreakPenalty) على منطقة التبديل قبل
+ * وبعد — دقيقٌ لأنّ الكسور غير المتأثّرة تُلغى. سالبٌ = تحسين.
+ *
+ * يتطلّب إرفاق ctx.baselineWingDeficits/baselineLabOverflows (للحارس) و
+ * ctx.dailyCapByClassSubject (لكسر السقف) مرّةً قبل أوّل نداء.
+ *
+ * @param {Object} state حالة الجدول.
+ * @param {Object} ctx سياق المحرّك + خطّ الأساس + خريطة السقف.
+ * @param {{classId,day,period}} cellA الخليّة الأولى.
+ * @param {{classId,day,period}} cellB الخليّة الثانية.
+ * @param {boolean} [fast] إن true يستخدم الحارس التفاضليّ _swapDiffFeasible
+ *   (صالحٌ للتبديل داخل الصفّ فقط — يفحص خانتَي التبديل لا الحالة كاملةً) بدل
+ *   _isGloballyFeasible الكامل. تسريعٌ ~1000× لحلقة Hill-Climbing. الافتراضيّ
+ *   (الكامل) للاستخدام العامّ والتشخيص.
+ * @return {{feasible: boolean, deltaPenalty: number, reason?: string}}
+ */
+function _attemptSwap(state, ctx, cellA, cellB, fast) {
+  // (1) تحقّق أوّليّ: خليّتان مختلفتان تحملان درسًا، بمحتوًى غير متطابق.
+  if (cellA.classId === cellB.classId && cellA.day === cellB.day &&
+      cellA.period === cellB.period) {
+    return { feasible: false, deltaPenalty: 0, reason: 'SAME_CELL' };
+  }
+  const slotA = state.getCell(cellA.classId, cellA.day, cellA.period);
+  const slotB = state.getCell(cellB.classId, cellB.day, cellB.period);
+  if (!slotA || slotA.kind !== 'LESSON') {
+    return { feasible: false, deltaPenalty: 0, reason: 'CELL_A_NOT_LESSON' };
+  }
+  if (!slotB || slotB.kind !== 'LESSON') {
+    return { feasible: false, deltaPenalty: 0, reason: 'CELL_B_NOT_LESSON' };
+  }
+  if (slotA.subjectKey === slotB.subjectKey &&
+      String(slotA.civilId) === String(slotB.civilId)) {
+    return { feasible: false, deltaPenalty: 0, reason: 'IDENTICAL_CONTENT' };
+  }
+  // نافذة الحضور (الجلسة 53/ب): كلّ معلّمٍ يُفحص في **وجهته** بعد التبديل.
+  // الحماية الضمنيّة (خانة الحجب تشغل الوجهة فترميها place) قائمة، وهذه ثانيةٌ
+  // مستقلّة عنها — فلا تسقط الحمايتان معًا إن غاب الحجب عن الشبكة.
+  if (isCellBlockedFor(ctx.teacherBlocks, slotA.civilId, cellB.day, cellB.period) ||
+      isCellBlockedFor(ctx.teacherBlocks, slotB.civilId, cellA.day, cellA.period)) {
+    return { feasible: false, deltaPenalty: 0, reason: 'TEACHER_BLOCK_WINDOW' };
+  }
+
+  // نسخ محتوى الأصلَين (slot المُخزَّن قد يُعاد استخدامه؛ ننسخ الحقول الجوهريّة).
+  const origA = { kind: 'LESSON', subjectKey: slotA.subjectKey, civilId: slotA.civilId };
+  const origB = { kind: 'LESSON', subjectKey: slotB.subjectKey, civilId: slotB.civilId };
+
+  const region = _buildSwapRegion(cellA, slotA, cellB, slotB);
+  const before = _localBreakPenalty(state, ctx, region);
+
+  // (2) تطبيق مؤقّت: أفرِغ الخليّتين ثمّ ضع المحتوى المتبادَل.
+  state.unplace(cellA.classId, cellA.day, cellA.period);
+  state.unplace(cellB.classId, cellB.day, cellB.period);
+
+  const swappedA = { kind: 'LESSON', subjectKey: origB.subjectKey, civilId: origB.civilId };
+  const swappedB = { kind: 'LESSON', subjectKey: origA.subjectKey, civilId: origA.civilId };
+
+  // place قد يرمي عند تعارض معلّم فيزيائيّ — تراجُع وإرجاع سبب.
+  try {
+    state.place(cellA.classId, cellA.day, cellA.period, swappedA);
+  } catch (eA) {
+    state.place(cellA.classId, cellA.day, cellA.period, origA);
+    state.place(cellB.classId, cellB.day, cellB.period, origB);
+    return { feasible: false, deltaPenalty: 0, reason: 'PLACE_CONFLICT_A: ' + eA.message };
+  }
+  try {
+    state.place(cellB.classId, cellB.day, cellB.period, swappedB);
+  } catch (eB) {
+    state.unplace(cellA.classId, cellA.day, cellA.period);
+    state.place(cellA.classId, cellA.day, cellA.period, origA);
+    state.place(cellB.classId, cellB.day, cellB.period, origB);
+    return { feasible: false, deltaPenalty: 0, reason: 'PLACE_CONFLICT_B: ' + eB.message };
+  }
+
+  // (3) الحارس على الحالة المبدَّلة (تفاضليّ سريع أو كامل).
+  const guard = fast ? _swapDiffFeasible(state, ctx, cellA, cellB)
+                     : _isGloballyFeasible(state, ctx);
+  const after = guard.feasible ? _localBreakPenalty(state, ctx, region) : 0;
+
+  // (4) تراجُع دائم — إعادة الأصلَين (الدالّة dry-run).
+  state.unplace(cellA.classId, cellA.day, cellA.period);
+  state.unplace(cellB.classId, cellB.day, cellB.period);
+  state.place(cellA.classId, cellA.day, cellA.period, origA);
+  state.place(cellB.classId, cellB.day, cellB.period, origB);
+
+  if (!guard.feasible) {
+    return { feasible: false, deltaPenalty: 0,
+      reason: 'GUARD: ' + guard.violations.map(function (v) { return v.type; }).join(',') };
+  }
+  return { feasible: true, deltaPenalty: after - before };
+}
+
+/**
+ * حارسٌ تفاضليّ سريع للتبديل **داخل الصفّ** (تُستدعى والحالة في صورتها المبدَّلة):
+ * تعارض المعلّم يمنعه place() أصلًا، والتبديل داخل الصفّ لا يحرّك إلا خانتين،
+ * فالانتهاكات الجديدة الممكنة محصورة في خانتَي التبديل: تجاوز مختبر جديد، أو
+ * عجز جناح جديد عند المعلّمَين المنتقلَين. يفحص الخانتين فقط (O(أجنحة+مختبرات))
+ * بدل مسح الحالة كاملةً — مكافئٌ للحارس الكامل في نطاق التبديل داخل الصفّ.
+ *
+ * ⚠️ صالحٌ للتبديل داخل الصفّ فقط؛ للتبديل عبر الصفوف استخدم _isGloballyFeasible.
+ *
+ * @return {{feasible: boolean, violations: Array}}
+ */
+function _swapDiffFeasible(state, ctx, cellA, cellB) {
+  const baseWing = ctx.baselineWingDeficits || {};
+  const baseLab = ctx.baselineLabOverflows || {};
+  const slots = [[cellA.day, cellA.period], [cellB.day, cellB.period]];
+  const labKeys = Object.keys(ctx.capacityBySubjectKey || {});
+
+  for (let s = 0; s < slots.length; s++) {
+    const d = slots[s][0], p = slots[s][1];
+
+    // تجاوز مختبر جديد (> السعة و > خطّ الأساس).
+    for (let i = 0; i < labKeys.length; i++) {
+      const key = labKeys[i];
+      const cap = ctx.capacityBySubjectKey[key];
+      if (typeof cap !== 'number') continue;
+      const cnt = state.getLabCount(key, d, p);
+      if (cnt <= cap) continue;
+      const allowed = baseLab[key + '|' + d + '|' + p] || cap;
+      if (cnt > allowed) {
+        return { feasible: false, violations: [{ type: 'LAB_OVERFLOW_NEW',
+          detail: key + ' (' + d + ',' + p + '): ' + cnt + ' > ' + cap }] };
+      }
+    }
+
+    // عجز جناح جديد لم يكن في خطّ الأساس.
+    for (let w = 0; w < ctx.wings.length; w++) {
+      const wing = ctx.wings[w];
+      if ((ctx.supervisorCountByWing[wing] || 0) <= 0) continue;
+      if (state.getFreeSupervisors(wing, d, p) < 1 && !baseWing[wing + '|' + d + '|' + p]) {
+        return { feasible: false, violations: [{ type: 'WING_DEFICIT_NEW',
+          detail: wing + ' (' + d + ',' + p + ')' }] };
+      }
+    }
+  }
+
+  // رئيس قسم في الحصّة الأخيرة — قيد صلب (متّسق مع المقيّم). يكفي فحص الخانتين
+  // المتأثّرتين: هل ينقل التبديل رئيس قسم إلى الأخيرة؟ (الحالة هنا مبدَّلة سلفًا.)
+  const lastIdx = ctx.lastIdx;
+  const pair = [cellA, cellB];
+  for (let i = 0; i < pair.length; i++) {
+    const cc = pair[i];
+    if (cc.period !== lastIdx) continue;
+    const cell = state.getCell(cc.classId, cc.day, cc.period);
+    if (cell && cell.kind === 'LESSON' &&
+        isHeadOfDepartment(ctx.teacherByCivilId[String(cell.civilId)] || {})) {
+      return { feasible: false, violations: [{ type: 'BROKEN_DEPT_HEAD_LAST',
+        detail: 'رئيس قسم ' + cell.civilId + ' عند الأخيرة (' + cc.day + ',' + cc.period + ')' }] };
+    }
+  }
+
+  // ⚠️ لا فحص تغطيةٍ يوميّة هنا عمدًا (حُذف DAILY_FLOOR_BREACH التفاضليّ): كان
+  // يمنع كلّ تبديلٍ يُفرغ يومًا من مادّةٍ ملزَمة، فحجب التبديل الوحيد الذي يشفي
+  // كسر كتلةٍ صلبة وزنه 100000 حمايةً لقاعدةٍ وزنها 700. الحارس البولياني يَجُبّ
+  // كلّ وزن، فما يُقايَس بغيره يُترَك لدفتر العقوبات لا للحارس. انظر رأس
+  // _isGloballyFeasible لطبقات إنفاذ التغطية الثلاث الباقية.
+  return { feasible: true, violations: [] };
+}
+
+/**
+ * يطبّق تبديل خليّتَي درس **بشكل دائم** (لا تراجُع) — لحلقة Hill-Climbing بعد
+ * قبول التبديل. يفترض أنّ الجدوى تحقّقت مسبقًا (place لن يرمي). التبديل =
+ * unplace×2 + place×2 مع تبادل المحتوى.
+ */
+function _applySwap(state, cellA, cellB) {
+  const sA = state.getCell(cellA.classId, cellA.day, cellA.period);
+  const sB = state.getCell(cellB.classId, cellB.day, cellB.period);
+  const cA = { kind: 'LESSON', subjectKey: sA.subjectKey, civilId: sA.civilId };
+  const cB = { kind: 'LESSON', subjectKey: sB.subjectKey, civilId: sB.civilId };
+  state.unplace(cellA.classId, cellA.day, cellA.period);
+  state.unplace(cellB.classId, cellB.day, cellB.period);
+  state.place(cellA.classId, cellA.day, cellA.period, cB);
+  state.place(cellB.classId, cellB.day, cellB.period, cA);
+}
+
+/**
+ * يحسب عدد الكسور الموزونة «القابلة للتغيّر» (كلّ الأنواع عدا SUPERVISOR_DEFICIT
+ * الثابت) في الحالة كاملةً، بصيغة مستقلّة عن ترتيب الوضع (نظير _localBreakPenalty
+ * لكن على الحالة كلّها). للتحقّق المستقلّ من penalty ولتوزيع الكسور بعد الإصلاح.
+ *
+ * @return {{counts: Object, penalty: number}}
+ */
+function _computeChangeableBreaks(state, ctx) {
+  const W = (ctx && ctx.weights) || CONSTANTS.BREAK_WEIGHTS || {};
+  const wOf = function (name) {
+    if (typeof W[name] === 'number') return W[name];
+    // (الحزمة 6/أ) حائطٌ صريح: مفتاحٌ غير معروف = خطأٌ يوقف، لا صفرٌ صامتٌ يُفسد penalty.
+    throw new Error('وزنٌ غير معرّف في خريطة الأوزان: ' + name);
+  };
+  const dim = state.getDimensions();
+  const days = dim.days, periods = dim.periods, classIds = dim.classIds, civilIds = dim.civilIds;
+  const lastIdx = ctx.lastIdx;
+  const counts = {};
+  const add = function (type, n) { if (n > 0) counts[type] = (counts[type] || 0) + n; };
+
+  // BROKEN_LAB: فائض التزامن لكلّ خانة مختبر.
+  const labKeys = Object.keys(ctx.capacityBySubjectKey || {});
+  for (let i = 0; i < labKeys.length; i++) {
+    const key = labKeys[i];
+    const cap = ctx.capacityBySubjectKey[key];
+    if (typeof cap !== 'number') continue;
+    for (let d = 0; d < days; d++) {
+      for (let p = 0; p < periods; p++) add('BROKEN_LAB', Math.max(0, state.getLabCount(key, d, p) - cap));
+    }
+  }
+
+  // BROKEN_DAILY_CAP: فائض عدد المادّة/اليوم لكلّ (صفّ|مادّة).
+  const capMap = ctx.dailyCapByClassSubject || {};
+  const capKeys = Object.keys(capMap);
+  for (let i = 0; i < capKeys.length; i++) {
+    const parts = capKeys[i].split('|');
+    const classId = parts[0], subjectKey = parts.slice(1).join('|');
+    const dc = capMap[capKeys[i]];
+    if (typeof dc !== 'number') continue;
+    for (let d = 0; d < days; d++) {
+      add('BROKEN_DAILY_CAP', Math.max(0, state.getSubjectDayCount(classId, subjectKey, d) - dc));
+    }
+  }
+
+  // BROKEN_DAILY_FLOOR: يومٌ بعدد مادّةٍ < الحدّ الأدنى لكلّ (صفّ|مادّة) ذات floor≥1.
+  const floorMap = ctx.floorByClassSubject || {};
+  const floorKeys = Object.keys(floorMap);
+  for (let i = 0; i < floorKeys.length; i++) {
+    const parts = floorKeys[i].split('|');
+    const classId = parts[0], subjectKey = parts.slice(1).join('|');
+    const fl = floorMap[floorKeys[i]];
+    if (typeof fl !== 'number') continue;
+    for (let d = 0; d < days; d++) {
+      if (state.getSubjectDayCount(classId, subjectKey, d) < fl) add('BROKEN_DAILY_FLOOR', 1);
+    }
+  }
+
+  // BROKEN_CONSEC: تزاوج الكتلة المزدوجة لكلّ (صفّ، مادّة) ذات قاعدة تتالٍ مفعَّلة.
+  // الصلب في counts بوزنٍ موحَّد (BROKEN_CONSEC_HARD) نظير سائر الكسور؛ المرن بوزن
+  // الورقة (غير موحَّد) فيُجمَع مباشرةً في softConsecPenalty ويُضاف عند الحساب، مع
+  // عدٍّ منفصلٍ للعرض فقط. مطابقٌ دلاليًّا لـ_consecPairPenalty فيبقى ΣΔ==reconstruct.
+  let softConsecPenalty = 0, softConsecCount = 0;
+  const consecSubs = ctx.consecutiveSubjects || {};
+  const consecKeys = Object.keys(consecSubs);
+  for (let i = 0; i < consecKeys.length; i++) {
+    const key = consecKeys[i];
+    const spec = consecSubs[key];
+    const isHard = !!spec.hard;
+    const w = isHard ? 0 : spec.weight;       // المرن: وزن الورقة (null ⟹ خامل)
+    if (!isHard && (typeof w !== 'number' || w <= 0)) continue;  // خامل — تخطٍّ
+    for (let c = 0; c < classIds.length; c++) {
+      if (!_consecClassSubjectBroken(state, classIds[c], key, days, periods)) continue;
+      if (isHard) add('BROKEN_CONSEC_HARD', 1);
+      else { softConsecPenalty += w; softConsecCount++; }
+    }
+  }
+
+  // BROKEN_MATH_LAST: خلايا الأخيرة بمادّة ممنوعة.
+  // BROKEN_DEPT_HEAD_LAST: خلايا الأخيرة لرئيس قسم (قيد صلب، طبقة الإصلاح).
+  if (lastIdx >= 0 && lastIdx < periods) {
+    for (let c = 0; c < classIds.length; c++) {
+      for (let d = 0; d < days; d++) {
+        const cell = state.getCell(classIds[c], d, lastIdx);
+        if (!cell || cell.kind !== 'LESSON') continue;
+        if (ctx.bannedLastSubjectKeys[cell.subjectKey]) add('BROKEN_MATH_LAST', 1);
+        if (isHeadOfDepartment(ctx.teacherByCivilId[String(cell.civilId)] || {})) {
+          add('BROKEN_DEPT_HEAD_LAST', 1);
+        }
+      }
+    }
+  }
+
+  // كسور السابعة + الفرديّة لكلّ معلّم من عدد سابعاته L. «السابعة الثانية» لغير
+  // الأولويّة وزنها متدرّج بالنصاب (_np2lWeight) فتُجمَع عقوبتها مستقلّةً عن نموذج
+  // counts×wOf (نظير المرن الموزون)، مع عدٍّ إجماليّ للعرض. ثابتٌ للمعلّم ⟹ ΣΔ سليم.
+  let np2lPenalty = 0, np2lCount = 0;
+  for (let i = 0; i < civilIds.length; i++) {
+    const cid = civilIds[i];
+    const t = ctx.teacherByCivilId[cid] || {};
+    const L = state.getLastPeriodCount(cid);
+    const F = state.getFirstPeriodCount(cid);
+    // السقف الصلب الفعّال: الفرديّ (الجَبّ) إن وُجد، وإلا العامّ.
+    const capOv = ctx.lastCapByTeacher[cid];
+    const hardCap = (typeof capOv === 'number') ? capOv : ctx.params.lastHard;
+    add('BROKEN_LAST_OVER_HARD', Math.max(0, L - hardCap));
+    if (t.isWingSupervisor === true) add('BROKEN_SUP_LAST_OVER', Math.max(0, L - ctx.params.lastSupervisorMax));
+    if (ctx.adminAvoidLast && t.category === ctx.adminCategoryName) add('BROKEN_ADMIN_LAST', L);
+    const isPriority = !!(t.department && ctx.priorityDeptNames && ctx.priorityDeptNames.has(t.department));
+    if (!isPriority && !_seventhExempt(ctx, cid)) {
+      const n2 = Math.max(0, L - 1);
+      if (n2 > 0) { np2lPenalty += _np2lWeight(cid, ctx) * n2; np2lCount += n2; }
+    }
+    const indiv = ctx.indivByCivilId[cid];
+    if (indiv) {
+      if (indiv.noLast) add('BROKEN_TEACHER_RULE', L);
+      if (indiv.noFirst) add('BROKEN_TEACHER_RULE', F);
+    }
+  }
+
+  // BROKEN_DEPT_HEAD_NOT_FIRST: لكلّ (رئيس قسم، يوم له فيه حصّة) لا تتضمّن حصّةً
+  // أولى (p===0). per-teacher-per-day (قاعدة عرفٍ خفيفة، طبقة الإصلاح).
+  for (let i = 0; i < civilIds.length; i++) {
+    const cid = civilIds[i];
+    if (!isHeadOfDepartment(ctx.teacherByCivilId[cid] || {})) continue;
+    for (let d = 0; d < days; d++) {
+      let hasLesson = false, hasFirst = false;
+      for (let p = 0; p < periods; p++) {
+        const tc = state.getTeacherCell(cid, d, p);
+        if (typeof tc === 'string') { hasLesson = true; if (p === 0) hasFirst = true; }
+      }
+      if (hasLesson && !hasFirst) add('BROKEN_DEPT_HEAD_NOT_FIRST', 1);
+    }
+  }
+
+  // «يوم المراجعة الخفيف» (وحدته المعلّم): عقوبة مباشرة من الورقة تُجمَع مستقلّةً
+  // عن نموذج counts×wOf (نظير المرن الموزون)، مع عدٍّ منفصلٍ للعرض. مطابقٌ دلاليًّا
+  // لـ_govtLightDayPenalty فيبقى ΣΔ==reconstruct.
+  let govtPenalty = 0, govtHardCount = 0, govtSoftCount = 0;
+  const gld = ctx.govtLightDay;
+  if (gld && gld.enabled) {
+    for (let i = 0; i < civilIds.length; i++) {
+      if (_govtExempt(ctx, civilIds[i])) continue;   // بوّابة الإعفاء (الجلسة 59)
+      const v = _teacherLightestOccupied(state, civilIds[i], days, periods);
+      if (v <= gld.optimal) continue;
+      if (v <= gld.maxEnd) { govtPenalty += gld.wSoft; govtSoftCount++; }
+      else { govtPenalty += gld.wHard; govtHardCount++; }
+    }
+  }
+
+  // «موازنة حصص المعلّم» (وحدته المعلّم): عقوبة مباشرة من الورقة تُجمَع مستقلّةً
+  // عن نموذج counts×wOf (نظير يوم المراجعة)، مع عدٍّ منفصلٍ للعرض. مطابقٌ دلاليًّا
+  // لـ_dayBalancePenalty (نفس _dayBalanceSpread) فيبقى ΣΔ==reconstruct.
+  let dayBalPenalty = 0, dayBalHardCount = 0, dayBalSoftCount = 0;
+  const dbl = ctx.dayBalance;
+  if (dbl && dbl.enabled) {
+    for (let i = 0; i < civilIds.length; i++) {
+      const s = _dayBalanceSpread(state, ctx, civilIds[i]);
+      if (s <= dbl.okSpread) continue;
+      if (s <= dbl.softSpread) { dayBalPenalty += dbl.wSoft; dayBalSoftCount++; }
+      else { dayBalPenalty += dbl.wHard; dayBalHardCount++; }
+    }
+  }
+
+  // «الأخيرتان في صفٍّ واحد» (وحدته المعلّم): عقوبة مباشرة من الورقة تُجمَع مستقلّةً
+  // عن نموذج counts×wOf (نظير موازنة الأيّام)، مع عدٍّ منفصلٍ للعرض. مطابقٌ دلاليًّا
+  // لـ_lastSameClassPenalty (نفس _lastSameClassCount) فيبقى ΣΔ==reconstruct.
+  let lastSameClassPenalty = 0, lastSameClassCount = 0;
+  if (ctx.lastPreferDifferent) {
+    for (let i = 0; i < civilIds.length; i++) {
+      const n = _lastSameClassCount(state, ctx, civilIds[i]);
+      if (n <= 0) continue;
+      lastSameClassPenalty += n * ctx.weights.W_LAST_SAME_CLASS;
+      lastSameClassCount += n;
+    }
+  }
+
+  // «أولى وأخيرة في يومٍ واحد» (وحدته (معلّم، يوم)): عقوبة مباشرة من الورقة تُجمَع
+  // مستقلّةً عن نموذج counts×wOf (نظير الأخيرتين في صفٍّ واحد)، مع عدٍّ منفصلٍ
+  // للعرض. مطابقٌ دلاليًّا لـ_firstLastSameDayPenalty (نفس _firstLastSameDayCount)
+  // فيبقى ΣΔ==reconstruct. مطفأ (الوزن 0) ⟹ لا مسح.
+  let firstLastPenalty = 0, firstLastCount = 0;
+  const wFL = _firstLastSameDayWeight(ctx);
+  if (wFL > 0) {
+    for (let i = 0; i < civilIds.length; i++) {
+      const n = _firstLastSameDayCount(state, ctx, civilIds[i]);
+      if (n <= 0) continue;
+      firstLastPenalty += n * wFL;
+      firstLastCount += n;
+    }
+  }
+
+  // «شكل يوم المعلّم» (وحدته (معلّم، يوم)، الجلسة 59): عقوبة مباشرة من الورقة تُجمَع
+  // مستقلّةً عن نموذج counts×wOf (نظير الأخيرتين في صفٍّ واحد)، مع عدٍّ منفصلٍ للعرض
+  // ونوعَين متمايزين — الافتراض PAIR والاستثناء GAP — كي يقرأ المالك الحالتين على
+  // حدة. مطابقٌ دلاليًّا لـ_dayShapePenalty (نفس _dayShapeDayCount) فيبقى
+  // ΣΔ==reconstruct. الوزن 0 لكلا الوضعين ⟹ لا مسح.
+  // ⚠️ سعر الزوج متدرّج (الجلسة 61) فتُجمَع العقوبة مستقلّةً عن نموذج counts×wOf
+  // — نظير السابعة الثانية واحتياط القسم. والدلاء تُجمَع للتقرير كي يقرأ المساهمة
+  // الحقيقيّة بدل اشتقاقها عددًا × وزنًا (وهو ما صار كاذبًا).
+  let shapePenalty = 0, shapePairCount = 0, shapeGapCount = 0, shapePairPenalty = 0;
+  const shapeB = { plain: 0, recess: 0, meet: 0, both: 0 };
+  for (let i = 0; i < civilIds.length; i++) {
+    const gsh = _dayShapeWeight(ctx, civilIds[i]);
+    if (gsh.w <= 0) continue;
+    for (let d = 0; d < days; d++) {
+      const shp = _dayShapeDayShape(state, ctx, civilIds[i], d, gsh.mode);
+      if (shp.count < 2) continue;
+      const n = (gsh.mode === 'GAP') ? shp.singles : shp.pairs;
+      if (n <= 0) continue;
+      const dayPen = _dayShapePenaltyFromShape(ctx, civilIds[i], shp);
+      shapePenalty += dayPen;
+      if (gsh.mode === 'GAP') { shapeGapCount += n; continue; }
+      shapePairCount += n;
+      shapePairPenalty += dayPen;
+      shapeB.plain  += shp.pairsPlain;
+      shapeB.recess += shp.pairsRecess;
+      shapeB.meet   += shp.pairsMeet;
+      shapeB.both   += shp.pairsBoth;
+    }
+  }
+
+  // «استنزاف احتياط القسم» (وحدته الخانة (قسم،يوم،حصّة)): المسح الختاميّ الكامل —
+  // كلّ قسمٍ له مدخل في reserveCandidatesByDept × كلّ (يوم، حصّة). العقوبة متدرّجة
+  // (الوزن × النقص) فتُجمَع مستقلّةً عن نموذج counts×wOf (نظير المرن الموزون
+  // والسابعة الثانية)، والعدّ خانةٌ واحدة لكلّ خانةٍ ذات نقص — لا «نقص» كسرًا.
+  // مطابقٌ دلاليًّا لحدّ _localBreakPenalty (نفس _deptReserveDeficit) فيبقى
+  // ΣΔ==reconstruct. يُمسَح دائمًا (ولو كان الوزن صفرًا) كي تبقى خريطة الاستنزاف
+  // مرصودةً في التقرير مجّانًا قبل تفعيل الوزن.
+  let deptReservePenalty = 0, deptReserveSlots = 0, deptReserveDeficitSum = 0;
+  // تشخيص الحزمة 46: كم خانةً أعفتها قاعدة «لا درسَ للقسم» وكم نقصًا كانت ستُنتج.
+  // بلا هذا العدّ لا يُميَّز «القاعدة عملت» من «القاعدة ابتلعت أكثر ممّا ينبغي».
+  let deptReserveExemptSlots = 0, deptReserveExemptDeficit = 0;
+  const wReserve = wOf('BROKEN_DEPT_RESERVE');
+  const resDepts = Object.keys(ctx.reserveCandidatesByDept || {});
+  const resInfo = {};
+  for (let i = 0; i < resDepts.length; i++) {
+    for (let d = 0; d < days; d++) {
+      for (let p = 0; p < periods; p++) {
+        const def = _deptReserveDeficit(state, ctx, resDepts[i], d, p, resInfo);
+        if (resInfo.exempt) {
+          const would = Math.max(0, resInfo.minReserve - resInfo.free);
+          if (would > 0) { deptReserveExemptSlots++; deptReserveExemptDeficit += would; }
+        }
+        if (def <= 0) continue;
+        deptReserveSlots++;
+        deptReserveDeficitSum += def;
+        deptReservePenalty += wReserve * def;
+      }
+    }
+  }
+
+  let penalty = 0;
+  const types = Object.keys(counts);
+  for (let i = 0; i < types.length; i++) penalty += counts[types[i]] * wOf(types[i]);
+  penalty += softConsecPenalty;   // المرن الموزون: وزن الورقة (خارج نموذج counts×wOf)
+  penalty += govtPenalty;         // يوم المراجعة الخفيف: وزن الورقة المباشر
+  penalty += dayBalPenalty;       // موازنة حصص المعلّم: وزن الورقة المباشر
+  penalty += lastSameClassPenalty; // الأخيرتان في صفٍّ واحد: وزن الورقة المباشر
+  penalty += firstLastPenalty;    // أولى وأخيرة في يومٍ واحد: وزن الورقة المباشر
+  penalty += shapePenalty;        // شكل يوم المعلّم: وزن الورقة المباشر
+  penalty += np2lPenalty;         // السابعة الثانية: وزن متدرّج بالنصاب (خارج counts×wOf)
+  penalty += deptReservePenalty;  // احتياط القسم: الوزن × النقص (خارج counts×wOf)
+  // عدّ العرض فقط — بعد حساب penalty كي لا يُوزَن بـwOf.
+  if (np2lCount > 0) counts.BROKEN_NON_PRIORITY_2ND_LAST = np2lCount;
+  if (softConsecCount > 0) counts.BROKEN_CONSEC_SOFT = softConsecCount;
+  if (govtHardCount > 0) counts.BROKEN_GOVT_LIGHTDAY_HARD = govtHardCount;
+  if (govtSoftCount > 0) counts.BROKEN_GOVT_LIGHTDAY_SOFT = govtSoftCount;
+  if (dayBalHardCount > 0) counts.BROKEN_DAY_BALANCE_HARD = dayBalHardCount;
+  if (dayBalSoftCount > 0) counts.BROKEN_DAY_BALANCE_SOFT = dayBalSoftCount;
+  if (lastSameClassCount > 0) counts.BROKEN_LAST_SAME_CLASS_SOFT = lastSameClassCount;
+  if (firstLastCount > 0) counts.BROKEN_FIRST_LAST_SAME_DAY = firstLastCount;
+  if (shapePairCount > 0) counts.BROKEN_ADJACENT_PAIR = shapePairCount;
+  if (shapeGapCount > 0) counts.BROKEN_SINGLE_GAP = shapeGapCount;
+  if (deptReserveSlots > 0) counts.BROKEN_DEPT_RESERVE = deptReserveSlots;
+  // deptReserve: تفصيلٌ للعرض (خانات/مجموع النقص/المساهمة) — المساهمة الحقيقيّة
+  // ليست العدد × الوزن (العقوبة متدرّجة)، فيقرؤها التقرير من هنا لا يشتقّها.
+  return { counts: counts, penalty: penalty,
+    deptReserve: { slots: deptReserveSlots, deficit: deptReserveDeficitSum,
+                   penalty: deptReservePenalty,
+                   exemptSlots: deptReserveExemptSlots,
+                   exemptDeficit: deptReserveExemptDeficit },
+    // تفكيك أزواج «شكل يوم المعلّم» (الجلسة 61) — للتقرير: المساهمة متدرّجة
+    // فلا تُشتقّ عددًا × وزنًا. مجموع الدلاء = pairs.
+    shapePairs: { total: shapePairCount, plain: shapeB.plain, recess: shapeB.recess,
+                  meet: shapeB.meet, both: shapeB.both, penalty: shapePairPenalty } };
+}
+
+/**
+ * يجمع القيود الصلبة غير المحقَّقة في الحالة الراهنة (لقسم «تعارض صلب» بالتقرير):
+ * كتل التتالي الصلبة المكسورة لكلّ (صفّ،مادّة)، وخلايا رئيس القسم بالأخيرة.
+ * قراءة فقط. لا يشمل المرن (خامل/موزون، ليس تعارضًا صلبًا).
+ *
+ * @return {{consec: Array<{classId,subjectKey,name}>, deptHeadLast: Array<{classId,day,civilId}>}}
+ */
+function _collectHardViolations(state, ctx) {
+  const dim = state.getDimensions();
+  const days = dim.days, periods = dim.periods, classIds = dim.classIds;
+  const lastIdx = ctx.lastIdx;
+  const consec = [];
+  const consecSubs = ctx.consecutiveSubjects || {};
+  const keys = Object.keys(consecSubs);
+  for (let i = 0; i < keys.length; i++) {
+    if (!consecSubs[keys[i]].hard) continue;
+    for (let c = 0; c < classIds.length; c++) {
+      if (_consecClassSubjectBroken(state, classIds[c], keys[i], days, periods)) {
+        consec.push({ classId: classIds[c], subjectKey: keys[i], name: consecSubs[keys[i]].name });
+      }
+    }
+  }
+  const deptHeadLast = [];
+  if (lastIdx >= 0 && lastIdx < periods) {
+    for (let c = 0; c < classIds.length; c++) {
+      for (let d = 0; d < days; d++) {
+        const cell = state.getCell(classIds[c], d, lastIdx);
+        if (cell && cell.kind === 'LESSON' &&
+            isHeadOfDepartment(ctx.teacherByCivilId[String(cell.civilId)] || {})) {
+          deptHeadLast.push({ classId: classIds[c], day: d, civilId: cell.civilId });
+        }
+      }
+    }
+  }
+  return { consec: consec, deptHeadLast: deptHeadLast };
+}
+
+/** مفاتيح مجموعة القيود الصلبة (لمقارنة «جديد بعد التبديل»). */
+function _hardViolationKeys(hv) {
+  const s = {};
+  for (let i = 0; i < hv.consec.length; i++) s['C|' + hv.consec[i].classId + '|' + hv.consec[i].subjectKey] = true;
+  for (let i = 0; i < hv.deptHeadLast.length; i++) s['D|' + hv.deptHeadLast[i].classId + '|' + hv.deptHeadLast[i].day] = true;
+  return s;
+}
+
+/** وصفٌ مقروء لمفتاح قيدٍ صلبٍ (المُعارِض في التقرير). */
+function _hardKeyLabel(key, ctx) {
+  const parts = key.split('|');
+  if (parts[0] === 'C') {
+    const spec = (ctx.consecutiveSubjects || {})[parts[2]] || {};
+    return 'كتلة «' + (spec.name || parts[2]) + '» للصفّ ' + parts[1];
+  }
+  const wd = CONSTANTS.WEEK_DAYS;
+  return 'رئيس قسم بالأخيرة (' + parts[1] + '، ' + (wd[parts[2]] || ('يوم ' + parts[2])) + ')';
+}
+
+/**
+ * تحليل التعارض الصلب لقسم التقرير «⚠ تعارض صلب — قرارك». لكلّ كتلة تتالٍ صلبة
+ * باقيةٍ بعد الإصلاح: يبحث — بآلة _attemptSwap التجريبيّة القائمة — عن تبديلٍ داخل
+ * الصفّ يحقّق الكتلة (يجمع حصص المادّة متجاورةً في يوم)، ويحدّد أيّ قيدٍ صلبٍ آخر
+ * يكسره ذلك التبديل. إن كان كلّ تبديلٍ محقِّقٍ يكسر صلبًا آخر ⟹ تعارضٌ يقينيّ يُسمّى
+ * المُعارِض. القرار للمستخدم (تعطيل أحد القيدين في الورقة).
+ *
+ * @return {Array<{material,classId,detail,verdict,opposers}>}
+ */
+function _analyzeHardConflicts(state, ctx) {
+  const dim = state.getDimensions();
+  const days = dim.days, periods = dim.periods;
+  const wd = CONSTANTS.WEEK_DAYS;
+  const ord = CONSTANTS.PERIOD_ORDINALS || [];
+  const hv = _collectHardViolations(state, ctx);
+  const baseKeys = _hardViolationKeys(hv);
+  const rows = [];
+  // ضمانٌ صارم: يُطبَّق تبديلٌ مؤقّت للفحص ثمّ يُعكَس؛ لقطة/استرجاع تحمي الحالة
+  // النهائيّة (مسار الإنتاج يكتبها بعد هذا مباشرةً) من أيّ خللٍ في العكس.
+  const _snap = state.snapshot();
+
+  for (let vi = 0; vi < hv.consec.length; vi++) {
+    const v = hv.consec[vi];
+    // حصص هذه المادّة لهذا الصفّ (عبر الأسبوع).
+    const cells = [];
+    for (let d = 0; d < days; d++) {
+      for (let p = 0; p < periods; p++) {
+        const cell = state.getCell(v.classId, d, p);
+        if (cell && cell.kind === 'LESSON' && cell.subjectKey === v.subjectKey) cells.push({ day: d, period: p });
+      }
+    }
+    const detail = cells.map(function (c) { return (wd[c.day] || c.day) + '/' + (ord[c.period] || ('حصّة ' + (c.period + 1))); }).join('، ');
+
+    let cleanFix = false, anyFeasible = false, anyBlockSwap = false;
+    const opposers = {};
+    if (cells.length >= 2) {
+      // تعدادٌ كامل: لكلّ زوجٍ (keep, mover) من التوائم، جرّب إحضار mover مجاورًا
+      // لـkeep على **يوم keep** — فتُغطّى أيّام كلّ التوائم لا يوم cells[0] وحده
+      // (توأمان بنفس الحصّة على يومين ⟹ يُجرَّب التزويج على كلا اليومين).
+      for (let ki = 0; ki < cells.length; ki++) {
+        const keep = cells[ki];
+        for (let mi = 0; mi < cells.length; mi++) {
+          if (mi === ki) continue;
+          const mover = cells[mi];
+          const targets = [{ day: keep.day, period: keep.period - 1 },
+                           { day: keep.day, period: keep.period + 1 }];
+          for (let ti = 0; ti < targets.length; ti++) {
+            const t = targets[ti];
+            if (t.period < 0 || t.period >= periods) continue;
+            const tcell = state.getCell(v.classId, t.day, t.period);
+            if (!tcell || tcell.kind !== 'LESSON') continue;      // _attemptSwap يحتاج خانةً مشغولة
+            if (tcell.subjectKey === v.subjectKey) continue;       // مادّتنا أصلًا
+            const from = { classId: v.classId, day: mover.day, period: mover.period };
+            const to = { classId: v.classId, day: t.day, period: t.period };
+            const res = _attemptSwap(state, ctx, from, to);
+            if (!res || !res.feasible) continue;
+            anyFeasible = true;
+            // هل يحقّق الكتلة؟ + أيّ صلبٍ جديد يكسر؟ (تطبيقٌ مؤقّت ثمّ عكس).
+            try {
+              _applySwap(state, from, to);
+              const nowBroken = _consecClassSubjectBroken(state, v.classId, v.subjectKey, days, periods);
+              const afterKeys = _hardViolationKeys(_collectHardViolations(state, ctx));
+              _applySwap(state, from, to);   // عكسٌ (التبديل عكسُ نفسه)
+              if (nowBroken) continue;        // لم يحقّق الكتلة
+              anyBlockSwap = true;
+              const newHard = Object.keys(afterKeys).filter(function (k) { return !baseKeys[k]; });
+              if (newHard.length === 0) cleanFix = true;
+              else for (let n = 0; n < newHard.length; n++) opposers[newHard[n]] = true;
+            } catch (e) { /* تعذّر التطبيق — تخطٍّ */ }
+          }
+        }
+      }
+    }
+
+    let verdict, opsLabel = '';
+    const opKeys = Object.keys(opposers);
+    if (cleanFix) {
+      verdict = 'تبديلٌ محقِّقٌ نظيفٌ متاح — لم يبلغه الإصلاح (قاعٌ محلّيّ/حدّ محاولات). أعِد التوليد أو راجِع.';
+    } else if (anyBlockSwap && opKeys.length > 0) {
+      opsLabel = opKeys.map(function (k) { return _hardKeyLabel(k, ctx); }).join(' + ');
+      verdict = 'تعارضٌ صلبٌ يقينيّ: كلّ تبديلٍ محقِّقٍ للكتلة يكسر — ' + opsLabel +
+        '. لحلّه: اختر أحد القيدين واكتب له مفعَّل=لا في ورقة القيود ثمّ أعِد التوليد.';
+    } else if (anyFeasible) {
+      verdict = 'تبديلات مجدية لا تحقّق الكتلة المزدوجة — لا مسار مباشر. أعِد التوليد أو عطّل القيد في الورقة.';
+    } else {
+      verdict = 'لا تبديلٌ مجدٍ داخل الصفّ (قيدٌ فيزيائيّ يمنع). عطّل القيد في الورقة إن تعذّر.';
+    }
+    rows.push({ material: v.name, classId: v.classId, detail: detail, verdict: verdict, opposers: opsLabel });
+  }
+
+  // رؤساء الأقسام بالأخيرة الباقون (صلب أيضًا) — يُدرَجون بلا تحليل تبديل (يعالجه
+  // حارس feasible القائم؛ وجودُهم بعد إصلاحٍ ناجحٍ نادرٌ إذ feasible يشملهم).
+  for (let i = 0; i < hv.deptHeadLast.length; i++) {
+    const v = hv.deptHeadLast[i];
+    rows.push({ material: 'رئيس قسم', classId: v.classId,
+      detail: (wd[v.day] || v.day) + ' / الأخيرة (' + v.civilId + ')',
+      verdict: 'قيد DEPT_HEAD_LAST صلبٌ باقٍ. عطّل قاعدته أو راجِع التوليد.', opposers: '' });
+  }
+
+  state.restore(_snap);   // إعادة الحالة إلى ما قبل أيّ تبديلٍ تجريبيّ
+  return rows;
+}
+
+// ============================================================
+// تمريرة «لماذا بقي هذا الكسر» — المرحلة 1 (الجلسة 31)
+// تعميم نمط _analyzeHardConflicts على كلّ الكسور المتبقّية: تعداد سجلّيّ
+// (مرآة _computeChangeableBreaks) + مَجَسّ تبديلات داخل الصفّ (مرآة فضاء
+// المحرّك حصرًا — لا نقل) + حكم ثلاثيّ. dry-run خالص.
+// ============================================================
+
+/** خلايا درس المعلّم عند حصّةٍ بعينها عبر الأيّام (مراسي كسور الأخيرة/الأولى). */
+function _teacherPeriodLessonCells(state, ctx, cid, periodIdx) {
+  const cells = [];
+  for (let d = 0; d < ctx.days; d++) {
+    const tc = state.getTeacherCell(cid, d, periodIdx);
+    if (typeof tc === 'string' && tc.length > 0) {
+      cells.push({ classId: tc, day: d, period: periodIdx });
+    }
+  }
+  return cells;
+}
+
+/** خلايا مادّةٍ لصفٍّ: كلّ الأسبوع، أو يوم dayFilter وحده، أو ما عدا excludeDay. */
+function _classSubjectLessonCells(state, ctx, classId, subjectKey, dayFilter, excludeDay) {
+  const cells = [];
+  for (let d = 0; d < ctx.days; d++) {
+    if (typeof dayFilter === 'number' && d !== dayFilter) continue;
+    if (typeof excludeDay === 'number' && d === excludeDay) continue;
+    for (let p = 0; p < ctx.periods; p++) {
+      const cell = state.getCell(classId, d, p);
+      if (cell && cell.kind === 'LESSON' && cell.subjectKey === subjectKey) {
+        cells.push({ classId: classId, day: d, period: p });
+      }
+    }
+  }
+  return cells;
+}
+
+/**
+ * يُعدّد الكسور المتبقّية سجلًّا سجلًّا — مرآة _computeChangeableBreaks شرطًا شرطًا
+ * (نفس الشروط والمصادر) لكن بالتقاط هويّة كلّ كسرٍ بدل العدّ المجمَّع، فمجموع
+ * السجلّات حسب النوع يطابق counts بالبناء (شرط تحقّق ورقة «تقرير الكسور»).
+ * لا يشمل SUPERVISOR_DEFICIT (ثابتٌ خارج القابل للتغيّر — يُستكمَل عند الكتابة
+ * من exceptions البناء، فالاجتماعات لا تتحرّك وإحداثيّاتها لا تبيت).
+ *
+ * unit (وحدة الكسر للعرض): TEACHER / CLASS_SUBJECT / CLASS_SUBJECT_DAY / CELL /
+ * SUBJECT_SLOT (مختبر في خانة) / DEPT_SLOT (قسمٌ في خانة — احتياط الغياب).
+ *
+ * weight = الوزن الفعليّ عبر المصدر الموحَّد _breakTypeWeight: وزن الورقة للمرن
+ * الموزون (CONSEC_SOFT من spec.weight؛ GOVT/BALANCE من الورقة مباشرةً هنا)،
+ * ومن BREAK_WEIGHTS للأنواع المعلنة. لا افتراضيّ صامت: النوع المجهول يُدرَج
+ * بوزن «؟ غير معرَّف» بلا مساهمة، مع تحذير Logger (كشفٌ لا اختلاق).
+ *
+ * قراءة فقط. العدّاد الأصليّ يبقى كما هو مصدرَ penalty — هذا للتفسير لا للمحاسبة.
+ *
+ * @return {Array<Object>} سجلّات {type, unit, civilId, classId, subjectKey,
+ *   day, period, weight, extra}.
+ */
+function _enumerateBreakRecords(state, ctx) {
+  // وزن العرض من المصدر الموحَّد (_breakTypeWeight): لا افتراضيّ صامت — النوع
+  // المجهول يُدرَج بوزن «؟ غير معرَّف» بلا مساهمة، مع تحذيرٍ مسموع (كشفٌ لا اختلاق).
+  const wOf = function (name) {
+    const w = _breakTypeWeight(name, ctx);
+    if (typeof w !== 'number') {
+      Logger.log('تحذير (_enumerateBreakRecords): نوع كسرٍ بلا وزن معرَّف — «' +
+        name + '». يُدرَج بوزن «؟ غير معرَّف».');
+      return '؟ غير معرَّف';
+    }
+    return w;
+  };
+  const dim = state.getDimensions();
+  const days = dim.days, periods = dim.periods, classIds = dim.classIds, civilIds = dim.civilIds;
+  const lastIdx = ctx.lastIdx;
+  const out = [];
+  const push = function (rec, n) {
+    const times = (typeof n === 'number') ? n : 1;
+    for (let k = 0; k < times; k++) {
+      out.push({
+        type: rec.type,
+        unit: rec.unit,
+        civilId: (rec.civilId != null) ? String(rec.civilId) : null,
+        classId: rec.classId || null,
+        subjectKey: rec.subjectKey || null,
+        day: (typeof rec.day === 'number') ? rec.day : null,
+        period: (typeof rec.period === 'number') ? rec.period : null,
+        weight: rec.weight,
+        extra: rec.extra || null,
+        // anchoredByEngine يُشتقّ لاحقًا في _analyzeAllBreaks من تقاطع مراسي الكسر
+        // مع مخرَج _brokenLessonCells تحت نوعه (لا قاموس يدويّ) — لا يُضبَط هنا.
+      });
+    }
+  };
+
+  // BROKEN_LAB: فائض التزامن لكلّ خانة مختبر (سجلّ لكلّ وحدة فائض).
+  const labKeys = Object.keys(ctx.capacityBySubjectKey || {});
+  for (let i = 0; i < labKeys.length; i++) {
+    const key = labKeys[i];
+    const cap = ctx.capacityBySubjectKey[key];
+    if (typeof cap !== 'number') continue;
+    for (let d = 0; d < days; d++) {
+      for (let p = 0; p < periods; p++) {
+        const n = Math.max(0, state.getLabCount(key, d, p) - cap);
+        if (n > 0) {
+          push({ type: 'BROKEN_LAB', unit: 'SUBJECT_SLOT', subjectKey: key,
+            day: d, period: p, weight: wOf('BROKEN_LAB') }, n);
+        }
+      }
+    }
+  }
+
+  // BROKEN_DAILY_CAP: فائض عدد المادّة/اليوم (سجلّ لكلّ وحدة فائض).
+  const capMap = ctx.dailyCapByClassSubject || {};
+  const capKeys = Object.keys(capMap);
+  for (let i = 0; i < capKeys.length; i++) {
+    const parts = capKeys[i].split('|');
+    const classId = parts[0], subjectKey = parts.slice(1).join('|');
+    const dc = capMap[capKeys[i]];
+    if (typeof dc !== 'number') continue;
+    for (let d = 0; d < days; d++) {
+      const n = Math.max(0, state.getSubjectDayCount(classId, subjectKey, d) - dc);
+      if (n > 0) {
+        push({ type: 'BROKEN_DAILY_CAP', unit: 'CLASS_SUBJECT_DAY', classId: classId,
+          subjectKey: subjectKey, day: d, weight: wOf('BROKEN_DAILY_CAP') }, n);
+      }
+    }
+  }
+
+  // BROKEN_DAILY_FLOOR: يومٌ دون الحدّ الأدنى.
+  const floorMap = ctx.floorByClassSubject || {};
+  const floorKeys = Object.keys(floorMap);
+  for (let i = 0; i < floorKeys.length; i++) {
+    const parts = floorKeys[i].split('|');
+    const classId = parts[0], subjectKey = parts.slice(1).join('|');
+    const fl = floorMap[floorKeys[i]];
+    if (typeof fl !== 'number') continue;
+    for (let d = 0; d < days; d++) {
+      if (state.getSubjectDayCount(classId, subjectKey, d) < fl) {
+        push({ type: 'BROKEN_DAILY_FLOOR', unit: 'CLASS_SUBJECT_DAY', classId: classId,
+          subjectKey: subjectKey, day: d, weight: wOf('BROKEN_DAILY_FLOOR') });
+      }
+    }
+  }
+
+  // BROKEN_CONSEC_HARD / BROKEN_CONSEC_SOFT (المرن بوزن الورقة؛ الخامل لا يُعدّ).
+  const consecSubs = ctx.consecutiveSubjects || {};
+  const consecKeys = Object.keys(consecSubs);
+  for (let i = 0; i < consecKeys.length; i++) {
+    const key = consecKeys[i];
+    const spec = consecSubs[key];
+    const isHard = !!spec.hard;
+    const w = isHard ? wOf('BROKEN_CONSEC_HARD') : spec.weight;
+    if (!isHard && (typeof w !== 'number' || w <= 0)) continue;
+    for (let c = 0; c < classIds.length; c++) {
+      if (!_consecClassSubjectBroken(state, classIds[c], key, days, periods)) continue;
+      push({ type: isHard ? 'BROKEN_CONSEC_HARD' : 'BROKEN_CONSEC_SOFT',
+        unit: 'CLASS_SUBJECT', classId: classIds[c], subjectKey: key, weight: w,
+        extra: { name: spec.name } });
+    }
+  }
+
+  // BROKEN_MATH_LAST + BROKEN_DEPT_HEAD_LAST: خلايا الأخيرة.
+  if (lastIdx >= 0 && lastIdx < periods) {
+    for (let c = 0; c < classIds.length; c++) {
+      for (let d = 0; d < days; d++) {
+        const cell = state.getCell(classIds[c], d, lastIdx);
+        if (!cell || cell.kind !== 'LESSON') continue;
+        if (ctx.bannedLastSubjectKeys[cell.subjectKey]) {
+          push({ type: 'BROKEN_MATH_LAST', unit: 'CELL', classId: classIds[c],
+            subjectKey: cell.subjectKey, civilId: cell.civilId, day: d,
+            period: lastIdx, weight: wOf('BROKEN_MATH_LAST') });
+        }
+        if (isHeadOfDepartment(ctx.teacherByCivilId[String(cell.civilId)] || {})) {
+          push({ type: 'BROKEN_DEPT_HEAD_LAST', unit: 'CELL', classId: classIds[c],
+            subjectKey: cell.subjectKey, civilId: cell.civilId, day: d,
+            period: lastIdx, weight: wOf('BROKEN_DEPT_HEAD_LAST') });
+        }
+      }
+    }
+  }
+
+  // كسور السابعة + الفرديّة لكلّ معلّم (سجلّ لكلّ وحدة كسر).
+  for (let i = 0; i < civilIds.length; i++) {
+    const cid = civilIds[i];
+    const t = ctx.teacherByCivilId[cid] || {};
+    const L = state.getLastPeriodCount(cid);
+    const F = state.getFirstPeriodCount(cid);
+    const capOv = ctx.lastCapByTeacher[cid];
+    const hardCap = (typeof capOv === 'number') ? capOv : ctx.params.lastHard;
+    push({ type: 'BROKEN_LAST_OVER_HARD', unit: 'TEACHER', civilId: cid,
+      weight: wOf('BROKEN_LAST_OVER_HARD'), extra: { L: L, cap: hardCap } },
+      Math.max(0, L - hardCap));
+    if (t.isWingSupervisor === true) {
+      push({ type: 'BROKEN_SUP_LAST_OVER', unit: 'TEACHER', civilId: cid,
+        weight: wOf('BROKEN_SUP_LAST_OVER'),
+        extra: { L: L, cap: ctx.params.lastSupervisorMax } },
+        Math.max(0, L - ctx.params.lastSupervisorMax));
+    }
+    if (ctx.adminAvoidLast && t.category === ctx.adminCategoryName) {
+      push({ type: 'BROKEN_ADMIN_LAST', unit: 'TEACHER', civilId: cid,
+        weight: wOf('BROKEN_ADMIN_LAST'), extra: { L: L } }, L);
+    }
+    const isPriority = !!(t.department && ctx.priorityDeptNames && ctx.priorityDeptNames.has(t.department));
+    if (!isPriority && !_seventhExempt(ctx, cid)) {
+      push({ type: 'BROKEN_NON_PRIORITY_2ND_LAST', unit: 'TEACHER', civilId: cid,
+        weight: _np2lWeight(cid, ctx), extra: { L: L } },
+        Math.max(0, L - 1));
+    }
+    const indiv = ctx.indivByCivilId[cid];
+    if (indiv) {
+      if (indiv.noLast) {
+        push({ type: 'BROKEN_TEACHER_RULE', unit: 'TEACHER', civilId: cid,
+          weight: wOf('BROKEN_TEACHER_RULE'), extra: { rule: 'noLast', n: L } }, L);
+      }
+      if (indiv.noFirst) {
+        push({ type: 'BROKEN_TEACHER_RULE', unit: 'TEACHER', civilId: cid,
+          weight: wOf('BROKEN_TEACHER_RULE'), extra: { rule: 'noFirst', n: F } }, F);
+      }
+    }
+  }
+
+  // BROKEN_DEPT_HEAD_NOT_FIRST: (رئيس قسم، يومٌ له فيه حصص بلا أولى).
+  for (let i = 0; i < civilIds.length; i++) {
+    const cid = civilIds[i];
+    if (!isHeadOfDepartment(ctx.teacherByCivilId[cid] || {})) continue;
+    for (let d = 0; d < days; d++) {
+      let hasLesson = false, hasFirst = false;
+      for (let p = 0; p < periods; p++) {
+        const tc = state.getTeacherCell(cid, d, p);
+        if (typeof tc === 'string') { hasLesson = true; if (p === 0) hasFirst = true; }
+      }
+      if (hasLesson && !hasFirst) {
+        push({ type: 'BROKEN_DEPT_HEAD_NOT_FIRST', unit: 'TEACHER', civilId: cid,
+          day: d, weight: wOf('BROKEN_DEPT_HEAD_NOT_FIRST') });
+      }
+    }
+  }
+
+  // «يوم المراجعة الخفيف» (وحدته المعلّم) — الوزن من الورقة مباشرةً.
+  const gld = ctx.govtLightDay;
+  if (gld && gld.enabled) {
+    for (let i = 0; i < civilIds.length; i++) {
+      if (_govtExempt(ctx, civilIds[i])) continue;   // بوّابة الإعفاء (الجلسة 59)
+      const v = _teacherLightestOccupied(state, civilIds[i], days, periods);
+      if (v <= gld.optimal) continue;
+      const soft = (v <= gld.maxEnd);
+      push({ type: soft ? 'BROKEN_GOVT_LIGHTDAY_SOFT' : 'BROKEN_GOVT_LIGHTDAY_HARD',
+        unit: 'TEACHER', civilId: civilIds[i], weight: soft ? gld.wSoft : gld.wHard,
+        extra: { lightest: v, optimal: gld.optimal, maxEnd: gld.maxEnd } });
+    }
+  }
+
+  // «موازنة حصص المعلّم» (وحدته المعلّم) — الوزن من الورقة مباشرةً.
+  const dbl = ctx.dayBalance;
+  if (dbl && dbl.enabled) {
+    for (let i = 0; i < civilIds.length; i++) {
+      const s = _dayBalanceSpread(state, ctx, civilIds[i]);
+      if (s <= dbl.okSpread) continue;
+      push({ type: (s <= dbl.softSpread) ? 'BROKEN_DAY_BALANCE_SOFT' : 'BROKEN_DAY_BALANCE_HARD',
+        unit: 'TEACHER', civilId: civilIds[i],
+        weight: (s <= dbl.softSpread) ? dbl.wSoft : dbl.wHard, extra: { spread: s } });
+    }
+  }
+
+  // «الأخيرتان في صفٍّ واحد» (وحدته المعلّم) — سجلٌّ لكلّ تكرارٍ صفّيّ (تصاعديّ).
+  // الوزن من الورقة مباشرةً (نظير موازنة الأيّام) فلا يمرّ بـwOf.
+  if (ctx.lastPreferDifferent) {
+    for (let i = 0; i < civilIds.length; i++) {
+      const n = _lastSameClassCount(state, ctx, civilIds[i]);
+      if (n <= 0) continue;
+      push({ type: 'BROKEN_LAST_SAME_CLASS_SOFT', unit: 'TEACHER', civilId: civilIds[i],
+        weight: ctx.weights.W_LAST_SAME_CLASS, extra: { repeats: n } }, n);
+    }
+  }
+
+  // «شكل يوم المعلّم» (وحدته (معلّم، يوم)، الجلسة 59) — سجلٌّ لكلّ يومٍ فيه وحداتٌ،
+  // يحمل يومَه وعددَه (فيُعرَض ويُرسَّى ويُقاس بالمَجَسّ على يومه وحده). الوزن من
+  // الورقة مباشرةً فلا يمرّ بـwOf، والعدّ يطابق counts بـpush(rec, n).
+  // ⚠️ سعر الزوج متدرّج (الجلسة 61): يُدفَع سجلٌّ لكلّ **دلوٍ** بوزنه الحقيقيّ لا
+  // سجلٌّ واحد بوزنٍ موحَّد — وإلّا كذب عمود «الوزن» في التقرير وكذب مجموع الفرق.
+  // التجميع في العرض يجمع الأوزان والوحدات فيخرج الرقم صحيحًا من غير منطقٍ خاصّ.
+  const EWsh = ctx.weights || {};
+  const wPlain  = Number(EWsh.W_ADJACENT_PAIR) || 0;
+  const wRecess = Number(EWsh.W_ADJACENT_PAIR_RECESS) || 0;
+  const wMeet   = Number(EWsh.W_ADJACENT_PAIR_MEETING) || 0;
+  for (let i = 0; i < civilIds.length; i++) {
+    const gsh = _dayShapeWeight(ctx, civilIds[i]);
+    if (gsh.w <= 0) continue;
+    for (let d = 0; d < days; d++) {
+      if (gsh.mode === 'GAP') {
+        const n = _dayShapeDayCount(state, ctx, civilIds[i], d, gsh.mode);
+        if (n <= 0) continue;
+        push({ type: 'BROKEN_SINGLE_GAP', unit: 'TEACHER', civilId: civilIds[i],
+          day: d, weight: gsh.w, extra: { units: n } }, n);
+        continue;
+      }
+      const shp = _dayShapeDayShape(state, ctx, civilIds[i], d, gsh.mode);
+      if (shp.count < 2 || shp.pairs <= 0) continue;
+      const buckets = [
+        { n: shp.pairsPlain,  w: wPlain,  kind: 'PLAIN' },
+        { n: shp.pairsRecess, w: wRecess, kind: 'RECESS' },
+        { n: shp.pairsMeet,   w: wMeet,   kind: 'MEETING' },
+        { n: shp.pairsBoth,   w: Math.min(wRecess, wMeet), kind: 'BOTH' },
+      ];
+      for (let b = 0; b < buckets.length; b++) {
+        if (buckets[b].n <= 0) continue;
+        push({ type: 'BROKEN_ADJACENT_PAIR', unit: 'TEACHER', civilId: civilIds[i],
+          day: d, weight: buckets[b].w,
+          extra: { units: buckets[b].n, kind: buckets[b].kind } }, buckets[b].n);
+      }
+    }
+  }
+
+  // «أولى وأخيرة في يومٍ واحد» (وحدته (معلّم، يوم)) — سجلٌّ لكلّ يومٍ مخالف يحمل
+  // يومَه (فيُعرَض ويُرسَّى بخليّتَيه). الوزن من الورقة مباشرةً فلا يمرّ بـwOf.
+  const wFLrec = _firstLastSameDayWeight(ctx);
+  if (wFLrec > 0) {
+    for (let i = 0; i < civilIds.length; i++) {
+      for (let d = 0; d < days; d++) {
+        if (!_firstLastSameDayHit(state, ctx, civilIds[i], d)) continue;
+        push({ type: 'BROKEN_FIRST_LAST_SAME_DAY', unit: 'TEACHER', civilId: civilIds[i],
+          day: d, weight: wFLrec, extra: { day: d } });
+      }
+    }
+  }
+
+  // «استنزاف احتياط القسم» (وحدته الخانة): سجلٌّ **واحد** لكلّ خانةٍ ذات نقص — لا
+  // «نقص» سجلًّا — فيطابق عدَّ _computeChangeableBreaks (خانات لا نقص) بالبناء.
+  // شرط الكشف والمصدر مرآةٌ حرفيّة له (نفس _deptReserveDeficit، نفس مجموعة الأقسام).
+  // الوزن المعروض هو الوزن الفعليّ للسجلّ = الوزن × النقص (العقوبة متدرّجة)، نظير
+  // _np2lWeight الذي يُدرَج بوزنه الحقيقيّ لا بثابت عرض.
+  const wRes = wOf('BROKEN_DEPT_RESERVE');
+  const resDeptKeys = Object.keys(ctx.reserveCandidatesByDept || {});
+  for (let i = 0; i < resDeptKeys.length; i++) {
+    const dep = resDeptKeys[i];
+    const cands = ctx.reserveCandidatesByDept[dep] || [];
+    for (let d = 0; d < days; d++) {
+      for (let p = 0; p < periods; p++) {
+        const def = _deptReserveDeficit(state, ctx, dep, d, p);
+        if (def <= 0) continue;
+        let free = 0;
+        for (let k = 0; k < cands.length; k++) {
+          if (state.isTeacherFree(cands[k], d, p)) free++;
+        }
+        push({ type: 'BROKEN_DEPT_RESERVE', unit: 'DEPT_SLOT', day: d, period: p,
+          weight: (typeof wRes === 'number') ? wRes * def : wRes,
+          extra: { departmentName: dep, free: free, required: free + def,
+                   deficit: def, deptSize: cands.length } });
+      }
+    }
+  }
+
+  return out;
+}
+
+/** مفتاح توحيد التحليل: السجلّات المتطابقة الهويّة تتقاسم مَجَسًّا واحدًا. */
+function _breakProbeKey(rec) {
+  return rec.type + '|' + (rec.civilId || '') + '|' + (rec.classId || '') + '|' +
+    (rec.subjectKey || '') + '|' + (rec.day == null ? '' : rec.day) + '|' +
+    (rec.period == null ? '' : rec.period) + '|' +
+    ((rec.extra && rec.extra.rule) || '') + '|' +
+    // القسم جزءٌ من الهويّة: كسرا احتياطٍ لقسمين مختلفين في الخانة نفسها متمايزان
+    // ولا يتقاسمان مَجَسًّا واحدًا. لا نوعَ قائمًا يحمل departmentName ⟹ إضافة محايدة.
+    ((rec.extra && rec.extra.departmentName) || '');
+}
+
+/**
+ * خطّة مَجَسّ كسرٍ واحد: مراسيه (خلايا انطلاق التبديل) ودالّة قيمته valueFn —
+ * تُقرأ من الحالة الراهنة، والإزالة ⇔ قيمة ما-بعد-التبديل < ما-قبله (فتصلح
+ * للأنواع العدديّة، الثنائيّة، والمتدرّجة hard→soft على السواء). المراسي مرايا
+ * مراسي المحرّك (_brokenLessonCells) حيث وُجدت، وبنفس منطقها للأنواع غير
+ * المرساة هناك (المختبر/الحدّ الأدنى/المرن الخفيف): خلايا الكسر نفسها.
+ *
+ * @return {{anchors: Array<{classId,day,period}>, valueFn: Function}|null}
+ */
+function _breakProbePlan(state, ctx, rec) {
+  const lastIdx = ctx.lastIdx;
+  const days = ctx.days, periods = ctx.periods;
+  switch (rec.type) {
+    case 'BROKEN_LAB': {
+      const key = rec.subjectKey, d = rec.day, p = rec.period;
+      const cap = ctx.capacityBySubjectKey[key];
+      const dim = state.getDimensions();
+      const anchors = [];
+      for (let c = 0; c < dim.classIds.length; c++) {
+        const cell = state.getCell(dim.classIds[c], d, p);
+        if (cell && cell.kind === 'LESSON' && cell.subjectKey === key) {
+          anchors.push({ classId: dim.classIds[c], day: d, period: p });
+        }
+      }
+      return { anchors: anchors, valueFn: function () {
+        return Math.max(0, state.getLabCount(key, d, p) - cap);
+      } };
+    }
+    case 'BROKEN_DAILY_CAP': {
+      const classId = rec.classId, subjectKey = rec.subjectKey, d = rec.day;
+      const dc = (ctx.dailyCapByClassSubject || {})[classId + '|' + subjectKey];
+      return {
+        anchors: _classSubjectLessonCells(state, ctx, classId, subjectKey, d),
+        valueFn: function () {
+          return Math.max(0, state.getSubjectDayCount(classId, subjectKey, d) - dc);
+        },
+      };
+    }
+    case 'BROKEN_DAILY_FLOOR': {
+      const classId = rec.classId, subjectKey = rec.subjectKey, d = rec.day;
+      const fl = (ctx.floorByClassSubject || {})[classId + '|' + subjectKey];
+      return {
+        anchors: _classSubjectLessonCells(state, ctx, classId, subjectKey, undefined, d),
+        valueFn: function () {
+          return (state.getSubjectDayCount(classId, subjectKey, d) < fl) ? 1 : 0;
+        },
+      };
+    }
+    case 'BROKEN_CONSEC_HARD':
+    case 'BROKEN_CONSEC_SOFT': {
+      const classId = rec.classId, subjectKey = rec.subjectKey;
+      return {
+        anchors: _classSubjectLessonCells(state, ctx, classId, subjectKey),
+        valueFn: function () {
+          return _consecClassSubjectBroken(state, classId, subjectKey, days, periods);
+        },
+      };
+    }
+    case 'BROKEN_MATH_LAST': {
+      const classId = rec.classId, d = rec.day;
+      return {
+        anchors: [{ classId: classId, day: d, period: lastIdx }],
+        valueFn: function () {
+          const cell = state.getCell(classId, d, lastIdx);
+          return (cell && cell.kind === 'LESSON' &&
+            ctx.bannedLastSubjectKeys[cell.subjectKey]) ? 1 : 0;
+        },
+      };
+    }
+    case 'BROKEN_DEPT_HEAD_LAST': {
+      const classId = rec.classId, d = rec.day;
+      return {
+        anchors: [{ classId: classId, day: d, period: lastIdx }],
+        valueFn: function () {
+          const cell = state.getCell(classId, d, lastIdx);
+          return (cell && cell.kind === 'LESSON' &&
+            isHeadOfDepartment(ctx.teacherByCivilId[String(cell.civilId)] || {})) ? 1 : 0;
+        },
+      };
+    }
+    case 'BROKEN_LAST_OVER_HARD':
+    case 'BROKEN_SUP_LAST_OVER':
+    case 'BROKEN_ADMIN_LAST':
+    case 'BROKEN_NON_PRIORITY_2ND_LAST': {
+      const cid = rec.civilId;
+      const capOv = ctx.lastCapByTeacher[cid];
+      const hardCap = (typeof capOv === 'number') ? capOv : ctx.params.lastHard;
+      const supMax = ctx.params.lastSupervisorMax;
+      const type = rec.type;
+      return {
+        anchors: _teacherPeriodLessonCells(state, ctx, cid, lastIdx),
+        valueFn: function () {
+          const L = state.getLastPeriodCount(cid);
+          if (type === 'BROKEN_LAST_OVER_HARD') return Math.max(0, L - hardCap);
+          if (type === 'BROKEN_SUP_LAST_OVER') return Math.max(0, L - supMax);
+          if (type === 'BROKEN_ADMIN_LAST') return L;
+          return Math.max(0, L - 1);   // NON_PRIORITY_2ND_LAST
+        },
+      };
+    }
+    case 'BROKEN_TEACHER_RULE': {
+      const cid = rec.civilId;
+      const isFirst = !!(rec.extra && rec.extra.rule === 'noFirst');
+      return {
+        anchors: _teacherPeriodLessonCells(state, ctx, cid, isFirst ? 0 : lastIdx),
+        valueFn: function () {
+          return isFirst ? state.getFirstPeriodCount(cid) : state.getLastPeriodCount(cid);
+        },
+      };
+    }
+    case 'BROKEN_DEPT_HEAD_NOT_FIRST': {
+      const cid = rec.civilId, d = rec.day;
+      const anchors = [];
+      for (let p = 0; p < periods; p++) {
+        const tc = state.getTeacherCell(cid, d, p);
+        if (typeof tc === 'string' && tc.length > 0) {
+          anchors.push({ classId: tc, day: d, period: p });
+        }
+      }
+      return {
+        anchors: anchors,
+        valueFn: function () {
+          let hasLesson = false, hasFirst = false;
+          for (let p = 0; p < periods; p++) {
+            const tc = state.getTeacherCell(cid, d, p);
+            if (typeof tc === 'string') { hasLesson = true; if (p === 0) hasFirst = true; }
+          }
+          return (hasLesson && !hasFirst) ? 1 : 0;
+        },
+      };
+    }
+    case 'BROKEN_GOVT_LIGHTDAY_SOFT':
+    case 'BROKEN_GOVT_LIGHTDAY_HARD': {
+      const cid = rec.civilId;
+      if (_govtExempt(ctx, cid)) return null;   // بوّابة الإعفاء (الجلسة 59)
+      // مراسي المحرّك (البند ج في _brokenLessonCells): أعلى درسٍ على كلّ يومٍ أخفّ —
+      // معمَّمةً هنا على المخالف المرن أيضًا (المحرّك يرسّي الصلب فقط).
+      const latest = [];
+      let minLatest = periods;
+      for (let d = 0; d < days; d++) {
+        let lt = -1;
+        for (let p = periods - 1; p >= 0; p--) {
+          if (state.getTeacherCell(cid, d, p)) { lt = p; break; }
+        }
+        latest.push(lt);
+        if (lt < minLatest) minLatest = lt;
+      }
+      const anchors = [];
+      for (let d = 0; d < days; d++) {
+        if (latest[d] !== minLatest) continue;
+        for (let p = periods - 1; p >= 0; p--) {
+          const tc = state.getTeacherCell(cid, d, p);
+          if (typeof tc === 'string') { anchors.push({ classId: tc, day: d, period: p }); break; }
+        }
+      }
+      return {
+        anchors: anchors,
+        valueFn: function () { return _govtLightDayPenalty(state, ctx, cid); },
+      };
+    }
+    case 'BROKEN_DAY_BALANCE_SOFT':
+    case 'BROKEN_DAY_BALANCE_HARD': {
+      const cid = rec.civilId;
+      // مراسي المحرّك (البند د): كلّ دروسه في أيّامه الأثقل.
+      const loads = [];
+      let mx = 0;
+      for (let d = 0; d < days; d++) {
+        const v = _dayBalanceDayCount(state, ctx, cid, d);
+        loads.push(v);
+        if (v > mx) mx = v;
+      }
+      const anchors = [];
+      for (let d = 0; d < days; d++) {
+        if (loads[d] !== mx) continue;
+        for (let p = 0; p < periods; p++) {
+          const tc = state.getTeacherCell(cid, d, p);
+          if (typeof tc === 'string') anchors.push({ classId: tc, day: d, period: p });
+        }
+      }
+      return {
+        anchors: anchors,
+        valueFn: function () { return _dayBalancePenalty(state, ctx, cid); },
+      };
+    }
+    case 'BROKEN_LAST_SAME_CLASS_SOFT': {
+      const cid = rec.civilId;
+      // مراسي المحرّك: خلايا حصصه الأخيرة الواقعة في صفٍّ تكرّر (n ≥ 2) — إخراج
+      // إحداها من الأخيرة أو نقلها لصفٍّ آخر هو الحركة المُنقِصة للعدد.
+      const byClass = {};
+      for (let d = 0; d < days; d++) {
+        const tc = state.getTeacherCell(cid, d, lastIdx);
+        if (typeof tc === 'string' && tc.length > 0) byClass[tc] = (byClass[tc] || 0) + 1;
+      }
+      const anchors = [];
+      for (let d = 0; d < days; d++) {
+        const tc = state.getTeacherCell(cid, d, lastIdx);
+        if (typeof tc === 'string' && byClass[tc] > 1) {
+          anchors.push({ classId: tc, day: d, period: lastIdx });
+        }
+      }
+      return {
+        anchors: anchors,
+        valueFn: function () { return _lastSameClassPenalty(state, ctx, cid); },
+      };
+    }
+    case 'BROKEN_ADJACENT_PAIR':
+    case 'BROKEN_SINGLE_GAP': {
+      const cid = rec.civilId, sd = rec.day;
+      const gsh = _dayShapeWeight(ctx, cid);
+      if (gsh.w <= 0 || typeof sd !== 'number') return null;
+      // مراسي المحرّك (البند ط) حرفيًّا: طرفا كلّ وحدة في ذلك اليوم. القيمة ليومه
+      // وحده لا للمعلّم كلّه — فيقيس المَجَسّ ما يُصلحه التبديل فعلًا.
+      const anchors = [];
+      const occS = _dayShapeOcc(state, ctx, cid, sd);
+      const addA = function (p) {
+        const tc = state.getTeacherCell(cid, sd, p);
+        if (typeof tc === 'string' && tc.length > 0) {
+          anchors.push({ classId: tc, day: sd, period: p });
+        }
+      };
+      if (gsh.mode === 'GAP') {
+        for (let p = 0; p + 2 < periods; p++) {
+          if (occS[p] && !occS[p + 1] && occS[p + 2]) { addA(p); addA(p + 2); }
+        }
+      } else {
+        const bpS = _dayShapeBlockPairs(state, ctx, cid, sd);   // استثناء الكتلة
+        for (let p = 0; p + 1 < periods; p++) {
+          if (occS[p] && occS[p + 1] && !(bpS && bpS[p])) { addA(p); addA(p + 1); }
+        }
+      }
+      return {
+        anchors: anchors,
+        valueFn: function () {
+          // السعر المتدرّج (الجلسة 61) لا العدد × الوزن — وإلّا وعد المَجَسّ بما
+          // لا يتحقّق (زوجُ اجتماعٍ يكلّف 1 لا 5).
+          return _dayShapeDayPenalty(state, ctx, cid, sd, gsh.mode);
+        },
+      };
+    }
+    case 'BROKEN_FIRST_LAST_SAME_DAY': {
+      const cid = rec.civilId, fd = rec.day;
+      if (_firstLastSameDayWeight(ctx) <= 0 || typeof fd !== 'number') return null;
+      // مراسي المحرّك (البند ح): خليّتا أولى ذلك اليوم وأخيرته — إخراج إحداهما من
+      // طرف اليوم هو الحركة المُزيلة. القيمة لهذا السجلّ وحده (يومه) لا للمعلّم كلّه.
+      const anchors = [];
+      const c0 = state.getTeacherCell(cid, fd, 0);
+      const c7 = state.getTeacherCell(cid, fd, lastIdx);
+      if (typeof c0 === 'string') anchors.push({ classId: c0, day: fd, period: 0 });
+      if (typeof c7 === 'string') anchors.push({ classId: c7, day: fd, period: lastIdx });
+      return {
+        anchors: anchors,
+        valueFn: function () { return _firstLastSameDayHit(state, ctx, cid, fd) ? 1 : 0; },
+      };
+    }
+    case 'BROKEN_DEPT_RESERVE': {
+      // حارس التعطيل نفسه: الوزن صفرًا ⟹ لا مَجَسّ (الحكم STRUCTURAL كما في حزمة 44).
+      const wRes = (ctx.weights || {}).BROKEN_DEPT_RESERVE;
+      if (typeof wRes !== 'number' || wRes <= 0) return null;
+      const dep = (rec.extra && rec.extra.departmentName) || '';
+      const rd = rec.day, rp = rec.period;
+      // نفس مرتكزات المحرّك حرفيًّا (_reserveProbeAnchors) — فيصحّ اشتقاق
+      // anchoredByEngine بالتقاطع، ولا يَعِد التقرير بحلٍّ خارج فضاء الإصلاح.
+      return {
+        anchors: _reserveProbeAnchors(state, ctx, dep, rd, rp),
+        valueFn: function () { return _deptReserveDeficit(state, ctx, dep, rd, rp); },
+      };
+    }
+    default:
+      return null;
+  }
+}
+
+/**
+ * مَجَسّ كسرٍ واحد: يعدّد تبديلات مراسيه داخل صفّها (مرآة فضاء المحرّك حصرًا —
+ * _attemptSwap بالحارس التفاضليّ، لا نقل) ويحكم:
+ *   SWAP_COSTLY  ① يوجد تبديل مجدٍ يُزيله — يُختار الأرخص (أدنى دلتا) ويُسمّى
+ *                  كسرُه البديل بفرقِ _computeChangeableBreaks كاملٍ **واحد**
+ *                  (لكلّ كسرٍ لا لكلّ مرشّح — ضبطًا للكلفة).
+ *   HARD_BLOCKED ② كلّ تبديلٍ مُزيلٍ يرفضه الحارس الصلب (تُجمَع أنواع الرفض).
+ *   STRUCTURAL   ③ لا تبديل يُزيله أصلًا.
+ *   UNANALYZED     بلغ المسح سقف المحاولات قبل إثبات شيء (مسحٌ ناقص لا يثبت
+ *                  البنيويّة — يُعلَن نقصه بدل حكمٍ زائف).
+ * كلّ تطبيقٍ يُعكَس فورًا (_applySwap عكسُ نفسه)؛ budget.snap شبكة أمان استرجاع.
+ *
+ * @param {Object} budget {attempts, cap, truncated, snap} — يُحدَّث في المكان.
+ * @return {{verdict, bestSwap, swapDelta, replacementBreaks, hardTypes}}
+ */
+/**
+ * فرق «الجودة الناعمة» لتبديلٍ مقترَح (الجلسة 59) — فجوات يوم المعلّم والثلاثيّات
+ * وسقف الأولى وسادسة رئيس القسم: أي ما يقيسه **التلدين** ولا يقيسه دفترُ الكسور.
+ *
+ * ⚠️ لماذا لزم: طبقة الإصلاح عمياء عن الناعم (تُحسّن الكسور وحدها)، والتلدين يقيس
+ * الاثنين. فالجدول الذي يراه التقرير هو **مخرَج التلدين**، وفيه تبديلاتٌ تُنقص عدّ
+ * الكسور ويرفضها التلدين عن حقٍّ لأنّها تُفسد الجودة. المَجَسّ كان يقيس شقًّا واحدًا
+ * فيَعِد بمكسبٍ وهميّ ويلوم «الإصلاح» — قياسٌ ناقصٌ لا كذب، وهذا يُكمله.
+ *
+ * الوحدة المتأثّرة معلّما الخليّتين وحدهما (نظير region.teacherIds)، ومجموعتهما لا
+ * تتغيّر بالتبديل فتُقرأ مرّةً واحدة. يُستدعى والحالةُ **قبل** التبديل.
+ *
+ * @return {number} فرق العقوبة الناعمة (موجب = التبديل يُفسد الجودة).
+ */
+function _swapSoftDelta(state, ctx, cellA, cellB) {
+  if (typeof _diTeacherSoftPenalty !== 'function') return 0;
+  const sA = state.getCell(cellA.classId, cellA.day, cellA.period);
+  const sB = state.getCell(cellB.classId, cellB.day, cellB.period);
+  const ids = {};
+  if (sA && sA.civilId) ids[String(sA.civilId)] = true;
+  if (sB && sB.civilId) ids[String(sB.civilId)] = true;
+  const keys = Object.keys(ids);
+  if (keys.length === 0) return 0;
+  let before = 0;
+  for (let i = 0; i < keys.length; i++) before += _diTeacherSoftPenalty(state, ctx, keys[i]);
+  _applySwap(state, cellA, cellB);
+  let after = 0;
+  for (let i = 0; i < keys.length; i++) after += _diTeacherSoftPenalty(state, ctx, keys[i]);
+  _applySwap(state, cellA, cellB);
+  return after - before;
+}
+
+function _probeOneBreak(state, ctx, rec, cellsByClass, budget, baseCounts) {
+  const plan = _breakProbePlan(state, ctx, rec);
+  if (!plan) {
+    return { verdict: 'STRUCTURAL', bestSwap: null, swapDelta: null,
+      replacementBreaks: null, hardTypes: [] };
+  }
+  const before = plan.valueFn();
+  let best = null, hardBlocked = false;
+  const hardTypes = {};
+
+  for (let ai = 0; ai < plan.anchors.length && !budget.truncated; ai++) {
+    const a = plan.anchors[ai];
+    const partners = a.partners || cellsByClass[a.classId] || [];
+    for (let j = 0; j < partners.length; j++) {
+      if (budget.attempts >= budget.cap) { budget.truncated = true; break; }
+      const b = partners[j];
+      if (a.day === b.day && a.period === b.period) continue;
+      budget.attempts++;
+      const r = _attemptSwap(state, ctx, a, b, true);
+      if (r.feasible) {
+        _applySwap(state, a, b);
+        const removed = plan.valueFn() < before;
+        _applySwap(state, a, b);
+        if (removed) {
+          // المفاضلة بالمحصّلة (كسور + ناعم) لا بالكسور وحدها — نفس هدف التلدين
+          // الذي أنتج هذا الجدول، وإلّا رشّح المَجَسُّ تبديلًا رفضه التلدين عن حقّ.
+          const soft = _swapSoftDelta(state, ctx, a, b);
+          const total = r.deltaPenalty + soft;
+          if (best === null || total < best.total) {
+            best = { a: a, b: b, delta: r.deltaPenalty, soft: soft, total: total };
+          }
+        }
+      } else if (r.reason && r.reason.indexOf('GUARD') === 0) {
+        // الحارس الصلب رفض — هل كان التبديل سيُزيل الكسر لو سُمح؟ (place لا يرمي
+        // هنا: تعارض المعلّم يُرفَض قبل الحارس بـPLACE_CONFLICT؛ الحماية احتياط.)
+        try {
+          _applySwap(state, a, b);
+          const removed = plan.valueFn() < before;
+          _applySwap(state, a, b);
+          if (removed) {
+            hardBlocked = true;
+            const types = r.reason.replace('GUARD: ', '').split(',');
+            for (let ti = 0; ti < types.length; ti++) {
+              if (types[ti]) hardTypes[types[ti]] = true;
+            }
+          }
+        } catch (e) { state.restore(budget.snap); }
+      }
+      // سائر الأسباب (SAME_CELL/IDENTICAL_CONTENT/PLACE_CONFLICT): لا تبديل ممكن.
+    }
+  }
+
+  const out = {
+    verdict: best ? 'SWAP_COSTLY' : (hardBlocked ? 'HARD_BLOCKED' : 'STRUCTURAL'),
+    bestSwap: best ? { a: { classId: best.a.classId, day: best.a.day, period: best.a.period },
+                       b: { classId: best.b.classId, day: best.b.day, period: best.b.period } }
+                   : null,
+    swapDelta: best ? best.delta : null,
+    // فرق الجودة الناعمة والمحصّلة (الجلسة 59) — يقرؤهما نصّ التقرير فيقول الصدق:
+    // «يُنقص العدّ ويُفسد الجودة» بدل «يُخفّض الإجمالي».
+    swapSoftDelta: best ? best.soft : null,
+    swapTotalDelta: best ? best.total : null,
+    replacementBreaks: null,
+    hardTypes: Object.keys(hardTypes),
+  };
+  if (budget.truncated && !best && !hardBlocked) out.verdict = 'UNANALYZED';
+
+  // فرقٌ كامل واحد للأرخص: تسمية الكسر/الكسور البديلة (الأنواع التي زادت).
+  if (best) {
+    _applySwap(state, best.a, best.b);
+    const after = _computeChangeableBreaks(state, ctx).counts;
+    _applySwap(state, best.a, best.b);
+    const inc = [];
+    for (const k in after) {
+      const dlt = after[k] - (baseCounts[k] || 0);
+      if (dlt > 0) inc.push({ type: k, n: dlt });
+    }
+    out.replacementBreaks = inc;
+  }
+  return out;
+}
+
+/**
+ * تمريرة الاستخلاص «لماذا بقي هذا الكسر» — تعميم نمط _analyzeHardConflicts على
+ * كلّ الكسور المتبقّية بعد الإصلاح. تُعدّد السجلّات (_enumerateBreakRecords) ثمّ
+ * تُجري مَجَسًّا واحدًا لكلّ هويّة كسرٍ مميَّزة (_breakProbeKey — سابعات المعلّم
+ * المتكرّرة مثلًا تتقاسم تحليلًا واحدًا) وتُلصق الحكم بكلّ سجلّ.
+ *
+ * dry-run خالص بنمط لقطة/استرجاع (نظير _analyzeHardConflicts): الحالة تعود كما
+ * كانت حرفيًّا. baseCounts (عدّ الحالة النهائيّة) يُمرَّر ولا يُعاد حسابه.
+ *
+ * @param {Object} state الحالة المُصلَحة.
+ * @param {Object} ctx السياق كامل الخرائط (خطّ الأساس + السقف + floor مُرفَقة).
+ * @param {Object} baseCounts counts من _computeChangeableBreaks النهائيّ.
+ * @return {{records: Array, attempts: number, truncated: boolean, elapsedMs: number,
+ *   anchoredTypes: Array<string>}}
+ */
+function _analyzeAllBreaks(state, ctx, baseCounts) {
+  const t0 = Date.now();
+  const records = _enumerateBreakRecords(state, ctx);
+  const dim = state.getDimensions();
+  const classIds = dim.classIds;
+
+  // ---------- العلم المشتقّ anchoredByEngine (قَتْل القاموس اليدويّ) ----------
+  // نداءٌ واحدٌ لـ_brokenLessonCells على الحالة النهائيّة نفسها (نظيفة، قبل مَجَسّ
+  // التبديلات أدناه) → مجموعة (خليّة::نوع). سجلّ كسرٍ مُرسًّى ⟺ تتقاطع مراسيه
+  // (_breakProbePlan.anchors) مع تلك المجموعة تحت نوعه بعينه. مطابقةٌ نوعيّة لا
+  // مجرّدة: المُرسّى يُميَّز عن غيره بنيويًّا مهما تغيّرت العتبات، بلا قائمةٍ تتعفّن.
+  const anchorOut = _brokenLessonCells(state, ctx);
+  const anchoredSet = {};
+  const anchoredTypesSet = {};
+  for (let i = 0; i < anchorOut.length; i++) {
+    const bc = anchorOut[i];
+    const tps = bc.types || [];
+    for (let j = 0; j < tps.length; j++) {
+      anchoredSet[bc.classId + '#' + bc.day + '#' + bc.period + '::' + tps[j]] = true;
+      anchoredTypesSet[tps[j]] = true;
+    }
+  }
+  const anchoredFlagByKey = {};
+  for (let i = 0; i < records.length; i++) {
+    const rec = records[i];
+    const k = _breakProbeKey(rec);
+    if (!(k in anchoredFlagByKey)) {
+      const plan = _breakProbePlan(state, ctx, rec);
+      let flag = false;
+      if (plan && plan.anchors) {
+        for (let j = 0; j < plan.anchors.length; j++) {
+          const an = plan.anchors[j];
+          if (anchoredSet[an.classId + '#' + an.day + '#' + an.period + '::' + rec.type]) {
+            flag = true;
+            break;
+          }
+        }
+      }
+      anchoredFlagByKey[k] = flag;
+    }
+    rec.anchoredByEngine = anchoredFlagByKey[k];
+  }
+  const anchoredTypes = Object.keys(anchoredTypesSet).sort();
+
+  // شركاء التبديل: كلّ خلايا الدرس بالصفّ (مرآة حلقة المحرّك).
+  const cellsByClass = {};
+  for (let c = 0; c < classIds.length; c++) {
+    const classId = classIds[c];
+    cellsByClass[classId] = [];
+    for (let d = 0; d < dim.days; d++) {
+      for (let p = 0; p < dim.periods; p++) {
+        const cell = state.getCell(classId, d, p);
+        if (cell && cell.kind === 'LESSON') {
+          cellsByClass[classId].push({ classId: classId, day: d, period: p });
+        }
+      }
+    }
+  }
+
+  // ATTEMPT_CAP نظير سقف _DiagSwapSpace — أمانٌ زمنيّ (بلوغه يُعلَن لا يُخفى).
+  const budget = { attempts: 0, cap: 25000, truncated: false, snap: state.snapshot() };
+  const byKey = {};
+
+  for (let i = 0; i < records.length; i++) {
+    const rec = records[i];
+    const key = _breakProbeKey(rec);
+    if (!byKey[key]) {
+      byKey[key] = budget.truncated
+        ? { verdict: 'UNANALYZED', bestSwap: null, swapDelta: null,
+            replacementBreaks: null, hardTypes: [] }
+        : _probeOneBreak(state, ctx, rec, cellsByClass, budget, baseCounts);
+    }
+    const a = byKey[key];
+    rec.verdict = a.verdict;
+    rec.bestSwap = a.bestSwap;
+    rec.swapDelta = a.swapDelta;
+    rec.swapSoftDelta = a.swapSoftDelta;   // الجلسة 59: شقّ الجودة الناعمة
+    rec.swapTotalDelta = a.swapTotalDelta; // والمحصّلة (كسور + ناعم)
+    rec.replacementBreaks = a.replacementBreaks;
+    rec.hardTypes = a.hardTypes;
+  }
+
+  state.restore(budget.snap);   // شبكة أمان — كلّ التطبيقات مُعكوسة أصلًا
+  return { records: records, attempts: budget.attempts,
+    truncated: budget.truncated, elapsedMs: Date.now() - t0,
+    anchoredTypes: anchoredTypes };
+}
+
+/**
+ * يُصدِر سجلّات الكسور المتبقّية بعد الإصلاح بشكل breakIndex الذي يبتلعه
+ * writeScheduleData ({type, severity:'BROKEN', classId, day, period})، مشتقّةً
+ * من الحالة المُصلَحة — لإعادة بناء عمود «نوع الكسر» بدل exceptions الخام البائتة.
+ *
+ * يقتصر على BROKEN_NON_PRIORITY_2ND_LAST على خلايا الدرس (LESSON). يعيد استخدام
+ * شرط الكشف نفسه من _computeChangeableBreaks حرفيًّا (مستقلّ لا else-chain):
+ * معلّمٌ غير-أولويّة (department خارج priorityDeptNames) وعدد حصصه الأخيرة L≥2 ⟹
+ * يُوسَم كلُّ خليّة أخيرة (p===lastIdx) من خلاياه بإحداثيّاتها الفعليّة (قرار العرض
+ * المحسوم: وسم الكلّ، فعدد الخلايا قد يفوق عدّ الكسر L−1).
+ *
+ * لا يُصدِر SUPERVISOR_DEFICIT (كسر اجتماع، يبقى في _RepairReport — محسوم).
+ * لا منطق كشف جديد: فقط التقاط إحداثيّات الخلايا للشرط القائم.
+ *
+ * @param {Object} state الحالة المُصلَحة.
+ * @param {Object} ctx السياق (lastIdx, teacherByCivilId, priorityDeptNames).
+ * @return {Array<{type, severity, classId, day, period}>}
+ */
+function _repairedBreakExceptions(state, ctx) {
+  const dim = state.getDimensions();
+  const days = dim.days, classIds = dim.classIds;
+  const lastIdx = ctx.lastIdx;
+  const out = [];
+  if (lastIdx < 0 || lastIdx >= dim.periods) return out;
+
+  for (let c = 0; c < classIds.length; c++) {
+    const classId = classIds[c];
+    for (let d = 0; d < days; d++) {
+      const cell = state.getCell(classId, d, lastIdx);
+      if (!cell || cell.kind !== 'LESSON') continue;
+      const cid = String(cell.civilId);
+      const t = ctx.teacherByCivilId[cid] || {};
+      const isPriority = !!(t.department && ctx.priorityDeptNames &&
+        ctx.priorityDeptNames.has(t.department));
+      if (isPriority) continue;
+      if (_seventhExempt(ctx, cid)) continue;   // المُعفى فرديًّا لا يُوسَم
+      if (state.getLastPeriodCount(cid) < ctx.params.lastAllowed) continue;
+      out.push({ type: 'BROKEN_NON_PRIORITY_2ND_LAST', severity: 'BROKEN',
+        classId: classId, day: d, period: lastIdx });
+    }
+  }
+  return out;
+}
+
+/**
+ * يجمع كلّ خلايا الدرس الحاملة لأيّ كسرٍ قابل للتبديل — مرتكَزات التبديل في حلقة
+ * الإصلاح. يُعاد حسابه كلّ جولة (الكسور تتغيّر مع الإصلاح). نوعان من المرتكزات:
+ *   (أ) كسور per-cell الخمسة (الحصّة الأخيرة/السقف اليوميّ/NOT_FIRST).
+ *   (ب) خلايا الكتل المتتالية المكسورة (وحدة (صفّ،مادّة) أسبوعيّة): لكلّ مادّةٍ
+ *       نمطها «متتاليتان» مفعَّلٍ (صلب، أو مرن ذو وزن) وكتلتها غير محقَّقة لصفٍّ،
+ *       تُرسَّى **كلّ خلايا تلك المادّة لذلك الصفّ** فتزاوجها الحلقة (best-improvement)
+ *       مع كلّ خانات الصفّ — بما فيها الخانة المجاورة للتوأم عبر الأيّام — فيُولَّد
+ *       تبديل التزويج ويُطبَّق. مقود بالورقة (ctx.consecutiveSubjects)، عامّ لأيّ
+ *       مادّة. الخامل (مرن بلا وزن) لا يُرسَّى (لا عقوبة له فلا جدوى من تبديله).
+ *
+ * الإرساء لا يمسّ المحاسبة (لا _localBreakPenalty ولا _computeChangeableBreaks ولا
+ * الحارس) — يزيد المرشّحات فقط؛ فتبقى ΣΔ==reconstruct وfeasible سليمة بالبنية.
+ *
+ * @return {Array<{classId,day,period}>}
+ */
+function _brokenLessonCells(state, ctx) {
+  const dim = state.getDimensions();
+  const days = dim.days, periods = dim.periods, classIds = dim.classIds;
+  const lastIdx = ctx.lastIdx;
+  const capMap = ctx.dailyCapByClassSubject || {};
+  const out = [];
+  const byKey = {};
+  // كلّ خليّةٍ تُدفَع مرّةً واحدة (مجموعة المرتكزات كما كانت — ثابتة لحلقة المحرّك)،
+  // وتُراكِم أنواعَ الكسور التي دفعتها (types) — بيانات وصفيّة للاشتقاق التقريريّ
+  // (anchoredByEngine)، لا يقرؤها _repairHillClimb. الإضافة لا تمسّ شرطَ ترسيةٍ ولا رقمًا.
+  const push = function (classId, d, p, type) {
+    const k = classId + '#' + d + '#' + p;
+    let rec = byKey[k];
+    if (!rec) {
+      rec = { classId: classId, day: d, period: p, types: [] };
+      byKey[k] = rec;
+      out.push(rec);
+    }
+    if (type && rec.types.indexOf(type) < 0) rec.types.push(type);
+  };
+
+  // (أ) كسور per-cell. الوسم متعدّد لا else-chain: كلّ نوعٍ ينطبق يُدفَع مستقلًّا
+  // ليطابق سجلّات _enumerateBreakRecords المستقلّة نوعًا نوعًا (فيصحّ اشتقاق العلم
+  // تحت كلّ نوع). مجموعة الخلايا لا تتغيّر: الخليّة في out متى انطبق أيّ نوع — نفس
+  // شرط broken القديم بالضبط (اتّحاد) — يتغيّر ثراء types فقط. لا شرطَ ترسيةٍ تبدّل.
+  for (let c = 0; c < classIds.length; c++) {
+    const classId = classIds[c];
+    for (let d = 0; d < days; d++) {
+      for (let p = 0; p < periods; p++) {
+        const cell = state.getCell(classId, d, p);
+        if (!cell || cell.kind !== 'LESSON') continue;
+        const cid = String(cell.civilId);
+        const t = ctx.teacherByCivilId[cid] || {};
+        if (p === lastIdx) {
+          if (ctx.bannedLastSubjectKeys[cell.subjectKey]) push(classId, d, p, 'BROKEN_MATH_LAST');
+          if (isHeadOfDepartment(t)) push(classId, d, p, 'BROKEN_DEPT_HEAD_LAST');
+          if (ctx.adminAvoidLast && t.category === ctx.adminCategoryName) push(classId, d, p, 'BROKEN_ADMIN_LAST');
+          if (t.isWingSupervisor === true &&
+              state.getLastPeriodCount(cid) > ctx.params.lastSupervisorMax) {
+            push(classId, d, p, 'BROKEN_SUP_LAST_OVER');
+          }
+          const isPriority = !!(t.department && ctx.priorityDeptNames && ctx.priorityDeptNames.has(t.department));
+          if (!isPriority && !_seventhExempt(ctx, cid) &&
+              state.getLastPeriodCount(cid) >= ctx.params.lastAllowed) {
+            push(classId, d, p, 'BROKEN_NON_PRIORITY_2ND_LAST');
+          }
+        }
+        const dc = capMap[classId + '|' + cell.subjectKey];
+        if (typeof dc === 'number' && state.getSubjectDayCount(classId, cell.subjectKey, d) > dc) {
+          push(classId, d, p, 'BROKEN_DAILY_CAP');
+        }
+        // مرتكز NOT_FIRST: رئيس قسم في يومٍ بلا حصّة أولى (نقل حصّةٍ للأولى يُزيله).
+        if (isHeadOfDepartment(t) && typeof state.getTeacherCell(cid, d, 0) !== 'string') {
+          push(classId, d, p, 'BROKEN_DEPT_HEAD_NOT_FIRST');
+        }
+      }
+    }
+  }
+
+  // (ب) خلايا الكتل المتتالية المكسورة (مقود بالورقة).
+  const consecSubs = ctx.consecutiveSubjects || {};
+  const consecKeys = Object.keys(consecSubs);
+  for (let i = 0; i < consecKeys.length; i++) {
+    const key = consecKeys[i];
+    const spec = consecSubs[key];
+    // خامل (مرن بلا وزن) لا يُرسَّى.
+    if (!spec.hard && (typeof spec.weight !== 'number' || spec.weight <= 0)) continue;
+    const ctype = spec.hard ? 'BROKEN_CONSEC_HARD' : 'BROKEN_CONSEC_SOFT';
+    for (let c = 0; c < classIds.length; c++) {
+      const classId = classIds[c];
+      if (!_consecClassSubjectBroken(state, classId, key, days, periods)) continue;
+      for (let d = 0; d < days; d++) {
+        for (let p = 0; p < periods; p++) {
+          const cell = state.getCell(classId, d, p);
+          if (cell && cell.kind === 'LESSON' && cell.subjectKey === key) push(classId, d, p, ctype);
+        }
+      }
+    }
+  }
+
+  // (ج) مخالفو «يوم المراجعة الخفيف» (وحدته المعلّم). الكسر عموميٌّ للمعلّم لا
+  // مربوطٌ بخليّة؛ لتوليد حركاتٍ مُصلِحة نُرسّي — لكلّ معلّمٍ مخالف (أخفّ يوم > optimal)
+  // — أعلى خليّة درسٍ له على كلّ يومٍ يساوي أخفّه (تحريكها أبكر يُنزل أخفّ يومه).
+  // بلا اجتماعات (لا تتحرّك). بلا ترسية = لا مرشّح (درس الجلسة 27).
+  const gld = ctx.govtLightDay;
+  if (gld && gld.enabled) {
+    const civ = dim.civilIds;
+    for (let i = 0; i < civ.length; i++) {
+      const cid = civ[i];
+      if (_govtExempt(ctx, cid)) continue;   // بوّابة الإعفاء (الجلسة 59): لا كسرَ فلا ترسية
+      const latest = [];
+      let minLatest = periods;
+      for (let d = 0; d < days; d++) {
+        let lt = -1;
+        for (let p = periods - 1; p >= 0; p--) {
+          if (state.getTeacherCell(cid, d, p)) { lt = p; break; }
+        }
+        latest.push(lt);
+        if (lt < minLatest) minLatest = lt;
+      }
+      if (minLatest + 1 <= gld.optimal) continue;  // مثاليٌّ (v ≤ optimal) — يُقصى وحده؛ الصلب والمرن يُرسَّيان
+      // النوع بطبقة المخالف (نظير _govtLightDayPenalty و_enumerateBreakRecords).
+      const gtype = (minLatest + 1 <= gld.maxEnd) ? 'BROKEN_GOVT_LIGHTDAY_SOFT' : 'BROKEN_GOVT_LIGHTDAY_HARD';
+      for (let d = 0; d < days; d++) {
+        if (latest[d] !== minLatest) continue;      // أيّامه الأخفّ فقط
+        for (let p = periods - 1; p >= 0; p--) {
+          const tc = state.getTeacherCell(cid, d, p);
+          if (typeof tc === 'string') { push(tc, d, p, gtype); break; }  // أعلى درسٍ (tc=classId)
+        }
+      }
+    }
+  }
+
+  // (د) مخالفو «موازنة حصص المعلّم» (وحدته المعلّم، فارق ≥2). الكسر عموميٌّ
+  // للمعلّم لا مربوطٌ بخليّة؛ لتوليد حركاتٍ مُصلِحة نُرسّي — لكلّ معلّمٍ مخالف —
+  // كلّ خلايا درسه في أيّامه الأثقل (حمل اليوم == max بمصطلح الموازنة): إخراجُ
+  // درسٍ منها نحو يومٍ أخفّ هو الحركة المُنقِصة للفارق (يهبط max أو يرتفع min).
+  // بلا اجتماعات (لا تتحرّك). بلا ترسية = لا مرشّح (درس الجلسة 27).
+  const dbl = ctx.dayBalance;
+  if (dbl && dbl.enabled) {
+    const civ = dim.civilIds;
+    for (let i = 0; i < civ.length; i++) {
+      const cid = civ[i];
+      // المعفى (الجلسة 53) لا كسر له ⟹ لا مرتكز: الموضع الرابع للموازنة، وهو
+      // الوحيد الذي يحسب mx/mn بنفسه فلا يرث بوّابة _dayBalanceSpread.
+      if (_dayBalanceExempt(ctx, cid)) continue;
+      const loads = [];
+      let mx = 0;
+      for (let d = 0; d < days; d++) {
+        const v = _dayBalanceDayCount(state, ctx, cid, d);
+        loads.push(v);
+        if (v > mx) mx = v;
+      }
+      let mn = Infinity;
+      for (let d = 0; d < days; d++) if (loads[d] < mn) mn = loads[d];
+      if (mx - mn <= dbl.okSpread) continue;         // فارق ≤ okSpread سليم — لا ترسية
+      // النوع بطبقة الفارق (نظير _dayBalancePenalty و_enumerateBreakRecords).
+      const btype = (mx - mn <= dbl.softSpread) ? 'BROKEN_DAY_BALANCE_SOFT' : 'BROKEN_DAY_BALANCE_HARD';
+      for (let d = 0; d < days; d++) {
+        if (loads[d] !== mx) continue;              // أيّامه الأثقل فقط
+        for (let p = 0; p < periods; p++) {
+          const tc = state.getTeacherCell(cid, d, p);
+          if (typeof tc === 'string') push(tc, d, p, btype);   // tc = classId
+        }
+      }
+    }
+  }
+
+  // (هـ) أيّام الصفر تحت «الحدّ الأدنى اليوميّ» BROKEN_DAILY_FLOOR (وحدته
+  // (صفّ، مادّة، يوم)). الكسر خاصّيّة يومٍ فارغ لا خليّةٍ قائمة، فمرتكزه — كما في
+  // خطّة المَجَسّ تحت النوع نفسه — خلايا درس المادّة في الأيّام الأخرى: نقل إحداها
+  // إلى اليوم الناقص هو الحركة المُصلِحة. التطابق مع المَجَسّ (نفس الدالّة بنفس
+  // الوسائط) مقصود ليُشتقّ anchoredByEngine = true تلقائيًّا بلا قاموس يدويّ.
+  // بلا ترسية = لا مرشّح (درس الجلسة 27).
+  const floorMapAnchor = ctx.floorByClassSubject || {};
+  const floorKeysAnchor = Object.keys(floorMapAnchor).sort();   // حتميّ: لا اعتماد على ترتيب مفاتيح كائن
+  for (let i = 0; i < floorKeysAnchor.length; i++) {
+    const fkey = floorKeysAnchor[i];
+    const fl = floorMapAnchor[fkey];
+    if (typeof fl !== 'number') continue;
+    const fparts = fkey.split('|');
+    const fClassId = fparts[0], fSubjectKey = fparts.slice(1).join('|');
+    for (let d = 0; d < days; d++) {
+      if (state.getSubjectDayCount(fClassId, fSubjectKey, d) >= fl) continue;
+      const fAnchors = _classSubjectLessonCells(state, ctx, fClassId, fSubjectKey, undefined, d);
+      for (let j = 0; j < fAnchors.length; j++) {
+        const fa = fAnchors[j];
+        push(fa.classId, fa.day, fa.period, 'BROKEN_DAILY_FLOOR');
+      }
+    }
+  }
+
+  // (و) مخالفو «الأخيرتان في صفٍّ واحد» (وحدته المعلّم). الكسر عموميٌّ للمعلّم؛
+  // لتوليد حركاتٍ مُصلِحة نُرسّي — لكلّ معلّمٍ مخالف — خلايا حصصه الأخيرة الواقعة في
+  // صفٍّ تكرّر (n ≥ 2): إخراج إحداها من الأخيرة أو نقلها لصفٍّ آخر يُنقص العدد.
+  // بلا ترسية = لا مرشّح (درس الجلسة 27).
+  if (ctx.lastPreferDifferent && lastIdx >= 0 && lastIdx < periods) {
+    const civLSC = dim.civilIds;
+    for (let i = 0; i < civLSC.length; i++) {
+      const cid = civLSC[i];
+      const byClass = {};
+      for (let d = 0; d < days; d++) {
+        const tc = state.getTeacherCell(cid, d, lastIdx);
+        if (typeof tc === 'string' && tc.length > 0) byClass[tc] = (byClass[tc] || 0) + 1;
+      }
+      for (let d = 0; d < days; d++) {
+        const tc = state.getTeacherCell(cid, d, lastIdx);
+        if (typeof tc === 'string' && byClass[tc] > 1) {
+          push(tc, d, lastIdx, 'BROKEN_LAST_SAME_CLASS_SOFT');   // tc = classId
+        }
+      }
+    }
+  }
+
+  // (ط) «شكل يوم المعلّم» (وحدته (معلّم، يوم)، الجلسة 59). تُرسَّى **طرفا كلّ وحدة**
+  // لا كلّ خلايا اليوم: للزوج المتجاور خليّتاه (إزاحة إحداهما حصّةً واحدة تفكّه)،
+  // وللفجوة المفردة الخليّتان المحيطتان بها (إزاحة إحداهما تضمّهما). ترسيةٌ ضيّقة
+  // مقصودة — الإرساء الواسع كان يضخّم فضاء البحث بلا حركةٍ إضافيّة مُصلِحة.
+  // خانة الاجتماع طرفٌ لا يُرسَّى (لا تتحرّك)، والوزن 0 ⟹ لا ترسية البتّة.
+  // بلا ترسية = لا مرشّح (درس الجلسة 27).
+  {
+    const civSH = dim.civilIds;
+    for (let i = 0; i < civSH.length; i++) {
+      const cid = civSH[i];
+      const gsh = _dayShapeWeight(ctx, cid);
+      if (gsh.w <= 0) continue;
+      const shType = (gsh.mode === 'GAP') ? 'BROKEN_SINGLE_GAP' : 'BROKEN_ADJACENT_PAIR';
+      for (let d = 0; d < days; d++) {
+        if (_dayShapeDayCount(state, ctx, cid, d, gsh.mode) <= 0) continue;
+        const occ = _dayShapeOcc(state, ctx, cid, d);
+        const anchor = function (p) {
+          const tc = state.getTeacherCell(cid, d, p);
+          if (typeof tc === 'string' && tc.length > 0) push(tc, d, p, shType);
+        };
+        if (gsh.mode === 'GAP') {
+          for (let p = 0; p + 2 < periods; p++) {
+            if (occ[p] && !occ[p + 1] && occ[p + 2]) { anchor(p); anchor(p + 2); }
+          }
+        } else {
+          // نفس استثناء الكتلة المزدوجة المعتمَد في العدّ — وإلّا رُسّيت خلايا
+          // لا كسرَ فيها فاستُنزفت محاولات الإصلاح بلا موضوع.
+          const bp = _dayShapeBlockPairs(state, ctx, cid, d);
+          for (let p = 0; p + 1 < periods; p++) {
+            if (occ[p] && occ[p + 1] && !(bp && bp[p])) { anchor(p); anchor(p + 1); }
+          }
+        }
+      }
+    }
+  }
+
+  // (ح) مخالفو «أولى وأخيرة في يومٍ واحد» (وحدته (معلّم، يوم)، الجلسة 57). لكلّ
+  // (معلّم، يوم) فيه أولى وأخيرة معًا تُرسَّى الخليّتان: إخراج إحداهما من طرف اليوم
+  // (تبديلٌ داخل صفّها إلى حصّةٍ وسطى أو يومٍ آخر) هو الحركة المُزيلة. مطفأ (الوزن 0)
+  // ⟹ لا ترسية البتّة (نظير حارس تعطيل الاحتياط). بلا ترسية = لا مرشّح (درس الجلسة 27).
+  if (_firstLastSameDayWeight(ctx) > 0) {
+    const civFL = dim.civilIds;
+    for (let i = 0; i < civFL.length; i++) {
+      const cid = civFL[i];
+      for (let d = 0; d < days; d++) {
+        if (!_firstLastSameDayHit(state, ctx, cid, d)) continue;
+        push(state.getTeacherCell(cid, d, 0), d, 0, 'BROKEN_FIRST_LAST_SAME_DAY');
+        push(state.getTeacherCell(cid, d, lastIdx), d, lastIdx, 'BROKEN_FIRST_LAST_SAME_DAY');
+      }
+    }
+  }
+
+  // (ز) خانات «استنزاف احتياط القسم» (وحدته (قسم، يوم، حصّة)). الكسر ليس خاصّيّة
+  // معلّمٍ ولا صفّ؛ مرتكزه خلايا دروس مرشّحي الاحتياط المشغولين في الخانة عبر
+  // _reserveProbeAnchors (المصدر الواحد لفضاء بحث هذا النوع). بلا هذه الترسية لا
+  // يستهدف المحرّك هذه الخانات أبدًا — وهذا بالضبط ما قاسته حزمة 44: الضحلة
+  // (ينقصها معلّمٌ واحد) أُصلحت عرَضًا 7/7، والعميقة (صفر أحرار) 0/12 لأنّها تحتاج
+  // ثلاث تحريكاتٍ مقصودة في الخانة نفسها لا مصادفةً. بلا ترسية = لا مرشّح (الجلسة 27).
+  //
+  // ⚠️ حارس التعطيل (إلزاميّ): الوزن صفرًا ⟹ لا حساب البتّة. سجلّات
+  // BROKEN_DEPT_RESERVE تُنتَج حتّى عند الوزن صفر (خريطة الاستنزاف المجّانيّة)، فلو
+  // رسّينا عندئذٍ لولّدنا محاولاتٍ مكسبها صفر: يتحرّك عدّاد المحاولات وقد تُقبل
+  // تحرّكاتٌ جانبيّة مختلفة ⟹ تنهار بوّابة الحياد ونفقد أداة التشخيص. صفرٌ = «كأنّ
+  // الحزمة غير موجودة».
+  const wRes = (ctx.weights || {}).BROKEN_DEPT_RESERVE;
+  if (typeof wRes !== 'number') {
+    throw new Error('_brokenLessonCells: ctx.weights.BROKEN_DEPT_RESERVE مطلوبٌ (حقل السجلّ الحيّ).');
+  }
+  const reservePartners = {};
+  if (wRes > 0) {
+    // الأعمق أوّلًا (النقص تنازليًّا) ثمّ (قسم، يوم، حصّة) تصاعديًّا — حتميّ تمامًا،
+    // والأقسام تُفرَز صراحةً فلا اعتماد على ترتيب مفاتيح كائن.
+    const resDeps = Object.keys(ctx.reserveCandidatesByDept || {}).sort();
+    const resSlots = [];
+    for (let i = 0; i < resDeps.length; i++) {
+      for (let d = 0; d < days; d++) {
+        for (let p = 0; p < periods; p++) {
+          const def = _deptReserveDeficit(state, ctx, resDeps[i], d, p);
+          if (def > 0) resSlots.push({ dept: resDeps[i], day: d, period: p, def: def });
+        }
+      }
+    }
+    resSlots.sort(function (x, y) {
+      if (y.def !== x.def) return y.def - x.def;
+      if (x.dept !== y.dept) return (x.dept < y.dept) ? -1 : 1;
+      return (x.day - y.day) || (x.period - y.period);
+    });
+    for (let i = 0; i < resSlots.length; i++) {
+      const anchors = _reserveProbeAnchors(state, ctx, resSlots[i].dept,
+        resSlots[i].day, resSlots[i].period);
+      for (let j = 0; j < anchors.length; j++) {
+        const an = anchors[j];
+        push(an.classId, an.day, an.period, 'BROKEN_DEPT_RESERVE');
+        reservePartners[an.classId + '#' + an.day + '#' + an.period] = an.partners;
+      }
+    }
+  }
+
+  // قصّ الوجهات — لمرتكزات الاحتياط **الخالصة** وحدها. الخليّة التي رسّاها نوعٌ آخر
+  // أيضًا تحتفظ بفضاء وجهاتها الكامل، فلا ينكمش بحث نوعٍ قائم بسببنا (حياد تامّ
+  // خارج هذا النوع). المستهلكان (_repairHillClimb و_probeOneBreak) يقرآن a.partners
+  // إن وُجد وإلّا فكلّ خلايا الصفّ — قراءةٌ إضافيّة خاملة لكلّ المرتكزات القائمة.
+  for (let i = 0; i < out.length; i++) {
+    const rec = out[i];
+    if (rec.types.length !== 1 || rec.types[0] !== 'BROKEN_DEPT_RESERVE') continue;
+    const pl = reservePartners[rec.classId + '#' + rec.day + '#' + rec.period];
+    if (pl) rec.partners = pl;
+  }
+
+  return out;
+}
+
+/** توقيع تبديلٍ مستقلّ عن الترتيب (لقائمة tabu). */
+function _swapSig(a, b) {
+  const ka = a.classId + '#' + a.day + '#' + a.period;
+  const kb = b.classId + '#' + b.day + '#' + b.period;
+  return (ka < kb) ? (ka + '~' + kb) : (kb + '~' + ka);
+}
+
+/**
+ * حلقة Hill-Climbing (best-improvement) لمرحلة الإصلاح — أوّل دالّة تطبّق
+ * تحريكات فعليًّا. فضاء البحث: التبديل **داخل الصفّ** حصرًا (قرار B6: أفضل دلتا
+ * فيه، و(ب) عبر الصفوف لا تضيف معتبرًا). الحارس تفاضليّ سريع (_swapDiffFeasible).
+ *
+ * الاستراتيجيّة:
+ *   - كلّ جولة: امسح كلّ مرتكزات الكسور × خانات صفّها، اجمع التبديلات المجدية،
+ *     طبّق الأكبر انخفاضًا على مستوى الجدول (best-improvement)، كرّر.
+ *   - عند القاع المحلّيّ (لا تبديل سالب): الهروب بتبديلٍ جانبيّ (delta==0) غير
+ *     مُحظَّر (tabu يمنع عكس آخر تبديلات)، ثمّ استئناف التسلّق. حدّ للخطوات
+ *     الجانبيّة المتتالية بلا تحسّن (sidewaysStreak) لتفادي الدوران.
+ *   - منع الدوران: التسلّق الصارم رتيب (penalty تنخفض دومًا) فلا يدور؛ tabu يحمي
+ *     الطور الجانبيّ فقط. نحتفظ بأفضل لقطة (bestSnapshot/bestPenalty) ونستردّها
+ *     في النهاية (الناتج = الأفضل المُطلَق لا آخر ما وُصِل).
+ *
+ * @param {Object} state حالة الجدول (تُعدَّل ثمّ تُستردّ للأفضل).
+ * @param {Object} ctx السياق + خطّ الأساس + خريطة السقف (مُرفَقة مسبقًا).
+ * @param {Object} [opts] {initialPenalty, maxMoves, maxSideways, tabuLen}.
+ * @return {Object} تقرير الحلقة (penalty، تبديلات، جولات، سجلّ).
+ */
+function _repairHillClimb(state, ctx, opts) {
+  opts = opts || {};
+  // 6/ج-3أ: كلّ مستدعٍ يمرّر الإجماليّ الحقيقيّ (main_Main.js:1061 و:2584)؛ 21300
+  // كانت بذرة تشخيصٍ كاذبة (الخام الحقيقيّ ≈21500) فأُعدِمت — الغياب عطبٌ يُكشَف.
+  if (typeof opts.initialPenalty !== 'number') {
+    throw new Error('_repairHillClimb: opts.initialPenalty مطلوبٌ (الإجماليّ الحقيقيّ قبل الإصلاح).');
+  }
+  const initialPenalty = opts.initialPenalty;
+  // 6/ج-3ب: حدود فضاء البحث الثلاثة صارت حقولًا حيّة في السجلّ تصل عبر ctx.weights
+  // (getEngineWeights يرمي إن غابت من الورقة). لا رقم حرفيّ يبقى؛ الغياب عطبٌ يُكشَف.
+  if (!(ctx && ctx.weights &&
+        typeof ctx.weights.REPAIR_MAX_MOVES === 'number' &&
+        typeof ctx.weights.REPAIR_MAX_SIDEWAYS === 'number' &&
+        typeof ctx.weights.REPAIR_TABU_LEN === 'number')) {
+    throw new Error('_repairHillClimb: ctx.weights.REPAIR_MAX_MOVES/REPAIR_MAX_SIDEWAYS/REPAIR_TABU_LEN مطلوبةٌ (حقول السجلّ الحيّة).');
+  }
+  const MAX_MOVES = (typeof opts.maxMoves === 'number') ? opts.maxMoves : ctx.weights.REPAIR_MAX_MOVES;
+  const MAX_SIDEWAYS = (typeof opts.maxSideways === 'number') ? opts.maxSideways : ctx.weights.REPAIR_MAX_SIDEWAYS;
+  const TABU_LEN = (typeof opts.tabuLen === 'number') ? opts.tabuLen : ctx.weights.REPAIR_TABU_LEN;
+
+  let curPenalty = initialPenalty;
+  let bestPenalty = curPenalty;
+  let bestSnapshot = state.snapshot();
+  const appliedLog = [];
+  const tabu = [];
+  const tabuHas = function (sig) { return tabu.indexOf(sig) >= 0; };
+  const pushTabu = function (sig) { tabu.push(sig); if (tabu.length > TABU_LEN) tabu.shift(); };
+
+  let appliedCount = 0, rounds = 0, sidewaysUsed = 0, sidewaysStreak = 0, totalAttempts = 0;
+
+  // حارس زمن: سقف Apps Script 6 دقائق صلب — نتوقّف بأمان قبله ونكتب الأفضل.
+  const t0 = Date.now();
+  // 6/ج-3أ: الرقم الحرفيّ 300000 أُعدِم — الميزانيّة حقلٌ حيّ في السجلّ يصل عبر
+  // ctx.weights.TIME_BUDGET_MS (getEngineWeights يرمي إن غاب من الورقة). الغياب عطبٌ.
+  if (!(ctx && ctx.weights && typeof ctx.weights.TIME_BUDGET_MS === 'number')) {
+    throw new Error('_repairHillClimb: ctx.weights.TIME_BUDGET_MS مطلوبٌ (حقل السجلّ الحيّ).');
+  }
+  const TIME_BUDGET_MS = (typeof opts.timeBudgetMs === 'number')
+    ? opts.timeBudgetMs : ctx.weights.TIME_BUDGET_MS;
+  let reachedTimeCap = false;
+
+  while (appliedCount < MAX_MOVES) {
+    if (Date.now() - t0 > TIME_BUDGET_MS) { reachedTimeCap = true; break; }
+    rounds++;
+
+    // فهرسة خلايا الدرس بالصفّ + مرتكزات الكسور.
+    const dim = state.getDimensions();
+    const cellsByClass = {};
+    for (let c = 0; c < dim.classIds.length; c++) cellsByClass[dim.classIds[c]] = [];
+    for (let c = 0; c < dim.classIds.length; c++) {
+      const classId = dim.classIds[c];
+      for (let d = 0; d < dim.days; d++) {
+        for (let p = 0; p < dim.periods; p++) {
+          const cell = state.getCell(classId, d, p);
+          if (cell && cell.kind === 'LESSON') cellsByClass[classId].push({ classId: classId, day: d, period: p });
+        }
+      }
+    }
+    const broken = _brokenLessonCells(state, ctx);
+
+    // مسح best-improvement (وأفضل تبديل جانبيّ غير محظور).
+    let best = null, bestSide = null;
+    for (let i = 0; i < broken.length; i++) {
+      const a = broken[i];
+      // a.partners لا يوجد إلا لمرتكز احتياطٍ خالص (قصُّ الوجهات في
+      // _brokenLessonCells)؛ وإلّا فكلّ خلايا الصفّ كما كان بالضبط.
+      const partners = a.partners || cellsByClass[a.classId] || [];
+      for (let j = 0; j < partners.length; j++) {
+        const b = partners[j];
+        if (a.day === b.day && a.period === b.period) continue;
+        totalAttempts++;
+        const r = _attemptSwap(state, ctx, a, b, true);   // fast guard
+        if (!r.feasible) continue;
+        if (r.deltaPenalty < 0) {
+          if (best === null || r.deltaPenalty < best.delta) best = { a: a, b: b, delta: r.deltaPenalty };
+        } else if (r.deltaPenalty === 0 && bestSide === null) {
+          const sig = _swapSig(a, b);
+          if (!tabuHas(sig)) bestSide = { a: a, b: b, sig: sig };
+        }
+      }
+    }
+
+    if (best !== null) {
+      _applySwap(state, best.a, best.b);
+      curPenalty += best.delta;
+      appliedCount++;
+      sidewaysStreak = 0;
+      pushTabu(_swapSig(best.a, best.b));
+      appliedLog.push({ kind: 'IMPROVE', a: best.a, b: best.b, delta: best.delta, penalty: curPenalty });
+      if (curPenalty < bestPenalty) { bestPenalty = curPenalty; bestSnapshot = state.snapshot(); }
+    } else if (bestSide !== null && sidewaysStreak < MAX_SIDEWAYS) {
+      _applySwap(state, bestSide.a, bestSide.b);
+      appliedCount++;
+      sidewaysUsed++;
+      sidewaysStreak++;
+      pushTabu(bestSide.sig);
+      appliedLog.push({ kind: 'SIDEWAYS', a: bestSide.a, b: bestSide.b, delta: 0, penalty: curPenalty });
+    } else {
+      break;   // قاع محلّيّ بلا هروب متاح
+    }
+  }
+
+  // استرداد أفضل لقطة مُطلقة.
+  state.restore(bestSnapshot);
+
+  return {
+    initialPenalty: initialPenalty,
+    finalPenalty: bestPenalty,
+    delta: bestPenalty - initialPenalty,
+    appliedCount: appliedCount,
+    rounds: rounds,
+    sidewaysUsed: sidewaysUsed,
+    totalAttempts: totalAttempts,
+    reachedMoveCap: (appliedCount >= MAX_MOVES),
+    reachedTimeCap: reachedTimeCap,
+    elapsedMs: Date.now() - t0,
+    log: appliedLog,
+  };
+}
+
+/**
+ * يبني وصف المنطقة المتأثّرة بنقل درسٍ من cellFrom إلى cellTo (نفس الصفّ، نفس
+ * المعلّم والمادّة). المادّة تغادر خانة المصدر وتصل خانة الهدف، والمعلّم واحدٌ.
+ *
+ * @return {{labSlots: Array, capKeys: Array, mathCells: Array, teacherIds: Array}}
+ */
+function _buildMoveRegion(cellFrom, slot, cellTo) {
+  const subject = slot.subjectKey;
+  const civilId = String(slot.civilId);
+
+  const labSlots = [
+    [subject, cellFrom.day, cellFrom.period],
+    [subject, cellTo.day, cellTo.period],
+  ];
+  const capKeys = [
+    [cellFrom.classId, subject, cellFrom.day],
+    [cellTo.classId, subject, cellTo.day],
+  ];
+  const mathCells = [
+    { classId: cellFrom.classId, day: cellFrom.day, period: cellFrom.period },
+    { classId: cellTo.classId, day: cellTo.day, period: cellTo.period },
+  ];
+  return { labSlots: labSlots, capKeys: capKeys, mathCells: mathCells, teacherIds: [civilId] };
+}
+
+/**
+ * يُقيّم نقل درسٍ من خليّته (cellFrom) إلى خليّة فارغة (cellTo) داخل نفس الصفّ
+ * ويُرجع أثره — dry-run خالص كـ_attemptSwap: يحاكي، يقيس، يتراجع دون التزامٍ
+ * دائم. القبول الفعليّ قرارُ حلقة Hill-Climbing لاحقًا.
+ *
+ * يُكمّل _attemptSwap: التبديل يبادل درسَين موجودَين، والنقل يحرّك درسًا إلى فراغ.
+ * يُعيد استخدام المقيّم الموضعيّ والحارس نفسَيهما. التراجُع O(1): النقل = unplace
+ * + place، وعكسه إعادة الأصل لمكانه. عند رمي place (تعارض معلّم) يُعاد الأصل فورًا.
+ *
+ * النقل داخل نفس الصفّ حصرًا: نقلٌ عبر صفّين يكسر تغطية النصاب (الصفّ المصدر
+ * يفقد حصّة مادّته) والحارس لا يفحص التغطية — فيُرفَض بـCROSS_CLASS_NOT_SUPPORTED.
+ *
+ * @param {Object} state حالة الجدول.
+ * @param {Object} ctx سياق المحرّك + خطّ الأساس + خريطة السقف.
+ * @param {{classId,day,period}} cellFrom الخليّة المصدر (تحمل درسًا).
+ * @param {{classId,day,period}} cellTo الخليّة الهدف (فارغة، نفس الصفّ).
+ * @return {{feasible: boolean, deltaPenalty: number, reason?: string}}
+ */
+function _attemptMove(state, ctx, cellFrom, cellTo) {
+  // (1) تحقّق أوّليّ.
+  if (cellFrom.classId === cellTo.classId && cellFrom.day === cellTo.day &&
+      cellFrom.period === cellTo.period) {
+    return { feasible: false, deltaPenalty: 0, reason: 'SAME_CELL' };
+  }
+  if (cellFrom.classId !== cellTo.classId) {
+    return { feasible: false, deltaPenalty: 0, reason: 'CROSS_CLASS_NOT_SUPPORTED' };
+  }
+  const slot = state.getCell(cellFrom.classId, cellFrom.day, cellFrom.period);
+  if (!slot || slot.kind !== 'LESSON') {
+    return { feasible: false, deltaPenalty: 0, reason: 'CELL_FROM_NOT_LESSON' };
+  }
+  if (state.getCell(cellTo.classId, cellTo.day, cellTo.period) !== null) {
+    return { feasible: false, deltaPenalty: 0, reason: 'CELL_TO_NOT_EMPTY' };
+  }
+  // نافذة الحضور (الجلسة 53/ب) — نظير الفحص في _attemptSwap.
+  if (isCellBlockedFor(ctx.teacherBlocks, slot.civilId, cellTo.day, cellTo.period)) {
+    return { feasible: false, deltaPenalty: 0, reason: 'TEACHER_BLOCK_WINDOW' };
+  }
+
+  const orig = { kind: 'LESSON', subjectKey: slot.subjectKey, civilId: slot.civilId };
+  const region = _buildMoveRegion(cellFrom, slot, cellTo);
+  const before = _localBreakPenalty(state, ctx, region);
+
+  // (2) تطبيق مؤقّت: أفرِغ المصدر ثمّ ضع في الهدف.
+  state.unplace(cellFrom.classId, cellFrom.day, cellFrom.period);
+  try {
+    state.place(cellTo.classId, cellTo.day, cellTo.period,
+      { kind: 'LESSON', subjectKey: orig.subjectKey, civilId: orig.civilId });
+  } catch (e) {
+    state.place(cellFrom.classId, cellFrom.day, cellFrom.period, orig);
+    return { feasible: false, deltaPenalty: 0, reason: 'PLACE_CONFLICT: ' + e.message };
+  }
+
+  // (3) الحارس.
+  const guard = _isGloballyFeasible(state, ctx);
+  const after = guard.feasible ? _localBreakPenalty(state, ctx, region) : 0;
+
+  // (4) تراجُع دائم — إعادة الأصل لمكانه.
+  state.unplace(cellTo.classId, cellTo.day, cellTo.period);
+  state.place(cellFrom.classId, cellFrom.day, cellFrom.period, orig);
+
+  if (!guard.feasible) {
+    return { feasible: false, deltaPenalty: 0,
+      reason: 'GUARD: ' + guard.violations.map(function (v) { return v.type; }).join(',') };
+  }
+  return { feasible: true, deltaPenalty: after - before };
+}

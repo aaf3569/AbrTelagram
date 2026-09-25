@@ -1,0 +1,436 @@
+/**
+ * algo_TeacherBlocks.js
+ *
+ * حجب خانات المعلّم (Teacher Blocks) — طبقة اشتقاقٍ وتطبيقٍ واحدة للقواعد
+ * الثلاث الفرديّة التي تصف **حضور** المعلّم لا تفضيله:
+ *   • «أيام التفرّغ»          — أيّامٌ ليس فيها بالمدرسة أصلًا.
+ *   • «الحصص المسموحة»       — نافذة الحصص التي يحضرها في أيّامه الحاضرة.
+ *   • «إعفاء من اجتماع القسم» — لا يُحسب عضوًا في اجتماع قسمه.
+ *
+ * فلسفة التنفيذ — **الحجب واقعةٌ لا عقوبة**: بدل قاعدةٍ ناعمة يكسرها المحرّك،
+ * تُشغَل خانات المعلّم خارج نافذته بخانة `BLOCK` قبل أيّ وضع. فيصير القيد
+ * حقيقةً في الشبكة لا رأيًا في دالّة النقاط، وترثه **كلّ** مواضع
+ * `state.isTeacherFree` (خمسة عشر موضعًا في الباني والإصلاح) بلا مساس:
+ *   - ترتيب MRV (_selectGroupMRV/_countValidCells) يراه أشدّ المعلّمين تقيّدًا
+ *     فيضع حصصه **أوّلًا** قبل أن يزاحمه أحد — وهو حصنه الحقيقيّ.
+ *   - عدّادا احتياط الغياب (الباني والإصلاح) يتوقّفان عن حسابه متاحًا وهو غائب.
+ *   - تبديلات الإصلاح تُرفَض تلقائيًّا إن أخرجته من نافذته (الخانة ليست حرّة).
+ * ولذلك لا كسرَ جديدًا هنا ولا وزنًا: ما لا يقع لا يُحسب.
+ *
+ * الهدف في العمود B اسمٌ قصير من منسدلة ورقة المعلمين، فتبديل المعلّم لاحقًا
+ * تغييرُ خليّةٍ واحدة لا تعديلُ كود. والاسم الذي لا يُحلّ **لا يُتخطّى صامتًا**:
+ * يُجمَع في unresolved ويرفعه فاحص الجدوى بوّابةً مانعة (قيدُ حضورٍ يسقط بصمت
+ * يُنتج جدولًا يبدو سليمًا وهو خطأ).
+ *
+ * أضيف في الجلسة 53 — المرحلة الأولى (الحجب).
+ */
+
+// ============================================================
+// الاشتقاق (Public)
+// ============================================================
+
+/**
+ * يشتقّ خريطة الحجب من ورقة القيود (القسم الثالث) عبر النموذج وحده — دالّة
+ * نقيّة: لا تقرأ أوراقًا ولا تكتب ولا تعرض.
+ *
+ * الصفّ يُقرأ فقط إن كان «مفعَّل = نعم» ومستوى إلزامه ≠ «معطَّل» (نفس بوّابة
+ * _buildBuilderContext حرفًا بحرف). نوع الهدف المدعوم «معلّم» وحده — ودورٌ أو
+ * مادّةٌ بهذه الأنواع تُسجَّل تحذيرًا لا تُطبَّق.
+ *
+ * @param {Object} model ناتج loadScheduleData().
+ * @return {{byCivilId: Object, unresolved: Object[], warnings: string[]}}
+ *   byCivilId: رقم مدني ⟸ {civilId, shortName, freeDays, allowedPeriods,
+ *   meetingExempt, blockedCells}. freeDays خريطة {يوم:true}؛ allowedPeriods
+ *   خريطة {حصّة:true} أو null (بلا نافذة)؛ blockedCells عدد الخانات المحجوبة.
+ *   unresolved: صفوفٌ هدفها لا يطابق اسمًا قصيرًا (للبوّابة).
+ *   ineffective: صفوفٌ مفعَّلة قيمتها لا تُنتج يومًا/حصّةً صالحة (للبوّابة).
+ */
+function deriveTeacherBlocks(model) {
+  const CS = CONSTANTS.CONSTRAINTS_SHEET;
+  const TT = CS.TARGET_TYPE_VOCAB;
+  const RTV = CS.RULE_TYPES_VOCAB;
+  const RT_FREE_DAYS   = RTV[8];   // 'أيام التفرّغ'
+  const RT_PERIODS     = RTV[9];   // 'الحصص المسموحة'
+  const RT_MEETING_EX  = RTV[10];  // 'إعفاء من اجتماع القسم'
+  const DISABLED = CS.ENFORCEMENT_LEVELS[2];
+
+  const days    = model.settings.days;
+  const periods = model.settings.periods;
+
+  const out = { byCivilId: {}, unresolved: [], ineffective: [], warnings: [] };
+  const rules = (model.constraints && model.constraints.rules) || [];
+
+  const ensure = function (cid) {
+    if (!out.byCivilId[cid]) {
+      out.byCivilId[cid] = {
+        civilId: cid,
+        shortName: model.shortNameByCivilId[cid] || cid,
+        freeDays: {},
+        allowedPeriods: null,
+        meetingExempt: false,
+        blockedCells: 0,
+      };
+    }
+    return out.byCivilId[cid];
+  };
+
+  for (let i = 0; i < rules.length; i++) {
+    const r = rules[i];
+    const rt = String(r.ruleType).trim();
+    if (rt !== RT_FREE_DAYS && rt !== RT_PERIODS && rt !== RT_MEETING_EX) continue;
+    if (String(r.enabled).trim() !== CONSTANTS.YES) continue;
+    if (String(r.enforcement).trim() === DISABLED) continue;
+
+    // نوع الهدف: «معلّم» وحده. الدور والمادّة لا معنى لهما هنا (الحضور شخصيّ).
+    if (r.targetType !== TT[0]) {
+      out.warnings.push('قواعد الحضور: نوع الهدف «' + r.targetType + '» غير مدعوم ' +
+        'للقيد «' + rt + '» في الصفّ ' + r.rowNumber + ' — المدعوم «' + TT[0] +
+        '» وحده. تجاهُل الصفّ.');
+      continue;
+    }
+
+    const cid = model.civilIdByShortName[r.target];
+    if (cid === undefined) {
+      // لا تخطٍّ صامت: قيدُ حضورٍ يسقط يُنتج جدولًا يبدو سليمًا وهو خطأ.
+      out.unresolved.push({ rowNumber: r.rowNumber, ruleType: rt, target: r.target });
+      continue;
+    }
+    const slot = ensure(String(cid));
+
+    if (rt === RT_MEETING_EX) {
+      slot.meetingExempt = true;
+      continue;
+    }
+
+    if (rt === RT_FREE_DAYS) {
+      const parsed = parseMeetingDayNames(r.value);   // مُشارَكٌ مع «يوم اجتماع القسم»
+      for (let u = 0; u < parsed.unknown.length; u++) {
+        out.warnings.push('قواعد الحضور: اسم يومٍ مجهول «' + parsed.unknown[u] +
+          '» في الصفّ ' + r.rowNumber + ' للمعلّم «' + slot.shortName + '» — أُسقِط.');
+      }
+      if (parsed.days.length === 0) {
+        // صفٌّ مفعَّل بلا أثر = سقوطٌ صامت. والسقوط الصامت هنا يُخرج جدولًا
+        // يبدو سليمًا والمعلّم يدرّس في يوم تفرّغه — فيُرفَع بوّابةً كالاسم
+        // الذي لا يُحلّ، لا تحذيرًا في سجلٍّ لا يقرؤه أحد.
+        out.ineffective.push({ rowNumber: r.rowNumber, ruleType: rt,
+          target: r.target, value: String(r.value) });
+        continue;
+      }
+      for (let d = 0; d < parsed.days.length; d++) {
+        if (parsed.days[d] < days) slot.freeDays[parsed.days[d]] = true;
+      }
+      continue;
+    }
+
+    // RT_PERIODS — «الحصص المسموحة»
+    const win = parseAllowedPeriods(r.value, periods);
+    for (let u = 0; u < win.unknown.length; u++) {
+      out.warnings.push('قواعد الحضور: رمز حصّةٍ مجهول أو خارج المدى [1..' + periods +
+        '] «' + win.unknown[u] + '» في الصفّ ' + r.rowNumber + ' للمعلّم «' +
+        slot.shortName + '» — أُسقِط.');
+    }
+    if (win.periods.length === 0) {
+      // كسابقه: صفٌّ مفعَّل بلا أثر يُوقف التوليد بدل أن يُنتج نافذةً وهميّة.
+      // dateCell يميّز «الخليّة صارت تاريخًا» عن «قيمة غير مفهومة» — علاجاهما
+      // مختلفان (تنسيق الخليّة مقابل تصحيح الكتابة).
+      const dateCell = (win.unknown.length === 1 && win.unknown[0] === 'DATE_CELL');
+      out.ineffective.push({ rowNumber: r.rowNumber, ruleType: rt,
+        target: r.target, value: String(r.value), dateCell: dateCell });
+      continue;
+    }
+    // صفّان للمعلّم نفسه: التقاطع (الأضيق يفوز) — حتميٌّ لا يتبع ترتيب الورقة.
+    const fresh = {};
+    for (let p = 0; p < win.periods.length; p++) {
+      if (slot.allowedPeriods === null || slot.allowedPeriods[win.periods[p]]) {
+        fresh[win.periods[p]] = true;
+      }
+    }
+    if (Object.keys(fresh).length === 0) {
+      out.warnings.push('قواعد الحضور: صفّا «' + rt + '» للمعلّم «' + slot.shortName +
+        '» لا يتقاطعان (الصفّ ' + r.rowNumber + ') — أُبقيت النافذة السابقة.');
+    } else {
+      slot.allowedPeriods = fresh;
+    }
+  }
+
+  // عدد الخانات المحجوبة لكلّ معلّم (للسجلّ ولفاحص الجدوى).
+  const cids = Object.keys(out.byCivilId);
+  for (let i = 0; i < cids.length; i++) {
+    const b = out.byCivilId[cids[i]];
+    let n = 0;
+    for (let d = 0; d < days; d++) {
+      for (let p = 0; p < periods; p++) if (_tbCellBlocked(b, d, p)) n++;
+    }
+    b.blockedCells = n;
+  }
+
+  return out;
+}
+
+/**
+ * عدد الخانات المحجوبة لمعلّم. يقرؤه فاحص الجدوى ليصير فحص OVERLOAD صادقًا:
+ * صاحب النافذة له ستّ خانات لا خمسٌ وثلاثون.
+ *
+ * @param {Object} blocks ناتج deriveTeacherBlocks().
+ * @param {string} civilId الرقم المدني.
+ * @param {number} totalSlots الأيّام × الحصص (سقفٌ دفاعيّ).
+ * @return {number}
+ */
+function teacherBlockedCellCount(blocks, civilId, totalSlots) {
+  const b = (blocks && blocks.byCivilId) ? blocks.byCivilId[String(civilId)] : null;
+  if (!b) return 0;
+  return Math.min(b.blockedCells, totalSlots);
+}
+
+/**
+ * هل لهذا المعلّم حجبٌ فعّال؟ بوّابة الإعفاءات (موازنة الأيّام وسقف الحصّة
+ * الأولى). الإعفاء وجوديّ لا قيميّ: من قُصّت شبكته لا يُقاس بمقياس من شبكته
+ * كاملة.
+ *
+ * @param {Object} ctx سياق المحرّك (يحمل teacherBlocks).
+ * @param {string} civilId الرقم المدني.
+ * @return {boolean}
+ */
+function isBlockedTeacher(ctx, civilId) {
+  const tb = ctx && ctx.teacherBlocks;
+  if (!tb || !tb.byCivilId) return false;
+  const b = tb.byCivilId[String(civilId)];
+  return !!(b && b.blockedCells > 0);
+}
+
+/**
+ * هل هذا المعلّم معفًى من اجتماع قسمه؟ يقرؤه _placeMeetingsPhase قبل بناء
+ * عضويّة القسم — فلا يُحسب في شرط «كلّ الأعضاء أحرار» ولا تُوضع له خانة.
+ *
+ * @param {Object} blocks ناتج deriveTeacherBlocks().
+ * @param {string} civilId الرقم المدني.
+ * @return {boolean}
+ */
+function isMeetingExemptTeacher(blocks, civilId) {
+  const b = (blocks && blocks.byCivilId) ? blocks.byCivilId[String(civilId)] : null;
+  return !!(b && b.meetingExempt);
+}
+
+// ============================================================
+// التطبيق (Public)
+// ============================================================
+
+/**
+ * يشغل خانات المعلّمين المحجوبة بخانة `BLOCK` على حالةٍ قائمة. يُستدعى من
+ * موضعين بنفس المعنى:
+ *   • buildSchedule — قبل المرحلة صفر (الاجتماعات)، والشبكة خالية تمامًا.
+ *   • hydrateStateFromScheduleData — بعد إرساء الجدول المكتوب، فقد تكون خليّةٌ
+ *     محجوبة مشغولةً بجدولٍ قديم سابقٍ للقاعدة. تلك تُتخطّى ويُحصى تخطّيها:
+ *     الحجب وصفٌ للحضور لا سلطةٌ تهدم ما هو مكتوب.
+ *
+ * @param {Object} state حالة الجدول (createScheduleState).
+ * @param {Object} blocks ناتج deriveTeacherBlocks().
+ * @return {{placed:number, skipped:Object[]}} skipped: خانات كانت مشغولة.
+ */
+function applyTeacherBlocks(state, blocks) {
+  const result = { placed: 0, skipped: [] };
+  if (!blocks || !blocks.byCivilId) return result;
+
+  const dim = state.getDimensions();
+  const cids = Object.keys(blocks.byCivilId).sort();   // ترتيبٌ حتميّ
+
+  for (let i = 0; i < cids.length; i++) {
+    const cid = cids[i];
+    const b = blocks.byCivilId[cid];
+    for (let d = 0; d < dim.days; d++) {
+      for (let p = 0; p < dim.periods; p++) {
+        if (!_tbCellBlocked(b, d, p)) continue;
+        if (!state.isTeacherFree(cid, d, p)) {
+          result.skipped.push({ civilId: cid, shortName: b.shortName, day: d, period: p });
+          continue;
+        }
+        state.place(cid, d, p, { kind: 'BLOCK' });
+        result.placed++;
+      }
+    }
+  }
+  return result;
+}
+
+/**
+ * هل هذه الخانة خارج نافذة هذا المعلّم؟ (الجلسة 53/ب — الحماية الصريحة)
+ *
+ * الحماية الأصليّة **ضمنيّة**: الخانة مشغولة بخانة BLOCK فترفضها `place`. وهي
+ * أنيقة لكنّها معلَّقةٌ كلّها بخيطٍ واحد — وجودِ خانة الحجب في الشبكة. فإن
+ * غابت (تمييهٌ لم يُرسِها، لقطة/استرجاع، مسارٌ لم يستدعِ التطبيق) سقطت الحماية
+ * كلّها بلا صوت. هذه الدالّة تُعيد اشتقاق الحكم من **القاعدة** لا من الشبكة،
+ * فتقف الحمايتان على ساقين مستقلّتين: تُستشار في بوّابات القرار الستّ (أربعٌ
+ * في الباني واثنتان في الإصلاح) إلى جانب isTeacherFree لا بدلًا منها.
+ *
+ * رخيصةٌ في الحلقات الساخنة: خروجٌ مبكّر بمطابقةٍ واحدة لمن لا حجب له — وهم
+ * كلّ المعلّمين إلّا واحدًا.
+ *
+ * @param {Object} blocks ناتج deriveTeacherBlocks() (أو ctx.teacherBlocks).
+ * @param {string} civilId الرقم المدني.
+ * @param {number} day اليوم (0-based).
+ * @param {number} period الحصّة (0-based).
+ * @return {boolean}
+ */
+function isCellBlockedFor(blocks, civilId, day, period) {
+  if (!blocks || !blocks.byCivilId) return false;
+  const b = blocks.byCivilId[String(civilId)];
+  if (!b) return false;
+  return _tbCellBlocked(b, day, period);
+}
+
+/**
+ * حارسٌ بعديّ: هل استقرّ درسٌ لصاحب حجبٍ خارج نافذته؟ (الجلسة 53/ب)
+ *
+ * الحجب يُنفَّذ بإشغال الخانة، و`place` ترمي عند خانةٍ مشغولة — فالمخالفة
+ * مستحيلةٌ نظريًّا في المسارات الثلاثة (الباني، تبديل الإصلاح، نقل الإصلاح).
+ * وقد وقعت. فمن كان يستحيل عليه أن يفشل يحتاج حارسًا صريحًا أكثر من غيره:
+ * هذه الدالّة تُقاس على **الشبكة النهائيّة** لا على النيّة، وتُستدعى بعد
+ * البناء وقبل الكتابة معًا.
+ *
+ * @param {Object} state حالة الجدول.
+ * @param {Object} blocks ناتج deriveTeacherBlocks().
+ * @return {Object[]} المخالفات [{civilId, shortName, day, period, classId}].
+ */
+function verifyTeacherBlocks(state, blocks) {
+  const out = [];
+  if (!blocks || !blocks.byCivilId) return out;
+  const dim = state.getDimensions();
+  const cids = Object.keys(blocks.byCivilId).sort();
+  for (let i = 0; i < cids.length; i++) {
+    const cid = cids[i];
+    const b = blocks.byCivilId[cid];
+    for (let d = 0; d < dim.days; d++) {
+      for (let p = 0; p < dim.periods; p++) {
+        if (!_tbCellBlocked(b, d, p)) continue;
+        const cell = state.getTeacherCell(cid, d, p);
+        // المرجع الخلفيّ للحصّة نصٌّ (classId)؛ الاجتماع والحجب كائنان.
+        if (typeof cell !== 'string' || cell === '') continue;
+        out.push({ civilId: cid, shortName: b.shortName,
+          day: d, period: p, classId: cell });
+      }
+    }
+  }
+  return out;
+}
+
+// ============================================================
+// المحلّلات (Public — مشترَكة مع حارس التعارضات)
+// ============================================================
+
+/**
+ * يحلّل نصّ «الحصص المسموحة» إلى فهارس حصص 0-based. يقبل ثلاثة أشكال ممزوجة
+ * بفاصلة عربيّة أو لاتينيّة: رقمًا مفردًا («2»)، ومدًى («1-2» بأيّ شرطة)،
+ * واسمًا ترتيبيًّا من PERIOD_ORDINALS («الأولى») أو LAST_PERIOD_NAME.
+ * الترقيم المكتوب 1-based (كما يراه المالك) والمُخرَج 0-based (كما تراه الشبكة).
+ *
+ * @param {*} text نصّ العمود «القيمة».
+ * @param {number} periods عدد حصص اليوم.
+ * @return {{periods:number[], unknown:string[]}} المقبول مرتَّبًا بلا تكرار.
+ */
+function parseAllowedPeriods(text, periods) {
+  const out = { periods: [], unknown: [] };
+  if (text === null || text === undefined) return out;
+  // خليّةٌ صارت تاريخًا: «1-2» تُغري Sheets بتحويلها إلى تاريخ حسب لغة الجدول،
+  // فتصل هنا كائنَ Date لا نصًّا. تُرفَض برمزٍ مميَّز ليقول الخطأ للمالك ما يفعل
+  // (تنسيق الخليّة نصًّا عاديًّا) بدل «قيمة غير مفهومة».
+  if (Object.prototype.toString.call(text) === '[object Date]') {
+    out.unknown.push('DATE_CELL');
+    return out;
+  }
+  const s = _tbNormalizeDigitsAndDashes(String(text)).trim();
+  if (s === '' || s === CONSTANTS.NOT_APPLICABLE) return out;
+
+  const ordinals = CONSTANTS.PERIOD_ORDINALS;
+  const lastName = CONSTANTS.LAST_PERIOD_NAME;
+  const seen = {};
+  const push = function (n1) {                    // n1 بترقيم 1-based
+    if (n1 < 1 || n1 > periods) return false;
+    if (!seen[n1]) { seen[n1] = true; out.periods.push(n1 - 1); }
+    return true;
+  };
+  // النصّ مُطبَّعٌ سلفًا (_tbNormalizeDigitsAndDashes) فكلّ شرطةٍ صارت ASCII.
+  const DASH = /-/;
+
+  const parts = s.split(/[،,]/);   // فاصلة عربيّة أو لاتينيّة
+  for (let i = 0; i < parts.length; i++) {
+    const token = parts[i].trim();
+    if (token === '') continue;
+
+    const dashParts = token.split(DASH);
+    if (dashParts.length === 2) {
+      const a = _tbTokenToPeriod(dashParts[0].trim(), ordinals, lastName, periods);
+      const b = _tbTokenToPeriod(dashParts[1].trim(), ordinals, lastName, periods);
+      if (a > 0 && b > 0) {
+        const lo = Math.min(a, b), hi = Math.max(a, b);
+        let ok = true;
+        for (let n = lo; n <= hi; n++) if (!push(n)) ok = false;
+        if (ok) continue;
+      }
+      out.unknown.push(token);
+      continue;
+    }
+
+    const n = _tbTokenToPeriod(token, ordinals, lastName, periods);
+    if (n > 0 && push(n)) continue;
+    out.unknown.push(token);
+  }
+
+  out.periods.sort(function (a, b) { return a - b; });
+  return out;
+}
+
+// ============================================================
+// المساعدات الخاصّة (Private)
+// ============================================================
+
+/**
+ * هل الخانة (يوم، حصّة) محجوبةٌ لهذا المعلّم؟ التعريف الوحيد للحجب — يقرؤه
+ * الاشتقاق (لعدّ الخانات) والتطبيق (للوضع) معًا فلا ينحرفان:
+ *   يومٌ من أيّام التفرّغ ⟹ اليوم كلّه · وإلّا حصّةٌ خارج النافذة (إن وُجدت).
+ */
+function _tbCellBlocked(b, day, period) {
+  if (b.freeDays[day]) return true;
+  if (b.allowedPeriods === null) return false;
+  return !b.allowedPeriods[period];
+}
+
+/**
+ * تطبيعُ ما يكتبه البشر قبل التحليل: الأرقام العربيّة-الهنديّة والفارسيّة إلى
+ * ASCII، وكلّ ما يشبه الشرطة إلى `-`، والمسافة غير الفاصلة إلى مسافة عاديّة.
+ *
+ * ⚠️ الحروف هنا بترميز `\uXXXX` لا بأنفسها عمدًا: الملفّ يمرّ بـclasp إلى Apps
+ * Script، ومصدرٌ خالصُ ASCII لا يحتمل تشويهًا في الطريق. وهذه الدالّة هي حارس
+ * الإدخال الوحيد — لا يُطابَق حرفٌ غريب في أيّ موضعٍ بعدها.
+ *
+ * @param {string} s النصّ الخام.
+ * @return {string} النصّ المُطبَّع.
+ */
+function _tbNormalizeDigitsAndDashes(s) {
+  let out = '';
+  for (let i = 0; i < s.length; i++) {
+    const c = s.charCodeAt(i);
+    if (c >= 0x0660 && c <= 0x0669) {        // ٠..٩ عربيّة-هنديّة
+      out += String.fromCharCode(0x30 + (c - 0x0660));
+    } else if (c >= 0x06F0 && c <= 0x06F9) { // ۰..۹ فارسيّة
+      out += String.fromCharCode(0x30 + (c - 0x06F0));
+    } else if (c === 0x2212 || c === 0x2043 || c === 0xFE63 || c === 0xFF0D ||
+               (c >= 0x2010 && c <= 0x2015)) {   // شُرَطٌ بأشكالها
+      out += '-';
+    } else if (c === 0x00A0 || c === 0x200F || c === 0x200E) {  // مسافةٌ/علاماتُ اتّجاه
+      out += (c === 0x00A0) ? ' ' : '';
+    } else {
+      out += s.charAt(i);
+    }
+  }
+  return out;
+}
+
+/** رمز حصّة (رقم أو ترتيبيّ أو «الأخيرة») ⟸ رقمها 1-based، أو 0 إن مجهولًا. */
+function _tbTokenToPeriod(token, ordinals, lastName, periods) {
+  if (token === '') return 0;
+  if (token === lastName) return periods;
+  const idx = ordinals.indexOf(token);
+  if (idx >= 0) return idx + 1;
+  if (/^[0-9]+$/.test(token)) return Number(token);
+  return 0;
+}

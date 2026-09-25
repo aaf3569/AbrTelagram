@@ -1,0 +1,335 @@
+/**
+ * algo_FeasibilityChecker.js
+ *
+ * فاحص الجدوى (المرحلة 9) — دالّة نقيّة تستهلك نموذج اللودر
+ * (loadScheduleData) وتُرجع تقريرًا منظَّمًا، دون عرض ولا كتابة ولا نصّ
+ * واجهة. طبقة العرض منفصلة في main_Main.js (نظير فصل
+ * detectConstraintConflicts عن _formatConstraintConflicts)، ليتمكّن
+ * المحرّك لاحقًا من استدعاء الفاحص بلا عرض.
+ *
+ * فلسفة البوّابة:
+ * - blocking: أخطاء بيانات قابلة للإصلاح — توقف البوّابة (canProceed=false).
+ * - structural: حقائق بنيويّة — لا توقف، تُبلَّغ فقط (تشخيص).
+ *
+ * كلّ عدد يُشتقّ من النموذج/الثوابت — لا أرقام مكتوبة يدويًّا. الخانات
+ * المتاحة = (الأيّام × الحصص) من الإعدادات، ناقصةً حصص الاجتماعات المُفعَّلة
+ * التي تنطبق على المعلّم: اجتماعات قسمه (واحدٌ افتراضًا، وأكثر إن كان لقسمه
+ * صفّ «عدد حصص اجتماع القسم»)، واجتماع رؤساء الأقسام لرؤساء الأقسام فقط.
+ */
+
+// ============================================================
+// فحص الجدوى (Public — دالّة نقيّة)
+// ============================================================
+
+/**
+ * يفحص جدوى توليد الجدول من نموذج اللودر. نقيّة: لا تقرأ أوراقًا ولا
+ * تكتب ولا تعرض — تحسب من model فقط وتُرجع التقرير.
+ *
+ * @param {Object} model ناتج loadScheduleData().
+ * @return {{
+ *   blocking: Object[],
+ *   structural: Object[],
+ *   summary: { blockingCount:number, structuralCount:number,
+ *              byType:Object, canProceed:boolean }
+ * }} التقرير المنظَّم. كلّ عنصر يحمل حقولًا آليّة فقط (type + أرقام/أهداف)،
+ *    بلا نصّ عربيّ — الوصف والإرشاد من مسؤوليّة طبقة العرض.
+ */
+function checkFeasibility(model) {
+  const blocking = [];
+  const structural = [];
+
+  const settings = model.settings;
+  const totalSlots = settings.days * settings.periods;
+
+  // حجب الحضور (الجلسة 53) — من المصدر الواحد الذي يقرؤه المحرّك نفسه، فلا
+  // ينحرف عدّ الفاحص عن الشبكة التي سيبنيها.
+  const teacherBlocks = deriveTeacherBlocks(model);
+
+  // اسم العرض المفضَّل لمعلّم (اسم قصير، وإلا الاسم الكامل، وإلا الرقم المدني)
+  const teacherTarget = function (cid, fullName) {
+    const sn = model.shortNameByCivilId[String(cid)];
+    if (sn) return sn;
+    if (fullName) return fullName;
+    return String(cid);
+  };
+
+  // ---------- blocking (1): معلّم بلا قسم ----------
+  // من dataErrors في النموذج (reason=MISSING_DEPARTMENT)
+  for (let i = 0; i < model.dataErrors.length; i++) {
+    const e = model.dataErrors[i];
+    blocking.push({
+      type:   'MISSING_DEPARTMENT',
+      target: teacherTarget(e.civilId, e.fullName),
+      row:    e.rowNumber,
+    });
+  }
+
+  // ---------- blocking (2,3): فحوص الحمل لكلّ معلّم له قسم ----------
+  for (let i = 0; i < model.teachers.length; i++) {
+    const t = model.teachers[i];
+    const hasDept = t.department !== '' && t.department !== null &&
+                    t.department !== undefined;
+    if (!hasDept) continue;  // مُعالَج في MISSING_DEPARTMENT
+
+    // الخانات المتاحة لهذا المعلّم
+    let available = totalSlots;
+    // حجب الحضور أوّلًا: خاناتٌ ليس فيها بالمدرسة أصلًا. بغير طرحها يرى الفاحص
+    // لصاحب النافذة خمسًا وثلاثين خانةً وهي ستّ — فيمرّ OVERLOAD كاذبًا ويفشل
+    // التوليد بعده بـCRITICAL_UNPLACED بلا تفسير.
+    available -= teacherBlockedCellCount(teacherBlocks, t.civilId, totalSlots);
+    // حصص اجتماع القسم: واحدةٌ افتراضًا، وأكثر للأقسام التي لها صفّ «عدد حصص
+    // اجتماع القسم» في القسم الثالث (قسم الرياضيات: اجتماعان). نفس الدالّة التي
+    // يقرؤها الباني — فلا ينحرف عدّ الفاحص عمّا يضعه المحرّك فعلًا. والمعفى
+    // بصفّ «إعفاء من اجتماع القسم» لا تُطرح له (لا خانة اجتماع تُوضع له).
+    if (!isMeetingExemptTeacher(teacherBlocks, t.civilId)) {
+      available -= getDeptMeetingCount(settings, t.department);
+    }
+    if (settings.deptHeadsMeetingEnabled && isHeadOfDepartment(t)) {
+      available -= 1;  // حصّة اجتماع رؤساء الأقسام
+    }
+
+    // (2) الفعلي ≠ المطلوب
+    if (t.actualLoad !== t.requiredLoad) {
+      blocking.push({
+        type:     'LOAD_MISMATCH',
+        target:   teacherTarget(t.civilId, t.fullName),
+        row:      t.rowNumber,
+        expected: t.requiredLoad,
+        actual:   t.actualLoad,
+      });
+    }
+
+    // (3) نصابه > 0 والفعلي يتجاوز الخانات المتاحة
+    if (t.requiredLoad > 0 && t.actualLoad > available) {
+      blocking.push({
+        type:      'OVERLOAD',
+        target:    teacherTarget(t.civilId, t.fullName),
+        row:       t.rowNumber,
+        actual:    t.actualLoad,
+        available: available,
+      });
+    }
+  }
+
+  // ---------- blocking (3.5): هدف قاعدة حضورٍ لا يطابق اسمًا قصيرًا ----------
+  // قواعد الحضور تُنفَّذ حجبًا لا عقوبة، فسقوطها لا يترك أثرًا في تقرير الكسور:
+  // يخرج جدولٌ يبدو سليمًا والمعلّم يدرّس في أيّام تفرّغه. ولذلك بوّابةٌ مانعة
+  // لا تحذيرٌ في السجلّ — وهي أيضًا شبكة الأمان عند تبديل المعلّم في الورقة.
+  for (let i = 0; i < teacherBlocks.unresolved.length; i++) {
+    const u = teacherBlocks.unresolved[i];
+    blocking.push({
+      type:     'TEACHER_BLOCK_UNRESOLVED',
+      target:   u.target,
+      row:      u.rowNumber,
+      ruleType: u.ruleType,
+    });
+  }
+  // وصفٌّ مفعَّل قيمته لا تُنتج أثرًا: نفس الخطر بوجهٍ آخر — القاعدة تبدو
+  // قائمةً في الورقة وهي ساقطة في المحرّك.
+  for (let i = 0; i < teacherBlocks.ineffective.length; i++) {
+    const u = teacherBlocks.ineffective[i];
+    blocking.push({
+      type:     'TEACHER_BLOCK_INEFFECTIVE',
+      target:   u.target,
+      row:      u.rowNumber,
+      ruleType: u.ruleType,
+      value:    u.value,
+      dateCell: !!u.dateCell,
+    });
+  }
+
+  // ---------- blocking (4): اسم قصير في التوزيع بلا معلّم ----------
+  for (let i = 0; i < model.unresolvedAssignments.length; i++) {
+    const u = model.unresolvedAssignments[i];
+    blocking.push({
+      type:       'UNRESOLVED_ASSIGNMENT',
+      target:     u.teacherShortName,
+      row:        u.rowNumber,
+      className:  u.className,
+      subjectKey: u.subjectKey,
+    });
+  }
+
+  // ---------- blocking (5): طلب مادّة مختبريّة يتجاوز السعة الإجماليّة ----------
+  // السعة من النموذج (قيم الورقة الحيّة)؛ اسم المختبر العربيّ يُطابَق بمفتاح
+  // totals عبر CONSTANTS.SUBJECTS (الاسم → المفتاح).
+  const keyBySubjectName = {};
+  const subjKeys = Object.keys(CONSTANTS.SUBJECTS);
+  for (let i = 0; i < subjKeys.length; i++) {
+    keyBySubjectName[CONSTANTS.SUBJECTS[subjKeys[i]].name] = subjKeys[i];
+  }
+  for (let i = 0; i < model.constraints.labs.length; i++) {
+    const lab = model.constraints.labs[i];
+    const key = keyBySubjectName[lab.subject];
+    const demand = (key && typeof model.labSubjectTotals[key] === 'number')
+      ? model.labSubjectTotals[key] : 0;
+    const capacity = Number(lab.capacity);
+    const threshold = capacity * totalSlots;
+    if (demand > threshold) {
+      blocking.push({
+        type:      'LAB_DEMAND_EXCEEDS_CAPACITY',
+        target:    lab.subject,
+        demand:    demand,
+        capacity:  capacity,
+        available: totalSlots,
+        threshold: threshold,
+      });
+    }
+  }
+
+  // ---------- blocking (6): خطّة الصفّ تتجاوز خانات شبكته ----------
+  // الفاحص كان يقيس حمل المعلّم وحده، فمرّ اختيار الوضع «أونلاين» بلا حارس:
+  // خطّةُ 35 حصّة للصفّ في شبكةٍ سعتها 25 ⟹ عشر حصص تسقط لكلّ صفّ بصمتٍ تامّ،
+  // بلا أثرٍ في تقرير الكسور — لأنّ الشبكة تُملأ خانةً خانة والفائض لا يُوضع
+  // أصلًا (نتيجة 55 §2). الاجتماعات تشغل شبكة المعلّم لا شبكة الصفّ، فسعة
+  // الصفّ هي totalSlots كاملةً.
+  for (let i = 0; i < model.subjects.length; i++) {
+    const cls = model.subjects[i];
+    const periodsMap = cls.periods || {};
+    const subjKeysOfClass = Object.keys(periodsMap);
+    let demand = 0;
+    for (let j = 0; j < subjKeysOfClass.length; j++) {
+      const v = periodsMap[subjKeysOfClass[j]];
+      if (typeof v === 'number') demand += v;
+    }
+    if (demand > totalSlots) {
+      blocking.push({
+        type:      'CLASS_OVERLOAD',
+        target:    cls.className,
+        demand:    demand,
+        available: totalSlots,
+      });
+    }
+  }
+  // ---------- structural: معلّمٌ لا يتّسع يومه لتغطية أزواجه الملزَمة ----------
+  // زوج (صفّ|مادّة) ملزَمٌ بالتغطية يطلب floor(النصاب ÷ الأيّام) حصّةً **في كلّ
+  // يوم**. فإن ضاق يوم معلّمه عن مجموع ما تطلبه أزواجه، فاليوم الفارغ حتميّ لا
+  // عارض — ولا تُحلّ هذه بالتبديل (كلّ خانات اليوم مشغولة أصلًا) بل بالتوزيع:
+  // تخفيف نصاب، أو نقل صفٍّ لمعلّمٍ آخر، أو رفع عتبة الإلزام.
+  //
+  // وجهان للحمامة الواحدة، وكلاهما يُشتقّ من النموذج قبل وجود أيّ جدول:
+  //   NEED — Σ floorPerDay لأزواجه > حصص اليوم: مستحيلٌ رياضيًّا مهما وُزّع.
+  //   FULL — نصابه > (الأيّام − 1) × حصص اليوم: يومٌ واحد على الأقلّ يمتلئ
+  //          بالضرورة، فتزاحمه أزواجه الملزَمة على خاناتٍ لا تكفي إلّا بالتمام.
+  const minWeeklyRaw = (model.constraints.params || {}).DAILY_COVERAGE_MIN_WEEKLY;
+  const minWeekly = Number(minWeeklyRaw);
+  if (minWeeklyRaw !== undefined && minWeeklyRaw !== null &&
+      String(minWeeklyRaw).trim() !== '' && !isNaN(minWeekly)) {
+    const consecKeys = _consecutiveSubjectKeysFromModel(model);
+    const periodsByClass = {};
+    for (let i = 0; i < model.subjects.length; i++) {
+      periodsByClass[model.subjects[i].className] = model.subjects[i].periods;
+    }
+    // لكلّ معلّم: مجموع الحدّ الأدنى اليوميّ لأزواجه الملزَمة + عددها.
+    const needByCivilId = {};
+    const pairsByCivilId = {};
+    for (let i = 0; i < model.assignments.length; i++) {
+      const a = model.assignments[i];
+      const pm = periodsByClass[a.className];
+      const count = (pm && typeof pm[a.subjectKey] === 'number') ? pm[a.subjectKey] : 0;
+      if (count <= 0 || count < minWeekly) continue;
+      if (consecKeys[a.subjectKey]) continue;
+      const floorPerDay = Math.floor(count / settings.days);
+      if (floorPerDay < 1) continue;
+      const cid = String(a.civilId);
+      needByCivilId[cid] = (needByCivilId[cid] || 0) + floorPerDay;
+      if (!pairsByCivilId[cid]) pairsByCivilId[cid] = [];
+      pairsByCivilId[cid].push(a.className + '|' + a.subjectKey);
+    }
+    const perDay = settings.periods;
+    const fullDayThreshold = (settings.days - 1) * perDay;
+    for (let i = 0; i < model.teachers.length; i++) {
+      const t = model.teachers[i];
+      const cid = String(t.civilId);
+      const need = needByCivilId[cid] || 0;
+      if (need <= 0) continue;                       // لا زوج ملزَم ⟹ لا إنذار
+      const tooNarrow = need > perDay;
+      const forcedFull = t.requiredLoad > fullDayThreshold;
+      if (!tooNarrow && !forcedFull) continue;
+      structural.push({
+        type:         'DAILY_COVERAGE_TEACHER_SATURATED',
+        target:       teacherTarget(t.civilId, t.fullName),
+        row:          t.rowNumber,
+        cause:        tooNarrow ? (forcedFull ? 'NEED+FULL' : 'NEED') : 'FULL',
+        dailyNeed:    need,
+        perDay:       perDay,
+        requiredLoad: t.requiredLoad,
+        fullDayLimit: fullDayThreshold,
+        pairs:        pairsByCivilId[cid].length,
+      });
+    }
+  }
+
+  // ---------- structural: خانات سابعة لا يغطّيها عرض المعلّمين ----------
+  // نفس مخطِّط الباني (planSeventhLayer) على شبكةٍ خالية من الحصص: إن عجزت
+  // المطابقة عن ملء (صفّ، يوم) تحت السقوف الصلبة، فالكسر هناك حتميّ مهما وُزّع —
+  // وعلاجه بالبيانات (نقل صفٍّ لمعلّمٍ مؤهّل) لا بالتوليد. يُبلَّغ بالاسم قبل
+  // التوليد لا بعده. محميّ: تعذّر بناء السياق لا يُسقط الفحص كلّه.
+  try {
+    const st0 = createScheduleState(model);
+    const ctx0 = _buildBuilderContext(model, st0);
+    applyTeacherBlocks(st0, ctx0.teacherBlocks);
+    const g0 = _deriveGroups(model, ctx0);
+    const sp = planSeventhLayer(st0, ctx0, g0);
+    for (let i = 0; i < sp.unfilled.length; i++) {
+      structural.push({
+        type:       'SEVENTH_SUPPLY_SHORT',
+        target:     sp.unfilled[i].classId,
+        day:        sp.unfilled[i].day,
+        candidates: sp.unfilled[i].candidates,
+        demand:     sp.demand,
+        supplyFree: sp.supplyFree,
+        supplyTotal: sp.supplyTotal,
+      });
+    }
+  } catch (e) {
+    Logger.log('فحص عرض السابعة تعذّر: ' + e.message);
+  }
+
+  // ---------- structural: عجز تغطية المشرفين لكلّ جناح ----------
+  // العجز = max(0, مجموع نُصُب المشرفين − (عددهم − 1) × الخانات الكليّة).
+  const loadByCivilId = {};
+  for (let i = 0; i < model.teachers.length; i++) {
+    loadByCivilId[String(model.teachers[i].civilId)] = model.teachers[i].requiredLoad;
+  }
+  const wings = Object.keys(model.supervisorsByWing);
+  for (let i = 0; i < wings.length; i++) {
+    const sups = model.supervisorsByWing[wings[i]];
+    const supervisorCount = sups.length;
+    let loadSum = 0;
+    for (let j = 0; j < sups.length; j++) {
+      const ld = loadByCivilId[String(sups[j].civilId)];
+      loadSum += (typeof ld === 'number') ? ld : 0;
+    }
+    const raw = loadSum - (supervisorCount - 1) * totalSlots;
+    const deficit = raw > 0 ? raw : 0;
+    if (deficit > 0) {
+      structural.push({
+        type:            'SUPERVISOR_COVERAGE_DEFICIT',
+        wing:            wings[i],
+        deficit:         deficit,
+        supervisorCount: supervisorCount,
+      });
+    }
+  }
+
+  // ---------- summary ----------
+  const byType = {};
+  for (let i = 0; i < blocking.length; i++) {
+    byType[blocking[i].type] = (byType[blocking[i].type] || 0) + 1;
+  }
+  for (let i = 0; i < structural.length; i++) {
+    byType[structural[i].type] = (byType[structural[i].type] || 0) + 1;
+  }
+
+  return {
+    blocking:   blocking,
+    structural: structural,
+    summary: {
+      blockingCount:   blocking.length,
+      structuralCount: structural.length,
+      byType:          byType,
+      canProceed:      blocking.length === 0,
+    },
+  };
+}
