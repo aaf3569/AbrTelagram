@@ -234,6 +234,7 @@ const MARKUP = `
  *   attendance              — the page's single mountAttendanceSheet() instance
  *   onAttendanceSaved(fn)   — subscribe to that instance's saves
  *   getSession()            — { user, data, classList } the page already resolved
+ *   onTodayStats(stats)     — optional: today's totals, after every render of today's grid
  */
 export async function mountTodayAbsenceSheet(host, hooks) {
   // Fetched rather than <link>ed so the markup never paints unstyled — and
@@ -641,6 +642,7 @@ export async function mountTodayAbsenceSheet(host, hooks) {
       let GRID = Object.create(null);
       let selectedDate = fromInputDate(kuwaitTodayISO());
       let morningLatesMap = Object.create(null); // className -> {count, details}
+      let classSizes = new Map(); // className -> number of students (for the day's attendance rate)
       let gridLoadRequestId = 0;
       let gridLoadedAt = 0; // when the grid on screen was last fully loaded
 
@@ -915,6 +917,56 @@ export async function mountTodayAbsenceSheet(host, hooks) {
         }
 
         requestAnimationFrame(centerClassLabels);
+        emitTodayStats();
+      }
+
+      // Today's numbers for adminpage.html's home screen (الرئيسية), worked
+      // out from the grid this sheet already loads — so the home screen
+      // costs no reads of its own. Only for today: after the date picker
+      // moves to another day, the home screen keeps today's last numbers.
+      function emitTodayStats(){
+        if (typeof hooks.onTodayStats !== 'function') return;
+        if (toInputDate(selectedDate) !== kuwaitTodayISO()) return;
+
+        const absent = new Set(), late = new Set(), morning = new Set();
+        const keyOf = (st, cn) => st.id ? `id:${st.id}` : `name:${cn}:${st.name}`;
+        let lessonsTaken = 0, lessonsMissed = 0, expectedSeats = 0, absentSeats = 0, totalStudents = 0;
+
+        for (const cn of ALL_CLASSES) {
+          const size = classSizes.get(cn) || 0;
+          totalStudents += size;
+          for (let li = 1; li <= 7; li++) {
+            const cell = GRID?.[cn]?.[li];
+            if (!cell) continue;
+            if (cell.hasAnyRecord) {
+              lessonsTaken++;
+              expectedSeats += size;
+              absentSeats += Math.min(cell.count, size || cell.count);
+            } else if (cell.missed) {
+              lessonsMissed++;
+            }
+            cell.students.forEach((st) => absent.add(keyOf(st, cn)));
+            cell.lateStudents.forEach((st) => late.add(keyOf(st, cn)));
+          }
+          for (const d of morningLatesMap[cn]?.details || []) {
+            morning.add(keyOf({ id: d.studentId, name: d.studentName }, cn));
+          }
+        }
+
+        hooks.onTodayStats({
+          totalStudents,
+          absentStudents: absent.size,
+          // Students with no absence in any lesson recorded so far today.
+          presentStudents: Math.max(0, totalStudents - absent.size),
+          lateStudents: late.size,
+          morningLates: morning.size,
+          lessonsTaken,
+          lessonsMissed,
+          // Share of seats filled across every lesson recorded so far
+          // (null until the first lesson is recorded).
+          attendanceRate: expectedSeats ? (expectedSeats - absentSeats) / expectedSeats : null,
+          updatedAt: Date.now(),
+        });
       }
 
       // Keep each merged class label centred in the part of its cell that is
@@ -1717,6 +1769,11 @@ export async function mountTodayAbsenceSheet(host, hooks) {
             num: Number(data.studentNumber ?? data.number ?? data.no ?? data.roll ?? data.idNumber ?? data.studentNo)
           });
         });
+
+        classSizes = new Map();
+        for (const st of studentsById.values()) {
+          if (st.className) classSizes.set(st.className, (classSizes.get(st.className) || 0) + 1);
+        }
 
         const absentSeenByCell = new Map();
         const lateSeenByCell   = new Map();

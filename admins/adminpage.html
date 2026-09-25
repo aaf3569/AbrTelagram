@@ -83,12 +83,10 @@
     @keyframes spin{ to{ transform: rotate(360deg); } }
 
     /* Skeleton loader — shown instead of the spinner while auth/role
-       resolve. Reuses the real .avatar/.btn/.dash-hero-text classes for
-       sizing (including the desktop hero/grid reflow further below) and
-       only overrides their fill with a shimmer — .skel-fill is combined
-       with 2-3 real classes on each element specifically so it always
-       outranks .btn.ghost/.btn.primary's own background regardless of
-       source order. */
+       resolve. Reuses the real .today-card/.dash-tile classes for sizing
+       (so it reflows like the real home screen) and only overrides their
+       fill with a shimmer; !important so it always beats their own
+       backgrounds regardless of source order. */
     @keyframes skelShimmer{ 0%{ background-position:200% 0; } 100%{ background-position:-200% 0; } }
     .skel-fill{
       background: linear-gradient(100deg, rgba(3,60,84,.08) 30%, rgba(3,60,84,.16) 45%, rgba(3,60,84,.08) 60%) !important;
@@ -106,22 +104,12 @@
       border-radius:6px;
     }
     @media (prefers-reduced-motion: reduce){ .skel-line{ animation:none; } }
-    .skel-name-line{ width:150px; height:20px; margin:4px auto 0; }
-    .skel-sub-line{ width:210px; height:14px; margin:6px auto 0; }
-    .skel-heading-line{ width:150px; height:16px; margin:0 2px 6px; }
-    @media (min-width: 1024px){
-      .skel-name-line{ margin:0; }
-      .skel-sub-line{ margin:4px 0 0; }
-    }
+    .skel-heading-line{ width:150px; height:18px; margin:26px 4px 12px; }
+    .skel-card{ min-height:330px; }
     .msg{ font-size:.98rem; text-align:center }
     .error{ color:#a11; background:#fde8e8; border:1px solid #f5c5c5; padding:12px; border-radius:14px }
     .muted{ color:var(--muted) }
 
-    .center{ display:flex; flex-direction:column; align-items:center; gap:8px; margin-top:6px; text-align:center }
-    .avatar{ width:112px; height:112px; border-radius:999px; background:var(--primary); display:grid; place-items:center; border:2px solid rgba(255,255,255,.9); box-shadow: var(--shadow-1); overflow:hidden }
-    .avatar svg{ width:60px; height:60px; stroke:#fff; fill:none; stroke-width:2 }
-    .name{ font-size:1.18rem; font-weight:900; color:#033C54 }
-    .divider{width:100%;height:2px;background:linear-gradient(to right,transparent,rgba(3,60,84,.22) 15%,rgba(3,60,84,.22) 85%,transparent);margin:20px 0 32px;border-radius:1px}
 
     .stack{ width:min(640px, 100%); display:flex; flex-direction:column; gap:20px; margin-top:16px; align-items:center; margin-inline:auto }
     .btn{
@@ -142,7 +130,6 @@
     .btn.ghost:hover{ transform:translateY(-3px); box-shadow:0 18px 40px rgba(3,60,84,.22); border-color:rgba(3,60,84,.4) }
     .btn.danger{ background:#fff; color:#cb2b2b; border:1px solid rgba(203,43,43,.4); box-shadow:var(--shadow-1) }
     .btn.danger:hover{ transform:translateY(-3px); box-shadow:0 18px 40px rgba(203,43,43,.2); border-color:rgba(203,43,43,.55) }
-    .btn.section-break{ margin-top:12px }
 
     /* ===== Sidebar =====
        Ported as-is from the Admin/admin.html sidebar design (same commit
@@ -195,7 +182,7 @@
     .sidebar-user-avatar{
       width:44px; height:44px; flex-shrink:0; border-radius:50%;
       background:linear-gradient(135deg, var(--primary-light), var(--primary)); color:#fff; font-weight:900; font-size:1.05rem;
-      display:grid; place-items:center; box-shadow:var(--shadow-1);
+      display:grid; place-items:center; box-shadow:var(--shadow-1); overflow:hidden;
     }
     .sidebar-user-info{ min-width:0; display:flex; flex-direction:column; gap:2px; }
     .sidebar-user-name{ font-weight:800; font-size:.94rem; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -500,8 +487,11 @@
     .absence-close:hover { background: #eaf0f6; border-color: rgba(3,60,84,.25); }
 
     @media (max-width:480px){
-      main{ padding:24px 8px 32px }
-      .column{ width:98vw }
+      main{ padding:16px 12px 28px }
+      /* Keep the centred title clear of the menu button. */
+      .site-header{ padding-inline:64px; }
+      .site-title{ font-size:clamp(1rem, 5vw, 1.25rem); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+      .column{ width:100% }
       .panel{ padding:16px 10px }
       .btn{
         min-height:78px;
@@ -509,7 +499,6 @@
         font-size:1.08rem;
       }
       .stack{ gap:14px }
-      .btn.section-break{ margin-top:0 }
       #telegramSettingsBtn{ margin-top:16px; margin-bottom:16px; }
       .add-teacher-body {
         grid-template-columns: 1fr;
@@ -650,15 +639,169 @@
     .notif-edit-cancel { border:1px solid var(--border); background:#fff; color:#4a6072; }
     .notif-edit-cancel:hover { background:#f4f8fb; }
 
-    /* Elements that only exist for the desktop dashboard layout below —
-       hidden here so phones/tablets render exactly as before; the
-       min-width:1024px block further down is the only place that turns
-       them on. */
-    .site-logo,
-    .dash-welcome,
-    .dash-section-title,
-    .dash-icon,
-    .dash-sub { display:none; }
+    .site-logo{ display:none; }
+
+    /* ===== Home screen (الرئيسية) — phone first ===== */
+    #stateAdmin.active, #stateLoading.active{ display:flex; flex-direction:column; width:100%; }
+    .stat-num{ font-variant-numeric:tabular-nums; }
+
+    /* Today card: attendance ring + recorded lessons + four counters. */
+    .today-card{
+      position:relative; overflow:hidden; isolation:isolate;
+      display:flex; flex-direction:column; gap:16px; width:100%;
+      padding:18px 16px 16px; border:none; border-radius:24px; cursor:pointer;
+      font-family:inherit; text-align:right; color:#fff;
+      background:
+        radial-gradient(420px 220px at 0% 0%, rgba(121,179,200,.35), transparent 60%),
+        linear-gradient(150deg, #065372, #033C54 55%, #022b42);
+      box-shadow:0 18px 40px rgba(3,60,84,.30);
+      transition:var(--transition);
+    }
+    .today-card::after{
+      content:''; position:absolute; z-index:-1; width:220px; height:220px; border-radius:50%;
+      left:-70px; bottom:-110px; background:rgba(255,255,255,.06);
+    }
+    .today-card:active{ transform:scale(.99); }
+    .today-card:focus-visible{ outline:3px solid var(--focus); outline-offset:3px; }
+    @media (hover:hover) and (pointer:fine){ .today-card:hover{ transform:translateY(-2px); box-shadow:0 24px 48px rgba(3,60,84,.36); } }
+    .today-card > span{ display:flex; }
+
+    .today-head{ align-items:flex-start; justify-content:space-between; gap:10px; }
+    .today-head-text{ display:flex; flex-direction:column; gap:2px; min-width:0; }
+    .today-greeting{ font-size:1.12rem; font-weight:900; }
+    .today-date{ font-size:.84rem; font-weight:700; opacity:.78; }
+    .today-open{
+      display:inline-flex; align-items:center; gap:6px; flex-shrink:0;
+      padding:6px 12px; border-radius:999px; font-size:.78rem; font-weight:800;
+      background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.18);
+    }
+    .today-open i{ font-size:.7rem; }
+
+    .today-main{ align-items:center; gap:18px; }
+    .today-ring{ position:relative; width:118px; height:118px; flex-shrink:0; display:grid; place-items:center; }
+    .today-ring svg{ position:absolute; inset:0; width:100%; height:100%; transform:rotate(-90deg); }
+    .today-ring circle{ fill:none; stroke-width:11; }
+    .ring-track{ stroke:rgba(255,255,255,.14); }
+    .ring-bar{
+      stroke:#7ee2a8; stroke-linecap:round;
+      stroke-dasharray:100; stroke-dashoffset:calc(100 - var(--p, 0));
+      transition:stroke-dashoffset .9s cubic-bezier(.22,.7,.25,1), stroke .3s ease;
+    }
+    .today-ring.mid .ring-bar{ stroke:#ffd166; }
+    .today-ring.low .ring-bar{ stroke:#ff8a80; }
+    .ring-label{ position:relative; display:flex; flex-direction:column; align-items:center; gap:2px; text-align:center; }
+    .ring-label b{ font-size:1.7rem; font-weight:900; line-height:1; }
+    .ring-label span{ font-size:.7rem; font-weight:700; opacity:.8; }
+
+    .today-lessons{ display:flex; flex-direction:column; gap:4px; min-width:0; }
+    .today-lessons-label{ font-size:.8rem; font-weight:700; opacity:.8; }
+    .today-lessons b{ font-size:2rem; font-weight:900; line-height:1.1; }
+    .today-missed, .today-allgood{
+      display:inline-flex; align-items:center; gap:6px; align-self:flex-start;
+      margin-top:4px; padding:5px 10px; border-radius:10px; font-size:.78rem; font-weight:800;
+    }
+    .today-missed{ background:rgba(255,138,128,.18); color:#ffd3cf; }
+    .today-allgood{ background:rgba(126,226,168,.16); color:#c9f5da; }
+    .today-missed[hidden], .today-allgood[hidden]{ display:none; }
+
+    .today-stats{ display:grid !important; grid-template-columns:repeat(4, minmax(0,1fr)); gap:8px; }
+    .today-stat{
+      display:flex; flex-direction:column; align-items:center; gap:3px; min-width:0;
+      padding:10px 4px 9px; border-radius:16px; text-align:center;
+      background:rgba(255,255,255,.10); border:1px solid rgba(255,255,255,.12);
+    }
+    .today-stat i{ font-size:.85rem; opacity:.9; }
+    .today-stat b{ font-size:1.28rem; font-weight:900; line-height:1.15; }
+    .today-stat span{ font-size:.7rem; font-weight:700; opacity:.82; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
+    .today-stat.present i{ color:#7ee2a8; }
+    .today-stat.absent i{ color:#ff8a80; }
+    .today-stat.late i{ color:#ffd166; }
+    .today-stat.morning i{ color:#ffb86b; }
+    .today-error{ font-size:.82rem; font-weight:800; opacity:.9; }
+    .today-error[hidden]{ display:none; }
+
+    /* Numbers shimmer until the first stats arrive. */
+    .today-card.is-loading .stat-num{
+      color:transparent; border-radius:8px; min-width:2.2em; display:inline-block;
+      background:linear-gradient(100deg, rgba(255,255,255,.10) 30%, rgba(255,255,255,.24) 45%, rgba(255,255,255,.10) 60%);
+      background-size:250% 100%; animation:skelShimmer 1.4s ease-in-out infinite;
+    }
+    @media (prefers-reduced-motion: reduce){ .today-card.is-loading .stat-num{ animation:none; } }
+
+    /* Section titles */
+    .dash-section-title{
+      display:flex; align-items:center; gap:10px; width:100%;
+      font-size:1.02rem; font-weight:900; color:var(--primary);
+      margin:26px 4px 12px;
+    }
+    .dash-section-title::before{
+      content:''; width:8px; height:8px; border-radius:999px; flex-shrink:0;
+      background:linear-gradient(145deg,var(--primary),var(--primary-light));
+    }
+
+    /* Action tiles: two per row on phone; .wide spans the row. */
+    .dash-grid{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:12px; width:100%; }
+    .dash-tile{
+      position:relative; display:flex; flex-direction:column; align-items:flex-start; gap:12px;
+      min-height:118px; padding:16px 14px; border-radius:20px; cursor:pointer; text-align:right;
+      font-family:inherit; color:var(--primary);
+      background:#fff; border:1px solid var(--border); box-shadow:0 6px 18px rgba(3,60,84,.08);
+      transition:var(--transition);
+    }
+    .dash-tile:active{ transform:scale(.98); }
+    .dash-tile:focus-visible{ outline:3px solid var(--focus); outline-offset:2px; }
+    @media (hover:hover) and (pointer:fine){ .dash-tile:hover{ transform:translateY(-3px); box-shadow:0 16px 32px rgba(3,60,84,.16); border-color:rgba(3,60,84,.28); } }
+    .dash-icon{
+      display:grid; place-items:center; width:42px; height:42px; flex-shrink:0;
+      border-radius:13px; font-size:1.05rem;
+      background:rgba(3,60,84,.08); color:var(--primary-light);
+    }
+    .dash-text{ display:flex; flex-direction:column; gap:3px; min-width:0; }
+    .dash-title{ font-size:1rem; font-weight:900; color:var(--primary); }
+    .dash-sub{ font-size:.76rem; font-weight:700; color:var(--muted); line-height:1.5; }
+    .dash-chev{ margin-inline-start:auto; font-size:.85rem; opacity:.7; }
+
+    .dash-tile.wide{ grid-column:1 / -1; flex-direction:row; align-items:center; min-height:84px; gap:14px; }
+    .dash-tile.primary{
+      border:none; color:#fff;
+      background:linear-gradient(145deg,var(--primary),var(--primary-light));
+      box-shadow:0 14px 30px rgba(3,60,84,.28);
+    }
+    .dash-tile.primary .dash-icon{ background:rgba(255,255,255,.16); color:#fff; width:48px; height:48px; font-size:1.2rem; }
+    .dash-tile.primary .dash-title{ color:#fff; font-size:1.12rem; }
+    .dash-tile.primary .dash-sub{ color:rgba(255,255,255,.78); }
+    /* An odd tile out at the end of a 2-column grid fills the row. */
+    .dash-tile.wide-sm{ grid-column:1 / -1; flex-direction:row; align-items:center; min-height:76px; }
+
+    /* فصولي tiles (built in JS) */
+    #myClassesButtons .dash-tile{ min-height:96px; }
+
+    /* Account row: Telegram settings + logout, compact. */
+    .dash-utility{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:10px; margin-top:22px; width:100%; }
+    .dash-row, #telegramSettingsBtn.dash-row{
+      display:flex; align-items:center; justify-content:center; gap:8px;
+      width:100%; min-height:50px; margin:0; padding:10px 12px; border-radius:14px; cursor:pointer;
+      font-family:inherit; font-size:.88rem; font-weight:800; letter-spacing:0;
+      color:var(--primary); background:#fff; border:1px solid var(--border);
+      box-shadow:0 4px 12px rgba(3,60,84,.06); transition:var(--transition);
+    }
+    #telegramSettingsBtn.dash-row::after{ content:none; }
+    .dash-row:active{ transform:scale(.98); }
+    .dash-row.danger{ color:#b42318; border-color:rgba(180,35,24,.22); }
+    @media (hover:hover) and (pointer:fine){
+      .dash-row:hover, #telegramSettingsBtn.dash-row:hover{ transform:translateY(-2px); box-shadow:0 10px 22px rgba(3,60,84,.12); }
+      .dash-row.danger:hover{ background:#fff7f6; }
+    }
+
+    @media (max-width:360px){
+      .today-main{ gap:12px; }
+      .today-ring{ width:100px; height:100px; }
+      .ring-label b{ font-size:1.45rem; }
+      .today-stat b{ font-size:1.1rem; }
+      .today-stat span{ font-size:.64rem; white-space:normal; line-height:1.25; }
+      .dash-sub{ display:none; }
+      .dash-tile{ min-height:96px; }
+    }
 
     /* ============================================================
        Desktop dashboard — monitor-sized screens only. Everything
@@ -687,63 +830,42 @@
       main{ padding:56px 40px 72px; align-items:flex-start; }
       .column{ width:min(1180px, 92vw); align-items:stretch; gap:36px; }
 
-      /* Profile hero card */
-      .center{
-        flex-direction:row; align-items:center; justify-content:flex-start;
-        text-align:right; gap:16px; margin-top:0;
-        background:#fff; border:1px solid var(--border); border-radius:18px;
-        box-shadow: var(--shadow-1); padding:16px 24px;
+      /* Home: today card on top, with the ring, lessons and counters
+         side by side; tiles in three columns underneath. */
+      .today-card{
+        display:grid; grid-template-columns:auto minmax(0,1fr); align-items:center;
+        padding:26px 30px; border-radius:26px; gap:22px 40px;
       }
-      .avatar{ width:60px; height:60px; flex-shrink:0; }
-      .avatar svg{ width:32px; height:32px; }
-      .dash-hero-text{ display:flex; flex-direction:column; gap:3px; }
-      .name{ font-size:1.25rem; }
-      .dash-welcome{ display:block; color:var(--muted); font-weight:700; font-size:.88rem; }
+      .today-head, .today-error{ grid-column:1 / -1; }
+      .today-greeting{ font-size:1.35rem; }
+      .today-date{ font-size:.92rem; }
+      .today-main{ gap:28px; }
+      .today-ring{ width:148px; height:148px; }
+      .ring-label b{ font-size:2.1rem; }
+      .ring-label span{ font-size:.8rem; }
+      .today-lessons b{ font-size:2.5rem; }
+      .today-stats{ gap:14px; }
+      .today-stat{ padding:16px 8px 14px; border-radius:18px; gap:5px; }
+      .today-stat i{ font-size:1rem; }
+      .today-stat b{ font-size:1.7rem; }
+      .today-stat span{ font-size:.82rem; }
+      .skel-card{ min-height:400px; }
 
-      .divider{ display:none; }
-
-      .dash-section-title{
-        display:flex; align-items:center; gap:10px; width:100%;
-        font-size:1.08rem; font-weight:900; color:var(--primary);
-        margin:14px 2px 0;
-      }
-      .dash-section-title::before{
-        content:''; width:8px; height:8px; border-radius:999px; flex-shrink:0;
-        background:linear-gradient(145deg,var(--primary),var(--primary-light));
-      }
-
-      /* Action grid */
-      .stack{
-        width:100%; display:grid;
-        grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));
-        gap:24px; margin-top:18px; align-items:stretch;
-      }
-      .btn{
-        width:100%; min-height:196px; border-radius:22px; padding:32px;
-        flex-direction:column; align-items:flex-start; justify-content:flex-start;
-        text-align:right; gap:8px;
-      }
-      .btn:hover{ transform:translateY(-5px); }
-      .dash-icon{
-        display:grid; place-items:center; width:48px; height:48px;
-        border-radius:14px; font-size:1.15rem; margin-bottom:18px;
-        background:rgba(3,60,84,.08); color:var(--primary);
-      }
-      .btn.primary .dash-icon{ background:rgba(255,255,255,.18); color:#fff; }
-      .dash-title{ font-size:1.14rem; font-weight:900; }
-      .dash-sub{
-        display:block; font-size:.85rem; font-weight:700; opacity:.75;
-        white-space:normal; line-height:1.6;
-      }
-
-      /* Utility row (Telegram settings + logout) — de-emphasized, compact */
-      .btn.section-break{
-        grid-column: 1 / -1; min-height:auto;
-        flex-direction:row; align-items:center; justify-content:flex-start;
-        padding:18px 24px; border-radius:16px; font-size:.95rem; gap:12px;
-      }
-      .btn.section-break .dash-icon{ margin-bottom:0; width:38px; height:38px; font-size:1rem; }
-      .btn.section-break .dash-sub{ display:none; }
+      .dash-section-title{ font-size:1.12rem; margin:40px 4px 16px; }
+      .skel-heading-line{ margin:40px 4px 16px; }
+      /* Four columns: الغياب and الإشعارات take two each, so the six
+         actions fill two even rows. */
+      .dash-grid{ grid-template-columns:repeat(4, minmax(0,1fr)); gap:20px; }
+      .dash-tile{ min-height:150px; padding:24px; border-radius:22px; gap:16px; }
+      .dash-tile:hover{ transform:translateY(-5px); }
+      .dash-icon{ width:50px; height:50px; border-radius:15px; font-size:1.2rem; }
+      .dash-title{ font-size:1.12rem; }
+      .dash-sub{ font-size:.85rem; }
+      .dash-tile.wide{ grid-column:span 2; flex-direction:column; align-items:flex-start; min-height:150px; }
+      .dash-tile.wide .dash-chev{ display:none; }
+      .dash-tile.wide-sm{ grid-column:span 2; flex-direction:column; align-items:flex-start; min-height:150px; }
+      #myClassesButtons .dash-tile{ min-height:120px; }
+      .dash-utility{ grid-template-columns:repeat(2, minmax(0, 260px)); justify-content:start; margin-top:28px; }
 
       /* Sheets: give the full-screen panels room to breathe on wide screens */
       .sheet-header{ padding:22px 36px; gap:14px; }
@@ -821,10 +943,12 @@
       </button>
     </div>
 
+    <!-- The signed-in admin's name and photo (tap it to change the photo) —
+         moved here from the top of the home screen. -->
     <div id="sidebarUser" class="sidebar-user" hidden>
-      <div id="sidebarUserAvatar" class="sidebar-user-avatar"><i class="fas fa-user-shield" aria-hidden="true"></i></div>
+      <div id="profileAvatar" class="sidebar-user-avatar"><i class="fas fa-user-shield" aria-hidden="true"></i></div>
       <div class="sidebar-user-info">
-        <span id="sidebarUserName" class="sidebar-user-name"></span>
+        <span id="adminName" class="sidebar-user-name"></span>
         <span class="sidebar-user-role">مشرف للنظام</span>
       </div>
     </div>
@@ -946,29 +1070,19 @@
   <main>
     <div class="column">
 
-      <div id="stateLoading" class="state active panel" aria-hidden="true">
-        <div class="center">
-          <div class="avatar skel-fill"></div>
-          <div class="dash-hero-text">
-            <div class="skel-line skel-name-line"></div>
-            <div class="skel-line skel-sub-line"></div>
-          </div>
-        </div>
-        <div class="divider" aria-hidden="true"></div>
+      <!-- Skeleton of the home screen below (same card/grid classes, so it
+           reflows the same way on phone and desktop) while auth and the
+           role check resolve. -->
+      <div id="stateLoading" class="state active" aria-hidden="true">
+        <div class="today-card skel-card skel-fill"></div>
         <div class="skel-line skel-heading-line"></div>
-        <div class="stack" role="group" aria-hidden="true">
-          <div class="btn primary skel-fill"></div>
-          <div class="btn ghost skel-fill"></div>
-          <div class="btn ghost skel-fill"></div>
-          <div class="btn ghost skel-fill"></div>
-          <div class="btn ghost skel-fill"></div>
-          <div class="btn ghost skel-fill"></div>
-          <!-- Matches #telegramSettingsSlot's mounted button and logoutBtn —
-               both real buttons carry section-break so they stay compact
-               full-width rows in the desktop grid instead of tall tiles
-               like the others above. -->
-          <div class="btn ghost section-break skel-fill"></div>
-          <div class="btn ghost section-break skel-fill"></div>
+        <div class="dash-grid">
+          <div class="dash-tile wide skel-fill"></div>
+          <div class="dash-tile skel-fill"></div>
+          <div class="dash-tile skel-fill"></div>
+          <div class="dash-tile skel-fill"></div>
+          <div class="dash-tile skel-fill"></div>
+          <div class="dash-tile wide-sm skel-fill"></div>
         </div>
       </div>
 
@@ -982,62 +1096,124 @@
       </div>
 
       <section id="stateAdmin" class="state" aria-label="لوحة الإدارة">
-        <div class="center">
-          <div id="profileAvatar" class="avatar"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.2"></circle><path d="M5 19c0-3.3 3.1-5.5 7-5.5s7 2.2 7 5.5"></path></svg></div>
-          <div class="dash-hero-text">
-            <div id="adminName" class="name">—</div>
-            <div class="dash-welcome">مرحبًا بك في لوحة تحكم الإدارة</div>
-          </div>
-        </div>
+        <!-- Today at a glance. The numbers come from the غياب اليوم sheet
+             (/admins/newabsence.js), which is preloaded in the background
+             anyway, so this costs no reads of its own. Tapping anywhere on
+             it opens that sheet. -->
+        <button id="todayCard" class="today-card is-loading" type="button" aria-label="غياب اليوم — عرض التفاصيل">
+          <span class="today-head">
+            <span class="today-head-text">
+              <span id="todayGreeting" class="today-greeting">أهلًا بك</span>
+              <span id="todayDate" class="today-date">—</span>
+            </span>
+            <span class="today-open">التفاصيل<i class="fas fa-chevron-left" aria-hidden="true"></i></span>
+          </span>
+          <span class="today-main">
+            <span id="todayRing" class="today-ring" style="--p:0">
+              <svg viewBox="0 0 120 120" aria-hidden="true">
+                <circle class="ring-track" cx="60" cy="60" r="52"></circle>
+                <circle class="ring-bar" cx="60" cy="60" r="52" pathLength="100"></circle>
+              </svg>
+              <span class="ring-label">
+                <b id="todayRate" class="stat-num">—</b>
+                <span>نسبة الحضور</span>
+              </span>
+            </span>
+            <span class="today-lessons">
+              <span class="today-lessons-label">الحصص المسجّلة اليوم</span>
+              <b id="todayTaken" class="stat-num">—</b>
+              <span id="todayMissed" class="today-missed" hidden>
+                <i class="fas fa-triangle-exclamation" aria-hidden="true"></i><span id="todayMissedText"></span>
+              </span>
+              <span id="todayAllGood" class="today-allgood" hidden>
+                <i class="fas fa-circle-check" aria-hidden="true"></i><span>لا توجد حصص فائتة</span>
+              </span>
+            </span>
+          </span>
+          <span class="today-stats">
+            <span class="today-stat present">
+              <i class="fas fa-user-check" aria-hidden="true"></i>
+              <b id="statPresent" class="stat-num">—</b>
+              <span>حاضرون</span>
+            </span>
+            <span class="today-stat absent">
+              <i class="fas fa-user-xmark" aria-hidden="true"></i>
+              <b id="statAbsent" class="stat-num">—</b>
+              <span>غائبون</span>
+            </span>
+            <span class="today-stat late">
+              <i class="fas fa-user-clock" aria-hidden="true"></i>
+              <b id="statLate" class="stat-num">—</b>
+              <span>متأخرون</span>
+            </span>
+            <span class="today-stat morning">
+              <i class="fas fa-sun" aria-hidden="true"></i>
+              <b id="statMorning" class="stat-num">—</b>
+              <span>تأخير الصبح</span>
+            </span>
+          </span>
+          <span id="todayError" class="today-error" hidden>تعذّر تحميل إحصائيات اليوم — اضغط لفتح غياب اليوم.</span>
+        </button>
 
         <section id="myClassesSection" hidden>
           <h2 class="dash-section-title">فصولي</h2>
-          <div id="myClassesButtons" class="stack" role="group" aria-label="فصولي"></div>
+          <div id="myClassesButtons" class="dash-grid" role="group" aria-label="فصولي"></div>
         </section>
 
-        <div class="divider" aria-hidden="true"></div>
-
         <h2 class="dash-section-title">الإجراءات السريعة</h2>
-        <div class="stack" role="group" aria-label="أوامر الإدارة">
-          <button id="openAbsence" class="btn primary" type="button" aria-label="الغياب">
+        <div class="dash-grid" role="group" aria-label="أوامر الإدارة">
+          <button id="openAbsence" class="dash-tile primary wide" type="button" aria-label="الغياب">
             <i class="fas fa-clipboard-list dash-icon" aria-hidden="true"></i>
-            <span class="dash-title">الغياب</span>
-            <span class="dash-sub">تسجيل ومتابعة غياب الطلاب</span>
+            <span class="dash-text">
+              <span class="dash-title">الغياب</span>
+              <span class="dash-sub">غياب اليوم، المختصر، والتدقيق</span>
+            </span>
+            <i class="fas fa-chevron-left dash-chev" aria-hidden="true"></i>
           </button>
-          <button id="openTeachers" class="btn ghost" type="button" aria-label="إدارة المعلمين">
+          <button id="openTeachers" class="dash-tile" type="button" aria-label="إدارة المعلمين">
             <i class="fas fa-chalkboard-user dash-icon" aria-hidden="true"></i>
-            <span class="dash-title">المعلمون</span>
-            <span class="dash-sub">إدارة حسابات وبيانات المعلمين</span>
+            <span class="dash-text">
+              <span class="dash-title">المعلمون</span>
+              <span class="dash-sub">الحسابات والبيانات</span>
+            </span>
           </button>
-          <button id="openClasses" class="btn ghost" type="button" aria-label="الطلاب">
+          <button id="openClasses" class="dash-tile" type="button" aria-label="الطلاب">
             <i class="fas fa-school dash-icon" aria-hidden="true"></i>
-            <span class="dash-title">الطلاب</span>
-            <span class="dash-sub">عرض وتنظيم فصول المدرسة</span>
+            <span class="dash-text">
+              <span class="dash-title">الطلاب</span>
+              <span class="dash-sub">فصول المدرسة</span>
+            </span>
           </button>
-          <!-- NEW BUTTON: schedules -->
-          <button id="openSchedules" class="btn ghost" type="button" aria-label="الجداول">
+          <button id="openSchedules" class="dash-tile" type="button" aria-label="الجداول">
             <i class="fas fa-calendar-days dash-icon" aria-hidden="true"></i>
-            <span class="dash-title">الجداول</span>
-            <span class="dash-sub">إدارة الجدول الأسبوعي للحصص</span>
+            <span class="dash-text">
+              <span class="dash-title">الجداول</span>
+              <span class="dash-sub">الجدول الأسبوعي</span>
+            </span>
           </button>
-          <button id="openSchoolSchedule" class="btn ghost" type="button" aria-label="جدول المدرسة">
+          <button id="openSchoolSchedule" class="dash-tile" type="button" aria-label="جدول المدرسة">
             <i class="fas fa-table-cells dash-icon" aria-hidden="true"></i>
-            <span class="dash-title">جدول المدرسة</span>
-            <span class="dash-sub">عرض جدول جميع المعلمين والحصص</span>
+            <span class="dash-text">
+              <span class="dash-title">جدول المدرسة</span>
+              <span class="dash-sub">كل المعلمين والحصص</span>
+            </span>
           </button>
-          <button id="openNotifications" class="btn ghost" type="button" aria-label="الإشعارات">
+          <button id="openNotifications" class="dash-tile wide-sm" type="button" aria-label="الإشعارات">
             <i class="fas fa-bell dash-icon" aria-hidden="true"></i>
-            <span class="dash-title">الإشعارات</span>
-            <span class="dash-sub">إرسال ومتابعة الإشعارات</span>
-          </button>
-          <!-- /NEW -->
-          <div id="telegramSettingsSlot"></div>
-          <button id="logoutBtn" class="btn ghost section-break" type="button" aria-label="تسجيل الخروج">
-            <i class="fas fa-right-from-bracket dash-icon" aria-hidden="true"></i>
-            <span class="dash-title">تسجيل الخروج</span>
+            <span class="dash-text">
+              <span class="dash-title">الإشعارات</span>
+              <span class="dash-sub">إرسال ومتابعة</span>
+            </span>
           </button>
         </div>
 
+        <div class="dash-utility" role="group" aria-label="الحساب">
+          <div id="telegramSettingsSlot"></div>
+          <button id="logoutBtn" class="dash-row danger" type="button" aria-label="تسجيل الخروج">
+            <i class="fas fa-right-from-bracket" aria-hidden="true"></i>
+            <span>تسجيل الخروج</span>
+          </button>
+        </div>
       </section>
 
     </div>
@@ -1505,6 +1681,7 @@
 
     const profileAvatar = document.getElementById('profileAvatar');
     const adminName     = document.getElementById('adminName');
+    const sidebarUser   = document.getElementById('sidebarUser');
     const myClassesSection = document.getElementById('myClassesSection');
     const myClassesButtons = document.getElementById('myClassesButtons');
 
@@ -1522,8 +1699,14 @@
     mountTelegramSettings({
       auth,
       getDisplayName: () => adminName?.textContent || '',
-      extraClass: 'section-break'
+      extraClass: 'dash-row'
     });
+    // The shared module gives its button plain text; add the icon the
+    // home screen's account row uses.
+    {
+      const tgBtn = document.getElementById('telegramSettingsBtn');
+      if(tgBtn) tgBtn.innerHTML = '<i class="fas fa-gear" aria-hidden="true"></i><span>إعدادات المستخدم</span>';
+    }
 
     // NEW: Absence modal refs
     const absenceModal = document.getElementById('absenceModal');
@@ -2141,6 +2324,66 @@
       }
     }
 
+    /* ========= Home: today card ========= */
+    // Greeting + date at the top of الرئيسية, and today's numbers, which
+    // the غياب اليوم sheet reports (onTodayStats) every time it renders
+    // today's grid — after its background preload, on each reopen, after an
+    // attendance save, and every minute while it's mounted.
+    const todayCard = document.getElementById('todayCard');
+    const todayRing = document.getElementById('todayRing');
+    const fmtCount = (n) => toArabicDigits(String(n ?? 0));
+
+    function renderTodayHeader(name){
+      const hour = Number(new Intl.DateTimeFormat('en-GB', { hour:'numeric', hourCycle:'h23', timeZone:'Asia/Kuwait' }).format(new Date()));
+      const greeting = hour < 12 ? 'صباح الخير' : 'مساء الخير';
+      const first = (name || '').toString().trim().split(/\s+/)[0] || '';
+      document.getElementById('todayGreeting').textContent = first ? `${greeting}، ${first}` : greeting;
+      document.getElementById('todayDate').textContent = new Intl.DateTimeFormat('ar-KW', {
+        weekday:'long', day:'numeric', month:'long', timeZone:'Asia/Kuwait'
+      }).format(new Date());
+    }
+
+    function renderTodayStats(st){
+      todayCard.classList.remove('is-loading');
+      document.getElementById('todayError').hidden = true;
+      const rate = st.attendanceRate;
+      const pct = rate == null ? null : Math.round(rate * 100);
+      document.getElementById('todayRate').textContent = pct == null ? '—' : `${toArabicDigits(String(pct))}٪`;
+      todayRing.style.setProperty('--p', pct ?? 0);
+      todayRing.classList.toggle('mid', pct != null && pct < 90 && pct >= 75);
+      todayRing.classList.toggle('low', pct != null && pct < 75);
+
+      const due = st.lessonsTaken + st.lessonsMissed;
+      document.getElementById('todayTaken').textContent = due
+        ? `${fmtCount(st.lessonsTaken)} / ${fmtCount(due)}`
+        : fmtCount(st.lessonsTaken);
+      document.getElementById('todayMissedText').textContent =
+        st.lessonsMissed === 1 ? 'حصة واحدة لم تُسجّل'
+        : st.lessonsMissed === 2 ? 'حصتان لم تُسجّلا'
+        : `${fmtCount(st.lessonsMissed)} ${st.lessonsMissed <= 10 ? 'حصص' : 'حصة'} لم تُسجّل`;
+      document.getElementById('todayMissed').hidden = !st.lessonsMissed;
+      document.getElementById('todayAllGood').hidden = !!st.lessonsMissed || !st.lessonsTaken;
+
+      document.getElementById('statPresent').textContent = fmtCount(st.presentStudents);
+      document.getElementById('statAbsent').textContent = fmtCount(st.absentStudents);
+      document.getElementById('statLate').textContent = fmtCount(st.lateStudents);
+      document.getElementById('statMorning').textContent = fmtCount(st.morningLates);
+    }
+
+    function showTodayStatsError(){
+      if(!todayCard.classList.contains('is-loading')) return; // keep numbers already shown
+      todayCard.classList.remove('is-loading');
+      document.getElementById('todayError').hidden = false;
+    }
+
+    todayCard.addEventListener('click', () => openTodayAbsenceSheet());
+
+    // Coming back to the app later: bring the numbers up to date (the sheet
+    // skips it if its data is under a minute old).
+    document.addEventListener('visibilitychange', () => {
+      if(document.visibilityState === 'visible' && sAdmin.classList.contains('active')) todayAbsenceApi?.refresh();
+    });
+
     /* ========= غياب اليوم sheet ========= */
     // Opened from "الغياب اليوم" in the الغياب popup and from the sidebar's
     // "غياب اليوم". Same #hash pattern as the notifications sheet, so the
@@ -2160,6 +2403,7 @@
         todayAbsenceMount = import('/admins/newabsence.js')
           .then(({ mountTodayAbsenceSheet }) => mountTodayAbsenceSheet(todayAbsenceHost, {
             close: () => closeTodayAbsenceSheet(),
+            onTodayStats: renderTodayStats,
             openSidebar: () => window.adminSidebar?.open(),
             attendance,
             onAttendanceSaved: (fn) => attendanceSavedListeners.add(fn),
@@ -2177,7 +2421,14 @@
     // A failure here is silent — opening it tries again and reports then.
     function preloadTodayAbsence(){
       const idle = window.requestIdleCallback || ((cb) => setTimeout(cb, 200));
-      idle(() => { mountTodayAbsence().catch(() => {}); }, { timeout: 1500 });
+      idle(() => {
+        mountTodayAbsence()
+          // Mounted, but today's grid can still fail to load (the sheet then
+          // shows its own error and reports nothing) — don't leave the home
+          // card shimmering forever. Numbers that arrive later replace it.
+          .then(() => setTimeout(showTodayStatsError, 30000))
+          .catch(() => showTodayStatsError());
+      }, { timeout: 1500 });
     }
 
     function openTodayAbsenceSheet(updateHash = true){
@@ -2507,13 +2758,15 @@
       if(!list.length){ myClassesSection.hidden = true; return; }
       list.forEach(classKey => {
         const btn = document.createElement('button');
-        btn.className = 'btn ghost';
+        btn.className = 'dash-tile';
         btn.type = 'button';
         btn.setAttribute('aria-label', `تسجيل الحضور — ${classKey}`);
         btn.innerHTML = `
           <i class="fas fa-chalkboard dash-icon" aria-hidden="true"></i>
-          <span class="dash-title">${toArabicDigits(classKey)}</span>
-          <span class="dash-sub">تسجيل الحضور لهذا الفصل</span>
+          <span class="dash-text">
+            <span class="dash-title">${toArabicDigits(classKey)}</span>
+            <span class="dash-sub">تسجيل الحضور</span>
+          </span>
         `;
         btn.addEventListener('click', () => attendance.openForClass(classKey));
         myClassesButtons.appendChild(btn);
@@ -2540,6 +2793,8 @@
         }
         currentAdminData = data;
         adminName.textContent = data?.name || (user.email ? user.email.split('@')[0] : 'مشرف');
+        sidebarUser.hidden = false;
+        renderTodayHeader(data?.name);
         avatarUserUid = user.uid;
         loadStoredAvatar(user.uid);
         // Kept raw (and alongside the user/role) for the غياب اليوم sheet,
