@@ -22,9 +22,9 @@ const CSS_URL = new URL("./absence.css", import.meta.url).href;
 const MARKUP = `
   <header class="site-header">
     <div class="header-actions">
-      <button class="icon-btn ghost" id="backBtn" title="رجوع" aria-label="رجوع">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
-          <path d="M15 6l-6 6 6 6"/>
+      <button class="icon-btn ghost" id="menuBtn" title="القائمة" aria-label="فتح القائمة">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
+          <path d="M4 6h16M4 12h16M4 18h16"/>
         </svg>
       </button>
     </div>
@@ -215,7 +215,8 @@ const MARKUP = `
  * Renders the sheet into `host` and starts loading the school overview.
  *
  * hooks:
- *   close()       — back button: close the sheet
+ *   close()       — close the sheet
+ *   openSidebar() — menu button: open adminpage.html's sidebar
  *   getSession()  — { user, data, classList } the page already resolved
  */
 export async function mountDetailedAbsenceSheet(host, hooks) {
@@ -244,7 +245,7 @@ export async function mountDetailedAbsenceSheet(host, hooks) {
   const sNotLog  = sheetDoc.getElementById('stateNotLogged');
   const sDenied  = sheetDoc.getElementById('stateDenied');
   const sHome    = sheetDoc.getElementById('stateHome');
-  const backBtn = sheetDoc.getElementById('backBtn');
+  const menuBtn = sheetDoc.getElementById('menuBtn');
   const refreshView = sheetDoc.getElementById('refreshView');
   const exportData = sheetDoc.getElementById('exportData');
   const exportModal = sheetDoc.getElementById('exportModal');
@@ -284,8 +285,9 @@ export async function mountDetailedAbsenceSheet(host, hooks) {
   const miniAbsent = sheetDoc.getElementById('miniAbsent');
   const miniLate = sheetDoc.getElementById('miniLate');
 
-  // Was a link back to adminpage.html; now it's already the page underneath.
-  backBtn.addEventListener('click', () => hooks.close());
+  // Where the back button used to be: opens adminpage.html's sidebar,
+  // which sits above the sheet and can switch to any other section.
+  menuBtn.addEventListener('click', () => hooks.openSidebar());
 
   // State variables
   let selectedGrade = null;

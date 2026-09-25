@@ -22,8 +22,8 @@ const FONT_AWESOME_URL = "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.
 const MARKUP = `
   <header class="site-header" id="siteHeader">
     <div class="header-inner">
-      <button class="icon-btn" id="backBtn" title="رجوع" aria-label="رجوع">
-        <i class="fas fa-arrow-right"></i>
+      <button class="icon-btn" id="menuBtn" title="القائمة" aria-label="فتح القائمة">
+        <i class="fas fa-bars"></i>
       </button>
 
       <div class="header-center">
@@ -229,7 +229,8 @@ const MARKUP = `
  * Renders the sheet into `host` and starts loading today's grid.
  *
  * hooks:
- *   close()                 — back button / title: close the sheet
+ *   close()                 — title: close the sheet
+ *   openSidebar()           — menu button: open adminpage.html's sidebar
  *   attendance              — the page's single mountAttendanceSheet() instance
  *   onAttendanceSaved(fn)   — subscribe to that instance's saves
  *   getSession()            — { user, data, classList } the page already resolved
@@ -275,7 +276,7 @@ export async function mountTodayAbsenceSheet(host, hooks) {
       const sDenied  = sheetDoc.getElementById('stateDenied');
       const sOk      = sheetDoc.getElementById('stateOk');
 
-      const backBtn = sheetDoc.getElementById('backBtn');
+      const menuBtn = sheetDoc.getElementById('menuBtn');
       const downloadBtn = sheetDoc.getElementById('downloadBtn');
       const gridBody = sheetDoc.getElementById('gridBody');
       const tableScroll = sheetDoc.getElementById('tableScroll');
@@ -2008,8 +2009,10 @@ export async function mountTodayAbsenceSheet(host, hooks) {
         }
       })();
 
-      backBtn.addEventListener('click', () => {
-        hooks.close();
+      // Where the back button used to be: opens adminpage.html's sidebar,
+      // which sits above the sheet and can switch to any other section.
+      menuBtn.addEventListener('click', () => {
+        hooks.openSidebar();
       });
 
       // FIX: Close popover only if click is outside popover (and not inside)

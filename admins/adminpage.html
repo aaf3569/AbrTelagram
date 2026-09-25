@@ -2160,6 +2160,7 @@
         todayAbsenceMount = import('/admins/newabsence.js')
           .then(({ mountTodayAbsenceSheet }) => mountTodayAbsenceSheet(todayAbsenceHost, {
             close: () => closeTodayAbsenceSheet(),
+            openSidebar: () => window.adminSidebar?.open(),
             attendance,
             onAttendanceSaved: (fn) => attendanceSavedListeners.add(fn),
             getSession: () => adminSession,
@@ -2232,6 +2233,7 @@
         detailedAbsenceMount = import('/admins/absence.js')
           .then(({ mountDetailedAbsenceSheet }) => mountDetailedAbsenceSheet(detailedAbsenceHost, {
             close: () => closeDetailedAbsenceSheet(),
+            openSidebar: () => window.adminSidebar?.open(),
             getSession: () => adminSession,
           }))
           .then((api) => { detailedAbsenceApi = api; return api; })
@@ -2290,6 +2292,7 @@
         overallAbsenceMount = import('/admins/overallabsence.js')
           .then(({ mountOverallAbsenceSheet }) => mountOverallAbsenceSheet(overallAbsenceHost, {
             close: () => closeOverallAbsenceSheet(),
+            openSidebar: () => window.adminSidebar?.open(),
             attendance,
             onAttendanceSaved: (fn) => attendanceSavedListeners.add(fn),
             getSession: () => adminSession,
