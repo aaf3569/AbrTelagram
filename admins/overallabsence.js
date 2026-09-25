@@ -17,6 +17,7 @@ import {
 } from "/shared/firebase.js";
 import { kuwaitTodayISO, getCurrentKuwaitMinutes } from "/shared/kuwait-time.js";
 import { fetchClassList, sortClassList } from "/shared/class-registry.js";
+import { canManageAttendance } from "/shared/auth-guard.js";
 
 const CSS_URL = new URL("./overallabsence.css", import.meta.url).href;
 const FONT_AWESOME_URL = "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css";
@@ -1254,7 +1255,7 @@ export async function mountOverallAbsenceSheet(host, hooks) {
                 <div class="meta">متأخر</div>
               `;
               row.addEventListener('click', () => {
-                window.location.href = `students.html?student=${encodeURIComponent(student.id)}&class=${encodeURIComponent(student.className || className)}`;
+                openStudent(student.id, student.className || className, student.name);
               });
               getStudentWarningLevel(student.id).then(w => row.classList.add(`warning-${w}`)).catch(() => row.classList.add('warning-0'));
               latesList.appendChild(row);
@@ -1284,7 +1285,7 @@ export async function mountOverallAbsenceSheet(host, hooks) {
             row.addEventListener('click', () => {
               const studentId = row.dataset.studentId;
               const studentClass = row.dataset.studentClass || "";
-              window.location.href = `students.html?student=${encodeURIComponent(studentId)}&class=${encodeURIComponent(studentClass)}`;
+              openStudent(studentId, studentClass, student.name);
             });
 
             stWrap.appendChild(row);
@@ -1843,7 +1844,7 @@ export async function mountOverallAbsenceSheet(host, hooks) {
       (async () => {
         const { user, data, classList } = hooks.getSession() || {};
         if (!user) { show(sNotLog); return; }
-        if ((data?.role || '').toString().toLowerCase() !== 'admin') { show(sDenied); return; }
+        if (!canManageAttendance(data)) { show(sDenied); return; }
 
         try {
           ALL_CLASSES = sortClassList(classList || await fetchClassList(db));
@@ -1859,6 +1860,16 @@ export async function mountOverallAbsenceSheet(host, hooks) {
       menuBtn.addEventListener('click', () => {
         hooks.openSidebar();
       });
+
+      // adminpage.html opens the student's page (/admins/students.html); a
+      // host where that page isn't available (Teachers/user.html, for a
+      // teacher allowed to manage attendance) passes openStudent to show
+      // its own student profile sheet instead.
+      function openStudent(id, className, name){
+        if (!id) return;
+        if (typeof hooks.openStudent === 'function') { hooks.openStudent(id, { name, className }); return; }
+        window.location.href = `/admins/students.html?student=${encodeURIComponent(id)}&class=${encodeURIComponent(className || '')}`;
+      }
 
       // FIX: Close popover only if click is outside popover (and not inside)
       document.addEventListener('click', (e) => {

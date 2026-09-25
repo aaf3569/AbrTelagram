@@ -39,3 +39,13 @@ export async function getTeacherProfile(db, uid) {
   const snap = await getDoc(doc(db, "teachers", uid));
   return snap.exists() ? (snap.data() || {}) : null;
 }
+
+// The absence sheets (غياب اليوم / الغياب المختصر / تدقيق في الغائب) and
+// تسجيل التأخير الصباحي: admins, plus any teacher an admin granted
+// "إدارة الغياب" in admins/teachers.html (permissions.allowManageAttendance).
+// Strictly `true`, like firestore.rules' matching check, so the page never
+// offers what the rules would then refuse.
+export function canManageAttendance(profile) {
+  return normalizeRole(profile?.role) === "admin"
+    || profile?.permissions?.allowManageAttendance === true;
+}

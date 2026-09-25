@@ -16,6 +16,7 @@ import {
 } from "/shared/firebase.js";
 import { kuwaitTodayISO } from "/shared/kuwait-time.js";
 import { fetchClassList, groupByGrade, sortClassList } from "/shared/class-registry.js";
+import { canManageAttendance } from "/shared/auth-guard.js";
 
 const CSS_URL = new URL("./absence.css", import.meta.url).href;
 
@@ -642,7 +643,7 @@ export async function mountDetailedAbsenceSheet(host, hooks) {
   (async () => {
     const { user, data, classList } = hooks.getSession() || {};
     if (!user) { show(sNotLog); return; }
-    if ((data?.role || '').toString().toLowerCase() !== 'admin') { show(sDenied); return; }
+    if (!canManageAttendance(data)) { show(sDenied); return; }
     try {
       const list = classList || await fetchClassList(db);
       const grouped = groupByGrade(list);

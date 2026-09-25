@@ -77,6 +77,28 @@ service cloud.firestore {
         && d.permissions.allowSupervisorStudents == true;
     }
 
+    // "إدارة الغياب" (admins/teachers.html → صلاحيات المستخدم): lets a
+    // teacher use the absence sheets (غياب اليوم / الغياب المختصر /
+    // تدقيق في الغائب) and تسجيل التأخير الصباحي with the same reach as an
+    // admin — editing any past session, backfilling a missed lesson, and
+    // correcting or deleting morning lates. Mirrors shared/auth-guard.js'
+    // canManageAttendance(); only an admin can set it (teachers/{uid}
+    // update rules below).
+    function hasManageAttendancePermission() {
+      let d = myTeacherDoc();
+      return signedIn()
+        && d != null
+        && ('permissions' in d)
+        && (d.permissions is map)
+        && ('allowManageAttendance' in d.permissions)
+        && (d.permissions.allowManageAttendance is bool)
+        && d.permissions.allowManageAttendance == true;
+    }
+
+    function canManageAttendance() {
+      return isAdmin() || hasManageAttendancePermission();
+    }
+
     function isTeacherOrAdmin() {
       return signedIn() && (
         isAdmin()
@@ -768,7 +790,7 @@ service cloud.firestore {
         && request.resource.data.createdBy == request.auth.uid;
 
       allow update: if
-        isAdmin()
+        canManageAttendance()
         || (
           isTeacherSupervisorOrAdmin()
           && preserveOrInit('class')
@@ -1108,9 +1130,9 @@ service cloud.firestore {
 
     /* ---------- morningLates ---------- */
     match /morningLates/{lateId} {
-      allow read: if isUserOrAdmin();
+      allow read: if isUserOrAdmin() || hasManageAttendancePermission();
 
-      allow create: if isUserOrAdmin()
+      allow create: if (isUserOrAdmin() || hasManageAttendancePermission())
         && (request.resource.data.type is string)
         && isISODate(request.resource.data.date)
         && (request.resource.data.dayName is string)
@@ -1128,7 +1150,7 @@ service cloud.firestore {
           || request.resource.data.createdAt is timestamp
         );
 
-      allow update, delete: if isAdmin();
+      allow update, delete: if canManageAttendance();
     }
 
     /* ---------- siteLogs ---------- */
@@ -1179,12 +1201,13 @@ service cloud.firestore {
 
       // A teacher can only create their own current/today's session
       // (teacherUid must be them, and it must still be within the lesson's
-      // own time window). An admin backfilling a lesson nobody ever took
-      // attendance for is exempt from both — the lesson's real (absent)
+      // own time window). An admin (or a teacher with "إدارة الغياب")
+      // backfilling a lesson nobody ever took attendance for is exempt from
+      // both — the lesson's real (absent)
       // teacher goes in teacherUid instead of the admin's own uid, and the
       // whole point is that the lesson's time window has already passed.
       allow create: if
-        (isAdmin() && newSessionShapeValid() && nonEmptyString(newSessionData().teacherUid))
+        (canManageAttendance() && newSessionShapeValid() && nonEmptyString(newSessionData().teacherUid))
         || (
           isTeacherSupervisorOrAdmin()
           && newSessionData().teacherUid == request.auth.uid
@@ -1215,7 +1238,7 @@ service cloud.firestore {
         );
 
       allow update: if
-        isAdmin()
+        canManageAttendance()
         || (
           isTeacherSupervisorOrAdmin()
           && sessionData().teacherUid == request.auth.uid
@@ -1286,16 +1309,17 @@ service cloud.firestore {
 
         allow create: if
           isTeacherSupervisorOrAdmin()
-          && (canWriteRecord() || canCreateRecordAsDeptColleague() || isAdmin())
+          && (canWriteRecord() || canCreateRecordAsDeptColleague() || canManageAttendance())
           && recordFieldsValid();
 
-        // Admins can correct any student's record on any session (past the
-        // 45-minute self-edit window, or one taken by another teacher) —
-        // e.g. editing a record opened from a student's profile page. The
-        // owning teacher still only gets their own live-session window.
+        // Admins (and teachers with "إدارة الغياب") can correct any
+        // student's record on any session (past the 45-minute self-edit
+        // window, or one taken by another teacher) — e.g. editing a record
+        // opened from a student's profile page. The owning teacher still
+        // only gets their own live-session window.
         allow update: if
           isTeacherSupervisorOrAdmin()
-          && (canWriteRecord() || isAdmin())
+          && (canWriteRecord() || canManageAttendance())
           && recordFieldsValid();
 
         allow delete: if isAdmin();

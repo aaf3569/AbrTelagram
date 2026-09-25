@@ -144,6 +144,29 @@
         </button>
       </div>
 
+      <!-- إدارة الغياب (teachers/{uid}.permissions.allowManageAttendance,
+           granted from admins/teachers.html): the same absence sheets the
+           admin page has, opened in this page, plus تسجيل التأخير الصباحي. -->
+      <div id="sidebarAttendanceGroup" class="sidebar-group" hidden>
+        <div class="sidebar-section-label">الغياب</div>
+        <button id="sidebarMaToday" class="sidebar-link" type="button">
+          <i class="fas fa-calendar-day" aria-hidden="true"></i>
+          <span>غياب اليوم</span>
+        </button>
+        <button id="sidebarMaOverall" class="sidebar-link" type="button">
+          <i class="fas fa-list-check" aria-hidden="true"></i>
+          <span>الغياب المختصر</span>
+        </button>
+        <button id="sidebarMaDetailed" class="sidebar-link" type="button">
+          <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
+          <span>تدقيق في الغائب</span>
+        </button>
+        <button id="sidebarMaMorningLate" class="sidebar-link" type="button">
+          <i class="fas fa-clock" aria-hidden="true"></i>
+          <span>تسجيل التأخير الصباحي</span>
+        </button>
+      </div>
+
       <div class="sidebar-group sidebar-group-bottom">
         <div id="telegramSettingsSlot"></div>
         <button id="sidebarLogout" class="sidebar-link" type="button">
@@ -166,6 +189,14 @@
       </div>
     </div>
   </main>
+
+  <!-- الغياب sheets (إدارة الغياب). /admins/newabsence.js, overallabsence.js
+       and absence.js render into these hosts (each in its own shadow root)
+       the first time they're opened — the very same sheets adminpage.html
+       uses. -->
+  <section id="maTodaySheet" class="sheet" aria-hidden="true"><div id="maTodayHost" class="ma-host"></div></section>
+  <section id="maOverallSheet" class="sheet" aria-hidden="true"><div id="maOverallHost" class="ma-host"></div></section>
+  <section id="maDetailedSheet" class="sheet" aria-hidden="true"><div id="maDetailedHost" class="ma-host"></div></section>
 
   <!-- MORE -->
   <section id="moreSheet" class="sheet" aria-hidden="true">
@@ -929,7 +960,7 @@
     import { mountAttendanceSheet, LESSON_END_GRACE_MINUTES } from "/shared/attendance.js";
     import { mountStudentNotesSheet } from "/shared/student-notes-sheet.js";
     import { parseTimeToMinutes } from "/shared/kuwait-time.js";
-    import { isTruthyFlag } from "/shared/auth-guard.js";
+    import { isTruthyFlag, canManageAttendance } from "/shared/auth-guard.js";
 
 
 
@@ -960,9 +991,13 @@
     // the جدول القسم case; the real authorization is firestore.rules'
     // department-peer branch on attendanceSessions' create rule. Reuses
     // this page's own db/auth rather than re-initializing.
+    // The الغياب sheets (إدارة الغياب, near the bottom) subscribe here so a
+    // save made from them shows up in their grids straight away.
+    const maSavedListeners = new Set();
     const dsAttendance = mountAttendanceSheet({
       db, auth, isPrivilegedEdit: true,
       onSaved: () => {
+        maSavedListeners.forEach((fn) => { try { fn(); } catch (e) { console.error(e); } });
         if (dsPopoverEl.classList.contains('open')) dsClosePopover();
         if (dsSheetEl.classList.contains('open')) loadDeptSchedGridForDate(dsSelectedDate);
         if (mcSheetEl.classList.contains('open') && mcCurrentClass) mcRefreshAttendButtonState(mcCurrentClass);
@@ -1231,6 +1266,7 @@
     const sidebarEditSchedule = document.getElementById('sidebarEditSchedule');
     const sidebarHeadDept = document.getElementById('sidebarHeadDept');
     const sidebarDeptGroup = document.getElementById('sidebarDeptGroup');
+    const sidebarAttendanceGroup = document.getElementById('sidebarAttendanceGroup');
     const sidebarUser = document.getElementById('sidebarUser');
     const sidebarUserAvatar = document.getElementById('sidebarUserAvatar');
     const sidebarUserName = document.getElementById('sidebarUserName');
@@ -5217,6 +5253,9 @@
         [dsSheetEl, () => sidebarDeptSchedule],
         [ssSheetEl, () => sidebarSchoolSchedule],
         [svsSheetEl, () => sidebarSupervisorStudents],
+        [document.getElementById('maTodaySheet'), () => document.getElementById('sidebarMaToday')],
+        [document.getElementById('maOverallSheet'), () => document.getElementById('sidebarMaOverall')],
+        [document.getElementById('maDetailedSheet'), () => document.getElementById('sidebarMaDetailed')],
         [mcSheetEl, () => {
           if (ocSheet.classList.contains('open')) return sidebarOtherClasses;
           return [...sidebarClassesButtons.querySelectorAll('.sidebar-class-btn')]
@@ -6226,6 +6265,115 @@
     svsClose.addEventListener('click', closeSupervisorStudentsSheet);
     sidebarSupervisorStudents.addEventListener('click', () => { closeSidebar(); openSupervisorStudentsSheet(); });
     sidebarMorningLate.addEventListener('click', () => { closeSidebar(); location.href = '/teachers/morning.html'; });
+
+    /* ========= الغياب (إدارة الغياب, ma*) =========
+       For a teacher an admin granted "إدارة الغياب" in admins/teachers.html.
+       These are adminpage.html's own absence sheets, mounted here with this
+       page's db/auth, its single shared attendance sheet (dsAttendance,
+       isPrivilegedEdit — so تعديل and تسجيل الغياب work on any lesson) and
+       its student profile sheet. What they may actually write is decided by
+       firestore.rules' hasManageAttendancePermission(). Same history-entry
+       convention as the ds/ss/svs sheets above; only one of the three is
+       open at a time (switching replaces the history entry instead of
+       stacking another). */
+    const maSheets = {
+      today: {
+        el: document.getElementById('maTodaySheet'), host: document.getElementById('maTodayHost'),
+        link: document.getElementById('sidebarMaToday'), hash: '#today-absence', title: 'غياب اليوم',
+        load: () => import('/admins/newabsence.js').then((m) => m.mountTodayAbsenceSheet),
+      },
+      overall: {
+        el: document.getElementById('maOverallSheet'), host: document.getElementById('maOverallHost'),
+        link: document.getElementById('sidebarMaOverall'), hash: '#overall-absence', title: 'الغياب المختصر',
+        load: () => import('/admins/overallabsence.js').then((m) => m.mountOverallAbsenceSheet),
+      },
+      detailed: {
+        el: document.getElementById('maDetailedSheet'), host: document.getElementById('maDetailedHost'),
+        link: document.getElementById('sidebarMaDetailed'), hash: '#detailed-absence', title: 'تدقيق الغياب',
+        load: () => import('/admins/absence.js').then((m) => m.mountDetailedAbsenceSheet),
+      },
+    };
+
+    // Builds a sheet once; it stays mounted afterwards (keeping its date and
+    // filters) and later opens just slide it back in.
+    function maMount(key){
+      const s = maSheets[key];
+      if (!s.mounting) {
+        s.mounting = s.load()
+          .then((mount) => mount(s.host, {
+            close: () => closeManageAttendanceSheet(key),
+            openSidebar: () => openSidebar(),
+            attendance: dsAttendance,
+            onAttendanceSaved: (fn) => maSavedListeners.add(fn),
+            getSession: () => ({ user: currentUser, data: currentTeacherProfile, classList: CLASS_OPTIONS }),
+            openStudent: (id, info) => studentNotes.open(id, info),
+          }))
+          .then((api) => { s.api = api; return api; })
+          .catch((e) => { s.mounting = null; throw e; });
+      }
+      return s.mounting;
+    }
+
+    const maOpenKey = () => Object.keys(maSheets).find((k) => maSheets[k].el.classList.contains('open')) || null;
+
+    function maHide(key){
+      const el = maSheets[key].el;
+      el.classList.remove('open');
+      if (el.contains(document.activeElement)) document.activeElement.blur();
+      el.setAttribute('aria-hidden', 'true');
+    }
+
+    function openManageAttendanceSheet(key){
+      if (sidebarAttendanceGroup.hidden) return;
+      const s = maSheets[key];
+      const current = maOpenKey();
+      if (current === key) return;
+      if (current) {
+        maHide(current);
+        try { history.replaceState({ maSheet: key }, '', s.hash); } catch {}
+      } else {
+        try { history.pushState({ maSheet: key }, '', s.hash); } catch {}
+      }
+      s.api?.refresh();
+      s.el.classList.add('open');
+      s.el.setAttribute('aria-hidden', 'false');
+      maMount(key).catch(async (e) => {
+        console.error(`[manage-attendance:${key}] failed to load`, e);
+        closeManageAttendanceSheet(key);
+        const retry = await showActionPopup({
+          title: `تعذّر فتح ${s.title}`,
+          message: 'تحقّق من الاتصال وحاول مرة أخرى.',
+          confirmText: 'إعادة المحاولة',
+          cancelText: 'إغلاق',
+          icon: '!'
+        });
+        if (retry) openManageAttendanceSheet(key);
+      });
+    }
+
+    function closeManageAttendanceSheet(key){
+      if (!maSheets[key].el.classList.contains('open')) return;
+      maHide(key);
+      if (history.state?.maSheet) { try { history.back(); } catch {} }
+    }
+
+    function closeAllManageAttendanceSheets(){
+      const current = maOpenKey();
+      if (current) closeManageAttendanceSheet(current);
+    }
+
+    window.addEventListener('popstate', () => {
+      const current = maOpenKey();
+      if (current && history.state?.maSheet !== current) maHide(current);
+    });
+
+    for (const key of Object.keys(maSheets)) {
+      maSheets[key].link.addEventListener('click', () => { closeSidebar(); openManageAttendanceSheet(key); });
+    }
+    document.getElementById('sidebarMaMorningLate').addEventListener('click', () => {
+      closeSidebar();
+      location.href = '/teachers/morning.html';
+    });
     sidebarEditSchedule.addEventListener('click', () => { closeSidebar(); location.href = '/admins/adminschedule.html'; });
     sidebarHeadDept.addEventListener('click', () => { closeSidebar(); location.href = '/dephead/department.html'; });
 
@@ -7019,6 +7167,8 @@
           sidebarMorningLate.hidden = true;
           sidebarEditSchedule.hidden = true;
           sidebarHeadDept.hidden = true;
+          sidebarAttendanceGroup.hidden = true;
+          closeAllManageAttendanceSheets();
           currentUser = null;
           showStatus('الرجاء تسجيل الدخول أولاً.', true);
           updateSidebarUser();
@@ -7038,6 +7188,7 @@
       sidebarMorningLate.hidden = true;
       sidebarEditSchedule.hidden = true;
       sidebarHeadDept.hidden = true;
+      sidebarAttendanceGroup.hidden = true;
       currentUser = user;
       currentRole = '';
       updateSidebarUser();
@@ -7076,14 +7227,21 @@
             const allowSupervisorStudents = isTruthyFlag(currentTeacherProfile?.isSupervisor) || isTruthyFlag(perms.allowSupervisorStudents);
             const allowMorningLate = isTruthyFlag(perms.allowMorningLate);
             const allowEditSchedule = isTruthyFlag(perms.allowEditSchedule);
+            // إدارة الغياب — strictly true, like firestore.rules' check.
+            const allowManageAttendance = canManageAttendance(currentTeacherProfile);
             // Department heads (role: 'head') get their own القسم group —
             // طلبات القسم (btnRequests, shown further below once headUid is
             // set) plus قسمي.
             const isHead = currentRole === 'head';
             sidebarSupervisorStudents.hidden = !allowSupervisorStudents;
-            sidebarMorningLate.hidden = !allowMorningLate;
+            // The الغياب group has its own تسجيل التأخير الصباحي, so the
+            // صلاحيات إضافية one would just be a duplicate.
+            const showMorningLate = allowMorningLate && !allowManageAttendance;
+            sidebarMorningLate.hidden = !showMorningLate;
             sidebarEditSchedule.hidden = !allowEditSchedule;
-            sidebarSupervisorGroup.hidden = !(allowSupervisorStudents || allowMorningLate || allowEditSchedule);
+            sidebarSupervisorGroup.hidden = !(allowSupervisorStudents || showMorningLate || allowEditSchedule);
+            sidebarAttendanceGroup.hidden = !allowManageAttendance;
+            if (!allowManageAttendance) closeAllManageAttendanceSheets();
             sidebarHeadDept.hidden = !isHead;
             sidebarDeptGroup.hidden = !isHead;
 

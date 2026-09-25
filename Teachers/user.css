@@ -698,6 +698,10 @@
       transition: transform 0.3s cubic-bezier(0.22, 0.7, 0.25, 1);
     }
     .sheet.open { transform: translateX(0); }
+    /* الغياب sheets (إدارة الغياب): the host fills the sheet; the sheet's
+       own :host{display:flex} lays out its header and content, which an
+       outside `display` here would override. */
+    .ma-host { flex: 1 1 auto; min-height: 0; }
     .sheet-header {
       background: var(--card-bg); border-bottom: 1px solid var(--border);
       padding: 18px 20px;

@@ -572,6 +572,11 @@
               <div class="checkbox-wrap"><input type="checkbox" id="edTAllowEditSchedule"><label for="edTAllowEditSchedule" class="label" style="margin:0;">السماح بتعديل الجدول</label></div>
               <div class="checkbox-wrap"><input type="checkbox" id="edTAllowMorningLate"><label for="edTAllowMorningLate" class="label" style="margin:0;">تسجيل تأخير الصباح</label></div>
               <div class="checkbox-wrap"><input type="checkbox" id="edTAllowSupervisorStudents"><label for="edTAllowSupervisorStudents" class="label" style="margin:0;">ملفات الطلاب</label></div>
+              <!-- Shows الغياب (غياب اليوم، الغياب المختصر، تدقيق في الغائب،
+                   تسجيل التأخير الصباحي) in the teacher's own sidebar, with the
+                   same reach an admin has — see firestore.rules'
+                   hasManageAttendancePermission(). -->
+              <div class="checkbox-wrap"><input type="checkbox" id="edTAllowManageAttendance"><label for="edTAllowManageAttendance" class="label" style="margin:0;">إدارة الغياب</label></div>
             </div>
           </section>
         </div>
@@ -711,6 +716,7 @@
         <div class="field add-teacher-full"><div class="checkbox-wrap"><input type="checkbox" id="teacherAllowEditSchedule"><label for="teacherAllowEditSchedule" class="label" style="margin:0;">السماح بتعديل الجدول</label></div></div>
         <div class="field add-teacher-full"><div class="checkbox-wrap"><input type="checkbox" id="teacherAllowMorningLate"><label for="teacherAllowMorningLate" class="label" style="margin:0;">تسجيل تأخير الصباح</label></div></div>
         <div class="field add-teacher-full"><div class="checkbox-wrap"><input type="checkbox" id="teacherAllowSupervisorStudents"><label for="teacherAllowSupervisorStudents" class="label" style="margin:0;">ملفات الطلاب</label></div></div>
+        <div class="field add-teacher-full"><div class="checkbox-wrap"><input type="checkbox" id="teacherAllowManageAttendance"><label for="teacherAllowManageAttendance" class="label" style="margin:0;">إدارة الغياب</label></div></div>
         <div class="field add-teacher-full"><label class="label">الفصول (Classes)</label><div id="auClasses" class="classes-list"></div><div class="inline-add"><button id="auAddClass" class="add" type="button">+ إضافة</button></div></div>
       </div>
       <div class="modal-footer"><button id="cancelAddTeacher" class="btn ghost" type="button">إلغاء</button><button id="createTeacherBtn" class="btn primary" type="button">إنشاء الحساب</button></div>
@@ -910,6 +916,7 @@
     const edTAllowEditSchedule=document.getElementById('edTAllowEditSchedule');
     const edTAllowMorningLate=document.getElementById('edTAllowMorningLate');
     const edTAllowSupervisorStudents=document.getElementById('edTAllowSupervisorStudents');
+    const edTAllowManageAttendance=document.getElementById('edTAllowManageAttendance');
     const editTeacherBtn=document.getElementById('editTeacher');
     const cancelTeacherEditBtn=document.getElementById('cancelTeacherEdit');
     const saveTeacher=document.getElementById('saveTeacher');
@@ -953,6 +960,7 @@
     const teacherAllowEditSchedule=document.getElementById('teacherAllowEditSchedule');
     const teacherAllowMorningLate=document.getElementById('teacherAllowMorningLate');
     const teacherAllowSupervisorStudents=document.getElementById('teacherAllowSupervisorStudents');
+    const teacherAllowManageAttendance=document.getElementById('teacherAllowManageAttendance');
     const createTeacherBtn=document.getElementById('createTeacherBtn');
     const auClasses=document.getElementById('auClasses');
     const auAddClass=document.getElementById('auAddClass');
@@ -1423,7 +1431,7 @@
     }
     function normalizePermissions(data){
       const p=(data&&typeof data==='object'&&data.permissions&&typeof data.permissions==='object')?data.permissions:{};
-      return { allowEditSchedule: !!p.allowEditSchedule, allowMorningLate: !!p.allowMorningLate, allowSupervisorStudents: !!p.allowSupervisorStudents };
+      return { allowEditSchedule: !!p.allowEditSchedule, allowMorningLate: !!p.allowMorningLate, allowSupervisorStudents: !!p.allowSupervisorStudents, allowManageAttendance: p.allowManageAttendance === true };
     }
     function renderPermissionsPreview(permissions){
       permissionsView.innerHTML='';
@@ -1432,6 +1440,7 @@
       if(permissions.allowEditSchedule) active.push('السماح بتعديل الجدول');
       if(permissions.allowMorningLate) active.push('تسجيل تأخير الصباح');
       if(permissions.allowSupervisorStudents) active.push('ملفات الطلاب');
+      if(permissions.allowManageAttendance) active.push('إدارة الغياب');
       if(!active.length){
         const empty=document.createElement('div');
         empty.className='perm-empty';
@@ -1625,6 +1634,7 @@
         allowEditSchedule:edTAllowEditSchedule.checked,
         allowMorningLate:edTAllowMorningLate.checked,
         allowSupervisorStudents:edTAllowSupervisorStudents.checked,
+        allowManageAttendance:edTAllowManageAttendance.checked,
         classes:getClassesFrom(edClasses),
       });
     }
@@ -1643,6 +1653,7 @@
       const allowEditSchedule=!!edTAllowEditSchedule.checked;
       const allowMorningLate=!!edTAllowMorningLate.checked;
       const allowSupervisorStudents=!!edTAllowSupervisorStudents.checked;
+      const allowManageAttendance=!!edTAllowManageAttendance.checked;
       profileName.textContent=name;
       profileEmail.textContent=civilId;
       teacherAvatar.textContent=getInitials(name,civilId,currentTeacher?.uid);
@@ -1658,7 +1669,7 @@
       setViewValue(vEdTRole,role==='head'?'رئيس القسم':'مدرس');
       setViewValue(vEdTSpecialization, edTSpecializationField.hidden ? '—' : (edTSpecialization.value||'—'));
       setViewValue(vEdTSpecialization2, edTSpecialization2Field.hidden ? '—' : (edTSpecialization2.value||'—'));
-      renderPermissionsPreview({ isSupervisor, supervisorGrade, allowEditSchedule, allowMorningLate, allowSupervisorStudents });
+      renderPermissionsPreview({ isSupervisor, supervisorGrade, allowEditSchedule, allowMorningLate, allowSupervisorStudents, allowManageAttendance });
       renderClassesPreview(getClassesFrom(edClasses));
       updateSupervisorCheckboxLabels();
       if(teacherEditMode) saveTeacher.hidden=!isEditFormDirty();
@@ -1667,7 +1678,7 @@
       teacherEditMode=!!isEdit;
       teacherProfileShell.classList.toggle('teacher-readonly', !teacherEditMode);
       teacherProfileShell.classList.toggle('teacher-editing', teacherEditMode);
-      [edTName,edTEmail,edTPhone,edTTeams,edTDisplayedPassword,edTRole,edTSpecialization,edTSpecialization2,edTIsSupervisor,edTAllowEditSchedule,edTAllowMorningLate,edTAllowSupervisorStudents].forEach(el=>el.disabled=!teacherEditMode);
+      [edTName,edTEmail,edTPhone,edTTeams,edTDisplayedPassword,edTRole,edTSpecialization,edTSpecialization2,edTIsSupervisor,edTAllowEditSchedule,edTAllowMorningLate,edTAllowSupervisorStudents,edTAllowManageAttendance].forEach(el=>el.disabled=!teacherEditMode);
       toggleDisplayedPasswordBtn.disabled=!teacherEditMode;
       if(!teacherEditMode) setDisplayedPasswordVisibility(false);
       classesEditorWrap.hidden=!teacherEditMode;
@@ -1984,6 +1995,7 @@
       edTAllowEditSchedule.checked=!!normalizePermissions(d).allowEditSchedule;
       edTAllowMorningLate.checked=!!normalizePermissions(d).allowMorningLate;
       edTAllowSupervisorStudents.checked=!!normalizePermissions(d).allowSupervisorStudents;
+      edTAllowManageAttendance.checked=!!normalizePermissions(d).allowManageAttendance;
       edClasses.innerHTML='';
       const cls=Array.isArray(d.classes)?d.classes:[];
       if(!cls.length) edClasses.appendChild(makeClassRow(""));
@@ -2017,7 +2029,7 @@
       }
     });
     edAddClass.addEventListener('click',()=>{edClasses.appendChild(makeClassRow(""));updateProfileSummary();});
-    [edTName,edTEmail,edTPhone,edTTeams,edTDisplayedPassword,edTRole,edTSpecialization,edTSpecialization2,edTAllowEditSchedule,edTAllowMorningLate,edTAllowSupervisorStudents].forEach(el=>{
+    [edTName,edTEmail,edTPhone,edTTeams,edTDisplayedPassword,edTRole,edTSpecialization,edTSpecialization2,edTAllowEditSchedule,edTAllowMorningLate,edTAllowSupervisorStudents,edTAllowManageAttendance].forEach(el=>{
       const ev=el.tagName==='SELECT'||el.type==='checkbox'?'change':'input';
       el.addEventListener(ev, updateProfileSummary);
     });
@@ -2045,6 +2057,7 @@
       teacherAllowEditSchedule.checked=false;
       teacherAllowMorningLate.checked=false;
       teacherAllowSupervisorStudents.checked=false;
+      teacherAllowManageAttendance.checked=false;
       auClasses.innerHTML='';
       auClasses.appendChild(makeClassRow(""));
       syncAddTeacherSpecializationField();
@@ -2155,6 +2168,7 @@
         edTAllowEditSchedule.checked=!!normalizePermissions(d).allowEditSchedule;
         edTAllowMorningLate.checked=!!normalizePermissions(d).allowMorningLate;
         edTAllowSupervisorStudents.checked=!!normalizePermissions(d).allowSupervisorStudents;
+        edTAllowManageAttendance.checked=!!normalizePermissions(d).allowManageAttendance;
         edClasses.innerHTML='';const cls=Array.isArray(d.classes)?d.classes:[];if(!cls.length)edClasses.appendChild(makeClassRow(""));else cls.forEach(v=>edClasses.appendChild(makeClassRow(v)));
         setTeacherEditMode(false);
         updateProfileSummary();
@@ -2193,7 +2207,7 @@
         // including the French elective for French teachers.
         const subject2ToSave=(!edTSpecialization2Field.hidden && edTSpecialization2.value) ? edTSpecialization2.value : '';
         const prevPermissions=(currentTeacher?.data?.permissions&&typeof currentTeacher.data.permissions==='object')?currentTeacher.data.permissions:{};
-        const permissions={...prevPermissions,allowEditSchedule:!!edTAllowEditSchedule.checked,allowMorningLate:!!edTAllowMorningLate.checked,allowSupervisorStudents:!!edTAllowSupervisorStudents.checked};
+        const permissions={...prevPermissions,allowEditSchedule:!!edTAllowEditSchedule.checked,allowMorningLate:!!edTAllowMorningLate.checked,allowSupervisorStudents:!!edTAllowSupervisorStudents.checked,allowManageAttendance:!!edTAllowManageAttendance.checked};
         if(!name) throw new Error('أدخل الاسم.');
         if(!civilId) throw new Error('أدخل رقم البطاقة بالأرقام فقط.');
         if(!emailRx.test(email)) throw new Error('تعذّر توليد البريد الإلكتروني من رقم البطاقة.');
@@ -2339,7 +2353,7 @@
         const displayedPassword=teacherDisplayedPassword.value||password;
         const role=teacherRole.value, isSupervisor=teacherIsSupervisor.checked, classes=getClassesFrom(auClasses);
         const supervisorGrade=isSupervisor ? normalizeSupervisorGrade(addSupervisorGrade) : '';
-        const permissions={allowEditSchedule:!!teacherAllowEditSchedule.checked,allowMorningLate:!!teacherAllowMorningLate.checked,allowSupervisorStudents:!!teacherAllowSupervisorStudents.checked};
+        const permissions={allowEditSchedule:!!teacherAllowEditSchedule.checked,allowMorningLate:!!teacherAllowMorningLate.checked,allowSupervisorStudents:!!teacherAllowSupervisorStudents.checked,allowManageAttendance:!!teacherAllowManageAttendance.checked};
         const selectedSpecialization=(teacherSpecialization.value||'').trim();
         // The French elective is an optional second subject, never the
         // teacher's primary French specialization.
