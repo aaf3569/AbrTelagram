@@ -133,8 +133,7 @@
 
     /* ===== Sidebar =====
        Ported as-is from the Admin/admin.html sidebar design (same commit
-       that page's phone dashboard came from). Design/markup only — the
-       buttons inside don't wire up to anything yet, just open/close. */
+       that page's phone dashboard came from). */
     .header-toggle-btn{
       position:absolute; right:14px; top:50%; transform:translateY(-50%);
       width:42px; height:42px; flex-shrink:0; border-radius:12px;
@@ -821,10 +820,9 @@
       .site-title{ font-size:1.35rem; }
       /* Stays visible on desktop too (unlike Admin/admin.html's copy of
          this sidebar, which hides it there since its desktop dashboard
-         already lists every action in a grid) — this page's sidebar
-         buttons aren't wired to anything yet, so this is the only way in
-         to it until they are. Sits further from the edge to match the
-         wider desktop header padding. */
+         already lists every action in a grid) — here it's also the way
+         between the absence sheets. Sits further from the edge to match
+         the wider desktop header padding. */
       .header-toggle-btn{ right:24px; }
 
       main{ padding:56px 40px 72px; align-items:flex-start; }
@@ -929,10 +927,9 @@
   </header>
 
   <!-- ===== Sidebar =====
-       Ported as-is from the Admin/admin.html sidebar (design/markup only —
-       see the matching CSS comment above). The buttons below don't do
-       anything yet beyond opening/closing the sidebar itself; wiring them
-       to actual actions is a separate pass. -->
+       Ported from the Admin/admin.html sidebar. The links are wired up in
+       the page's module script (next to the home screen buttons they
+       mirror); this inline script only opens and closes it. -->
   <div id="sidebarBackdrop" class="sidebar-backdrop"></div>
   <aside id="sidebar" class="sidebar" aria-hidden="true">
     <div class="sidebar-head">
@@ -1023,9 +1020,8 @@
   </aside>
 
   <script>
-    // Sidebar open/close only — the buttons above aren't wired to any
-    // action yet (that's a separate pass); this just makes the ported
-    // design usable.
+    // Sidebar open/close only — the links inside are wired up in the
+    // module script below.
     (function(){
       var toggleBtn = document.getElementById('btnSidebarToggle');
       var sidebar = document.getElementById('sidebar');
@@ -2309,6 +2305,7 @@
 
     async function openNotificationsPanel(updateHash = true){
       openSheet(notificationsSheet);
+      window.adminSidebar?.setCurrent('sidebarNotifications');
       if(updateHash && window.location.hash !== NOTIFICATIONS_HASH){
         window.location.hash = 'notifications';
       }
@@ -2319,6 +2316,7 @@
     }
     function closeNotificationsPanel(clearHashOnClose = true){
       closeSheet(notificationsSheet);
+      window.adminSidebar?.setCurrent('sidebarHome');
       if(clearHashOnClose && window.location.hash === NOTIFICATIONS_HASH){
         clearHash();
       }
@@ -2594,8 +2592,8 @@
 
     // Sidebar: "غياب اليوم" / "الغياب المختصر" / "تدقيق في الغائب" open
     // their sheets; "الرئيسية" brings you back out of any of them (otherwise
-    // it'd be a dead button while a sheet is showing). The sidebar's other
-    // buttons aren't wired up yet.
+    // it'd be a dead button while a sheet is showing). The rest of the
+    // sidebar's links are wired up next to the home screen buttons below.
     document.getElementById('sidebarTodayAbsence').addEventListener('click', ()=>{
       window.adminSidebar?.close();
       openTodayAbsenceSheet();
@@ -2613,6 +2611,7 @@
       if(todayAbsenceSheet.classList.contains('open')) closeTodayAbsenceSheet();
       if(overallAbsenceSheet.classList.contains('open')) closeOverallAbsenceSheet();
       if(detailedAbsenceSheet.classList.contains('open')) closeDetailedAbsenceSheet();
+      if(notificationsSheet.classList.contains('open')) closeNotificationsPanel();
     });
 
     // Modal functions
@@ -2865,6 +2864,29 @@
     });
     openNotifications.addEventListener('click', ()=> openNotificationsPanel(true));
     closeNotifications.addEventListener('click', ()=> closeNotificationsPanel(true));
+
+    // Sidebar: the rest of its links do exactly what the matching home
+    // screen buttons do — the pages open in place of this one, and
+    // الإشعارات opens its sheet (after closing any absence sheet, which
+    // would otherwise sit on top of it).
+    const sidebarLinks = {
+      sidebarMorningLate: () => morningLateBtn.click(),
+      sidebarTeachers: () => openTeachers.click(),
+      sidebarStudents: () => openClasses.click(),
+      sidebarSchedules: () => openSchedules.click(),
+      sidebarSchoolSchedule: () => openSchoolSchedule.click(),
+      sidebarNotifications: () => {
+        closeOtherAbsenceSheets(null);
+        openNotificationsPanel(true);
+      },
+      sidebarLogout: () => logoutBtn.click(),
+    };
+    for (const [id, action] of Object.entries(sidebarLinks)) {
+      document.getElementById(id).addEventListener('click', () => {
+        window.adminSidebar?.close();
+        action();
+      });
+    }
 
     // ===== Notification Admin Form =====
     const openNotifFormBtn    = document.getElementById('openNotifForm');
