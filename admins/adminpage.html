@@ -24,8 +24,9 @@
 <!-- The غياب اليوم sheet is import()ed on first open; this fetches and parses
      it during page load (without running it) so that first open is quick. -->
 <link rel="modulepreload" href="/admins/newabsence.js">
-<!-- Same for the تدقيق في الغائب sheet. -->
+<!-- Same for the تدقيق في الغائب and الغياب المختصر sheets. -->
 <link rel="modulepreload" href="/admins/absence.js">
+<link rel="modulepreload" href="/admins/overallabsence.js">
   <title>لوحة الإدارة - ثانوية أحمد البشر الرومي</title>
 
   <!-- Tajawal -->
@@ -244,10 +245,13 @@
     #todayAbsenceHost{ flex:1 1 auto; min-height:0; }
     /* Same for تدقيق في الغائب (/admins/absence.js, #detailedAbsenceHost). */
     #detailedAbsenceHost{ flex:1 1 auto; min-height:0; }
+    /* And الغياب المختصر (/admins/overallabsence.js, #overallAbsenceHost). */
+    #overallAbsenceHost{ flex:1 1 auto; min-height:0; }
 
-    /* Scroll locks toggled on the real <body> by the غياب اليوم sheet's own
-       popups (modal-open) and by the shared attendance sheet (no-scroll) —
-       newabsence.html used to define these itself. */
+    /* Scroll locks toggled on the real <body> by the غياب اليوم and
+       الغياب المختصر sheets' own popups (modal-open) and by the shared
+       attendance sheet (no-scroll) — newabsence.html and overallabsence.html
+       used to define these themselves. */
     body.modal-open{ overflow:hidden; position:fixed; width:100%; }
     html.no-scroll, body.no-scroll{ position:fixed; overflow:hidden; width:100%; inset:0; overscroll-behavior:none; }
     .sheet-header{ background:#ffffff; border-bottom:1px solid var(--border); padding:14px 12px; display:flex; align-items:center; gap:10px; position:sticky; top:0; z-index:10 }
@@ -1407,6 +1411,14 @@
     <div id="detailedAbsenceHost"></div>
   </section>
 
+  <!-- الغياب المختصر — what used to be admins/overallabsence.html, now a
+       sheet on this page. /admins/overallabsence.js renders it (header, date
+       picker, class-by-lesson table and all) into #overallAbsenceHost the
+       first time it's opened. -->
+  <section id="overallAbsenceSheet" class="sheet" aria-hidden="true">
+    <div id="overallAbsenceHost"></div>
+  </section>
+
   <script type="module">
     import { firebaseConfig } from "/shared/firebase.js";
     /* ========= Firebase ========= */
@@ -2172,8 +2184,7 @@
       // what it has immediately and quietly swaps in fresh data a moment
       // later, without a loading state. Still loading: its own loading
       // state is showing, and that load is fresh anyway.
-      // Only one of the two absence sheets is ever showing.
-      if(detailedAbsenceSheet.classList.contains('open')) closeDetailedAbsenceSheet(false);
+      closeOtherAbsenceSheets(todayAbsenceSheet);
       todayAbsenceApi?.refresh();
       openSheet(todayAbsenceSheet);
       window.adminSidebar?.setCurrent('sidebarTodayAbsence');
@@ -2230,8 +2241,7 @@
     }
 
     function openDetailedAbsenceSheet(updateHash = true){
-      // Only one of the two absence sheets is ever showing.
-      if(todayAbsenceSheet.classList.contains('open')) closeTodayAbsenceSheet(false);
+      closeOtherAbsenceSheets(detailedAbsenceSheet);
       detailedAbsenceApi?.refresh();
       openSheet(detailedAbsenceSheet);
       window.adminSidebar?.setCurrent('sidebarDetailedAbsence');
@@ -2260,13 +2270,85 @@
       }
     }
 
-    // Sidebar: "غياب اليوم" / "تدقيق في الغائب" open their sheets;
-    // "الرئيسية" brings you back out of either (otherwise it'd be a dead
-    // button while a sheet is showing). The sidebar's other buttons aren't
-    // wired up yet.
+    /* ========= الغياب المختصر sheet ========= */
+    // Opened from "الغياب المختصر" in the الغياب popup and from the
+    // sidebar's "الغياب المختصر". Same #hash pattern as غياب اليوم above.
+    // Not preloaded: it reads the same day's data غياب اليوم already
+    // preloads, so fetching it on the chance it gets opened would read
+    // everything twice. The module itself is modulepreload-ed, though.
+    const OVERALL_ABSENCE_HASH = '#overall-absence';
+    const overallAbsenceSheet = document.getElementById('overallAbsenceSheet');
+    const overallAbsenceHost = document.getElementById('overallAbsenceHost');
+    let overallAbsenceMount = null;
+    let overallAbsenceApi = null; // { refresh } once mounted
+
+    // Builds the sheet and loads today's grid — once. It stays mounted
+    // afterwards (keeping its selected date), and later opens just slide it
+    // back in.
+    function mountOverallAbsence(){
+      if(!overallAbsenceMount){
+        overallAbsenceMount = import('/admins/overallabsence.js')
+          .then(({ mountOverallAbsenceSheet }) => mountOverallAbsenceSheet(overallAbsenceHost, {
+            close: () => closeOverallAbsenceSheet(),
+            attendance,
+            onAttendanceSaved: (fn) => attendanceSavedListeners.add(fn),
+            getSession: () => adminSession,
+          }))
+          .then((api) => { overallAbsenceApi = api; return api; })
+          .catch((e) => { overallAbsenceMount = null; throw e; });
+      }
+      return overallAbsenceMount;
+    }
+
+    function openOverallAbsenceSheet(updateHash = true){
+      closeOtherAbsenceSheets(overallAbsenceSheet);
+      overallAbsenceApi?.refresh();
+      openSheet(overallAbsenceSheet);
+      window.adminSidebar?.setCurrent('sidebarOverallAbsence');
+      if(updateHash && window.location.hash !== OVERALL_ABSENCE_HASH){
+        window.location.hash = 'overall-absence';
+      }
+      mountOverallAbsence().catch(async (e) => {
+        console.error('[overall-absence] failed to load', e);
+        closeOverallAbsenceSheet();
+        const retry = await showActionPopup({
+          variant: 'danger',
+          title: 'تعذّر فتح الغياب المختصر',
+          message: 'تحقّق من الاتصال وحاول مرة أخرى.',
+          confirmText: 'إعادة المحاولة',
+          cancelText: 'إغلاق',
+          icon: '!'
+        });
+        if(retry) openOverallAbsenceSheet();
+      });
+    }
+    function closeOverallAbsenceSheet(clearHashOnClose = true){
+      closeSheet(overallAbsenceSheet);
+      window.adminSidebar?.setCurrent('sidebarHome');
+      if(clearHashOnClose && window.location.hash === OVERALL_ABSENCE_HASH){
+        clearHash();
+      }
+    }
+
+    // Only one of the absence sheets is ever showing: opening one closes
+    // whichever other is open (leaving the hash to the one being opened).
+    function closeOtherAbsenceSheets(keep){
+      if(keep !== todayAbsenceSheet && todayAbsenceSheet.classList.contains('open')) closeTodayAbsenceSheet(false);
+      if(keep !== detailedAbsenceSheet && detailedAbsenceSheet.classList.contains('open')) closeDetailedAbsenceSheet(false);
+      if(keep !== overallAbsenceSheet && overallAbsenceSheet.classList.contains('open')) closeOverallAbsenceSheet(false);
+    }
+
+    // Sidebar: "غياب اليوم" / "الغياب المختصر" / "تدقيق في الغائب" open
+    // their sheets; "الرئيسية" brings you back out of any of them (otherwise
+    // it'd be a dead button while a sheet is showing). The sidebar's other
+    // buttons aren't wired up yet.
     document.getElementById('sidebarTodayAbsence').addEventListener('click', ()=>{
       window.adminSidebar?.close();
       openTodayAbsenceSheet();
+    });
+    document.getElementById('sidebarOverallAbsence').addEventListener('click', ()=>{
+      window.adminSidebar?.close();
+      openOverallAbsenceSheet();
     });
     document.getElementById('sidebarDetailedAbsence').addEventListener('click', ()=>{
       window.adminSidebar?.close();
@@ -2275,6 +2357,7 @@
     document.getElementById('sidebarHome').addEventListener('click', ()=>{
       window.adminSidebar?.close();
       if(todayAbsenceSheet.classList.contains('open')) closeTodayAbsenceSheet();
+      if(overallAbsenceSheet.classList.contains('open')) closeOverallAbsenceSheet();
       if(detailedAbsenceSheet.classList.contains('open')) closeDetailedAbsenceSheet();
     });
 
@@ -2472,6 +2555,7 @@
         if(window.location.hash === TODAY_ABSENCE_HASH) openTodayAbsenceSheet(false);
         else preloadTodayAbsence();
         if(window.location.hash === DETAILED_ABSENCE_HASH) openDetailedAbsenceSheet(false);
+        if(window.location.hash === OVERALL_ABSENCE_HASH) openOverallAbsenceSheet(false);
       }catch(e){ console.error(e); show(sDenied); }
     });
 
@@ -2496,8 +2580,9 @@
       openTodayAbsenceSheet();
     });
 
-    overallAbsenceBtn.addEventListener('click', ()=>{ 
-      window.location.href = '/admins/overallabsence.html';
+    overallAbsenceBtn.addEventListener('click', ()=>{
+      closeModal(absenceModal);
+      openOverallAbsenceSheet();
     });
     
     detailedAbsenceBtn.addEventListener('click', ()=>{
@@ -2903,6 +2988,14 @@
       if(detailedAbsenceSheet.classList.contains('open')){
         closeDetailedAbsenceSheet(false);
       }
+      // And الغياب المختصر.
+      if(window.location.hash === OVERALL_ABSENCE_HASH){
+        if(sAdmin.classList.contains('active')) openOverallAbsenceSheet(false);
+        return;
+      }
+      if(overallAbsenceSheet.classList.contains('open')){
+        closeOverallAbsenceSheet(false);
+      }
     });
 
     // إدارة المشرفين
@@ -2915,7 +3008,7 @@
 
     document.addEventListener('keydown', (e)=>{
       if(e.key==='Escape'){
-        // todayAbsenceSheet and detailedAbsenceSheet are left out on purpose:
+        // The absence sheets (today/overall/detailed) are left out on purpose:
         // inside them, Escape already closes their own popovers/modals/inner
         // sheets, and this listener would otherwise close the whole sheet
         // out from under them.
