@@ -483,7 +483,7 @@
       collection, query, where, getDocs,
       doc, getDoc, setDoc, updateDoc, deleteField, serverTimestamp, writeBatch
     } from "/shared/firebase.js";
-    import { watchPresence } from "/shared/presence.js";
+    import { watchPresence, startPresenceHeartbeat } from "/shared/presence.js";
     import { fetchClassList, sortClassList, primeClassList } from "/shared/class-registry.js";
     import { resolveDepartmentName, getMergedSubjectsForDepartment, getDepartmentSubjectFilters } from "/shared/departments.js";
 
@@ -1245,6 +1245,7 @@
 
       try{
         await loadHeadProfileAndCheck(user);
+        startPresenceHeartbeat(db, user.uid);
         classOptions = sortClassList(await fetchClassList(db));
         await loadTeachers();
       }catch(e){

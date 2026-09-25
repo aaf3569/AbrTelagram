@@ -16,6 +16,7 @@
 <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js" crossorigin>
 <link rel="modulepreload" href="/shared/class-registry.js">
 <link rel="modulepreload" href="/shared/firebase.js">
+<link rel="modulepreload" href="/shared/presence.js">
 <link rel="modulepreload" href="/shared/schedule-priority.js">
   <title>جدول المعلّم - ثانوية أحمد البشر الرومي</title>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@400;500;600;700;800;900&family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet"/>
@@ -961,6 +962,7 @@
     import { mountStudentNotesSheet } from "/shared/student-notes-sheet.js";
     import { parseTimeToMinutes } from "/shared/kuwait-time.js";
     import { isTruthyFlag, canManageAttendance } from "/shared/auth-guard.js";
+    import { startPresenceHeartbeat, stopPresenceHeartbeat } from "/shared/presence.js";
 
 
 
@@ -7169,6 +7171,7 @@
           sidebarHeadDept.hidden = true;
           sidebarAttendanceGroup.hidden = true;
           closeAllManageAttendanceSheets();
+          stopPresenceHeartbeat();
           currentUser = null;
           showStatus('الرجاء تسجيل الدخول أولاً.', true);
           updateSidebarUser();
@@ -7190,6 +7193,10 @@
       sidebarHeadDept.hidden = true;
       sidebarAttendanceGroup.hidden = true;
       currentUser = user;
+      // آخر ظهور in admins/teachers.html (and depHead/department.html)
+      // reads presence/{uid}; this is the page teachers actually live on,
+      // so it's the one that has to keep it fresh.
+      startPresenceHeartbeat(db, user.uid);
       currentRole = '';
       updateSidebarUser();
 

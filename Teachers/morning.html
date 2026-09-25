@@ -16,6 +16,7 @@
 <link rel="modulepreload" href="/shared/auth-guard.js">
 <link rel="modulepreload" href="/shared/class-registry.js">
 <link rel="modulepreload" href="/shared/firebase.js">
+<link rel="modulepreload" href="/shared/presence.js">
   <title>تسجيل المتأخرين | طابور الصباح</title>
 
   <link href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
@@ -482,6 +483,7 @@
     import { initializeApp, getApp, getApps } from "/shared/firebase.js";
     import { getAuth, onAuthStateChanged } from "/shared/firebase.js";
     import { fetchClassList, primeClassList } from "/shared/class-registry.js";
+    import { startPresenceHeartbeat } from "/shared/presence.js";
     import {
       initializeFirestore,
       persistentSingleTabManager,
@@ -686,6 +688,8 @@
           return;
         }
         currentUserData = snap.data() || {};
+        // Keeps آخر ظهور (admins/teachers.html) current while here too.
+        startPresenceHeartbeat(db, user.uid);
         const role = String(currentUserData.role || "").toLowerCase();
         const allowMorningLate = currentUserData?.permissions?.allowMorningLate === true;
         // "إدارة الغياب" includes تسجيل التأخير الصباحي too.
