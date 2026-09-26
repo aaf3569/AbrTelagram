@@ -352,17 +352,6 @@
     .gcell:hover { background: #f7fafc; }
     .gcell.empty { color: rgba(100, 116, 139, 0.38); font-weight: 400; }
     .gcell.clickable { cursor: pointer; }
-    /* Two (or more) classes in the same period — one chip per class, each
-       opening its own lesson actions. */
-    .gcell.multi-class { gap: 4px; align-content: center; padding: 8px 6px; }
-    .week-class-chip {
-      display: block; width: 100%; padding: 4px 6px; border-radius: 8px;
-      border: 1px solid rgba(4, 69, 99, .22); background: rgba(255, 255, 255, .72);
-      color: inherit; font: inherit; font-weight: 800; line-height: 1.3; cursor: pointer;
-      overflow-wrap: anywhere;
-    }
-    button.week-class-chip:hover { background: #fff; border-color: rgba(4, 69, 99, .4); }
-    button.week-class-chip:focus-visible { outline: 2px solid #79b3c8; outline-offset: 1px; }
     /* Day column: sticky, so the day stays readable while the week is
        scrolled sideways on a phone. Needs an opaque fill to sit over the
        cells passing beneath it. */
@@ -1239,8 +1228,6 @@
         font-size: .68rem; line-height: 1.25; overflow-wrap: anywhere;
       }
       .week-fit .gcell.lesson-highlight { font-weight: 800; }
-      .week-fit .gcell.multi-class { padding: 4px 1px; gap: 2px; }
-      .week-fit .week-class-chip { padding: 2px 1px; border-radius: 6px; font-size: .62rem; }
       .week-fit .day-col { position: static; box-shadow: none; padding: 6px 1px; }
       .week-fit .day-col > div:first-child { font-size: .62rem; }
       .week-fit .day-col .small { display: none; }
