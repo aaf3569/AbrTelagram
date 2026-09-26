@@ -2240,10 +2240,16 @@
       const snapshots = await Promise.all(uids.map(id => getDocs(query(
         collection(db,'schedules'), where('teacherUid','==', id)
       ))));
-      return snapshots.flatMap(snap => snap.docs).filter(d => {
+      const all = snapshots.flatMap(snap => snap.docs);
+      const valid = all.filter(d => {
         const day = d.data().dayIndex;
         return day !== null && day !== '' && Number.isInteger(Number(day)) && Number(day) >= 0 && Number(day) <= 4;
       });
+      // For جدولي الأسبوعي's console diagnostics: what Firestore returned
+      // but this filter threw away (no/invalid weekday).
+      valid.debugDropped = all.filter(d => !valid.includes(d));
+      valid.debugUids = uids;
+      return valid;
     }
 
     async function fetchWeekDocsForClass(grade, section, track){
@@ -2510,6 +2516,24 @@
         const t = row?.updatedAt || row?.createdAt;
         return (t && typeof t.toMillis === 'function') ? t.toMillis() : 0;
       };
+      // ---- Console diagnostics (جدولي الأسبوعي): one row per schedules doc
+      // Firestore returned, with what happened to it. Logging only — the
+      // grid is built exactly as before.
+      const DAY_NAMES = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس'];
+      const fmtTs = (t) => (t && typeof t.toDate === 'function') ? t.toDate().toISOString().replace('T', ' ').slice(0, 19) : '';
+      const debugRows = [];
+      const debugBySlot = new Map(); // slotKey -> debug row currently shown there
+      const debugRowFor = (d, x, result) => {
+        const row = {
+          docId: d.id || '', teacherUid: x.teacherUid || '', dayIndex: x.dayIndex,
+          day: (x.dayIndex === '' || x.dayIndex == null) ? '?' : (DAY_NAMES[Number(x.dayIndex)] || '?'), lesson: x.lesson,
+          classKey: x.classKey || `${x.grade ?? ''} / ${x.section ?? ''}${x.track ? ' ' + x.track : ''}`,
+          subject: x.subject || '', updatedAt: fmtTs(x.updatedAt), createdAt: fmtTs(x.createdAt), result
+        };
+        debugRows.push(row);
+        return row;
+      };
+      (snap.debugDropped || []).forEach(d => debugRowFor(d, d.data(), 'ignored: dayIndex missing or not 0-4 (Sun-Thu)'));
       snap.forEach(d => {
         const x = d.data();
         // Standing schedule entries recur by weekday — resolve to *this* week's
@@ -2517,12 +2541,18 @@
         // the entry happens to have last been saved with.
         const dayIdx = Number(x.dayIndex);
         const iso = weekDates[dayIdx];
-        if (iso === undefined) return;
-        if (isClassOverriddenForToday(x, overriddenClassKeysByDay[dayIdx] || new Set())) return;
+        if (iso === undefined) { debugRowFor(d, x, 'ignored: dayIndex not in this week'); return; }
+        if (isClassOverriddenForToday(x, overriddenClassKeysByDay[dayIdx] || new Set())) {
+          debugRowFor(d, x, 'hidden: this class runs a custom (special) schedule that day');
+          return;
+        }
         if (!map.has(iso)) map.set(iso, new Map());
         const lessonNum = Number(x.lesson);
         const slotKey = `${iso}|${lessonNum}`;
         const ms = scheduleRowMsForWeek(x);
+        const dbg = debugRowFor(d, x, '');
+        if (!Number.isInteger(lessonNum) || lessonNum < 1) dbg.result = `not shown: lesson "${x.lesson}" is not a valid period number`;
+        else if (lessonNum > FIXED_LESSON_COUNT) dbg.result = `not shown: lesson ${lessonNum} is beyond the ${FIXED_LESSON_COUNT} periods in the grid`;
         if (weekSlotMs.has(slotKey)) {
           console.warn(
             `[teacherschedule] two schedules docs both claim lesson ${lessonNum} on ${iso} for this teacher — `
@@ -2530,12 +2560,20 @@
             { classKey: map.get(iso).get(lessonNum), ms: weekSlotMs.get(slotKey) },
             { classKey: x.classKey, ms }
           );
-          if (weekSlotMs.get(slotKey) > ms) return;
+          const other = debugBySlot.get(slotKey);
+          if (weekSlotMs.get(slotKey) > ms) {
+            dbg.result = `DROPPED: same period as ${other?.classKey || '?'} (doc ${other?.docId || '?'}), which is newer`;
+            return;
+          }
+          if (other) other.result = `DROPPED: same period as ${dbg.classKey} (doc ${dbg.docId}), which is newer`;
         }
         weekSlotMs.set(slotKey, ms);
         const classText = x.classKey || `${x.grade} / ${x.section}${x.track ? ' '+x.track : ''}`;
         map.get(iso).set(lessonNum, classText);
+        if (!dbg.result) dbg.result = 'shown';
+        debugBySlot.set(slotKey, dbg);
       });
+      const debugOverrides = [];
 
       const mapByDate = cache.overridesByTeacher.get(uid) || new Map();
       weekDates.forEach((iso, dayIdx) => {
@@ -2551,15 +2589,19 @@
             const overrideClass = classKeyFromRow(o);
             if (!scheduledClass || !overrideClass || normalizeClassKey(scheduledClass) !== normalizeClassKey(overrideClass)) continue;
           }
+          const before = map.get(iso).get(i) || '';
           if (o._kind === 'new') {
             map.get(iso).set(i, (o.classKey || 'بديل'));
           } else if (o._kind === 'original') {
             map.get(iso).set(i, '—');
           }
+          debugOverrides.push({ date: iso, lesson: i, kind: o._kind === 'new' ? 'covering someone (added)' : 'covered by someone (removed)',
+            classKey: o.classKey || '', before, after: map.get(iso).get(i), overrideId: o._id || o.id || '' });
         }
       });
 
       const scheduleUids = await getScheduleUids(uid);
+      const debugCustom = [];
       weekDates.forEach((iso, dayIdx) => {
         const dayMap = map.get(iso);
         const customRows = customRowsByDay[dayIdx];
@@ -2572,10 +2614,42 @@
             const classKey = classKeyFromRow(row) || classKeyFromRow(lessonRow);
             if(!classKey) continue;
             // Custom always wins for this slot — overwrite, don't gap-fill.
+            debugCustom.push({ date: iso, lesson: i + 1, classKey, before: dayMap.get(i + 1) || '' });
             dayMap.set(i + 1, classKey);
           }
         });
       });
+
+      try {
+        const shownLessons = [];
+        for (const iso of weekDates) {
+          for (let i = 1; i <= FIXED_LESSON_COUNT; i++) {
+            const v = map.get(iso)?.get(i);
+            if (v && v !== '—') shownLessons.push({ date: iso, day: DAY_NAMES[weekDates.indexOf(iso)], lesson: i, classKey: v });
+          }
+        }
+        const grid = {};
+        weekDates.forEach((iso, dayIdx) => {
+          const row = {};
+          for (let i = 1; i <= FIXED_LESSON_COUNT; i++) row[`حصة ${i}`] = map.get(iso)?.get(i) || '';
+          grid[`${DAY_NAMES[dayIdx]} ${iso}`] = row;
+        });
+        const counted = debugRows.filter(r => r.result === 'shown').length;
+        console.groupCollapsed(
+          `[جدولي الأسبوعي] ${debugRows.length} schedules docs from Firestore → ${shownLessons.length} lessons in the grid`
+          + (debugRows.length !== counted ? ` (${debugRows.length - counted} docs not shown — see "result")` : '')
+        );
+        console.log('Teacher uid:', uid, '— schedules queried for teacherUid in:', snap.debugUids || scheduleUids);
+        console.log('Week:', weekDates.join(', '), '— periods in grid:', FIXED_LESSON_COUNT);
+        console.log('schedules docs (Firestore) and what happened to each:');
+        console.table(debugRows);
+        if (debugOverrides.length) { console.log('scheduleOverrides applied (covers):'); console.table(debugOverrides); }
+        if (debugCustom.length) { console.log('customDaySchedules applied (special days):'); console.table(debugCustom); }
+        console.log('Final grid:'); console.table(grid);
+        console.groupEnd();
+        // Also kept on window for copying: copy(window.__weekScheduleDebug)
+        if (typeof window !== 'undefined') window.__weekScheduleDebug = { uid, weekDates, docs: debugRows, overrides: debugOverrides, custom: debugCustom, shownLessons };
+      } catch (e) { console.warn('[جدولي الأسبوعي] diagnostics failed', e); }
 
       cache.teacherWeek.set(cacheKey, map);
       return map;
