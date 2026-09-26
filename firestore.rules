@@ -1355,6 +1355,20 @@ service cloud.firestore {
       }
     }
 
+    /* ---------- telegram_prompt_seen ---------- */
+    // One doc per user once the one-time "connect Telegram" popup was shown.
+    match /telegram_prompt_seen/{uid} {
+      allow get: if signedIn() && (uid == request.auth.uid || isAdmin());
+      allow list: if isAdmin();
+      allow create: if signedIn()
+        && uid == request.auth.uid
+        && request.resource.data.keys().hasOnly(['action', 'seenAt'])
+        && (request.resource.data.action in ['connect', 'later', 'already_connected'])
+        && (request.resource.data.seenAt is timestamp);
+      allow update: if false;
+      allow delete: if isAdmin();
+    }
+
     /* ---------- fallback ---------- */
     match /{document=**} {
       allow read, write: if false;

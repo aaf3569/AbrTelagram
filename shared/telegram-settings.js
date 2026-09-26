@@ -1,6 +1,18 @@
-import { getFirestore, doc, onSnapshot, getDoc } from "/shared/firebase.js";
+import {
+  getFirestore,
+  doc,
+  onSnapshot,
+  getDoc,
+  setDoc,
+  serverTimestamp,
+  onAuthStateChanged,
+} from "/shared/firebase.js";
 
 const STYLE_ID = "telegram-settings-style";
+const PROMPT_STYLE_ID = "telegram-prompt-style";
+const PROMPT_SEEN_COLLECTION = "telegram_prompt_seen";
+const PROMPT_SEEN_LS_PREFIX = "abr_tg_prompt_seen_";
+const SITE_NOTIF_HOST_ID = "abr-notif-popup-host";
 const TELEGRAM_BACKEND_BASE_URL = "https://abrschool-bot.onrender.com";
 
 // Render's free tier sleeps the backend after ~15min idle, so the first
@@ -413,6 +425,347 @@ export async function getTelegramConnectLink(userId, idToken) {
   return url;
 }
 
+const TELEGRAM_ICON_SVG = `
+  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <path fill="currentColor" d="M21.94 4.3 18.7 19.6c-.24 1.08-.88 1.35-1.79.84l-4.94-3.64-2.38 2.29c-.26.26-.49.49-1 .49l.36-5.03 9.15-8.27c.4-.36-.09-.55-.62-.2L6.17 13.2l-4.87-1.52c-1.06-.33-1.08-1.06.22-1.57l19.03-7.33c.88-.33 1.65.2 1.39 1.52z"/>
+  </svg>`;
+
+function ensurePromptStyles() {
+  if (document.getElementById(PROMPT_STYLE_ID)) return;
+
+  const style = document.createElement("style");
+  style.id = PROMPT_STYLE_ID;
+  style.textContent = `
+    .tg-prompt-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 9100;
+      display: grid;
+      place-items: center;
+      padding: 16px;
+      direction: rtl;
+      font-family: "Tajawal", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+      background: radial-gradient(circle at 50% 35%, rgba(34, 158, 217, 0.35), rgba(2, 20, 34, 0.78) 70%);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    .tg-prompt-overlay.open { opacity: 1; }
+    .tg-prompt-card {
+      position: relative;
+      width: min(440px, 100%);
+      max-height: calc(100dvh - 32px);
+      overflow-y: auto;
+      background: #ffffff;
+      border-radius: 28px;
+      box-shadow: 0 30px 80px rgba(0, 60, 100, 0.45), 0 0 0 4px rgba(42, 171, 238, 0.35);
+      color: #0f172a;
+      transform: translateY(40px) scale(0.85);
+      opacity: 0;
+    }
+    .tg-prompt-overlay.open .tg-prompt-card {
+      animation: tgPromptIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards,
+                 tgPromptGlow 2.4s ease-in-out 0.6s infinite;
+    }
+    @keyframes tgPromptIn {
+      to { transform: translateY(0) scale(1); opacity: 1; }
+    }
+    @keyframes tgPromptGlow {
+      0%, 100% { box-shadow: 0 30px 80px rgba(0, 60, 100, 0.45), 0 0 0 4px rgba(42, 171, 238, 0.35); }
+      50% { box-shadow: 0 30px 80px rgba(0, 60, 100, 0.45), 0 0 0 10px rgba(42, 171, 238, 0.18), 0 0 60px rgba(42, 171, 238, 0.55); }
+    }
+    .tg-prompt-hero {
+      position: relative;
+      background: linear-gradient(150deg, #2AABEE 0%, #229ED9 45%, #0a6fa8 100%);
+      padding: 34px 20px 30px;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+    }
+    .tg-prompt-hero::before,
+    .tg-prompt-hero::after {
+      content: "";
+      position: absolute;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.12);
+    }
+    .tg-prompt-hero::before { width: 180px; height: 180px; top: -70px; right: -50px; }
+    .tg-prompt-hero::after { width: 120px; height: 120px; bottom: -50px; left: -30px; }
+    .tg-prompt-close {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      z-index: 2;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: none;
+      background: rgba(255, 255, 255, 0.22);
+      color: #ffffff;
+      font-size: 1.3rem;
+      line-height: 1;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s ease, transform 0.2s ease;
+    }
+    .tg-prompt-close:hover { background: rgba(255, 255, 255, 0.34); transform: rotate(90deg); }
+    .tg-prompt-badge {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      z-index: 2;
+      padding: 5px 12px;
+      border-radius: 999px;
+      background: #ffd43b;
+      color: #5c3d00;
+      font-size: 0.78rem;
+      font-weight: 900;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18);
+      animation: tgPromptWiggle 2.4s ease-in-out 1s infinite;
+    }
+    @keyframes tgPromptWiggle {
+      0%, 80%, 100% { transform: rotate(0); }
+      84% { transform: rotate(-8deg); }
+      88% { transform: rotate(8deg); }
+      92% { transform: rotate(-5deg); }
+      96% { transform: rotate(5deg); }
+    }
+    .tg-prompt-logo {
+      position: relative;
+      z-index: 1;
+      width: 96px;
+      height: 96px;
+      border-radius: 50%;
+      background: #ffffff;
+      color: #229ED9;
+      display: grid;
+      place-items: center;
+      box-shadow: 0 14px 30px rgba(0, 40, 70, 0.3);
+      animation: tgPromptFloat 3s ease-in-out infinite;
+    }
+    .tg-prompt-logo svg { width: 52px; height: 52px; margin-inline-end: 6px; }
+    .tg-prompt-logo::before,
+    .tg-prompt-logo::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      border: 3px solid rgba(255, 255, 255, 0.8);
+      animation: tgPromptRing 2.2s ease-out infinite;
+    }
+    .tg-prompt-logo::after { animation-delay: 1.1s; }
+    @keyframes tgPromptRing {
+      from { transform: scale(1); opacity: 0.9; }
+      to { transform: scale(1.8); opacity: 0; }
+    }
+    @keyframes tgPromptFloat {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+    .tg-prompt-body {
+      padding: 22px 24px 24px;
+      text-align: center;
+      display: grid;
+      gap: 12px;
+    }
+    .tg-prompt-title {
+      margin: 0;
+      font-size: 1.4rem;
+      font-weight: 900;
+      color: #083b57;
+      line-height: 1.5;
+    }
+    .tg-prompt-text {
+      margin: 0;
+      font-size: 0.98rem;
+      font-weight: 600;
+      color: #475569;
+      line-height: 1.9;
+    }
+    .tg-prompt-perks {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 8px;
+      margin: 4px 0 6px;
+      padding: 0;
+      list-style: none;
+    }
+    .tg-prompt-perks li {
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: #e8f6fd;
+      color: #0a6fa8;
+      font-size: 0.82rem;
+      font-weight: 800;
+    }
+    .tg-prompt-connect {
+      position: relative;
+      overflow: hidden;
+      width: 100%;
+      min-height: 58px;
+      border: none;
+      border-radius: 16px;
+      background: linear-gradient(145deg, #2AABEE, #1c8cc4);
+      color: #ffffff;
+      font-family: inherit;
+      font-size: 1.1rem;
+      font-weight: 900;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      box-shadow: 0 14px 30px rgba(34, 158, 217, 0.45);
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+      animation: tgPromptPulse 1.8s ease-in-out 0.8s infinite;
+    }
+    .tg-prompt-connect svg { width: 22px; height: 22px; }
+    .tg-prompt-connect::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 40%;
+      left: -60%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.45), transparent);
+      transform: skewX(-20deg);
+      animation: tgPromptShine 2.6s ease-in-out 1s infinite;
+    }
+    @keyframes tgPromptShine {
+      0% { left: -60%; }
+      60%, 100% { left: 130%; }
+    }
+    @keyframes tgPromptPulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.035); }
+    }
+    .tg-prompt-connect:hover { box-shadow: 0 18px 38px rgba(34, 158, 217, 0.6); }
+    .tg-prompt-later {
+      width: 100%;
+      min-height: 46px;
+      border: none;
+      border-radius: 14px;
+      background: transparent;
+      color: #64748b;
+      font-family: inherit;
+      font-size: 0.95rem;
+      font-weight: 800;
+      cursor: pointer;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+    .tg-prompt-later:hover { background: #f1f5f9; color: #334155; }
+    .tg-prompt-connect:focus-visible,
+    .tg-prompt-later:focus-visible,
+    .tg-prompt-close:focus-visible {
+      outline: 3px solid rgba(34, 158, 217, 0.5);
+      outline-offset: 2px;
+    }
+    @media (max-width: 480px) {
+      .tg-prompt-hero { padding: 30px 16px 26px; }
+      .tg-prompt-body { padding: 18px 18px 20px; }
+      .tg-prompt-title { font-size: 1.22rem; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .tg-prompt-overlay *,
+      .tg-prompt-overlay *::before,
+      .tg-prompt-overlay *::after { animation: none !important; }
+      .tg-prompt-overlay.open .tg-prompt-card { transform: none; opacity: 1; }
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+function hasSeenPromptLocally(uid) {
+  try { return localStorage.getItem(PROMPT_SEEN_LS_PREFIX + uid) === "1"; } catch { return false; }
+}
+
+function rememberPromptSeen(db, uid, action) {
+  try { localStorage.setItem(PROMPT_SEEN_LS_PREFIX + uid, "1"); } catch {}
+  if (!db || !uid) return;
+  setDoc(doc(db, PROMPT_SEEN_COLLECTION, uid), { action, seenAt: serverTimestamp() }).catch(() => {});
+}
+
+// The site-wide admin notification popup may be open on page load; wait for
+// it to close so the two dialogs never stack on top of each other.
+function waitForSiteNotificationPopup() {
+  return new Promise((resolve) => {
+    if (!document.getElementById(SITE_NOTIF_HOST_ID)) return resolve();
+    const observer = new MutationObserver(() => {
+      if (!document.getElementById(SITE_NOTIF_HOST_ID)) {
+        observer.disconnect();
+        resolve();
+      }
+    });
+    observer.observe(document.body, { childList: true });
+  });
+}
+
+function showTelegramPrompt({ onConnect, onDismiss }) {
+  ensurePromptStyles();
+
+  const overlay = document.createElement("div");
+  overlay.className = "tg-prompt-overlay";
+  overlay.innerHTML = `
+    <section class="tg-prompt-card" role="dialog" aria-modal="true" aria-labelledby="tgPromptTitle">
+      <div class="tg-prompt-hero">
+        <span class="tg-prompt-badge">🔔 جديد</span>
+        <button type="button" class="tg-prompt-close" data-action="dismiss" aria-label="إغلاق">&times;</button>
+        <div class="tg-prompt-logo">${TELEGRAM_ICON_SVG}</div>
+      </div>
+      <div class="tg-prompt-body">
+        <h3 id="tgPromptTitle" class="tg-prompt-title">لا تفوّت أي إشعار بعد اليوم!</h3>
+        <p class="tg-prompt-text">اربط حسابك بالتلجرام لتصلك الإشعارات والتنبيهات المهمة فوراً على هاتفك.</p>
+        <ul class="tg-prompt-perks">
+          <li>⚡ إشعارات فورية</li>
+          <li>📱 على هاتفك مباشرة</li>
+          <li>✅ بضغطة واحدة</li>
+        </ul>
+        <button type="button" class="tg-prompt-connect" data-action="connect">
+          ${TELEGRAM_ICON_SVG}
+          <span>ربط التلجرام الآن</span>
+        </button>
+        <button type="button" class="tg-prompt-later" data-action="dismiss">لاحقاً</button>
+      </div>
+    </section>
+  `;
+
+  document.body.appendChild(overlay);
+  const previousOverflow = document.body.style.overflow;
+  document.body.style.overflow = "hidden";
+
+  let closed = false;
+  function close(callback) {
+    if (closed) return;
+    closed = true;
+    document.removeEventListener("keydown", onKeydown);
+    overlay.classList.remove("open");
+    document.body.style.overflow = previousOverflow;
+    setTimeout(() => overlay.remove(), 300);
+    callback();
+  }
+  function onKeydown(event) {
+    if (event.key === "Escape") close(onDismiss);
+  }
+
+  overlay.querySelectorAll('[data-action="dismiss"]').forEach((btn) => {
+    btn.addEventListener("click", () => close(onDismiss));
+  });
+  overlay.querySelector('[data-action="connect"]').addEventListener("click", () => close(onConnect));
+  overlay.addEventListener("click", (event) => {
+    if (event.target === overlay) close(onDismiss);
+  });
+  document.addEventListener("keydown", onKeydown);
+
+  requestAnimationFrame(() => {
+    overlay.classList.add("open");
+    overlay.querySelector('[data-action="connect"]')?.focus({ preventScroll: true });
+  });
+}
+
 function isConnectedDoc(data) {
   if (!data) return false;
   if (data.telegramConnected === true) return true;
@@ -634,4 +987,54 @@ export function mountTelegramSettings({ auth, slotId, extraClass } = {}) {
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && isOpen) closeModal();
   });
+
+  // One-time "connect Telegram" prompt, shown once per user ever: any
+  // dismissal (لاحقاً, ×, backdrop, Escape) or connect records it in
+  // telegram_prompt_seen/{uid} so it never returns, on any device.
+  let promptChecked = false;
+  async function maybeShowPrompt(user) {
+    if (promptChecked || !user || !db) return;
+    promptChecked = true;
+    const uid = user.uid;
+    if (hasSeenPromptLocally(uid)) return;
+
+    try {
+      const teacherSnap = await getDoc(doc(db, "teachers", uid));
+      if (isConnectedDoc(teacherSnap.exists() ? teacherSnap.data() : null)) {
+        rememberPromptSeen(db, uid, "already_connected");
+        return;
+      }
+      const seenSnap = await getDoc(doc(db, PROMPT_SEEN_COLLECTION, uid));
+      if (seenSnap.exists()) {
+        try { localStorage.setItem(PROMPT_SEEN_LS_PREFIX + uid, "1"); } catch {}
+        return;
+      }
+    } catch (error) {
+      // Can't confirm it wasn't shown already; skip rather than risk a repeat.
+      console.warn("[telegram-settings] prompt check failed:", error?.message || error);
+      return;
+    }
+
+    // Let the page finish rendering after login before interrupting.
+    await new Promise((resolve) => setTimeout(resolve, 900));
+    await waitForSiteNotificationPopup();
+    if (auth?.currentUser?.uid !== uid) return;
+
+    showTelegramPrompt({
+      onConnect: () => {
+        rememberPromptSeen(db, uid, "connect");
+        openModal();
+        handleConnect();
+      },
+      onDismiss: () => rememberPromptSeen(db, uid, "later"),
+    });
+  }
+
+  if (auth) {
+    try {
+      onAuthStateChanged(auth, (user) => { maybeShowPrompt(user); });
+    } catch (error) {
+      console.warn("[telegram-settings] auth listener failed:", error?.message || error);
+    }
+  }
 }
