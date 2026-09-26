@@ -836,6 +836,7 @@
     import {
       DEPARTMENTS,
       DEPARTMENT_LIST,
+      ABSENCE_MANAGEMENT_DEPARTMENT,
       resolveDepartmentName,
       isMergedDepartment,
       getMergedSubjectsForDepartment,
@@ -1159,7 +1160,8 @@
     // One entry per real department (16) — for a single-specialization
     // department the department name and its one subject are the same
     // string, so this doubles as "pick your subject" for those.
-    const subjectsKW = DEPARTMENT_LIST.slice();
+    // Plus إدارة الغياب, the attendance staff's own (non-teaching) section.
+    const subjectsKW = [...DEPARTMENT_LIST, ABSENCE_MANAGEMENT_DEPARTMENT];
 
     // Fetched from settings/classes inside onAuthStateChanged below, before
     // show(sTeachers) — makeClassRow() (the only consumer) is only ever
@@ -2117,9 +2119,12 @@
       teacherAllowEditSchedule.checked=false;
       teacherAllowMorningLate.checked=false;
       teacherAllowSupervisorStudents.checked=false;
-      teacherAllowManageAttendance.checked=false;
+      // Attendance staff get the إدارة الغياب permission by default and
+      // usually teach no classes, so start them without a class row.
+      const absenceStaff=selectedSubject===ABSENCE_MANAGEMENT_DEPARTMENT;
+      teacherAllowManageAttendance.checked=absenceStaff;
       auClasses.innerHTML='';
-      auClasses.appendChild(makeClassRow(""));
+      if(!absenceStaff) auClasses.appendChild(makeClassRow(""));
       syncAddTeacherSpecializationField();
       updateSupervisorCheckboxLabels();
     }

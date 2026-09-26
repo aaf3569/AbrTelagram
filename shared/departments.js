@@ -64,6 +64,13 @@ export const DEPARTMENTS = Object.freeze({
 
 export const DEPARTMENT_LIST = Object.freeze(Object.values(DEPARTMENTS));
 
+// Not a teaching department: staff who run attendance/absence. Kept out of
+// DEPARTMENTS/DEPARTMENT_LIST on purpose so it never shows up in subject,
+// scheduling or cover-teacher pickers — only the admin teachers directory
+// lists it (admins/teachers.html). Its members log in like any teacher and
+// land on Teachers/user.html.
+export const ABSENCE_MANAGEMENT_DEPARTMENT = 'إدارة الغياب';
+
 // subject name -> its one home department (mirrors CONSTANTS.SUBJECTS).
 export const SUBJECT_TO_DEPARTMENT = Object.freeze({
   'اللغة العربية':               DEPARTMENTS.ARABIC,
