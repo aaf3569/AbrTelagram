@@ -836,7 +836,6 @@
     import {
       DEPARTMENTS,
       DEPARTMENT_LIST,
-      ABSENCE_MANAGEMENT_DEPARTMENT,
       resolveDepartmentName,
       isMergedDepartment,
       getMergedSubjectsForDepartment,
@@ -1161,6 +1160,11 @@
     // department the department name and its one subject are the same
     // string, so this doubles as "pick your subject" for those.
     // Plus إدارة الغياب, the attendance staff's own (non-teaching) section.
+    // Defined here rather than imported: /shared/* is browser-cached for
+    // five minutes, so importing a newly added export can pair this fresh
+    // page with a stale module and fail to load. Keep in sync with
+    // ABSENCE_MANAGEMENT_DEPARTMENT in shared/departments.js.
+    const ABSENCE_MANAGEMENT_DEPARTMENT='إدارة الغياب';
     const subjectsKW = [...DEPARTMENT_LIST, ABSENCE_MANAGEMENT_DEPARTMENT];
 
     // Fetched from settings/classes inside onAuthStateChanged below, before
