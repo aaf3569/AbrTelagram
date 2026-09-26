@@ -2171,7 +2171,14 @@
 
     function renderWeekAdminStyle(containerEl, getCell, options = {}){
       const onLessonClick = typeof options.onLessonClick === 'function' ? options.onLessonClick : null;
+      const getCover = typeof options.getCover === 'function' ? options.getCover : () => null;
       containerEl.innerHTML = '';
+      if (options.caption) {
+        const cap = document.createElement('div');
+        cap.className = 'week-caption';
+        cap.textContent = options.caption;
+        containerEl.appendChild(cap);
+      }
       const wrap = document.createElement('div');
       wrap.className = 'grid-wrap week-fit';
       const grid = document.createElement('div');
@@ -2195,6 +2202,27 @@
           c.className='gcell';
           const cellContent = getCell(iso, i);
           c.textContent = (cellContent ?? '—');
+          const cover = (cellContent && cellContent !== '—') ? getCover(iso, i) : null;
+          if (cover?.type === 'covered') {
+            // Someone else takes this lesson on this date only — the class
+            // stays visible, tagged, and isn't this teacher's to open.
+            c.classList.add('lesson-highlight', 'lesson-covered');
+            c.title = cover.by ? `غطّاها ${cover.by} في هذا التاريخ فقط` : 'غطّاها معلم آخر في هذا التاريخ فقط';
+            const tag = document.createElement('span');
+            tag.className = 'week-cover-tag';
+            tag.textContent = 'تمت تغطيتها';
+            c.appendChild(tag);
+            grid.appendChild(c);
+            continue;
+          }
+          if (cover?.type === 'covering') {
+            c.classList.add('lesson-covering');
+            c.title = cover.by ? `تغطية عن ${cover.by} في هذا التاريخ` : 'تغطية في هذا التاريخ';
+            const tag = document.createElement('span');
+            tag.className = 'week-cover-tag';
+            tag.textContent = 'تغطية';
+            c.appendChild(tag);
+          }
           if (cellContent && cellContent !== '—') {
             c.classList.add('lesson-highlight');
             if (onLessonClick) {
@@ -2575,6 +2603,12 @@
       });
       const debugOverrides = [];
 
+      // Covers only ever apply to their own date (overrides are loaded and
+      // keyed by exact date). A covered lesson keeps its class in the grid
+      // and is marked instead of blanked out, so the week still shows every
+      // lesson; coverStatus tells the grid which slots to tag.
+      const coverStatus = new Map(); // `${iso}|${lesson}` -> { type: 'covered'|'covering', by }
+      map.coverStatus = coverStatus;
       const mapByDate = cache.overridesByTeacher.get(uid) || new Map();
       weekDates.forEach((iso, dayIdx) => {
         const dayOv = mapByDate.get(iso);
@@ -2592,8 +2626,9 @@
           const before = map.get(iso).get(i) || '';
           if (o._kind === 'new') {
             map.get(iso).set(i, (o.classKey || 'بديل'));
+            coverStatus.set(`${iso}|${i}`, { type: 'covering', by: o.originalTeacherName || '' });
           } else if (o._kind === 'original') {
-            map.get(iso).set(i, '—');
+            coverStatus.set(`${iso}|${i}`, { type: 'covered', by: o.newTeacherName || '' });
           }
           debugOverrides.push({ date: iso, lesson: i, kind: o._kind === 'new' ? 'covering someone (added)' : 'covered by someone (removed)',
             classKey: o.classKey || '', before, after: map.get(iso).get(i), overrideId: o._id || o.id || '' });
@@ -2616,6 +2651,7 @@
             // Custom always wins for this slot — overwrite, don't gap-fill.
             debugCustom.push({ date: iso, lesson: i + 1, classKey, before: dayMap.get(i + 1) || '' });
             dayMap.set(i + 1, classKey);
+            coverStatus.delete(`${iso}|${i + 1}`);
           }
         });
       });
@@ -2625,7 +2661,7 @@
         for (const iso of weekDates) {
           for (let i = 1; i <= FIXED_LESSON_COUNT; i++) {
             const v = map.get(iso)?.get(i);
-            if (v && v !== '—') shownLessons.push({ date: iso, day: DAY_NAMES[weekDates.indexOf(iso)], lesson: i, classKey: v });
+            if (v && v !== '—') shownLessons.push({ date: iso, day: DAY_NAMES[weekDates.indexOf(iso)], lesson: i, classKey: v, cover: coverStatus.get(`${iso}|${i}`)?.type || '' });
           }
         }
         const grid = {};
@@ -2640,7 +2676,7 @@
           + (debugRows.length !== counted ? ` (${debugRows.length - counted} docs not shown — see "result")` : '')
         );
         console.log('Teacher uid:', uid, '— schedules queried for teacherUid in:', snap.debugUids || scheduleUids);
-        console.log('Week:', weekDates.join(', '), '— periods in grid:', FIXED_LESSON_COUNT);
+        console.log('Week:', weekDates.join(', '), (typeof weekIsNextWeek !== 'undefined' && weekIsNextWeek) ? '(next week — today is Fri/Sat)' : '', '— periods in grid:', FIXED_LESSON_COUNT);
         console.log('schedules docs (Firestore) and what happened to each:');
         console.table(debugRows);
         if (debugOverrides.length) { console.log('scheduleOverrides applied (covers):'); console.table(debugOverrides); }
@@ -2978,6 +3014,8 @@
           const row = map.get(iso);
           return row ? (row.get(lessonIdx) || null) : null;
         }, {
+          getCover: (iso, lessonIdx) => map.coverStatus?.get(`${iso}|${lessonIdx}`) || null,
+          caption: `${weekIsNextWeek ? 'الأسبوع القادم' : 'هذا الأسبوع'}: ${formatDateArabic(weekDates[0])} – ${formatDateArabic(weekDates[4])}`,
           onLessonClick: (slotMeta) => {
             if (!slotMeta?.classKey || slotMeta.classKey === '—') return;
             openLessonActionsModal({
@@ -5282,9 +5320,15 @@
     }
 
     /* ========= Init week ========= */
+    // The school week is Sunday-Thursday. On Friday and Saturday the week
+    // that just ended is over, so the coming week is the useful one — this
+    // used to keep showing last week (and last week's covers) all weekend.
+    let weekIsNextWeek = false;
     function initWeek(){
       const today = kuwaitTodayISO();
-      const start = startOfWeekSunday(today);
+      const dow = isoToUTCDate(today).getUTCDay(); // 0 = Sunday … 6 = Saturday
+      weekIsNextWeek = dow >= 5;
+      const start = addDaysISO(startOfWeekSunday(today), weekIsNextWeek ? 7 : 0);
       weekDates = [0,1,2,3,4].map(n => addDaysISO(start, n));
       cache.weekKey = start;
     }

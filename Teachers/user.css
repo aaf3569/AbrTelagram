@@ -352,6 +352,17 @@
     .gcell:hover { background: #f7fafc; }
     .gcell.empty { color: rgba(100, 116, 139, 0.38); font-weight: 400; }
     .gcell.clickable { cursor: pointer; }
+    /* جدولي الأسبوعي: which week this is (the coming week on Fri/Sat). */
+    .week-caption { margin: 0 2px 10px; font-size: .86rem; font-weight: 800; color: #4a6072; text-align: right; }
+    /* Covered by someone else on this date only: still listed, muted. */
+    .gcell.lesson-covered { opacity: .62; background: repeating-linear-gradient(135deg, rgba(4,69,99,.05) 0 6px, transparent 6px 12px), #eef3f7 !important; cursor: default; }
+    .gcell.lesson-covered, .gcell.lesson-covering { align-content: center; gap: 3px; }
+    .week-cover-tag {
+      display: block; justify-self: center; margin-top: 2px; padding: 1px 7px; border-radius: 999px;
+      font-size: .66rem; font-weight: 800; line-height: 1.5; white-space: nowrap;
+      background: #fff4e5; color: #9a5b00; border: 1px solid rgba(214,138,0,.28);
+    }
+    .lesson-covering .week-cover-tag { background: #e8f5ee; color: #166534; border-color: rgba(22,101,52,.25); }
     /* Day column: sticky, so the day stays readable while the week is
        scrolled sideways on a phone. Needs an opaque fill to sit over the
        cells passing beneath it. */
@@ -1228,6 +1239,7 @@
         font-size: .68rem; line-height: 1.25; overflow-wrap: anywhere;
       }
       .week-fit .gcell.lesson-highlight { font-weight: 800; }
+      .week-fit .week-cover-tag { font-size: .5rem; padding: 1px 2px; margin-top: 1px; white-space: normal; line-height: 1.2; max-width: 100%; border-radius: 6px; }
       .week-fit .day-col { position: static; box-shadow: none; padding: 6px 1px; }
       .week-fit .day-col > div:first-child { font-size: .62rem; }
       .week-fit .day-col .small { display: none; }

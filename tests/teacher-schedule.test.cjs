@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 
-for (const pagePath of ['Teachers/teacherschedule.html', 'beta/userbeta.html']) {
+for (const pagePath of ['Teachers/user.html']) {
 const page = fs.readFileSync(path.join(__dirname, '..', pagePath), 'utf8');
 const pageTest = (name, run) => test(`${pagePath}: ${name}`, run);
 pageTest('teacher schedule module parses', () => {
@@ -124,9 +124,14 @@ pageTest('reported wrong-class covers preserve all 18 lessons in weekly and dail
   // Legitimate covers still apply, including differently spaced class labels.
   mondayCover.classKey = '12/1 د';
   thursdayCover.classKey = '12/5 ع';
+  // A covered lesson stays in the grid with its class, marked as covered
+  // (for that date only).
   const coveredWeek = await context.getWeekMapForTeacher('haider');
-  assert.equal(coveredWeek.get(dates[1]).get(5), '—');
-  assert.equal(coveredWeek.get(dates[4]).get(2), '—');
+  assert.equal(coveredWeek.get(dates[1]).get(5), '12 / 1 د');
+  assert.equal(coveredWeek.get(dates[4]).get(2), '12 / 5 ع');
+  assert.equal(coveredWeek.coverStatus.get(`${dates[1]}|5`).type, 'covered');
+  assert.equal(coveredWeek.coverStatus.get(`${dates[4]}|2`).type, 'covered');
+  assert.equal(coveredWeek.coverStatus.size, 2);
   assert.equal((await context.buildTodayMapWithOverrides('haider', dates[1])).get('5')._coveredAway, true);
 
   // An override without a class must not erase an unrelated standing lesson.
@@ -179,4 +184,27 @@ pageTest('custom replacement still suppresses the main lesson and resolves a leg
   assert.equal((await context.getWeekMapForTeacher('haider')).get(dates[1]).get(5), custom.classKey);
 });
 
+
+pageTest('Friday and Saturday show the coming week; Sunday-Thursday the current one', () => {
+  // The page's own date helpers, pulled out by name.
+  const helper = name => {
+    const at = page.indexOf(`    const ${name} = `);
+    assert.ok(at >= 0, name);
+    return page.slice(at, page.indexOf('\n    };', at) + 7);
+  };
+  const helpers = 'const pad2 = n => String(n).padStart(2, "0");\n' + ['isoToUTCDate', 'toISO', 'startOfWeekSunday', 'addDaysISO'].map(helper).join('\n');
+  const addDays = '';
+  const initStart = page.indexOf('    let weekIsNextWeek = false;');
+  const init = page.slice(initStart, page.indexOf('    function initClassPicker(', initStart));
+  const weekFor = today => {
+    const context = vm.createContext({ cache: {}, weekDates: [], kuwaitTodayISO: () => today });
+    vm.runInContext(helpers + addDays + init.replace('let weekIsNextWeek', 'var weekIsNextWeek') + '; this.initWeek = initWeek; this.getWeek = () => weekDates; this.isNext = () => weekIsNextWeek;', context);
+    context.initWeek();
+    return { first: context.getWeek()[0], last: context.getWeek()[4], next: context.isNext() };
+  };
+  assert.deepEqual({ ...weekFor('2026-09-24') }, { first: '2026-09-20', last: '2026-09-24', next: false }); // Thursday
+  assert.deepEqual({ ...weekFor('2026-09-25') }, { first: '2026-09-27', last: '2026-10-01', next: true });  // Friday
+  assert.deepEqual({ ...weekFor('2026-09-26') }, { first: '2026-09-27', last: '2026-10-01', next: true });  // Saturday
+  assert.deepEqual({ ...weekFor('2026-09-27') }, { first: '2026-09-27', last: '2026-10-01', next: false }); // Sunday
+});
 }
