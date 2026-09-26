@@ -1630,40 +1630,6 @@
     }
     .dw-cell-btn-future:hover { transform: translateY(-1px); border-color: rgba(4,69,99,.35); }
 
-    /* ---- Week: phone cards (hidden on wider screens) ---- */
-    .dw-cards { display: none; }
-    .dw-legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 14px; font-size: .74rem; font-weight: 800; color: var(--muted); }
-    .dw-legend span { display: inline-flex; align-items: center; gap: 5px; }
-    .dw-dot { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
-    .dw-dot.taken { background: rgba(16,185,129,.35); border: 1px solid rgba(16,185,129,.6); }
-    .dw-dot.missing { background: rgba(239,68,68,.25); border: 1px solid rgba(239,68,68,.55); }
-    .dw-dot.future { background: #e8eef4; border: 1px solid rgba(4,69,99,.25); }
-    .dw-card { background: #fff; border: 1px solid var(--border); border-radius: 16px; padding: 12px 10px 10px; box-shadow: 0 6px 18px rgba(3,60,84,.07); }
-    .dw-card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 2px 10px; }
-    .dw-card-name { font-weight: 900; color: var(--primary); font-size: .98rem; }
-    .dw-card-count { flex-shrink: 0; font-size: .74rem; font-weight: 800; color: var(--muted); background: #f1f5f9; border-radius: 999px; padding: 2px 9px; }
-    .dw-mini { display: grid; grid-template-columns: 52px repeat(7, minmax(0, 1fr)); gap: 3px; }
-    .dw-mini-corner { }
-    .dw-mini-num { text-align: center; font-size: .7rem; font-weight: 900; color: var(--muted); padding-bottom: 2px; }
-    .dw-mini-day { display: flex; align-items: center; font-size: .72rem; font-weight: 900; color: var(--primary); }
-    .dw-mini-day.is-today { color: #15803d; }
-    .dw-mini-cell {
-      min-height: 32px; border-radius: 7px; display: flex; align-items: center; justify-content: center;
-      font: inherit; font-size: .6rem; font-weight: 900; line-height: 1.15; padding: 1px; text-align: center;
-      overflow-wrap: anywhere; border: 1px solid transparent;
-    }
-    .dw-mini-cell.empty { background: #f8fafc; border-color: #eef2f6; }
-    button.dw-mini-cell { cursor: pointer; }
-    .dw-mini-cell.taken { background: rgba(16,185,129,.12); border-color: rgba(16,185,129,.35); color: #047857; }
-    .dw-mini-cell.missing { background: rgba(239,68,68,.10); border-color: rgba(239,68,68,.30); color: #b91c1c; }
-    .dw-mini-cell.future { background: #eef3f8; border-color: rgba(4,69,99,.16); color: var(--primary); }
-    .dw-mini-cell.is-today { box-shadow: inset 0 0 0 1.5px rgba(21,128,61,.35); }
-    .dw-cards-empty { text-align: center; color: var(--muted); font-weight: 800; padding: 20px; }
-    @media (max-width: 768px) {
-      #dwStateOk .ds-table-shell { display: none; }
-      .dw-cards { display: flex; flex-direction: column; gap: 12px; flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 4px 12px 20px; -webkit-overflow-scrolling: touch; }
-    }
-
     /* ---- Download popup ---- */
     .ds-dl-backdrop { position: fixed; inset: 0; z-index: 1000; background: rgba(15,23,42,.35); backdrop-filter: blur(4px); display: none; }
     .ds-dl-backdrop.open { display: block; }
