@@ -127,6 +127,10 @@
           <i class="fas fa-chalkboard"></i>
           <span>جداول الصفوف</span>
         </button>
+        <button id="sidebarTeacherSchedules" class="sidebar-link" type="button">
+          <i class="fas fa-chalkboard-user" aria-hidden="true"></i>
+          <span>جداول المعلمين</span>
+        </button>
       </div>
 
       <div id="sidebarSupervisorGroup" class="sidebar-group" hidden>
@@ -198,6 +202,53 @@
   <section id="maTodaySheet" class="sheet" aria-hidden="true"><div id="maTodayHost" class="ma-host"></div></section>
   <section id="maOverallSheet" class="sheet" aria-hidden="true"><div id="maOverallHost" class="ma-host"></div></section>
   <section id="maDetailedSheet" class="sheet" aria-hidden="true"><div id="maDetailedHost" class="ma-host"></div></section>
+
+  <!-- TEACHER SCHEDULES (جداول المعلمين): pick a department, then a
+       teacher, and see that teacher's week — the same grid as جدولي
+       الأسبوعي (read-only here). #teacherschedules. -->
+  <section id="tsSheet" class="sheet" aria-hidden="true">
+    <div class="sheet-header">
+      <button id="tsClose" class="back-btn" type="button">
+        <i class="fas fa-arrow-right"></i>
+        <span>رجوع</span>
+      </button>
+      <h3 class="sheet-title">جداول المعلمين</h3>
+    </div>
+    <div class="sheet-body">
+      <div class="card ts-picker-card">
+        <div class="ts-pickers">
+          <div class="ts-picker">
+            <label class="field-label" for="tsDeptPicker"><i class="fas fa-layer-group"></i> القسم</label>
+            <div class="input-wrap">
+              <i class="fas fa-building input-icon"></i>
+              <select id="tsDeptPicker" class="select">
+                <option value="">اختر القسم...</option>
+              </select>
+            </div>
+          </div>
+          <div class="ts-picker">
+            <label class="field-label" for="tsTeacherPicker"><i class="fas fa-user"></i> المعلم</label>
+            <div class="input-wrap">
+              <i class="fas fa-chalkboard-user input-icon"></i>
+              <select id="tsTeacherPicker" class="select" disabled>
+                <option value="">اختر القسم أولاً...</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div id="tsStatus" class="class-export-status" role="status" aria-live="polite"></div>
+      </div>
+      <div class="card" id="tsGridCard" hidden>
+        <div class="ts-teacher-head">
+          <div class="ts-teacher-meta">
+            <b id="tsTeacherName">—</b>
+            <span id="tsLessonCount"></span>
+          </div>
+        </div>
+        <div id="tsGrid"></div>
+      </div>
+    </div>
+  </section>
 
   <!-- MORE -->
   <section id="moreSheet" class="sheet" aria-hidden="true">
@@ -5442,6 +5493,7 @@
         [ocSheet, () => sidebarOtherClasses],
         [requestsSheet, () => btnRequests],
         [dsSheetEl, () => sidebarDeptSchedule],
+        [document.getElementById('tsSheet'), () => document.getElementById('sidebarTeacherSchedules')],
         [document.getElementById('dwSheet'), () => sidebarDeptSchedule],
         [ssSheetEl, () => sidebarSchoolSchedule],
         [svsSheetEl, () => sidebarSupervisorStudents],
@@ -5478,6 +5530,136 @@
       btnSidebarToggle.setAttribute('aria-expanded','false');
       document.body.style.overflow = '';
     }
+
+    /* ========= جداول المعلمين (tsSheet) =========
+       Any teacher's week, picked by department then name. Reuses
+       getWeekMapForTeacher / renderWeekAdminStyle (so covers are tagged
+       and Fri/Sat show the coming week, exactly like جدولي الأسبوعي) —
+       read-only: lessons here aren't tappable, they're someone else's.
+       The picked department/teacher are remembered on this device. */
+    const tsSheetEl = document.getElementById('tsSheet');
+    const tsDeptPicker = document.getElementById('tsDeptPicker');
+    const tsTeacherPicker = document.getElementById('tsTeacherPicker');
+    const tsStatus = document.getElementById('tsStatus');
+    const tsGridCard = document.getElementById('tsGridCard');
+    const tsGrid = document.getElementById('tsGrid');
+    const tsTeacherName = document.getElementById('tsTeacherName');
+    const tsLessonCount = document.getElementById('tsLessonCount');
+    const TS_STORE_KEY = 'teacherSchedules:last';
+    let tsTeachers = [];
+    let tsInitialized = false;
+    let tsRequestId = 0;
+
+    function tsSetStatus(text, isError = false){
+      tsStatus.textContent = text || '';
+      tsStatus.classList.toggle('error', !!isError);
+    }
+    function tsRemember(){
+      try { localStorage.setItem(TS_STORE_KEY, JSON.stringify({ dept: tsDeptPicker.value, uid: tsTeacherPicker.value })); } catch {}
+    }
+    function tsRecall(){
+      try { return JSON.parse(localStorage.getItem(TS_STORE_KEY) || '{}') || {}; } catch { return {}; }
+    }
+
+    function tsFillTeachers(dept){
+      const list = tsTeachers.filter(t => t.normalizedDepartment === dept);
+      tsTeacherPicker.innerHTML = '';
+      tsTeacherPicker.appendChild(new Option(dept ? (list.length ? 'اختر المعلم...' : 'لا يوجد معلمون في هذا القسم') : 'اختر القسم أولاً...', ''));
+      list.forEach(t => tsTeacherPicker.appendChild(new Option(t.role === 'head' ? `${t.name} — رئيس القسم` : t.name, t.uid)));
+      tsTeacherPicker.disabled = !list.length;
+    }
+
+    async function tsInit(){
+      tsSetStatus('جاري تحميل المعلمين…');
+      const all = await loadTeachersList();
+      tsTeachers = all.filter(t => (t.role || '').toString().toLowerCase() !== 'admin' && t.normalizedDepartment);
+      const counts = new Map();
+      tsTeachers.forEach(t => counts.set(t.normalizedDepartment, (counts.get(t.normalizedDepartment) || 0) + 1));
+      const depts = [...DEPARTMENT_LIST.filter(d => counts.has(d)), ...[...counts.keys()].filter(d => !DEPARTMENT_LIST.includes(d))];
+      tsDeptPicker.innerHTML = '';
+      tsDeptPicker.appendChild(new Option('اختر القسم...', ''));
+      depts.forEach(d => tsDeptPicker.appendChild(new Option(`${d} (${toArabicDigits(String(counts.get(d)))})`, d)));
+      tsSetStatus(depts.length ? '' : 'تعذّر تحميل قائمة المعلمين.', !depts.length);
+      // Start where the user left off, else in their own department.
+      const last = tsRecall();
+      const startDept = (last.dept && counts.has(last.dept)) ? last.dept : (counts.has(myDeptSchedDepartment) ? myDeptSchedDepartment : '');
+      tsDeptPicker.value = startDept;
+      tsFillTeachers(startDept);
+      if (startDept && last.uid && tsTeachers.some(t => t.uid === last.uid && t.normalizedDepartment === startDept)){
+        tsTeacherPicker.value = last.uid;
+        tsShowTeacher(last.uid);
+      }
+    }
+
+    async function tsShowTeacher(uid){
+      const requestId = ++tsRequestId;
+      const teacher = tsTeachers.find(t => t.uid === uid);
+      if (!teacher){ tsGridCard.hidden = true; return; }
+      tsSetStatus('جاري تحميل الجدول…');
+      tsGridCard.hidden = false;
+      tsTeacherName.textContent = teacher.name;
+      tsLessonCount.textContent = '';
+      tsGrid.innerHTML = '<div class="ts-loading"><div class="ds-spinner"></div></div>';
+      try {
+        initWeek();
+        const map = await getWeekMapForTeacher(uid);
+        if (requestId !== tsRequestId) return;
+        let lessons = 0;
+        weekDates.forEach(iso => { for (let i = 1; i <= FIXED_LESSON_COUNT; i++){ const v = map.get(iso)?.get(i); if (v && v !== '—') lessons++; } });
+        tsLessonCount.textContent = `${toArabicDigits(String(lessons))} حصة هذا الأسبوع`;
+        renderWeekAdminStyle(tsGrid, (iso, lessonIdx) => map.get(iso)?.get(lessonIdx) || null, {
+          getCover: (iso, lessonIdx) => map.coverStatus?.get(`${iso}|${lessonIdx}`) || null,
+          caption: `${weekIsNextWeek ? 'الأسبوع القادم' : 'هذا الأسبوع'}: ${formatDateArabic(weekDates[0])} – ${formatDateArabic(weekDates[4])}`,
+        });
+        tsSetStatus(lessons ? '' : 'لا توجد حصص مدرجة لهذا المعلم هذا الأسبوع.');
+      } catch (e) {
+        if (requestId !== tsRequestId) return;
+        console.error('[tsSheet] load failed:', e);
+        tsGrid.innerHTML = '';
+        tsSetStatus('تعذّر تحميل جدول المعلم. حاول مرة أخرى.', true);
+      }
+    }
+
+    tsDeptPicker.addEventListener('change', () => {
+      tsFillTeachers(tsDeptPicker.value);
+      tsGridCard.hidden = true;
+      tsSetStatus('');
+      tsRemember();
+    });
+    tsTeacherPicker.addEventListener('change', () => {
+      tsRemember();
+      if (tsTeacherPicker.value) tsShowTeacher(tsTeacherPicker.value);
+      else tsGridCard.hidden = true;
+    });
+
+    function tsOnEscape(e){ if (e.key === 'Escape') closeTeacherSchedulesSheet(); }
+    // Same #hash/history convention as the other sheets.
+    async function openTeacherSchedulesSheet(){
+      if (tsSheetEl.classList.contains('open')) return;
+      tsSheetEl.classList.add('open');
+      tsSheetEl.setAttribute('aria-hidden', 'false');
+      try { history.pushState({ tsSheetOpen: true }, '', '#teacherschedules'); } catch {}
+      document.addEventListener('keydown', tsOnEscape);
+      if (!tsInitialized){
+        tsInitialized = true;
+        try { await tsInit(); } catch (e) { tsInitialized = false; console.error(e); tsSetStatus('تعذّر تحميل قائمة المعلمين.', true); }
+      }
+    }
+    function tsHide(){
+      tsSheetEl.classList.remove('open');
+      tsSheetEl.setAttribute('aria-hidden', 'true');
+      document.removeEventListener('keydown', tsOnEscape);
+    }
+    function closeTeacherSchedulesSheet(){
+      if (!tsSheetEl.classList.contains('open')) return;
+      tsHide();
+      if (history.state?.tsSheetOpen) { try { history.back(); } catch {} }
+    }
+    window.addEventListener('popstate', () => {
+      if (tsSheetEl.classList.contains('open') && !history.state?.tsSheetOpen) tsHide();
+    });
+    document.getElementById('tsClose').addEventListener('click', closeTeacherSchedulesSheet);
+    document.getElementById('sidebarTeacherSchedules').addEventListener('click', () => { closeSidebar(); openTeacherSchedulesSheet(); });
 
     /* ========= جدول القسم (dsSheet) =========
        An in-page copy of depHead/dptschedual.html's grid + popover UI —
