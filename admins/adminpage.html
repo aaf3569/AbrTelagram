@@ -27,6 +27,7 @@
 <!-- Same for the تدقيق في الغائب and الغياب المختصر sheets. -->
 <link rel="modulepreload" href="/admins/absence.js">
 <link rel="modulepreload" href="/admins/overallabsence.js">
+<link rel="modulepreload" href="/admins/schedules.js">
   <title>لوحة الإدارة - ثانوية أحمد البشر الرومي</title>
 
   <!-- Tajawal -->
@@ -233,6 +234,8 @@
     #detailedAbsenceHost{ flex:1 1 auto; min-height:0; }
     /* And الغياب المختصر (/admins/overallabsence.js, #overallAbsenceHost). */
     #overallAbsenceHost{ flex:1 1 auto; min-height:0; }
+    /* And جداول الأقسام / جداول المعلمين (/admins/schedules.js). */
+    #deptSchedulesHost, #teacherSchedulesHost{ flex:1 1 auto; min-height:0; }
 
     /* Scroll locks toggled on the real <body> by the غياب اليوم and
        الغياب المختصر sheets' own popups (modal-open) and by the shared
@@ -993,17 +996,29 @@
           <i class="fas fa-school" aria-hidden="true"></i>
           <span>الطلاب</span>
         </button>
-        <button id="sidebarSchedules" class="sidebar-link" type="button">
-          <i class="fas fa-calendar-days" aria-hidden="true"></i>
-          <span>الجداول</span>
+        <button id="sidebarNotifications" class="sidebar-link" type="button">
+          <i class="fas fa-bell" aria-hidden="true"></i>
+          <span>الإشعارات</span>
+        </button>
+      </div>
+
+      <div class="sidebar-group">
+        <div class="sidebar-section-label">الجداول</div>
+        <button id="sidebarDeptSchedules" class="sidebar-link" type="button">
+          <i class="fas fa-users-rectangle" aria-hidden="true"></i>
+          <span>جداول الأقسام</span>
+        </button>
+        <button id="sidebarTeacherSchedules" class="sidebar-link" type="button">
+          <i class="fas fa-chalkboard-user" aria-hidden="true"></i>
+          <span>جداول المعلمين</span>
         </button>
         <button id="sidebarSchoolSchedule" class="sidebar-link" type="button">
           <i class="fas fa-table-cells" aria-hidden="true"></i>
           <span>جدول المدرسة</span>
         </button>
-        <button id="sidebarNotifications" class="sidebar-link" type="button">
-          <i class="fas fa-bell" aria-hidden="true"></i>
-          <span>الإشعارات</span>
+        <button id="sidebarSchedules" class="sidebar-link" type="button">
+          <i class="fas fa-calendar-days" aria-hidden="true"></i>
+          <span>تعديل الجداول</span>
         </button>
       </div>
 
@@ -1589,6 +1604,15 @@
        first time it's opened. -->
   <section id="overallAbsenceSheet" class="sheet" aria-hidden="true">
     <div id="overallAbsenceHost"></div>
+  </section>
+
+  <!-- جداول الأقسام / جداول المعلمين — /admins/schedules.js renders each
+       into its host the first time it's opened (sidebar → الجداول). -->
+  <section id="deptSchedulesSheet" class="sheet" aria-hidden="true">
+    <div id="deptSchedulesHost"></div>
+  </section>
+  <section id="teacherSchedulesSheet" class="sheet" aria-hidden="true">
+    <div id="teacherSchedulesHost"></div>
   </section>
 
   <script type="module">
@@ -2582,13 +2606,69 @@
       }
     }
 
-    // Only one of the absence sheets is ever showing: opening one closes
-    // whichever other is open (leaving the hash to the one being opened).
+    // Only one of these full-screen sheets (absence and schedules) is ever
+    // showing: opening one closes whichever other is open (leaving the hash
+    // to the one being opened).
     function closeOtherAbsenceSheets(keep){
       if(keep !== todayAbsenceSheet && todayAbsenceSheet.classList.contains('open')) closeTodayAbsenceSheet(false);
       if(keep !== detailedAbsenceSheet && detailedAbsenceSheet.classList.contains('open')) closeDetailedAbsenceSheet(false);
       if(keep !== overallAbsenceSheet && overallAbsenceSheet.classList.contains('open')) closeOverallAbsenceSheet(false);
+      scheduleSheets.forEach((s) => { if(keep !== s.sheet && s.sheet.classList.contains('open')) s.close(false); });
     }
+
+    /* ========= جداول الأقسام / جداول المعلمين sheets ========= */
+    // Sidebar → الجداول. Same #hash / mount-once pattern as the absence
+    // sheets above; /admins/schedules.js builds both.
+    function makeScheduleSheet({ key, hash, sheetId, hostId, sidebarId, exportName, title }){
+      const entry = { key, hash, sheet: document.getElementById(sheetId), host: document.getElementById(hostId), mount: null, api: null };
+      entry.mountOnce = () => {
+        if(!entry.mount){
+          entry.mount = import('/admins/schedules.js')
+            .then((m) => m[exportName](entry.host, {
+              close: () => entry.close(),
+              openSidebar: () => window.adminSidebar?.open(),
+              attendance,
+              onAttendanceSaved: (fn) => attendanceSavedListeners.add(fn),
+              getSession: () => adminSession,
+            }))
+            .then((api) => { entry.api = api; return api; })
+            .catch((e) => { entry.mount = null; throw e; });
+        }
+        return entry.mount;
+      };
+      entry.open = (updateHash = true) => {
+        closeOtherAbsenceSheets(entry.sheet);
+        entry.api?.refresh();
+        openSheet(entry.sheet);
+        window.adminSidebar?.setCurrent(sidebarId);
+        if(updateHash && window.location.hash !== hash) window.location.hash = hash.slice(1);
+        entry.mountOnce().catch(async (e) => {
+          console.error(`[${key}] failed to load`, e);
+          entry.close();
+          const retry = await showActionPopup({
+            variant: 'danger', title: `تعذّر فتح ${title}`, message: 'تحقّق من الاتصال وحاول مرة أخرى.',
+            confirmText: 'إعادة المحاولة', cancelText: 'إغلاق', icon: '!'
+          });
+          if(retry) entry.open();
+        });
+      };
+      entry.close = (clearHashOnClose = true) => {
+        closeSheet(entry.sheet);
+        window.adminSidebar?.setCurrent('sidebarHome');
+        if(clearHashOnClose && window.location.hash === hash) clearHash();
+      };
+      document.getElementById(sidebarId).addEventListener('click', () => {
+        window.adminSidebar?.close();
+        entry.open();
+      });
+      return entry;
+    }
+    const scheduleSheets = [
+      makeScheduleSheet({ key: 'dept-schedules', hash: '#dept-schedules', sheetId: 'deptSchedulesSheet', hostId: 'deptSchedulesHost',
+        sidebarId: 'sidebarDeptSchedules', exportName: 'mountDeptSchedulesSheet', title: 'جداول الأقسام' }),
+      makeScheduleSheet({ key: 'teacher-schedules', hash: '#teacher-schedules', sheetId: 'teacherSchedulesSheet', hostId: 'teacherSchedulesHost',
+        sidebarId: 'sidebarTeacherSchedules', exportName: 'mountTeacherSchedulesSheet', title: 'جداول المعلمين' }),
+    ];
 
     // Sidebar: "غياب اليوم" / "الغياب المختصر" / "تدقيق في الغائب" open
     // their sheets; "الرئيسية" brings you back out of any of them (otherwise
@@ -2611,6 +2691,7 @@
       if(todayAbsenceSheet.classList.contains('open')) closeTodayAbsenceSheet();
       if(overallAbsenceSheet.classList.contains('open')) closeOverallAbsenceSheet();
       if(detailedAbsenceSheet.classList.contains('open')) closeDetailedAbsenceSheet();
+      scheduleSheets.forEach((s) => { if(s.sheet.classList.contains('open')) s.close(); });
       if(notificationsSheet.classList.contains('open')) closeNotificationsPanel();
     });
 
@@ -2813,6 +2894,7 @@
         else preloadTodayAbsence();
         if(window.location.hash === DETAILED_ABSENCE_HASH) openDetailedAbsenceSheet(false);
         if(window.location.hash === OVERALL_ABSENCE_HASH) openOverallAbsenceSheet(false);
+        scheduleSheets.forEach((s) => { if(window.location.hash === s.hash) s.open(false); });
       }catch(e){ console.error(e); show(sDenied); }
     });
 
@@ -3275,6 +3357,14 @@
       }
       if(overallAbsenceSheet.classList.contains('open')){
         closeOverallAbsenceSheet(false);
+      }
+      // And the schedule sheets.
+      for(const s of scheduleSheets){
+        if(window.location.hash === s.hash){
+          if(sAdmin.classList.contains('active')) s.open(false);
+          return;
+        }
+        if(s.sheet.classList.contains('open')) s.close(false);
       }
     });
 
