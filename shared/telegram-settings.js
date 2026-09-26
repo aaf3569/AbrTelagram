@@ -290,6 +290,7 @@ function ensureStyles() {
       background: #ffeaea;
       box-shadow: 0 12px 24px rgba(185, 28, 28, 0.18);
     }
+    a.tg-settings-btn { text-decoration: none; box-sizing: border-box; }
     .tg-settings-btn[hidden] { display: none !important; }
     .tg-settings-spinner {
       width: 16px;
@@ -342,6 +343,10 @@ function createModal() {
             <i class="fab fa-telegram-plane"></i>
             <span data-field="connectLabel">ربط حساب التلجرام</span>
           </button>
+          <a class="tg-settings-btn primary" data-field="openLink" href="#" target="_blank" rel="noopener noreferrer" hidden>
+            <i class="fab fa-telegram-plane"></i>
+            <span>افتح التلجرام</span>
+          </a>
           <button type="button" class="tg-settings-btn danger" data-action="disconnect" hidden>
             <i class="fas fa-link-slash"></i>
             <span data-field="disconnectLabel">إلغاء ربط التلجرام</span>
@@ -360,6 +365,7 @@ function createModal() {
     messageBox: overlay.querySelector('[data-field="message"]'),
     connectBtn: overlay.querySelector('[data-action="connect"]'),
     disconnectBtn: overlay.querySelector('[data-action="disconnect"]'),
+    openLink: overlay.querySelector('[data-field="openLink"]'),
     connectLabel: overlay.querySelector('[data-field="connectLabel"]'),
     disconnectLabel: overlay.querySelector('[data-field="disconnectLabel"]'),
     closeBtn: overlay.querySelector('[data-action="close"]'),
@@ -378,6 +384,7 @@ function setMessage(parts, text, kind = "info") {
 
 function applyStatusUI(parts, state) {
   parts.statusCard.classList.remove("is-connected", "is-disconnected");
+  if (state !== "disconnected") parts.openLink.hidden = true;
   if (state === "connected") {
     parts.statusCard.classList.add("is-connected");
     parts.statusText.textContent = "متصل";
@@ -766,6 +773,66 @@ function showTelegramPrompt({ onConnect, onDismiss }) {
   });
 }
 
+// Mobile browsers (Android Chrome, iOS Safari) only let a page open a new
+// tab within a few seconds of a tap. The connect link comes from the Render
+// backend, which can take 30-60s to wake up, so fetching it *after* the tap
+// and then calling window.open gets silently blocked. The link is fixed per
+// user (t.me/<bot>?start=connect_<uid>), so fetch it ahead of time and keep
+// it, letting the tap open Telegram synchronously.
+const CONNECT_LINK_LS_PREFIX = "abr_tg_connect_link_";
+const connectLinkCache = new Map();
+const connectLinkInflight = new Map();
+
+function readCachedConnectLink(uid) {
+  if (!uid) return "";
+  if (connectLinkCache.has(uid)) return connectLinkCache.get(uid);
+  try {
+    const stored = localStorage.getItem(CONNECT_LINK_LS_PREFIX + uid) || "";
+    if (stored.startsWith("https://t.me/")) {
+      connectLinkCache.set(uid, stored);
+      return stored;
+    }
+  } catch {}
+  return "";
+}
+
+function prefetchConnectLink(user) {
+  const uid = user?.uid;
+  if (!uid) return Promise.reject(new Error("NO_USER"));
+  const cached = readCachedConnectLink(uid);
+  if (cached) return Promise.resolve(cached);
+  if (connectLinkInflight.has(uid)) return connectLinkInflight.get(uid);
+
+  const request = user.getIdToken()
+    .then((idToken) => getTelegramConnectLink(uid, idToken))
+    .then((url) => {
+      connectLinkCache.set(uid, url);
+      try { localStorage.setItem(CONNECT_LINK_LS_PREFIX + uid, url); } catch {}
+      return url;
+    })
+    .finally(() => connectLinkInflight.delete(uid));
+  connectLinkInflight.set(uid, request);
+  return request;
+}
+
+// Must be called synchronously inside the tap handler. Returns true when a
+// tab was opened (or the page is navigating to Telegram).
+function openTelegramUrlNow(url) {
+  const win = window.open(url, "_blank");
+  if (win) {
+    try { win.opener = null; } catch {}
+    return true;
+  }
+  // Popup blocked (common in installed home-screen apps): go to t.me in
+  // this tab instead, which hands off to the Telegram app.
+  try {
+    window.location.href = url;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function isConnectedDoc(data) {
   if (!data) return false;
   if (data.telegramConnected === true) return true;
@@ -882,6 +949,12 @@ export function mountTelegramSettings({ auth, slotId, extraClass } = {}) {
 
     fetchInitialStatus(user.uid);
     watchStatus(user.uid);
+    prefetchConnectLink(user).catch(() => {});
+  }
+
+  function showOpenLink(url) {
+    parts.openLink.href = url;
+    parts.openLink.hidden = false;
   }
 
   function closeModal() {
@@ -891,6 +964,8 @@ export function mountTelegramSettings({ auth, slotId, extraClass } = {}) {
     setMessage(parts, "");
   }
 
+  // Must stay synchronous up to openTelegramUrlNow(): any await before it
+  // loses the tap's permission to open a tab on phones.
   async function handleConnect() {
     const user = auth?.currentUser || null;
     if (!user) {
@@ -898,19 +973,32 @@ export function mountTelegramSettings({ auth, slotId, extraClass } = {}) {
       return;
     }
 
+    const cachedUrl = readCachedConnectLink(user.uid);
+    if (cachedUrl) {
+      openTelegramUrlNow(cachedUrl);
+      showOpenLink(cachedUrl);
+      setMessage(
+        parts,
+        "تم فتح التلجرام. اضغط زر Start في البوت لإكمال الربط، وستتحدث الحالة هنا تلقائياً. إذا لم يفتح التلجرام، اضغط «افتح التلجرام».",
+        "success"
+      );
+      return;
+    }
+
     actionInProgress = true;
     parts.connectBtn.disabled = true;
     parts.disconnectBtn.disabled = true;
     parts.connectLabel.innerHTML = '<span class="tg-settings-spinner"></span> جاري تجهيز الرابط...';
-    setMessage(parts, "جاري إنشاء رابط الربط مع التلجرام...", "info");
+    setMessage(parts, "جاري تجهيز رابط الربط مع التلجرام... قد يستغرق ذلك حتى دقيقة.", "info");
 
     try {
-      const idToken = await user.getIdToken();
-      const url = await getTelegramConnectLink(user.uid, idToken);
-      window.open(url, "_blank", "noopener,noreferrer");
+      // Too late to open a tab automatically now, so hand the user a real
+      // link: tapping it is a fresh tap the browser always allows.
+      const url = await prefetchConnectLink(user);
+      showOpenLink(url);
       setMessage(
         parts,
-        "تم فتح التلجرام في نافذة جديدة. اضغط زر Start في البوت لإكمال الربط، وستتحدث الحالة هنا تلقائياً.",
+        "الرابط جاهز! اضغط «افتح التلجرام» ثم اضغط زر Start في البوت لإكمال الربط.",
         "success"
       );
     } catch (error) {
@@ -1032,7 +1120,10 @@ export function mountTelegramSettings({ auth, slotId, extraClass } = {}) {
 
   if (auth) {
     try {
-      onAuthStateChanged(auth, (user) => { maybeShowPrompt(user); });
+      onAuthStateChanged(auth, (user) => {
+        if (user) prefetchConnectLink(user).catch(() => {});
+        maybeShowPrompt(user);
+      });
     } catch (error) {
       console.warn("[telegram-settings] auth listener failed:", error?.message || error);
     }
