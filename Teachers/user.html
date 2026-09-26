@@ -306,7 +306,6 @@
             <line x1="3" y1="10" x2="21" y2="10"/>
           </svg>
           <span id="dsDateLabel">—</span>
-          <small>اضغط لتغيير التاريخ</small>
           <div class="ds-date-input-wrapper" aria-hidden="true">
             <input class="ds-mobile-date-input" id="dsMobileDateInput" type="date" inputmode="none" />
           </div>
@@ -368,16 +367,10 @@
     </div>
     <div class="sheet-body ds-sheet-body">
       <div class="ds-toolbar dw-toolbar">
-        <button class="ds-tool-btn icon" id="dwPrev" type="button" aria-label="الأسبوع السابق" title="الأسبوع السابق">
-          <i class="fas fa-chevron-right" aria-hidden="true"></i>
-        </button>
         <div class="dw-range">
           <b id="dwRangeLabel">—</b>
           <small id="dwRangeSub"></small>
         </div>
-        <button class="ds-tool-btn icon" id="dwNext" type="button" aria-label="الأسبوع التالي" title="الأسبوع التالي">
-          <i class="fas fa-chevron-left" aria-hidden="true"></i>
-        </button>
         <button class="ds-tool-btn" id="dwDayBtn" type="button">
           <i class="fas fa-calendar-day" aria-hidden="true"></i><span>اليوم</span>
         </button>
@@ -402,6 +395,9 @@
             </table>
           </div>
         </div>
+        <!-- Phones: one card per teacher with their whole week as a small
+             grid (days down, periods across) instead of a 36-column table. -->
+        <div class="dw-cards" id="dwCards"></div>
       </div>
     </div>
   </section>
@@ -463,7 +459,6 @@
             <line x1="3" y1="10" x2="21" y2="10"/>
           </svg>
           <span id="ssDateLabel">—</span>
-          <small>اضغط لتغيير التاريخ</small>
           <div class="ss-date-input-wrapper" aria-hidden="true">
             <input class="ss-mobile-date-input" id="ssMobileDateInput" type="date" inputmode="none" />
           </div>
@@ -5933,8 +5928,6 @@
        sheet, for that cell's own date. */
     const dwSheetEl = document.getElementById('dwSheet');
     const dwClose = document.getElementById('dwClose');
-    const dwPrev = document.getElementById('dwPrev');
-    const dwNext = document.getElementById('dwNext');
     const dwDayBtn = document.getElementById('dwDayBtn');
     const dwRangeLabel = document.getElementById('dwRangeLabel');
     const dwRangeSub = document.getElementById('dwRangeSub');
@@ -6020,6 +6013,67 @@
       return { startISO, dates, scheduleByDay, cellsByDay };
     }
 
+    const DW_DAY_SHORT = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس'];
+
+    // Phone layout of the same week: a card per teacher, days as rows and
+    // the seven periods as columns, cells tappable like the table's.
+    function dwRenderCards(week, todayISO){
+      const cards = document.getElementById('dwCards');
+      cards.innerHTML = '';
+      if (!dsTeachersList.length){
+        cards.innerHTML = '<div class="dw-cards-empty">لا يوجد معلمون في هذا القسم</div>';
+        return;
+      }
+      const legend = document.createElement('div');
+      legend.className = 'dw-legend';
+      legend.innerHTML = '<span><i class="dw-dot taken"></i>تم تسليم الغياب</span><span><i class="dw-dot missing"></i>لم يُسلَّم</span><span><i class="dw-dot future"></i>لم تبدأ</span>';
+      cards.appendChild(legend);
+      for (const teacher of dsTeachersList){
+        let lessons = 0;
+        const card = document.createElement('article');
+        card.className = 'dw-card';
+        const grid = document.createElement('div');
+        grid.className = 'dw-mini';
+        grid.appendChild(Object.assign(document.createElement('span'), { className: 'dw-mini-corner' }));
+        for (let l = 1; l <= 7; l++){
+          const h = document.createElement('span');
+          h.className = 'dw-mini-num';
+          h.textContent = toArabicDigits(String(l));
+          h.title = `الحصة ${DW_ORDINALS[l - 1]}`;
+          grid.appendChild(h);
+        }
+        week.dates.forEach((iso, day) => {
+          const isToday = iso === todayISO;
+          const isFuture = iso > todayISO;
+          const dayCell = document.createElement('span');
+          dayCell.className = 'dw-mini-day' + (isToday ? ' is-today' : '');
+          dayCell.textContent = DW_DAY_SHORT[day];
+          grid.appendChild(dayCell);
+          for (let lesson = 1; lesson <= 7; lesson++){
+            const cell = week.cellsByDay[day]?.[teacher.uid]?.[lesson];
+            if (!cell || !cell.hasClass){
+              grid.appendChild(Object.assign(document.createElement('span'), { className: 'dw-mini-cell empty' + (isToday ? ' is-today' : '') }));
+              continue;
+            }
+            lessons++;
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'dw-mini-cell ' + (cell.taken ? 'taken' : (isFuture ? 'future' : 'missing')) + (isToday ? ' is-today' : '');
+            btn.textContent = toArabicDigits(cell.classKey.replace(/\s*\/\s*/g, '/'));
+            btn.title = `${DAYS_AR[day]} — الحصة ${DW_ORDINALS[lesson - 1]}`;
+            btn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              dsOpenPopoverForCell(teacher, lesson, cell, { date: dwDateFromISO(iso), scheduleMap: week.scheduleByDay[day] });
+            });
+            grid.appendChild(btn);
+          }
+        });
+        card.innerHTML = `<header class="dw-card-head"><span class="dw-card-name">${escapeHtml(teacher.name)}</span><span class="dw-card-count">${toArabicDigits(String(lessons))} حصة</span></header>`;
+        card.appendChild(grid);
+        cards.appendChild(card);
+      }
+    }
+
     function dwRender(){
       const week = dwWeek;
       const todayISO = kuwaitTodayISO();
@@ -6054,6 +6108,7 @@
       });
       dwHead.innerHTML = '';
       dwHead.append(dayRow, lessonRow);
+      dwRenderCards(week, todayISO);
 
       dwGridBody.innerHTML = '';
       if (!dsTeachersList.length){
@@ -6227,8 +6282,6 @@
     dsWeekBtn.addEventListener('click', openDeptWeekSheet);
     dwClose.addEventListener('click', closeDeptWeekSheet);
     dwDayBtn.addEventListener('click', dwBackToDay);
-    dwPrev.addEventListener('click', () => dwLoadWeek(addDaysISO(dwWeekStart, -7)));
-    dwNext.addEventListener('click', () => dwLoadWeek(addDaysISO(dwWeekStart, 7)));
     document.getElementById('dwLoadErrorRetry').addEventListener('click', () => dwLoadWeek(dwWeekStart));
 
     /* ========= تنزيل جدول القسم (both sheets) =========
