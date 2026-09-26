@@ -6234,7 +6234,8 @@
     /* ========= تنزيل جدول القسم (both sheets) =========
        A small popup: today's department schedule (the day sheet's date) or
        the week's (the week on screen, else the one containing that date),
-       saved as a PDF — the week as one page per day so each stays legible. */
+       saved as a PDF — the week as one landscape page laid out like the
+       school's printed department timetable. */
     const dsDlBackdrop = document.getElementById('dsDlBackdrop');
     const dsDlModal = document.getElementById('dsDlModal');
     const dsDlStatus = document.getElementById('dsDlStatus');
@@ -6307,6 +6308,74 @@
       return host;
     }
 
+    // The week as ONE landscape A4 page, laid out like the school's printed
+    // department timetable: ministry/school lines and logo on top, a dark
+    // bar with the department, the days over their seven numbered periods,
+    // a teachers column, and only the class in each cell. Classes are
+    // written compactly (12/1 د), thicker rules separate the days.
+    function dsBuildWeekPdfPage(week, dept){
+      const host = document.createElement('div');
+      host.style.cssText = 'position:fixed;top:0;left:-10000px;width:1123px;background:#fff;z-index:-1';
+      const compactClass = (c) => (c || '').toString().replace(/\s*\/\s*/g, '/').replace(/\s+/g, ' ').trim();
+      const n = Math.max(dsTeachersList.length, 1);
+      // Fit the rows to the page: ~520px of table body on a 794px-tall page.
+      const rowH = Math.max(26, Math.min(80, Math.floor(540 / n)));
+      const dayHeads = week.dates.map((iso, day) =>
+        `<th colspan="7" class="day ${day > 0 ? 'sep' : ''}">${escapeHtml(DAYS_AR[day])}<small>${escapeHtml(formatDateArabic(iso))}</small></th>`).join('');
+      const lessonHeads = week.dates.map((iso, day) =>
+        [1, 2, 3, 4, 5, 6, 7].map(l => `<th class="num ${l === 1 && day > 0 ? 'sep' : ''}">${l}</th>`).join('')).join('');
+      const rows = dsTeachersList.map(t => {
+        const tds = week.dates.map((iso, day) => [1, 2, 3, 4, 5, 6, 7].map(l => {
+          const c = week.cellsByDay[day]?.[t.uid]?.[l];
+          const cls = `${l === 1 && day > 0 ? 'sep' : ''} ${l % 2 === 0 ? 'alt' : ''}`;
+          return c?.hasClass ? `<td class="${cls} on">${escapeHtml(compactClass(c.classKey))}</td>` : `<td class="${cls}"></td>`;
+        }).join('')).join('');
+        return `<tr style="height:${rowH}px"><th class="name">${escapeHtml(t.name)}</th>${tds}</tr>`;
+      }).join('') || '<tr><td colspan="36">لا يوجد معلمون في هذا القسم</td></tr>';
+      host.innerHTML = `
+        <style>
+          #dsWeekPdf { width:1123px; min-height:794px; box-sizing:border-box; padding:26px 30px 24px; direction:rtl; background:#fff; color:#1e293b; font-family:var(--app-font); }
+          #dsWeekPdf .top { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+          #dsWeekPdf .lines { text-align:right; line-height:1.55; }
+          #dsWeekPdf .lines div { font-size:12px; font-weight:700; color:#475569; }
+          #dsWeekPdf .lines .school { font-size:17px; font-weight:900; color:#1e293b; }
+          #dsWeekPdf .lines .range { font-size:11px; font-weight:800; color:#64748b; margin-top:2px; }
+          #dsWeekPdf .top img { height:58px; object-fit:contain; }
+          #dsWeekPdf table { width:100%; border-collapse:collapse; table-layout:fixed; border:1.5px solid #334155; }
+          #dsWeekPdf thead .title th { background:#334155; color:#fff; font-size:17px; font-weight:900; padding:7px; }
+          #dsWeekPdf thead .days th { background:#475569; color:#fff; font-size:13px; font-weight:900; padding:6px 2px; }
+          #dsWeekPdf thead .days th small { display:block; font-size:8.5px; font-weight:700; opacity:.85; margin-top:1px; }
+          #dsWeekPdf thead .nums th { background:#64748b; color:#fff; font-size:10px; font-weight:800; padding:4px 0; border-left:1px solid rgba(255,255,255,.25); }
+          #dsWeekPdf th.corner { background:#334155; color:#fff; font-size:13px; font-weight:900; }
+          #dsWeekPdf tbody th.name { background:#f1f5f9; font-size:11px; font-weight:900; color:#1e293b; padding:2px 6px; text-align:center; border-top:1px solid #94a3b8; border-left:2px solid #334155; line-height:1.35; }
+          #dsWeekPdf tbody td { border-top:1px solid #cbd5e1; border-left:1px solid #e2e8f0; text-align:center; vertical-align:middle; font-size:9.5px; font-weight:900; color:#0f172a; padding:0 1px; white-space:nowrap; overflow:hidden; }
+          #dsWeekPdf tbody td.alt { background:#f8fafc; }
+          #dsWeekPdf tbody td.on { background:#e8f0f8; }
+          #dsWeekPdf .sep { border-right:2px solid #334155 !important; }
+        </style>
+        <div id="dsWeekPdf">
+          <div class="top">
+            <div class="lines">
+              <div>وزارة التربية والتعليم</div>
+              <div>منطقة العاصمة التعليمية</div>
+              <div class="school">ثانوية أحمد البشر الرومي</div>
+              <div class="range">الأسبوع: ${escapeHtml(dwWeekRangeText(week.startISO))}</div>
+            </div>
+            <img class="ds-pdf-logo" src="/images/schoollogo.png" alt="">
+          </div>
+          <table>
+            <colgroup><col style="width:118px">${'<col>'.repeat(35)}</colgroup>
+            <thead>
+              <tr class="title"><th colspan="36">${escapeHtml(dept || 'جدول القسم')}</th></tr>
+              <tr class="days"><th class="corner" rowspan="2">المعلم</th>${dayHeads}</tr>
+              <tr class="nums">${lessonHeads}</tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>`;
+      return host;
+    }
+
     async function dsDownloadPdf(kind){
       if (dsDlBusy) return;
       if (!window.html2canvas || !window.jspdf?.jsPDF){ dsSetDlStatus('error', 'مكتبة إنشاء PDF غير متاحة حالياً.'); return; }
@@ -6331,22 +6400,20 @@
         } else {
           const start = dsDownloadWeekStart();
           const week = (dwWeek && dwWeek.startISO === start) ? dwWeek : await dwFetchWeek(start);
-          pages = week.dates.map((iso, day) => ({
-            title: `جدول القسم — ${dept}`,
-            subtitle: `${DAYS_AR[day]} ${formatDateArabic(iso)} — الأسبوع ${dwWeekRangeText(start)}`,
-            cells: week.cellsByDay[day],
-          }));
+          // One landscape page for the whole week.
+          pages = [{ build: () => dsBuildWeekPdfPage(week, dept), landscape: true }];
           fileName = `جدول-القسم-الأسبوعي-${dept}-من-${formatDateArabicCompact(week.dates[0])}-إلى-${formatDateArabicCompact(week.dates[4])}`;
         }
         if (document.fonts?.ready) await document.fonts.ready;
         const { jsPDF } = window.jspdf;
-        const docPdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4', compress: true });
+        const docPdf = new jsPDF({ orientation: pages[0].landscape ? 'landscape' : 'portrait', unit: 'pt', format: 'a4', compress: true });
         for (let i = 0; i < pages.length; i++){
-          const host = dsBuildPdfPage(pages[i]);
+          const host = pages[i].build ? pages[i].build() : dsBuildPdfPage(pages[i]);
           document.body.appendChild(host);
           try {
             try { await waitForImageReady(host.querySelector('.ds-pdf-logo')); } catch (_) {}
-            const canvas = await window.html2canvas(host.querySelector('#dsPdfCard'), { backgroundColor: '#ffffff', scale: PDF_RENDER_SCALE, useCORS: true, logging: false });
+            const card = host.querySelector('#dsWeekPdf') || host.querySelector('#dsPdfCard');
+            const canvas = await window.html2canvas(card, { backgroundColor: '#ffffff', scale: pages[i].landscape ? 1.6 : PDF_RENDER_SCALE, useCORS: true, logging: false });
             if (i > 0) docPdf.addPage();
             addCanvasToA4Page(docPdf, canvas, 14);
           } finally {
