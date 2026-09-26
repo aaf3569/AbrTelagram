@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 
-for (const pagePath of ['Teachers/teacherschedule.html', 'beta/userbeta.html']) {
+for (const pagePath of ['Teachers/user.html']) {
 const page = fs.readFileSync(path.join(__dirname, '..', pagePath), 'utf8');
 const pageTest = (name, run) => test(`${pagePath}: ${name}`, run);
 pageTest('teacher schedule module parses', () => {
@@ -12,6 +12,10 @@ pageTest('teacher schedule module parses', () => {
   assert.ok(scripts.length);
   for (const [, source] of scripts) new vm.SourceTextModule(source);
 });
+async function priorityModule() {
+  const source = fs.readFileSync(path.join(__dirname, '../shared/schedule-priority.js'), 'utf8');
+  return import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
+}
 async function identity() {
   const source = fs.readFileSync(path.join(__dirname, '../shared/schedule-teacher-identity.js'), 'utf8');
   return import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
@@ -58,8 +62,9 @@ pageTest('all 18 assignments reach the weekly grid, including legacy UID and tex
     classKey: '12 / 1 د'
   }));
   const dates = ['2026-09-13', '2026-09-14', '2026-09-15', '2026-09-16', '2026-09-17'];
+  const { normalizeClassKey } = await priorityModule();
   const context = vm.createContext({
-    console, db: {}, weekDates: dates, FIXED_LESSON_COUNT: 7,
+    console, db: {}, weekDates: dates, FIXED_LESSON_COUNT: 7, normalizeClassKey,
     cache: { weekKey: dates[0], teacherWeek: new Map(), overridesByTeacher: new Map(), customDayDocs: new Map() },
     getScheduleUids: async () => ['haider', 'old-haider'],
     collection: () => 'schedules', where: (field, op, value) => ({ field, op, value }),
@@ -138,8 +143,9 @@ pageTest('reported wrong-class covers preserve all 18 lessons in weekly and dail
 pageTest('weekly map renders Monday fifth lesson and refreshes admin changes', async () => {
   let classKey = '12 / 1 د';
   const dates = ['2026-09-13', '2026-09-14', '2026-09-15', '2026-09-16', '2026-09-17'];
+  const { normalizeClassKey } = await priorityModule();
   const context = vm.createContext({
-    console, weekDates: dates, FIXED_LESSON_COUNT: 7,
+    console, weekDates: dates, FIXED_LESSON_COUNT: 7, normalizeClassKey,
     cache: { weekKey: dates[0], teacherWeek: new Map(), overridesByTeacher: new Map(), customDayDocs: new Map() },
     fetchWeekDocsForTeacher: async () => [{ data: () => ({ dayIndex: '1', lesson: '5', classKey }) }],
     loadOverridesForTeacherInDates: async () => {},
@@ -167,7 +173,7 @@ pageTest('custom replacement still suppresses the main lesson and resolves a leg
     loadOverridesForTeacherInDates: async () => {},
     fetchCustomScheduleDocsForDayIndex: async day => day === 1 ? [custom] : [],
     getOverriddenClassKeys: priority.getOverriddenClassKeys,
-    classKeyFromRow: priority.classKeyFromRow,
+    classKeyFromRow: priority.classKeyFromRow, normalizeClassKey: priority.normalizeClassKey,
     isClassOverriddenForToday: (row, keys) => priority.isClassOverriddenToday(priority.classKeyFromRow(row), keys),
     getScheduleUids: async () => ['haider', 'old-haider']
   });
@@ -179,4 +185,41 @@ pageTest('custom replacement still suppresses the main lesson and resolves a leg
   assert.equal((await context.getWeekMapForTeacher('haider')).get(dates[1]).get(5), custom.classKey);
 });
 
+
+pageTest('two classes in the same period both reach the weekly grid (18 assignments, 17 periods)', async () => {
+  const priority = await priorityModule();
+  const dates = ['2026-09-13', '2026-09-14', '2026-09-15', '2026-09-16', '2026-09-17'];
+  // 17 ordinary lessons plus a second class in Tuesday's third period,
+  // and one exact duplicate row (same class, same slot) that must collapse.
+  const rows = Array.from({ length: 17 }, (_, index) => ({
+    dayIndex: Math.floor(index / 4), lesson: index % 4 + 1, classKey: '12 / 1 د'
+  }));
+  rows.push({ dayIndex: 2, lesson: 3, classKey: '12 / 2 د' });
+  rows.push({ dayIndex: 2, lesson: 3, classKey: '12/1 د' });
+  const cache = { weekKey: dates[0], teacherWeek: new Map(), overridesByTeacher: new Map(), customDayDocs: new Map() };
+  const context = vm.createContext({
+    console, weekDates: dates, FIXED_LESSON_COUNT: 7, cache,
+    fetchWeekDocsForTeacher: async () => rows.map(row => ({ data: () => row })),
+    loadOverridesForTeacherInDates: async () => {},
+    fetchCustomScheduleDocsForDayIndex: async () => [],
+    getOverriddenClassKeys: () => new Set(), isClassOverriddenForToday: () => false,
+    classKeyFromRow: priority.classKeyFromRow, normalizeClassKey: priority.normalizeClassKey,
+    getScheduleUids: async () => ['haider']
+  });
+  const start = page.indexOf('    async function getWeekMapForTeacher(');
+  vm.runInContext(page.slice(start, page.indexOf('    async function waitForImageReady(', start)), context);
+  const week = await context.getWeekMapForTeacher('haider');
+  const classesIn = value => [...context.splitWeekCell(value)];
+  const total = [...week.values()].reduce((sum, day) => sum + [...day.values()].reduce((n, v) => n + classesIn(v).length, 0), 0);
+  assert.equal(total, 18);
+  assert.deepEqual(classesIn(week.get(dates[2]).get(3)).map(priority.normalizeClassKey).sort(),
+    ['12 / 1 د', '12 / 2 د'].map(priority.normalizeClassKey).sort());
+
+  // A cover for one of the two classes leaves the other in the slot.
+  cache.overridesByTeacher.set('haider', new Map([[dates[2], new Map([[3, { _kind: 'original', classKey: '12 / 2 د' }]])]]));
+  context.loadOverridesForTeacherInDates = async () => cache.overridesByTeacher.set('haider',
+    new Map([[dates[2], new Map([[3, { _kind: 'original', classKey: '12 / 2 د' }]])]]));
+  const covered = await context.getWeekMapForTeacher('haider');
+  assert.deepEqual(classesIn(covered.get(dates[2]).get(3)).map(priority.normalizeClassKey), [priority.normalizeClassKey('12 / 1 د')]);
+});
 }

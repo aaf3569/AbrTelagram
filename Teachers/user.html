@@ -2042,7 +2042,9 @@
             ? (hit.classKey || `${hit.grade} / ${hit.section}${hit.track?' '+hit.track:''}`)
             : '—';
 
-          cClass.textContent = txt;
+          // Any other class this teacher also has in this lesson.
+          const alsoTxt = hit?._alsoClasses?.length ? WEEK_CELL_SEP + hit._alsoClasses.join(WEEK_CELL_SEP) : '';
+          cClass.textContent = txt + alsoTxt;
 
           if (hit) cClass.classList.add('lesson-highlight');
           if (hit) {
@@ -2120,7 +2122,7 @@
           const txt = hit
             ? (hit.classKey || `${hit.grade} / ${hit.section}${hit.track?' '+hit.track:''}`)
             : '—';
-          compactClass.textContent = txt;
+          compactClass.textContent = txt + (hit?._alsoClasses?.length ? WEEK_CELL_SEP + hit._alsoClasses.join(WEEK_CELL_SEP) : '');
           if (hit) compactClass.classList.add('lesson-highlight');
           if (hit) {
             compactClass.classList.add('clickable');
@@ -2194,6 +2196,28 @@
           const c = document.createElement('div');
           c.className='gcell';
           const cellContent = getCell(iso, i);
+          const cellClasses = typeof cellContent === 'string' ? splitWeekCell(cellContent) : [];
+          if (cellClasses.length > 1) {
+            // Two (or more) classes in the same period: one chip each, each
+            // opening that class's own lesson actions.
+            c.classList.add('lesson-highlight', 'multi-class');
+            c.title = `${cellClasses.length} فصول في هذه الحصة`;
+            cellClasses.forEach(classKey => {
+              const chip = document.createElement(onLessonClick ? 'button' : 'span');
+              chip.className = 'week-class-chip';
+              chip.textContent = classKey;
+              if (onLessonClick) {
+                chip.type = 'button';
+                chip.addEventListener('click', (e) => {
+                  e.stopPropagation();
+                  onLessonClick({ date: iso, lesson: i, classKey });
+                });
+              }
+              c.appendChild(chip);
+            });
+            grid.appendChild(c);
+            continue;
+          }
           c.textContent = (cellContent ?? '—');
           if (cellContent && cellContent !== '—') {
             c.classList.add('lesson-highlight');
@@ -2330,15 +2354,28 @@
         const t = row?.updatedAt || row?.createdAt;
         return (t && typeof t.toMillis === 'function') ? t.toMillis() : 0;
       };
+      // A second, different class in the same lesson is a real assignment
+      // too (see getWeekMapForTeacher) — the newest row stays the lesson's
+      // main class (its tap opens that class), the others ride along in
+      // _alsoClasses so the day view shows them instead of dropping them.
+      const classesByLesson = new Map(); // lesson -> Map(normalizedClass -> row)
       snap.forEach(d=>{
         const x=d.data();
+        if(x.deletedAt) return;
         if(isClassOverriddenForToday(x, overriddenClassKeys)) return;
         const key = String(x.lesson);
-        const existing = byLesson.get(key);
-        if(!existing || scheduleRowMs(x) > scheduleRowMs(existing)){
-          byLesson.set(key, x);
-        }
+        const norm = normalizeClassKey(classKeyFromRow(x)) || '';
+        if(!classesByLesson.has(key)) classesByLesson.set(key, new Map());
+        const inLesson = classesByLesson.get(key);
+        const prevSame = inLesson.get(norm);
+        if(!prevSame || scheduleRowMs(x) >= scheduleRowMs(prevSame)) inLesson.set(norm, x);
       });
+      for(const [key, inLesson] of classesByLesson){
+        const rows = [...inLesson.values()].sort((a, b) => scheduleRowMs(b) - scheduleRowMs(a));
+        const main = { ...rows[0] };
+        if(rows.length > 1) main._alsoClasses = rows.slice(1).map(r => classKeyFromRow(r)).filter(Boolean);
+        byLesson.set(key, main);
+      }
 
       const mapByDate = cache.overridesByTeacher.get(uid) || new Map();
       const dayMap = mapByDate.get(dateISO) || new Map();
@@ -2498,18 +2535,19 @@
       // computed per weekday since each day can have different overrides.
       const overriddenClassKeysByDay = weekDates.map((iso, dayIdx) => getOverriddenClassKeys(customRowsByDay[dayIdx]));
 
-      // A teacher should only ever have one class for a given lesson — this
-      // query has no classKey filter (teacherUid only), so two rows
-      // genuinely competing for the same (iso, lesson) slot here is a
-      // leftover/orphaned doc, not two valid classes at once. Tracked
-      // separately from `map` since its values are already-formatted
-      // display strings, not the raw docs a timestamp could be read back
-      // off of.
-      const weekSlotMs = new Map();
+      // Every class this teacher has in a slot is kept. This used to keep
+      // only one row per (day, lesson) and drop the rest as "leftover"
+      // docs — but a teacher can genuinely be assigned two classes in the
+      // same period (admins/adminschedule.html's teacher report counts
+      // them all, and warns about them), so the grid came up a lesson
+      // short: 17 here against 18 there. Only true duplicates — the same
+      // class in the same slot twice — collapse, to the newest row, which
+      // is the same rule shared/teacher-lesson-report.js uses.
       const scheduleRowMsForWeek = (row) => {
         const t = row?.updatedAt || row?.createdAt;
         return (t && typeof t.toMillis === 'function') ? t.toMillis() : 0;
       };
+      const slotClasses = new Map(); // `${iso}|${lesson}` -> Map(normalizedClass -> { text, ms })
       snap.forEach(d => {
         const x = d.data();
         // Standing schedule entries recur by weekday — resolve to *this* week's
@@ -2518,24 +2556,29 @@
         const dayIdx = Number(x.dayIndex);
         const iso = weekDates[dayIdx];
         if (iso === undefined) return;
+        if (x.deletedAt) return;
         if (isClassOverriddenForToday(x, overriddenClassKeysByDay[dayIdx] || new Set())) return;
-        if (!map.has(iso)) map.set(iso, new Map());
         const lessonNum = Number(x.lesson);
         const slotKey = `${iso}|${lessonNum}`;
-        const ms = scheduleRowMsForWeek(x);
-        if (weekSlotMs.has(slotKey)) {
-          console.warn(
-            `[teacherschedule] two schedules docs both claim lesson ${lessonNum} on ${iso} for this teacher — `
-            + `keeping whichever is newer, but this is very likely a stale/leftover doc that should be deleted:`,
-            { classKey: map.get(iso).get(lessonNum), ms: weekSlotMs.get(slotKey) },
-            { classKey: x.classKey, ms }
-          );
-          if (weekSlotMs.get(slotKey) > ms) return;
-        }
-        weekSlotMs.set(slotKey, ms);
         const classText = x.classKey || `${x.grade} / ${x.section}${x.track ? ' '+x.track : ''}`;
-        map.get(iso).set(lessonNum, classText);
+        const norm = normalizeClassKey(classText) || classText;
+        const ms = scheduleRowMsForWeek(x);
+        if (!slotClasses.has(slotKey)) slotClasses.set(slotKey, new Map());
+        const inSlot = slotClasses.get(slotKey);
+        const prev = inSlot.get(norm);
+        if (!prev || ms >= prev.ms) inSlot.set(norm, { text: classText, ms });
       });
+      for (const [slotKey, inSlot] of slotClasses) {
+        const [iso, lessonText] = slotKey.split('|');
+        const lessonNum = Number(lessonText);
+        if (!map.has(iso)) map.set(iso, new Map());
+        if (inSlot.size > 1) {
+          console.warn(`[teacherschedule] ${inSlot.size} classes share lesson ${lessonNum} on ${iso} for this teacher — showing all of them:`,
+            [...inSlot.values()].map(v => v.text));
+        }
+        const texts = [...inSlot.values()].map(v => v.text).sort((a, b) => a.localeCompare(b, 'ar'));
+        map.get(iso).set(lessonNum, joinWeekCell(texts));
+      }
 
       const mapByDate = cache.overridesByTeacher.get(uid) || new Map();
       weekDates.forEach((iso, dayIdx) => {
@@ -2547,14 +2590,16 @@
           if (!o) continue;
           if (isClassOverriddenForToday(o, overriddenClassKeys)) continue;
           if (o._kind === 'original') {
-            const scheduledClass = map.get(iso).get(i);
+            // Covered away: only the class the cover is for leaves the
+            // slot — any other class this teacher has in it stays.
+            const scheduled = splitWeekCell(map.get(iso).get(i));
             const overrideClass = classKeyFromRow(o);
-            if (!scheduledClass || !overrideClass || normalizeClassKey(scheduledClass) !== normalizeClassKey(overrideClass)) continue;
-          }
-          if (o._kind === 'new') {
+            if (!scheduled.length || !overrideClass) continue;
+            const remaining = scheduled.filter(c => normalizeClassKey(c) !== normalizeClassKey(overrideClass));
+            if (remaining.length === scheduled.length) continue;
+            map.get(iso).set(i, remaining.length ? joinWeekCell(remaining) : '—');
+          } else if (o._kind === 'new') {
             map.get(iso).set(i, (o.classKey || 'بديل'));
-          } else if (o._kind === 'original') {
-            map.get(iso).set(i, '—');
           }
         }
       });
@@ -2579,6 +2624,17 @@
 
       cache.teacherWeek.set(cacheKey, map);
       return map;
+    }
+
+    // A weekly-grid cell can hold more than one class (a teacher assigned
+    // two classes in the same period). The cell's value stays a plain
+    // string — so the PDF export and the "has lessons" check work as-is —
+    // with the classes joined by WEEK_CELL_SEP.
+    var WEEK_CELL_SEP = ' + ';
+    function joinWeekCell(classes){ return classes.join(WEEK_CELL_SEP); }
+    function splitWeekCell(value){
+      if (!value || value === '—') return [];
+      return String(value).split(WEEK_CELL_SEP).map(v => v.trim()).filter(Boolean);
     }
 
     async function waitForImageReady(imgEl){
