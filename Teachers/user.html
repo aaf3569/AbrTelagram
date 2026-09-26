@@ -311,6 +311,13 @@
             <input class="ds-mobile-date-input" id="dsMobileDateInput" type="date" inputmode="none" />
           </div>
         </button>
+        <!-- The whole week (opens its own sheet in place of this one). -->
+        <button class="ds-tool-btn" id="dsWeekBtn" type="button">
+          <i class="fas fa-calendar-week" aria-hidden="true"></i><span>هالاسبوع</span>
+        </button>
+        <button class="ds-tool-btn icon" id="dsDownloadBtn" type="button" aria-label="تنزيل جدول القسم" title="تنزيل جدول القسم">
+          <i class="fas fa-download" aria-hidden="true"></i>
+        </button>
       </div>
 
       <div id="dsStateLoading" class="ds-state active">
@@ -346,6 +353,78 @@
       </div>
     </div>
   </section>
+
+  <!-- WEEK DEPT SCHEDULE SHEET (جدول القسم — الأسبوع): the same grid as
+       جدول القسم, for Sunday-Thursday at once — each day a group of seven
+       periods with the day above them. Opened from هالاسبوع (it replaces
+       the day sheet, and اليوم swaps back); #dptschedual-week. -->
+  <section id="dwSheet" class="sheet" aria-hidden="true">
+    <div class="sheet-header">
+      <button id="dwClose" class="back-btn" type="button">
+        <i class="fas fa-arrow-right"></i>
+        <span>رجوع</span>
+      </button>
+      <h3 class="sheet-title">جدول القسم — الأسبوع</h3>
+    </div>
+    <div class="sheet-body ds-sheet-body">
+      <div class="ds-toolbar dw-toolbar">
+        <button class="ds-tool-btn icon" id="dwPrev" type="button" aria-label="الأسبوع السابق" title="الأسبوع السابق">
+          <i class="fas fa-chevron-right" aria-hidden="true"></i>
+        </button>
+        <div class="dw-range">
+          <b id="dwRangeLabel">—</b>
+          <small id="dwRangeSub"></small>
+        </div>
+        <button class="ds-tool-btn icon" id="dwNext" type="button" aria-label="الأسبوع التالي" title="الأسبوع التالي">
+          <i class="fas fa-chevron-left" aria-hidden="true"></i>
+        </button>
+        <button class="ds-tool-btn" id="dwDayBtn" type="button">
+          <i class="fas fa-calendar-day" aria-hidden="true"></i><span>اليوم</span>
+        </button>
+        <button class="ds-tool-btn icon" id="dwDownloadBtn" type="button" aria-label="تنزيل جدول القسم" title="تنزيل جدول القسم">
+          <i class="fas fa-download" aria-hidden="true"></i>
+        </button>
+      </div>
+
+      <div id="dwStateLoading" class="ds-state active">
+        <div class="ds-spinner"></div>
+      </div>
+      <div id="dwStateLoadError" class="ds-state">
+        <div class="ds-msg-error">تعذّر تحميل جدول القسم للأسبوع. تحقق من الاتصال بالإنترنت ثم أعد المحاولة.</div>
+        <button id="dwLoadErrorRetry" class="ds-retry-btn" type="button">إعادة المحاولة</button>
+      </div>
+      <div id="dwStateOk" class="ds-state">
+        <div class="ds-table-shell">
+          <div class="ds-table-scroll" id="dwTableScroll">
+            <table class="ds-table dw-table" aria-label="جدول القسم للأسبوع">
+              <thead id="dwHead"></thead>
+              <tbody id="dwGridBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- تنزيل جدول القسم: today's or the week's, as a PDF. -->
+  <div class="ds-dl-backdrop" id="dsDlBackdrop" aria-hidden="true"></div>
+  <div class="ds-dl-modal" id="dsDlModal" role="dialog" aria-modal="true" aria-labelledby="dsDlTitle" aria-hidden="true">
+    <div class="ds-dl-head">
+      <b id="dsDlTitle">تنزيل جدول القسم</b>
+      <button class="ds-pop-close" id="dsDlClose" type="button" aria-label="إغلاق">×</button>
+    </div>
+    <div class="ds-dl-body">
+      <button class="ds-dl-option" id="dsDlDay" type="button">
+        <i class="fas fa-calendar-day" aria-hidden="true"></i>
+        <span class="ds-dl-text"><b>جدول اليوم</b><small id="dsDlDaySub">—</small></span>
+      </button>
+      <button class="ds-dl-option" id="dsDlWeek" type="button">
+        <i class="fas fa-calendar-week" aria-hidden="true"></i>
+        <span class="ds-dl-text"><b>جدول الأسبوع</b><small id="dsDlWeekSub">—</small></span>
+      </button>
+      <div class="ds-dl-status" id="dsDlStatus" hidden></div>
+    </div>
+  </div>
 
   <div class="ds-popover-backdrop" id="dsPopBackdrop" aria-hidden="true"></div>
   <div class="ds-popover" id="dsPopover" role="dialog" aria-modal="true" aria-hidden="true">
@@ -5371,6 +5450,7 @@
         [ocSheet, () => sidebarOtherClasses],
         [requestsSheet, () => btnRequests],
         [dsSheetEl, () => sidebarDeptSchedule],
+        [document.getElementById('dwSheet'), () => sidebarDeptSchedule],
         [ssSheetEl, () => sidebarSchoolSchedule],
         [svsSheetEl, () => sidebarSupervisorStudents],
         [document.getElementById('maTodaySheet'), () => document.getElementById('sidebarMaToday')],
@@ -5477,8 +5557,8 @@
       const e = parseTimeToMinutes(t.end);
       return now >= s && now <= e + LESSON_END_GRACE_MINUTES;
     }
-    function dsIsViewingToday(){
-      return dsToInputDate(dsSelectedDate) === dsToInputDate(new Date());
+    function dsIsViewingToday(dateObj = dsSelectedDate){
+      return dsToInputDate(dateObj) === dsToInputDate(new Date());
     }
 
     async function dsLoadDepartmentTeachers(department){
@@ -5596,15 +5676,15 @@
       }
     }
 
-    function dsCanTakeAttendanceNow(cellData, lesson){
-      return !cellData.taken && dsIsViewingToday() && dsIsLessonLiveNow(lesson);
+    function dsCanTakeAttendanceNow(cellData, lesson, dateObj = dsSelectedDate){
+      return !cellData.taken && dsIsViewingToday(dateObj) && dsIsLessonLiveNow(lesson);
     }
 
-    function dsWireTakeAttendanceUI(teacher, lesson, cellData){
+    function dsWireTakeAttendanceUI(teacher, lesson, cellData, dateObj = dsSelectedDate){
       const btn = document.getElementById('dsBtnTakeAttendance');
       if (!btn) return;
       btn.addEventListener('click', () => {
-        if (!dsCanTakeAttendanceNow(cellData, lesson)) return;
+        if (!dsCanTakeAttendanceNow(cellData, lesson, dateObj)) return;
         dsClosePopover();
         dsAttendance.openForAdminCreate({
           date: kuwaitTodayISO(), classKey: cellData.classKey, lesson,
@@ -5613,15 +5693,17 @@
       });
     }
 
-    function dsGetFreeDeptTeachersForLesson(lesson, excludeUid){
+    function dsGetFreeDeptTeachersForLesson(lesson, excludeUid, scheduleMap = dsScheduleMap){
       return dsTeachersList.filter(t => {
         if (t.uid === excludeUid) return false;
-        const sched = dsScheduleMap[t.uid];
+        const sched = scheduleMap[t.uid];
         return !sched || !sched[lesson];
       });
     }
 
-    function dsWireCoverUI(teacher, lesson, cellData){
+    function dsWireCoverUI(teacher, lesson, cellData, ctx = {}){
+      const dateObj = ctx.date || dsSelectedDate;
+      const scheduleMap = ctx.scheduleMap || dsScheduleMap;
       const btnOpenCover = document.getElementById('dsBtnOpenCover');
       const coverSection = document.getElementById('dsCoverSection');
       const coverTeacherList = document.getElementById('dsCoverTeacherList');
@@ -5630,7 +5712,7 @@
       let selectedTeacherUid = null;
 
       function renderFreeTeachers(){
-        const free = dsGetFreeDeptTeachersForLesson(lesson, teacher.uid);
+        const free = dsGetFreeDeptTeachersForLesson(lesson, teacher.uid, scheduleMap);
         coverTeacherList.innerHTML = '';
         if (!free.length){
           const empty = document.createElement('div');
@@ -5666,7 +5748,7 @@
         coverStatus.style.color = '';
         coverStatus.textContent = 'جارٍ إسناد التغطية...';
         try {
-          await dsAssignCover(teacher.uid, selectedTeacherUid, lesson, cellData.classKey);
+          await dsAssignCover(teacher.uid, selectedTeacherUid, lesson, cellData.classKey, dateObj);
           coverStatus.style.color = 'var(--success)';
           coverStatus.textContent = 'تم إسناد التغطية بنجاح.';
         } catch (e) {
@@ -5681,8 +5763,8 @@
     // Writes a scheduleOverrides doc naming newTeacherUid as the covering
     // teacher for this one date/lesson — same mechanism/doc-ID convention
     // depHead/dptschedual.html's own assignCover uses.
-    async function dsAssignCover(originalTeacherUid, newTeacherUid, lesson, classKey){
-      const dateISO = dsToInputDate(dsSelectedDate);
+    async function dsAssignCover(originalTeacherUid, newTeacherUid, lesson, classKey, dateObj = dsSelectedDate){
+      const dateISO = dsToInputDate(dateObj);
       const existingSnap = await getDocs(query(
         collection(db, 'scheduleOverrides'),
         where('date', '==', dateISO), where('lesson', '==', lesson),
@@ -5696,9 +5778,12 @@
       }, { merge: true });
     }
 
-    function dsOpenPopoverForCell(teacher, lesson, cellData){
+    // ctx: { date, scheduleMap } — the day the cell belongs to; defaults to
+    // the day sheet's selected date (the week sheet passes its own).
+    function dsOpenPopoverForCell(teacher, lesson, cellData, ctx = {}){
+      const cellDate = ctx.date || dsSelectedDate;
       const niceLesson = toArabicDigits(lesson);
-      const niceDate = toArabicDigits(dsFmtDateLong(dsSelectedDate));
+      const niceDate = toArabicDigits(dsFmtDateLong(cellDate));
       const niceClass = toArabicDigits(cellData.classKey);
       const niceTime = cellData.taken && cellData.time ? toArabicDigits(dsFormatTime(cellData.time)) : '—';
       const isHeadViewer = currentRole === 'head';
@@ -5719,7 +5804,7 @@
           <div class="ds-sec-title"><span>معلومات التسليم</span><span class="muted" style="font-weight:900">الوقت</span></div>
           <div class="ds-chips"><span class="ds-chip">تم التسليم في: ${niceTime}</span></div>
         </div>` : ''}
-        ${dsCanTakeAttendanceNow(cellData, lesson) ? `<button type="button" class="ds-btn-take-attendance" id="dsBtnTakeAttendance">تسجيل الغياب</button>` : ''}
+        ${dsCanTakeAttendanceNow(cellData, lesson, cellDate) ? `<button type="button" class="ds-btn-take-attendance" id="dsBtnTakeAttendance">تسجيل الغياب</button>` : ''}
         ${isHeadViewer ? `
         <button type="button" class="ds-btn-cover" id="dsBtnOpenCover">تغطية</button>
         <div class="ds-section" id="dsCoverSection" hidden>
@@ -5737,8 +5822,8 @@
       dsPopoverEl.setAttribute('aria-hidden', 'false');
       dsPopClose.focus({ preventScroll: true });
 
-      dsWireTakeAttendanceUI(teacher, lesson, cellData);
-      if (isHeadViewer) dsWireCoverUI(teacher, lesson, cellData);
+      dsWireTakeAttendanceUI(teacher, lesson, cellData, cellDate);
+      if (isHeadViewer) dsWireCoverUI(teacher, lesson, cellData, { date: cellDate, scheduleMap: ctx.scheduleMap });
     }
 
     function dsClosePopover(){
@@ -5797,6 +5882,7 @@
     function dsOnEscape(e){
       if (e.key !== 'Escape') return;
       if (dsPopoverEl.classList.contains('open')) { dsClosePopover(); return; }
+      if (document.getElementById('dsDlModal')?.classList.contains('open')) { dsCloseDownloadModal(); return; }
       closeDeptSchedSheet();
     }
 
@@ -5836,6 +5922,456 @@
     });
 
     dsClose.addEventListener('click', closeDeptSchedSheet);
+
+    /* ========= جدول القسم — الأسبوع (dwSheet) =========
+       The same grid as جدول القسم, for a whole Sunday-Thursday week: one
+       group of seven periods per day, the day's name above its group, the
+       periods labelled just by ordinal (الأولى …) so 35 columns fit. Opened
+       from the day sheet's هالاسبوع, which it replaces (the history entry is
+       swapped, not stacked, so the phone's back button still just closes
+       it); اليوم swaps back. Cells open the same lesson popover as the day
+       sheet, for that cell's own date. */
+    const dwSheetEl = document.getElementById('dwSheet');
+    const dwClose = document.getElementById('dwClose');
+    const dwPrev = document.getElementById('dwPrev');
+    const dwNext = document.getElementById('dwNext');
+    const dwDayBtn = document.getElementById('dwDayBtn');
+    const dwRangeLabel = document.getElementById('dwRangeLabel');
+    const dwRangeSub = document.getElementById('dwRangeSub');
+    const dwStateLoading = document.getElementById('dwStateLoading');
+    const dwStateLoadError = document.getElementById('dwStateLoadError');
+    const dwStateOk = document.getElementById('dwStateOk');
+    const dwHead = document.getElementById('dwHead');
+    const dwGridBody = document.getElementById('dwGridBody');
+    const dsWeekBtn = document.getElementById('dsWeekBtn');
+
+    const DW_ORDINALS = ['الأولى', 'الثانية', 'الثالثة', 'الرابعة', 'الخامسة', 'السادسة', 'السابعة'];
+    let dwWeekStart = null;      // ISO Sunday of the week on screen
+    let dwWeek = null;           // last loaded week (see dwFetchWeek)
+    let dwLoadRequestId = 0;
+
+    function dwShow(el){
+      [dwStateLoading, dwStateLoadError, dwStateOk].forEach(x => x.classList.remove('active'));
+      el.classList.add('active');
+    }
+    const dwDateFromISO = (iso) => { const [y, m, d] = iso.split('-').map(Number); return new Date(y, m - 1, d); };
+
+    // The school week containing dateObj; on Friday/Saturday the coming one
+    // (same rule as جدولي الأسبوعي).
+    function dwWeekStartFor(dateObj){
+      const start = startOfWeekSunday(dsToInputDate(dateObj));
+      return addDaysISO(start, dateObj.getDay() >= 5 ? 7 : 0);
+    }
+    function dwWeekRangeText(startISO){
+      return `${formatDateArabic(startISO)} – ${formatDateArabic(addDaysISO(startISO, 4))}`;
+    }
+
+    // Everything the week grid (and the week PDF) needs: for each of the five
+    // days, the department's schedule (teacherUid -> lesson -> class) and the
+    // attendance state of each scheduled lesson on that date.
+    async function dwFetchWeek(startISO){
+      const dates = [0, 1, 2, 3, 4].map(n => addDaysISO(startISO, n));
+      if (!dsTeachersList.length && myDeptSchedDepartment) dsTeachersList = await dsLoadDepartmentTeachers(myDeptSchedDepartment);
+      const deptUids = new Set(dsTeachersList.map(t => t.uid));
+      const [schedSnap, attSnap] = await Promise.all([
+        // dayIndex is saved as a number, but the admin page also accepts it
+        // as text — ask for both.
+        getDocs(query(collection(db, 'schedules'), where('dayIndex', 'in', [0, 1, 2, 3, 4, '0', '1', '2', '3', '4']))),
+        getDocs(query(collection(db, 'attendanceSessions'), where('date', 'in', dates))),
+      ]);
+      const scheduleByDay = dates.map(() => Object.create(null));
+      schedSnap.forEach(docSnap => {
+        const data = docSnap.data() || {};
+        const day = Number(data.dayIndex);
+        const lesson = Number(data.lesson);
+        const teacherUid = data.teacherUid;
+        const classKey = (data.classKey || '').toString().trim();
+        if (!deptUids.has(teacherUid) || !(day >= 0 && day <= 4) || !lesson || lesson < 1 || lesson > 7 || !classKey) return;
+        const byTeacher = scheduleByDay[day];
+        if (!byTeacher[teacherUid]) byTeacher[teacherUid] = {};
+        byTeacher[teacherUid][lesson] = { classKey, teacherName: data.teacherName || '', subject: data.subject || '' };
+      });
+      const taken = new Map(); // `${date}|${teacherUid}|${lesson}` -> session
+      attSnap.forEach(sessionDoc => {
+        const x = sessionDoc.data() || {};
+        taken.set(`${x.date}|${x.teacherUid}|${Number(x.lesson)}`, x);
+      });
+      const cellsByDay = dates.map((iso, day) => {
+        const cells = Object.create(null);
+        for (const teacher of dsTeachersList){
+          cells[teacher.uid] = {};
+          for (let lesson = 1; lesson <= 7; lesson++){
+            const sched = scheduleByDay[day][teacher.uid]?.[lesson];
+            const cell = { classKey: null, taken: false, time: null, hasClass: false };
+            if (sched){
+              cell.hasClass = true;
+              cell.classKey = sched.classKey;
+              const session = taken.get(`${iso}|${teacher.uid}|${lesson}`);
+              if (session && session.classKey === sched.classKey){
+                cell.taken = true;
+                cell.time = session.createdAt || session.sessionStartTs || null;
+              }
+            }
+            cells[teacher.uid][lesson] = cell;
+          }
+        }
+        return cells;
+      });
+      return { startISO, dates, scheduleByDay, cellsByDay };
+    }
+
+    function dwRender(){
+      const week = dwWeek;
+      const todayISO = kuwaitTodayISO();
+      dwRangeLabel.textContent = dwWeekRangeText(week.startISO);
+      const thisWeek = dwWeekStartFor(new Date());
+      dwRangeSub.textContent = week.startISO === thisWeek
+        ? (new Date().getDay() >= 5 ? 'الأسبوع القادم' : 'هذا الأسبوع')
+        : (week.startISO < thisWeek ? 'أسبوع سابق' : 'أسبوع قادم');
+
+      // Two header rows: the days (each spanning its seven periods), then
+      // the periods by ordinal.
+      const dayRow = document.createElement('tr');
+      const corner = document.createElement('th');
+      corner.className = 'ds-sticky-col';
+      corner.rowSpan = 2;
+      corner.textContent = 'المعلمين';
+      dayRow.appendChild(corner);
+      const lessonRow = document.createElement('tr');
+      week.dates.forEach((iso, day) => {
+        const th = document.createElement('th');
+        th.colSpan = 7;
+        th.className = 'dw-day-th' + (iso === todayISO ? ' is-today' : '');
+        th.innerHTML = `<span class="dw-day-label"><span class="dw-day-name">${escapeHtml(DAYS_AR[day])}</span><span class="dw-day-date">${escapeHtml(formatDateArabic(iso))}</span></span>`;
+        dayRow.appendChild(th);
+        DW_ORDINALS.forEach((label, i) => {
+          const lt = document.createElement('th');
+          lt.className = 'dw-lesson-th' + (i === 0 ? ' dw-day-start' : '') + (iso === todayISO ? ' is-today' : '');
+          lt.setAttribute('aria-label', `${DAYS_AR[day]} — الحصة ${label}`);
+          lt.textContent = label;
+          lessonRow.appendChild(lt);
+        });
+      });
+      dwHead.innerHTML = '';
+      dwHead.append(dayRow, lessonRow);
+
+      dwGridBody.innerHTML = '';
+      if (!dsTeachersList.length){
+        const tr = document.createElement('tr');
+        const td = document.createElement('td');
+        td.colSpan = 36;
+        td.className = 'muted';
+        td.style.cssText = 'text-align:center;padding:20px';
+        td.textContent = 'لا يوجد معلمون في هذا القسم';
+        tr.appendChild(td);
+        dwGridBody.appendChild(tr);
+        return;
+      }
+      for (const teacher of dsTeachersList){
+        const tr = document.createElement('tr');
+        const tdTeacher = document.createElement('td');
+        tdTeacher.className = 'ds-sticky-col';
+        tdTeacher.innerHTML = `<div class="ds-teacher-name">${escapeHtml(teacher.name)}</div>`;
+        tr.appendChild(tdTeacher);
+        week.dates.forEach((iso, day) => {
+          const isFuture = iso > todayISO;
+          for (let lesson = 1; lesson <= 7; lesson++){
+            const td = document.createElement('td');
+            if (lesson === 1) td.className = 'dw-day-start';
+            if (iso === todayISO) td.classList.add('is-today');
+            const cell = week.cellsByDay[day][teacher.uid]?.[lesson];
+            if (!cell || !cell.hasClass){
+              const empty = document.createElement('div');
+              empty.className = 'ds-cell-empty';
+              td.appendChild(empty);
+            } else {
+              const btn = document.createElement('button');
+              btn.type = 'button';
+              // A future lesson can't have attendance yet — neutral, not red.
+              btn.className = cell.taken ? 'ds-cell-btn-taken' : (isFuture ? 'dw-cell-btn-future' : 'ds-cell-btn-not-taken');
+              btn.textContent = toArabicDigits(cell.classKey);
+              btn.title = `${DAYS_AR[day]} — الحصة ${DW_ORDINALS[lesson - 1]}: ` + (cell.taken ? 'تم تسليم الغياب' : (isFuture ? 'لم تبدأ بعد' : 'لم يتم تسليم الغياب'));
+              btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                dsOpenPopoverForCell(teacher, lesson, cell, { date: dwDateFromISO(iso), scheduleMap: week.scheduleByDay[day] });
+              });
+              td.appendChild(btn);
+            }
+            tr.appendChild(td);
+          }
+        });
+        dwGridBody.appendChild(tr);
+      }
+      requestAnimationFrame(dwCenterDayLabels);
+    }
+
+    // Keep each day's name centred over the part of its seven periods that's
+    // currently visible (right of nothing, left of the sticky teachers
+    // column), so it follows along as the week is scrolled sideways.
+    const dwTableScroll = document.getElementById('dwTableScroll');
+    function dwCenterDayLabels(){
+      if (!dwSheetEl.classList.contains('open')) return;
+      const view = dwTableScroll.getBoundingClientRect();
+      const sticky = dwHead.querySelector('th.ds-sticky-col');
+      const stickyRect = sticky ? sticky.getBoundingClientRect() : null;
+      // RTL: the teachers column is pinned on the right edge.
+      const visLeft = view.left;
+      const visRight = stickyRect ? Math.min(view.right, stickyRect.left) : view.right;
+      dwHead.querySelectorAll('th.dw-day-th').forEach(th => {
+        const label = th.firstElementChild;
+        if (!label) return;
+        const r = th.getBoundingClientRect();
+        const left = Math.max(r.left, visLeft);
+        const right = Math.min(r.right, visRight);
+        const w = label.offsetWidth;
+        let center = (left + right) / 2;
+        if (right - left < w) {
+          // Too little of the group is showing to centre in — keep the label
+          // inside the group, pushed toward the visible side.
+          center = right <= left ? (r.left + r.right) / 2 : Math.min(Math.max(center, r.left + w / 2), r.right - w / 2);
+        }
+        label.style.left = (center - r.left) + 'px';
+      });
+    }
+    let dwCenterRaf = 0;
+    const dwScheduleCenter = () => {
+      if (dwCenterRaf) return;
+      dwCenterRaf = requestAnimationFrame(() => { dwCenterRaf = 0; dwCenterDayLabels(); });
+    };
+    dwTableScroll.addEventListener('scroll', dwScheduleCenter, { passive: true });
+    window.addEventListener('resize', dwScheduleCenter);
+
+    async function dwLoadWeek(startISO){
+      const requestId = ++dwLoadRequestId;
+      dwWeekStart = startISO;
+      dwRangeLabel.textContent = dwWeekRangeText(startISO);
+      dwRangeSub.textContent = '';
+      dwShow(dwStateLoading);
+      try {
+        const week = await dwFetchWeek(startISO);
+        if (requestId !== dwLoadRequestId) return;
+        dwWeek = week;
+        dwRender();
+        dwShow(dwStateOk);
+      } catch (e) {
+        if (requestId !== dwLoadRequestId) return;
+        console.error('[dwSheet] load failed:', e);
+        dwShow(dwStateLoadError);
+      }
+    }
+
+    function dwOnEscape(e){
+      if (e.key !== 'Escape') return;
+      if (dsPopoverEl.classList.contains('open')) { dsClosePopover(); return; }
+      if (dsDlModal.classList.contains('open')) { dsCloseDownloadModal(); return; }
+      closeDeptWeekSheet();
+    }
+
+    // Opened from the day sheet: the day sheet slides away and this one
+    // takes its history entry (#dptschedual → #dptschedual-week).
+    function openDeptWeekSheet(){
+      if (!myDeptSchedDepartment || dwSheetEl.classList.contains('open')) return;
+      const fromDay = dsSheetEl.classList.contains('open');
+      if (fromDay){
+        dsSheetEl.classList.remove('open');
+        dsSheetEl.setAttribute('aria-hidden', 'true');
+        document.removeEventListener('keydown', dsOnEscape);
+        dsClosePopover();
+      }
+      dwSheetEl.classList.add('open');
+      dwSheetEl.setAttribute('aria-hidden', 'false');
+      try {
+        if (fromDay && history.state?.dsSheetOpen) history.replaceState({ dwSheetOpen: true }, '', '#dptschedual-week');
+        else history.pushState({ dwSheetOpen: true }, '', '#dptschedual-week');
+      } catch {}
+      document.addEventListener('keydown', dwOnEscape);
+      const start = dwWeekStartFor(dsSelectedDate);
+      if (start !== dwWeekStart || !dwWeek) dwLoadWeek(start);
+      else requestAnimationFrame(dwCenterDayLabels);
+      setTimeout(dwCenterDayLabels, 350); // after the slide-in
+    }
+
+    function dwHide(){
+      dwSheetEl.classList.remove('open');
+      dwSheetEl.setAttribute('aria-hidden', 'true');
+      document.removeEventListener('keydown', dwOnEscape);
+      dsClosePopover();
+    }
+
+    function closeDeptWeekSheet(){
+      if (!dwSheetEl.classList.contains('open')) return;
+      dwHide();
+      if (history.state?.dwSheetOpen) { try { history.back(); } catch {} }
+    }
+
+    // اليوم: back to the day sheet (same history entry, swapped back).
+    async function dwBackToDay(){
+      dwHide();
+      dsSheetEl.classList.add('open');
+      dsSheetEl.setAttribute('aria-hidden', 'false');
+      try { history.replaceState({ dsSheetOpen: true }, '', '#dptschedual'); } catch {}
+      document.addEventListener('keydown', dsOnEscape);
+      if (!dsInitialized){
+        dsInitialized = true;
+        dsSelectedDate = new Date();
+        await loadDeptSchedGridForDate(dsSelectedDate, dsLoadDepartmentTeachers(myDeptSchedDepartment));
+      }
+    }
+
+    window.addEventListener('popstate', () => {
+      if (!dwSheetEl.classList.contains('open')) return;
+      if (history.state?.dwSheetOpen) return;
+      dwHide();
+    });
+
+    dsWeekBtn.addEventListener('click', openDeptWeekSheet);
+    dwClose.addEventListener('click', closeDeptWeekSheet);
+    dwDayBtn.addEventListener('click', dwBackToDay);
+    dwPrev.addEventListener('click', () => dwLoadWeek(addDaysISO(dwWeekStart, -7)));
+    dwNext.addEventListener('click', () => dwLoadWeek(addDaysISO(dwWeekStart, 7)));
+    document.getElementById('dwLoadErrorRetry').addEventListener('click', () => dwLoadWeek(dwWeekStart));
+
+    /* ========= تنزيل جدول القسم (both sheets) =========
+       A small popup: today's department schedule (the day sheet's date) or
+       the week's (the week on screen, else the one containing that date),
+       saved as a PDF — the week as one page per day so each stays legible. */
+    const dsDlBackdrop = document.getElementById('dsDlBackdrop');
+    const dsDlModal = document.getElementById('dsDlModal');
+    const dsDlStatus = document.getElementById('dsDlStatus');
+    const dsDlDay = document.getElementById('dsDlDay');
+    const dsDlWeek = document.getElementById('dsDlWeek');
+    let dsDlBusy = false;
+
+    function dsDownloadWeekStart(){
+      return dwSheetEl.classList.contains('open') && dwWeekStart ? dwWeekStart : dwWeekStartFor(dsSelectedDate);
+    }
+    function dsOpenDownloadModal(){
+      if (dsDlBusy) return;
+      document.getElementById('dsDlDaySub').textContent = toArabicDigits(dsFmtDateLong(dsSelectedDate));
+      document.getElementById('dsDlWeekSub').textContent = dwWeekRangeText(dsDownloadWeekStart());
+      dsDlStatus.hidden = true;
+      dsDlBackdrop.classList.add('open');
+      dsDlModal.classList.add('open');
+      dsDlModal.setAttribute('aria-hidden', 'false');
+    }
+    function dsCloseDownloadModal(){
+      if (dsDlBusy) return;
+      dsDlBackdrop.classList.remove('open');
+      dsDlModal.classList.remove('open');
+      dsDlModal.setAttribute('aria-hidden', 'true');
+    }
+    function dsSetDlStatus(kind, text){
+      dsDlStatus.hidden = !text;
+      dsDlStatus.className = `ds-dl-status ${kind || ''}`;
+      dsDlStatus.textContent = text || '';
+    }
+
+    // One A4 page: title + a teachers × seven-periods table.
+    function dsBuildPdfPage({ title, subtitle, cells }){
+      const host = document.createElement('div');
+      host.style.cssText = 'position:fixed;top:0;left:-10000px;width:794px;background:#fff;z-index:-1';
+      const head = DW_ORDINALS.map((o, i) => `<th>${escapeHtml(`الحصة ${o}`)}</th>`).join('');
+      const rows = dsTeachersList.map(t => {
+        const tds = [1, 2, 3, 4, 5, 6, 7].map(lesson => {
+          const c = cells[t.uid]?.[lesson];
+          return c?.hasClass ? `<td class="filled">${escapeHtml(toArabicDigits(c.classKey))}</td>` : '<td>—</td>';
+        }).join('');
+        return `<tr><th class="name">${escapeHtml(t.name)}</th>${tds}</tr>`;
+      }).join('') || '<tr><td colspan="8">لا يوجد معلمون في هذا القسم</td></tr>';
+      host.innerHTML = `
+        <style>
+          #dsPdfCard { width:794px; min-height:1123px; box-sizing:border-box; padding:30px 24px; direction:rtl; background:#fff; color:#102542; font-family:var(--app-font); }
+          #dsPdfCard .head { text-align:center; margin-bottom:16px; }
+          #dsPdfCard img { height:78px; display:block; margin:0 auto 12px; object-fit:contain; }
+          #dsPdfCard .school { font-size:22px; font-weight:900; color:#0e3554; margin-bottom:6px; }
+          #dsPdfCard .title { font-size:17px; font-weight:800; color:#1d4d72; margin-bottom:6px; }
+          #dsPdfCard .sub { font-size:13px; font-weight:800; color:#355f81; }
+          #dsPdfCard .sep { border-top:2px solid #dbe7f2; margin:14px 0 12px; }
+          #dsPdfCard table { width:100%; border-collapse:collapse; table-layout:fixed; border:1px solid #cddff0; }
+          #dsPdfCard thead th { background:linear-gradient(135deg,#0e3a5c,#1c5b88); color:#fff; font-size:10.5px; font-weight:900; padding:10px 4px; border-left:1px solid rgba(255,255,255,.2); }
+          #dsPdfCard thead th.corner { width:150px; }
+          #dsPdfCard tbody th.name { background:#f4f8fc; font-size:11px; font-weight:900; color:#163e63; padding:9px 8px; text-align:right; border-top:1px solid #d9e6f3; }
+          #dsPdfCard tbody td { text-align:center; font-size:11px; font-weight:800; color:#94a3b8; padding:9px 4px; border-top:1px solid #e1ebf5; border-left:1px solid #e1ebf5; }
+          #dsPdfCard tbody td.filled { background:#fff2a0; color:#1a3650; }
+        </style>
+        <div id="dsPdfCard">
+          <div class="head">
+            <img class="ds-pdf-logo" src="/images/schoollogo.png" alt="">
+            <div class="school">ثانوية أحمد البشر الرومي</div>
+            <div class="title">${escapeHtml(title)}</div>
+            <div class="sub">${escapeHtml(subtitle)}</div>
+          </div>
+          <div class="sep"></div>
+          <table><thead><tr><th class="corner">المعلمين</th>${head}</tr></thead><tbody>${rows}</tbody></table>
+        </div>`;
+      return host;
+    }
+
+    async function dsDownloadPdf(kind){
+      if (dsDlBusy) return;
+      if (!window.html2canvas || !window.jspdf?.jsPDF){ dsSetDlStatus('error', 'مكتبة إنشاء PDF غير متاحة حالياً.'); return; }
+      dsDlBusy = true;
+      dsDlDay.disabled = dsDlWeek.disabled = true;
+      dsSetDlStatus('', 'جاري إنشاء ملف PDF…');
+      const dept = myDeptSchedDepartment || '';
+      try {
+        let pages, fileName;
+        if (kind === 'day'){
+          const dayISO = dsToInputDate(dsSelectedDate);
+          const start = dwWeekStartFor(dsSelectedDate);
+          // The day sheet's own data when it's loaded for this date; else
+          // the week's copy of the same day.
+          let cells = dsAttendanceMap;
+          if (!Object.keys(cells).length || !dsInitialized){
+            const week = await dwFetchWeek(start);
+            cells = week.cellsByDay[week.dates.indexOf(dayISO)] || Object.create(null);
+          }
+          pages = [{ title: `جدول القسم — ${dept}`, subtitle: toArabicDigits(dsFmtDateLong(dsSelectedDate)), cells }];
+          fileName = `جدول-القسم-${dept}-${formatDateArabicCompact(dayISO)}`;
+        } else {
+          const start = dsDownloadWeekStart();
+          const week = (dwWeek && dwWeek.startISO === start) ? dwWeek : await dwFetchWeek(start);
+          pages = week.dates.map((iso, day) => ({
+            title: `جدول القسم — ${dept}`,
+            subtitle: `${DAYS_AR[day]} ${formatDateArabic(iso)} — الأسبوع ${dwWeekRangeText(start)}`,
+            cells: week.cellsByDay[day],
+          }));
+          fileName = `جدول-القسم-الأسبوعي-${dept}-من-${formatDateArabicCompact(week.dates[0])}-إلى-${formatDateArabicCompact(week.dates[4])}`;
+        }
+        if (document.fonts?.ready) await document.fonts.ready;
+        const { jsPDF } = window.jspdf;
+        const docPdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4', compress: true });
+        for (let i = 0; i < pages.length; i++){
+          const host = dsBuildPdfPage(pages[i]);
+          document.body.appendChild(host);
+          try {
+            try { await waitForImageReady(host.querySelector('.ds-pdf-logo')); } catch (_) {}
+            const canvas = await window.html2canvas(host.querySelector('#dsPdfCard'), { backgroundColor: '#ffffff', scale: PDF_RENDER_SCALE, useCORS: true, logging: false });
+            if (i > 0) docPdf.addPage();
+            addCanvasToA4Page(docPdf, canvas, 14);
+          } finally {
+            host.remove();
+          }
+        }
+        docPdf.save(filenameSafe(fileName) + '.pdf');
+        dsDlBusy = false;
+        dsCloseDownloadModal();
+        toast({ title: 'تم', text: 'تم تنزيل جدول القسم.', icon: 'fa-check-circle' });
+      } catch (e) {
+        console.error('[dsSheet] PDF failed:', e);
+        dsSetDlStatus('error', 'تعذّر إنشاء ملف PDF. حاول مرة أخرى.');
+      } finally {
+        dsDlBusy = false;
+        dsDlDay.disabled = dsDlWeek.disabled = false;
+      }
+    }
+
+    document.getElementById('dsDownloadBtn').addEventListener('click', dsOpenDownloadModal);
+    document.getElementById('dwDownloadBtn').addEventListener('click', dsOpenDownloadModal);
+    document.getElementById('dsDlClose').addEventListener('click', dsCloseDownloadModal);
+    dsDlBackdrop.addEventListener('click', dsCloseDownloadModal);
+    dsDlDay.addEventListener('click', () => dsDownloadPdf('day'));
+    dsDlWeek.addEventListener('click', () => dsDownloadPdf('week'));
 
     /* ========= جدول المدرسة (ssSheet) =========
        An in-page copy of Teachers/schoolschedule.html's whole-school grid

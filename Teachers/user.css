@@ -1582,6 +1582,89 @@
       text-align: right; transition: border-color .12s ease, background .12s ease; font-family: inherit;
     }
     .ds-cover-option:hover { background: var(--primary-light); }
+    /* ---- Toolbar buttons (هالاسبوع, download, week navigation) ---- */
+    .ds-toolbar { gap: 10px; flex-wrap: wrap; align-items: center; }
+    .ds-tool-btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      min-height: 48px; padding: 0 16px; border-radius: 14px; cursor: pointer;
+      border: 1px solid var(--border); background: #fff; color: var(--primary);
+      font: inherit; font-weight: 900; font-size: .92rem; box-shadow: var(--shadow-1, 0 8px 22px rgba(3,60,84,.10));
+      transition: var(--transition);
+    }
+    .ds-tool-btn.icon { width: 48px; padding: 0; }
+    .ds-tool-btn:hover { transform: translateY(-1px); border-color: rgba(4,69,99,.35); }
+    .ds-tool-btn:focus-visible { outline: 3px solid #79b3c8; outline-offset: 2px; }
+    .dw-range { display: flex; flex-direction: column; align-items: center; min-width: 170px; line-height: 1.35; }
+    .dw-range b { color: var(--primary); font-weight: 900; font-size: .98rem; }
+    .dw-range small { color: var(--muted); font-weight: 800; font-size: .78rem; min-height: 1em; }
+
+    /* ---- Week grid: 5 days x 7 periods ---- */
+    table.ds-table.dw-table { min-width: 0; width: max-content; }
+    .dw-table thead th { padding: 8px 4px; }
+    .dw-table thead tr:first-child th { top: 0; }
+    /* The day's name sits over its seven periods and is kept centred in the
+       visible part of that group while scrolling sideways (JS sets left). */
+    .dw-table th.dw-day-th {
+      position: relative; height: 46px; padding: 0; overflow: hidden;
+      background: linear-gradient(180deg, #eef5fb, #e3eef8); border-bottom: 1px solid var(--border);
+      border-inline-start: 2px solid rgba(4,69,99,.18);
+    }
+    .dw-day-label {
+      position: absolute; top: 50%; left: 0; transform: translate(-50%, -50%);
+      display: inline-flex; align-items: baseline; gap: 8px; white-space: nowrap; pointer-events: none;
+    }
+    .dw-day-name { font-size: 1rem; font-weight: 900; color: var(--primary); }
+    .dw-day-date { font-size: .78rem; font-weight: 800; color: var(--muted); }
+    .dw-table th.dw-day-th.is-today { background: linear-gradient(180deg, #e3f3ea, #d6ecdf); }
+    .dw-table th.dw-lesson-th { width: 78px; min-width: 78px; font-size: .78rem; font-weight: 900; color: var(--primary); white-space: nowrap; }
+    .dw-table th.dw-lesson-th.is-today { color: #166534; }
+    .dw-table .dw-day-start { border-inline-start: 2px solid rgba(4,69,99,.18); }
+    .dw-table td.is-today { background: #f6fbf8; }
+    .dw-table tbody td { padding: 6px 4px; }
+    .dw-table .ds-cell-btn-taken, .dw-table .ds-cell-btn-not-taken, .dw-table .dw-cell-btn-future, .dw-table .ds-cell-empty {
+      width: 100%; min-height: 38px; font-size: .78rem; border-radius: 10px; padding: 4px 2px;
+    }
+    .dw-cell-btn-future {
+      display: flex; align-items: center; justify-content: center; font-weight: 900; font-family: inherit;
+      border: 1px solid rgba(4,69,99,.18); background: #f3f7fb; color: var(--primary); cursor: pointer; transition: var(--transition);
+    }
+    .dw-cell-btn-future:hover { transform: translateY(-1px); border-color: rgba(4,69,99,.35); }
+
+    /* ---- Download popup ---- */
+    .ds-dl-backdrop { position: fixed; inset: 0; z-index: 1000; background: rgba(15,23,42,.35); backdrop-filter: blur(4px); display: none; }
+    .ds-dl-backdrop.open { display: block; }
+    .ds-dl-modal {
+      position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1001;
+      width: min(420px, 92vw); background: #fff; border: 1px solid var(--border); border-radius: 20px;
+      box-shadow: 0 24px 60px rgba(3,60,84,.28); display: none;
+    }
+    .ds-dl-modal.open { display: block; }
+    .ds-dl-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--border); }
+    .ds-dl-head b { color: var(--primary); font-size: 1.05rem; font-weight: 900; }
+    .ds-dl-body { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 10px; }
+    .ds-dl-option {
+      display: flex; align-items: center; gap: 14px; width: 100%; padding: 14px; border-radius: 14px; cursor: pointer; text-align: right;
+      border: 1px solid var(--border); background: #f8fbff; color: var(--primary); font: inherit; transition: var(--transition);
+    }
+    .ds-dl-option > i { width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; background: rgba(4,69,99,.08); font-size: 1.05rem; flex-shrink: 0; }
+    .ds-dl-option:hover:not(:disabled) { transform: translateY(-1px); border-color: rgba(4,69,99,.35); background: #fff; }
+    .ds-dl-option:disabled { opacity: .55; cursor: wait; }
+    .ds-dl-text { display: flex; flex-direction: column; gap: 2px; }
+    .ds-dl-text b { font-weight: 900; font-size: .98rem; }
+    .ds-dl-text small { color: var(--muted); font-weight: 800; font-size: .8rem; }
+    .ds-dl-status { font-size: .86rem; font-weight: 800; color: var(--muted); text-align: center; }
+    .ds-dl-status.error { color: var(--danger); }
+
+    @media (max-width: 768px) {
+      .ds-toolbar { padding: 10px 12px; gap: 8px; }
+      .ds-tool-btn { min-height: 44px; padding: 0 12px; font-size: .86rem; }
+      .ds-tool-btn.icon { width: 44px; }
+      .dw-toolbar { justify-content: center; }
+      .dw-range { min-width: 0; flex: 1 1 100%; order: -1; }
+      .dw-table th.dw-lesson-th { width: 64px; min-width: 64px; font-size: .72rem; }
+      .dw-table .ds-cell-btn-taken, .dw-table .ds-cell-btn-not-taken, .dw-table .dw-cell-btn-future, .dw-table .ds-cell-empty { min-height: 34px; font-size: .72rem; }
+    }
+
     .ds-cover-option.selected { border-color: var(--primary); background: rgba(59,130,246,.08); color: var(--primary); }
 
     @media (max-width: 480px) {
