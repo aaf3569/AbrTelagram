@@ -29,7 +29,7 @@ const CSS_TEXT = `
   --snp-good:#1e8e5a; --snp-good-soft:#e4f5ec;
   --snp-bad:#bf3a2a; --snp-bad-soft:#fbeae7;
   --snp-warn:#a06a12; --snp-warn-soft:#f7edd9;
-  --snp-font:var(--app-font, "Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif);
+  --snp-font:var(--app-font, "Tajawal", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif);
   position:fixed; inset:0; z-index:5000; display:flex; flex-direction:column;
   background:var(--snp-ground);
   color:var(--snp-text); font-family:var(--snp-font);

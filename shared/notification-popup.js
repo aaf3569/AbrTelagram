@@ -54,7 +54,7 @@ function ensureStyles() {
       transform: translateY(14px) scale(0.95);
       opacity: 0;
       transition: transform .28s cubic-bezier(.22,.7,.25,1), opacity .28s ease;
-      font-family: "Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      font-family: "Tajawal", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
       direction: rtl;
       text-align: right;
     }
@@ -98,7 +98,7 @@ function ensureStyles() {
       border-radius: 18px;
       background: linear-gradient(145deg, #033C54, #065372);
       color: #fff;
-      font-family: "Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      font-family: "Tajawal", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
       font-size: 1.08rem;
       font-weight: 900;
       cursor: pointer;

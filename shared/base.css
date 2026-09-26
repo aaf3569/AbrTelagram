@@ -1,5 +1,5 @@
 :root {
-  --app-font: "Noto Kufi Arabic", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --app-font: "Tajawal", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
 }
 
 *,
@@ -15,11 +15,15 @@ body {
   min-height: 100%;
 }
 
+/* Tajawal everywhere. Form controls don't inherit the page font on their
+   own, so they're named here too — that's what kept back buttons, inputs
+   and selects in a different font on pages that only set it on <body>. */
 body,
 button,
 input,
 select,
-textarea {
+textarea,
+optgroup {
   font-family: var(--app-font);
 }
 

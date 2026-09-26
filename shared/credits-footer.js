@@ -2,7 +2,7 @@
   const STYLE_ID = "credits-footer-style";
 
   const STYLES = `
-    .credits-footer{width:100%;display:flex;justify-content:center;padding:32px 16px 40px;font-family:"Noto Kufi Arabic", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif}
+    .credits-footer{width:100%;display:flex;justify-content:center;padding:32px 16px 40px;font-family:"Tajawal", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif}
     .credits-card{position:relative;width:100%;background:#ffffff;border:1px solid var(--border,#e6edf7);border-radius:24px;box-shadow:0 16px 40px rgba(3,60,84,.08),0 2px 6px rgba(3,60,84,.04);padding:36px 28px 22px;display:flex;flex-direction:column;align-items:center;text-align:center;overflow:hidden}
     .credits-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--primary,#033C54) 0%,var(--primary-light,#065372) 50%,var(--primary,#033C54) 100%)}
     .credits-logo{width:96px;height:96px;object-fit:contain;filter:drop-shadow(0 10px 18px rgba(3,60,84,.18));margin-bottom:18px}

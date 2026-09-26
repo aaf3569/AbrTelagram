@@ -8,6 +8,11 @@
    body{} rule became :host too. Rules below that target the shared
    attendance modals (#attConfirmModal, ...) no longer reach them — those
    live in the real page, which styles them itself. */
+    /* Form controls don't inherit the font by default, and shared/base.css
+       (which sets it for the rest of the site) doesn't reach inside this
+       shadow root — without this, buttons and inputs here fell back to the
+       system font. */
+    button, input, select, textarea, optgroup { font-family: inherit; }
     :host{
       --primary:#033C54;
       --primary-2:#065372;

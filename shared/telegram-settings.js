@@ -32,7 +32,7 @@ function ensureStyles() {
       justify-content: center;
       padding: 16px;
       direction: rtl;
-      font-family: "Noto Kufi Arabic", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+      font-family: "Tajawal", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
       opacity: 0;
       transition: opacity 0.2s ease;
     }

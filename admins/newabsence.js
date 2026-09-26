@@ -2464,7 +2464,7 @@ export async function mountTodayAbsenceSheet(host, hooks) {
             #dlPdfPage {
               width: 794px; height: 1123px; box-sizing: border-box; overflow: hidden;
               background: #ffffff; color: #153554;
-              font-family: "Noto Kufi Arabic", Tahoma, Arial, sans-serif;
+              font-family: "Tajawal", Tahoma, Arial, sans-serif;
               direction: rtl;
               padding: 30px 30px 22px;
               display: flex; flex-direction: column;

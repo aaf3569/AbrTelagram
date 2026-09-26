@@ -54,7 +54,7 @@ function ensurePopupStyles() {
       transform: translateY(12px) scale(0.96);
       opacity: 0;
       transition: transform .24s cubic-bezier(.22,.7,.25,1), opacity .2s ease;
-      font-family: var(--app-font, "Noto Kufi Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif);
+      font-family: var(--app-font, "Tajawal", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif);
       direction: rtl;
       text-align: center;
       overflow: hidden;
