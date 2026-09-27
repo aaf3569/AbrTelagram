@@ -446,8 +446,8 @@
             </table>
           </div>
         </div>
-        <!-- Phone: the week laid out exactly like its PDF (without the
-             school header), fitted to the screen width; pinch or the
+        <!-- The week laid out exactly like its PDF (without the school
+             header), fitted to the screen width; pinch, ctrl + wheel or the
              buttons zoom in. -->
         <div class="dw-paper-view" id="dwPaperView">
           <div class="dw-paper-canvas" id="dwPaperCanvas"></div>
@@ -6290,7 +6290,7 @@
       requestAnimationFrame(dwCenterDayLabels);
     }
 
-    /* ----- Phone: the week as its PDF page, zoomable -----
+    /* ----- The week as its PDF page, zoomable (every screen size) -----
        The page is drawn at its PDF width (1123px) and scaled with CSS zoom,
        which also scales its layout box, so the view's own scrollbars cover
        the zoomed page. Starts fitted to the screen width; pinch (two
@@ -6362,6 +6362,14 @@
       if (!dwPinch || e.touches.length !== 2) return;
       e.preventDefault();
       dwSetPaperScale(dwPinch.scale * dwTouchDist(e.touches) / dwPinch.dist, dwPinch.fx, dwPinch.fy);
+    }, { passive: false });
+    // Trackpad pinch (and ctrl + mouse wheel) arrive as wheel events with
+    // ctrlKey set — zoom the page instead of the browser.
+    dwPaperView.addEventListener('wheel', (e) => {
+      if (!e.ctrlKey) return;
+      e.preventDefault();
+      const r = dwPaperView.getBoundingClientRect();
+      dwSetPaperScale((dwPaperScale || dwPaperFitScale()) * Math.exp(-e.deltaY / 200), e.clientX - r.left, e.clientY - r.top);
     }, { passive: false });
     const dwPinchEnd = (e) => { if (e.touches.length < 2) dwPinch = null; };
     dwPaperView.addEventListener('touchend', dwPinchEnd);
