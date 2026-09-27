@@ -6328,7 +6328,7 @@
       document.getElementById('dwZoomIn').disabled = scale >= DW_ZOOM_MAX - 0.001;
     }
     function dwRenderPaper(){
-      dwPaperCanvas.innerHTML = `<div class="dw-paper dw-paper-live">${dsWeekPaperTable(dwWeek, myDeptSchedDepartment || '', { tapCells: true })}</div>`;
+      dwPaperCanvas.innerHTML = `<div class="dw-paper dw-paper-live"><div class="dw-paper-legend"><span class="taken">تم تسليم الغياب</span><span class="missing">لم يُسلَّم</span><span class="future">لم تبدأ</span></div>${dsWeekPaperTable(dwWeek, myDeptSchedDepartment || '', { tapCells: true })}</div>`;
       dwPaperScale = 0;
       dwPaperAtFit = true;
       dwSetPaperScale(0);
@@ -6590,6 +6590,7 @@
     // phones, by the week sheet itself (tapCells: lesson cells carry their
     // day/lesson/teacher so a tap opens the lesson popover).
     function dsWeekPaperTable(week, dept, { tapCells = false } = {}){
+      const todayISO = kuwaitTodayISO();
       const compactClass = (c) => (c || '').toString().replace(/\s*\/\s*/g, '/').replace(/\s+/g, ' ').trim();
       const n = Math.max(dsTeachersList.length, 1);
       // Fit the rows to the page: ~520px of table body on a 794px-tall page.
@@ -6603,7 +6604,9 @@
           const c = week.cellsByDay[day]?.[t.uid]?.[l];
           const cls = `${l === 1 && day > 0 ? 'sep' : ''} ${l % 2 === 0 ? 'alt' : ''}`;
           const tap = tapCells ? ` data-uid="${escapeHtml(t.uid)}" data-day="${day}" data-lesson="${l}"` : '';
-          return c?.hasClass ? `<td class="${cls} on"${tap}>${escapeHtml(compactClass(c.classKey))}</td>` : `<td class="${cls}"></td>`;
+          // On screen, lessons carry their attendance state (the PDF stays plain).
+          const st = !tapCells || !c?.hasClass ? '' : (c.taken ? ' st-taken' : (iso > todayISO ? '' : ' st-missing'));
+          return c?.hasClass ? `<td class="${cls} on${st}"${tap}>${escapeHtml(compactClass(c.classKey))}</td>` : `<td class="${cls}"></td>`;
         }).join('')).join('');
         return `<tr style="height:${rowH}px"><th class="name">${escapeHtml(t.name)}</th>${tds}</tr>`;
       }).join('') || '<tr><td colspan="36">لا يوجد معلمون في هذا القسم</td></tr>';
