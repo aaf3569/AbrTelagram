@@ -944,6 +944,7 @@
     table.csv-table td{ padding:6px; border-bottom:1px solid var(--border-light,#eef3f8); text-align:center; }
     table.csv-table tr.csv-row-ambiguous{ background:rgba(138,90,0,.05); }
     table.csv-table tr.csv-row-error{ background:rgba(180,35,24,.05); }
+    .csv-conflict-note{ margin-top:4px; font-size:11.5px; color:var(--danger,#b42318); font-weight:700; }
     table.csv-table select{ width:100%; height:32px; border-radius:8px; border:1px solid var(--border); font-family:inherit; }
     input.csv-test-input{ width:100%; height:30px; border-radius:8px; border:1px solid var(--border); font-family:inherit; text-align:center; padding:0 6px; }
     input.csv-test-input.csv-test-match{ background:rgba(18,106,46,.14); border-color:rgba(18,106,46,.4); }
@@ -3708,6 +3709,57 @@
       return { ...base, status: 'ambiguous', candidates };
     }
 
+    // The CSV names no teacher — each row is matched through the teachers'
+    // own class lists — so a teacher whose profile lists two classes that
+    // have this subject in the same period gets both lessons, which no
+    // teacher can actually teach. Those rows become a choice instead: the
+    // admin picks the real teacher for each, from everyone with that subject.
+    function csvSlotKey(uid, row){ return `${uid}|${row.dayIndex}|${row.lesson}`; }
+    function flagCsvTeacherClashes(rows){
+      const bySlot = new Map();
+      rows.forEach(r => {
+        if(r.status !== 'resolved') return;
+        const key = csvSlotKey(r.teacherUid, r);
+        if(!bySlot.has(key)) bySlot.set(key, []);
+        bySlot.get(key).push(r);
+      });
+      const teachers = csvTeacherIndex || [];
+      bySlot.forEach(group => {
+        if(group.length < 2) return;
+        const classes = group.map(r => r.siteClassKey).join(' و ');
+        group.forEach(r => {
+          const matched = { uid: r.teacherUid, name: r.teacherName };
+          const others = teachers
+            .filter(t => t.uid !== matched.uid && (t.subject === r.subject || t.subject2 === r.subject))
+            .map(t => ({ uid: t.uid, name: t.name }))
+            .sort((a, b) => a.name.localeCompare(b.name, 'ar'));
+          r.status = 'ambiguous';
+          r.conflict = true;
+          r.reason = `${matched.name} مُسند إلى ${classes} في نفس الحصة`;
+          r.candidates = [matched, ...others];
+          delete r.teacherUid;
+          delete r.teacherName;
+        });
+      });
+    }
+
+    // Final teacher per row -> any teacher still holding two lessons in one
+    // period, as readable lines (empty when there are none).
+    function csvRemainingClashes(rows){
+      const bySlot = new Map();
+      rows.forEach(r => {
+        const t = r.status === 'resolved' ? { uid: r.teacherUid, name: r.teacherName }
+          : (r.status === 'ambiguous' && r._picked) ? r._picked : null;
+        if(!t) return;
+        const key = csvSlotKey(t.uid, r);
+        if(!bySlot.has(key)) bySlot.set(key, { name: t.name, row: r, classes: [] });
+        bySlot.get(key).classes.push(r.siteClassKey);
+      });
+      return [...bySlot.values()]
+        .filter(g => g.classes.length > 1)
+        .map(g => `${g.name}: ${g.classes.join(' و ')} — ${CSV_DAY_NAMES[g.row.dayIndex]}، الحصة ${g.row.lesson}`);
+    }
+
     // ---------- Preview rendering ----------
     function renderCsvPreviewRow(row, index){
       const tr = document.createElement('tr');
@@ -3722,11 +3774,13 @@
         teacherCell = row.teacherName;
       } else if(row.status === 'ambiguous'){
         tr.classList.add('csv-row-ambiguous');
-        statusCell = '<span class="csv-chip warn">⚠️ أكثر من معلّم</span>';
+        statusCell = row.conflict
+          ? '<span class="csv-chip err">⛔ تعارض</span>'
+          : '<span class="csv-chip warn">⚠️ أكثر من معلّم</span>';
         teacherCell = `<select class="csv-ambiguous-pick" data-index="${index}">
           <option value="">— اختر —</option>
           ${row.candidates.map(c => `<option value="${c.uid}">${c.name}</option>`).join('')}
-        </select>`;
+        </select>${row.conflict ? `<div class="csv-conflict-note">${row.reason}</div>` : ''}`;
       } else if(row.status === 'unmatched'){
         tr.classList.add('csv-row-error');
         statusCell = '<span class="csv-chip err">❌ غير متطابق</span>';
@@ -3810,6 +3864,8 @@
     function applyPickToGroup(sourceRow, picked){
       csvRows.forEach((r, idx) => {
         if(r.status !== 'ambiguous') return;
+        // A clash is about one period only, so its pick stays on its row.
+        if(r.conflict || sourceRow.conflict) return;
         if(r.siteClassKey !== sourceRow.siteClassKey || r.subject !== sourceRow.subject) return;
         r._picked = picked;
         const sel = csvPreviewBody.querySelector(`.csv-ambiguous-pick[data-index="${idx}"]`);
@@ -3877,6 +3933,7 @@
         }
         await loadCsvTeacherIndex();
         csvRows = await Promise.all(rawRows.map(matchCsvRow));
+        flagCsvTeacherClashes(csvRows);
         renderCsvPreview();
         csvImportMsg.textContent = '';
       }catch(error){
@@ -3889,6 +3946,12 @@
     async function commitCsvImport(){
       const toWrite = csvRows.filter(r => r.status === 'resolved' || (r.status === 'ambiguous' && r._picked));
       if(!toWrite.length) return;
+
+      const clashes = csvRemainingClashes(csvRows);
+      if(clashes.length){
+        csvImportMsg.textContent = `لا يمكن الاستيراد: معلّم لديه أكثر من صف في نفس الحصة — ${clashes.join(' | ')}`;
+        return;
+      }
 
       // Confirming with rows still unresolved silently imports a partial
       // schedule — the success message only ever reports how many rows
