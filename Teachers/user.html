@@ -446,6 +446,17 @@
             </table>
           </div>
         </div>
+        <!-- Phone: the week laid out exactly like its PDF (without the
+             school header), fitted to the screen width; pinch or the
+             buttons zoom in. -->
+        <div class="dw-paper-view" id="dwPaperView">
+          <div class="dw-paper-canvas" id="dwPaperCanvas"></div>
+        </div>
+        <div class="dw-zoom-bar" id="dwZoomBar">
+          <button class="dw-zoom-btn" id="dwZoomOut" type="button" aria-label="تصغير"><i class="fas fa-minus" aria-hidden="true"></i></button>
+          <button class="dw-zoom-btn fit" id="dwZoomFit" type="button" aria-label="ملاءمة الشاشة"><i class="fas fa-compress" aria-hidden="true"></i></button>
+          <button class="dw-zoom-btn" id="dwZoomIn" type="button" aria-label="تكبير"><i class="fas fa-plus" aria-hidden="true"></i></button>
+        </div>
       </div>
     </div>
   </section>
@@ -6237,6 +6248,7 @@
         td.textContent = 'لا يوجد معلمون في هذا القسم';
         tr.appendChild(td);
         dwGridBody.appendChild(tr);
+        dwRenderPaper();
         return;
       }
       for (const teacher of dsTeachersList){
@@ -6274,8 +6286,98 @@
         });
         dwGridBody.appendChild(tr);
       }
+      dwRenderPaper();
       requestAnimationFrame(dwCenterDayLabels);
     }
+
+    /* ----- Phone: the week as its PDF page, zoomable -----
+       The page is drawn at its PDF width (1123px) and scaled with CSS zoom,
+       which also scales its layout box, so the view's own scrollbars cover
+       the zoomed page. Starts fitted to the screen width; pinch (two
+       fingers) or −/⤢/+ zoom around the fingers / the view's centre. The
+       view runs LTR (the page inside stays RTL) so scroll offsets are plain
+       positive numbers for the zoom math. */
+    const dwPaperView = document.getElementById('dwPaperView');
+    const dwPaperCanvas = document.getElementById('dwPaperCanvas');
+    const DW_PAPER_W = 1123;
+    const DW_ZOOM_MAX = 3;
+    let dwPaperScale = 0;          // 0 = not laid out yet
+    let dwPaperAtFit = true;
+
+    function dwPaperFitScale(){
+      const w = dwPaperView.clientWidth;
+      return w > 0 ? w / DW_PAPER_W : 0;
+    }
+    function dwSetPaperScale(next, focusX, focusY){
+      const fit = dwPaperFitScale();
+      if (!fit) return;
+      const prev = dwPaperScale || fit;
+      const scale = Math.min(DW_ZOOM_MAX, Math.max(fit, next));
+      const fx = focusX ?? dwPaperView.clientWidth / 2;
+      const fy = focusY ?? dwPaperView.clientHeight / 2;
+      const cx = (dwPaperView.scrollLeft + fx) / prev;
+      const cy = (dwPaperView.scrollTop + fy) / prev;
+      dwPaperScale = scale;
+      dwPaperAtFit = scale <= fit + 0.001;
+      const paper = dwPaperCanvas.firstElementChild;
+      if (paper) paper.style.zoom = String(scale);
+      dwPaperView.scrollLeft = cx * scale - fx;
+      dwPaperView.scrollTop = cy * scale - fy;
+      document.getElementById('dwZoomOut').disabled = dwPaperAtFit;
+      document.getElementById('dwZoomFit').disabled = dwPaperAtFit;
+      document.getElementById('dwZoomIn').disabled = scale >= DW_ZOOM_MAX - 0.001;
+    }
+    function dwRenderPaper(){
+      dwPaperCanvas.innerHTML = `<div class="dw-paper dw-paper-live">${dsWeekPaperTable(dwWeek, myDeptSchedDepartment || '', { tapCells: true })}</div>`;
+      dwPaperScale = 0;
+      dwPaperAtFit = true;
+      dwSetPaperScale(0);
+    }
+    // Keep the fitted state fitted when the view changes size (rotation,
+    // the sheet opening, the state panel appearing).
+    if (window.ResizeObserver){
+      new ResizeObserver(() => {
+        if (!dwPaperCanvas.firstElementChild) return;
+        if (dwPaperAtFit || !dwPaperScale) { dwPaperScale = 0; dwSetPaperScale(0); }
+        else dwSetPaperScale(dwPaperScale);
+      }).observe(dwPaperView);
+    }
+    document.getElementById('dwZoomIn').addEventListener('click', () => dwSetPaperScale((dwPaperScale || dwPaperFitScale()) * 1.5));
+    document.getElementById('dwZoomOut').addEventListener('click', () => dwSetPaperScale((dwPaperScale || dwPaperFitScale()) / 1.5));
+    document.getElementById('dwZoomFit').addEventListener('click', () => dwSetPaperScale(0));
+
+    let dwPinch = null;
+    const dwTouchDist = (t) => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+    dwPaperView.addEventListener('touchstart', (e) => {
+      if (e.touches.length !== 2) return;
+      const r = dwPaperView.getBoundingClientRect();
+      dwPinch = {
+        dist: dwTouchDist(e.touches),
+        scale: dwPaperScale || dwPaperFitScale(),
+        fx: (e.touches[0].clientX + e.touches[1].clientX) / 2 - r.left,
+        fy: (e.touches[0].clientY + e.touches[1].clientY) / 2 - r.top,
+      };
+    }, { passive: true });
+    dwPaperView.addEventListener('touchmove', (e) => {
+      if (!dwPinch || e.touches.length !== 2) return;
+      e.preventDefault();
+      dwSetPaperScale(dwPinch.scale * dwTouchDist(e.touches) / dwPinch.dist, dwPinch.fx, dwPinch.fy);
+    }, { passive: false });
+    const dwPinchEnd = (e) => { if (e.touches.length < 2) dwPinch = null; };
+    dwPaperView.addEventListener('touchend', dwPinchEnd);
+    dwPaperView.addEventListener('touchcancel', dwPinchEnd);
+
+    // A lesson cell opens the same popover as the interactive grid.
+    dwPaperCanvas.addEventListener('click', (e) => {
+      const td = e.target.closest('td[data-uid]');
+      if (!td || !dwWeek) return;
+      const day = Number(td.dataset.day), lesson = Number(td.dataset.lesson);
+      const teacher = dsTeachersList.find(t => t.uid === td.dataset.uid);
+      const cell = dwWeek.cellsByDay[day]?.[td.dataset.uid]?.[lesson];
+      if (!teacher || !cell?.hasClass) return;
+      e.stopPropagation();
+      dsOpenPopoverForCell(teacher, lesson, cell, { date: dwDateFromISO(dwWeek.dates[day]), scheduleMap: dwWeek.scheduleByDay[day] });
+    });
 
     // Keep each day's name centred over the part of its seven periods that's
     // currently visible (right of nothing, left of the sticky teachers
@@ -6483,9 +6585,11 @@
     // bar with the department, the days over their seven numbered periods,
     // a teachers column, and only the class in each cell. Classes are
     // written compactly (12/1 د), thicker rules separate the days.
-    function dsBuildWeekPdfPage(week, dept){
-      const host = document.createElement('div');
-      host.style.cssText = 'position:fixed;top:0;left:-10000px;width:1123px;background:#fff;z-index:-1';
+    // The week as the school's printed department timetable — one table,
+    // styled by .dw-paper in user.css. Used by the week PDF and, on
+    // phones, by the week sheet itself (tapCells: lesson cells carry their
+    // day/lesson/teacher so a tap opens the lesson popover).
+    function dsWeekPaperTable(week, dept, { tapCells = false } = {}){
       const compactClass = (c) => (c || '').toString().replace(/\s*\/\s*/g, '/').replace(/\s+/g, ' ').trim();
       const n = Math.max(dsTeachersList.length, 1);
       // Fit the rows to the page: ~520px of table body on a 794px-tall page.
@@ -6498,32 +6602,37 @@
         const tds = week.dates.map((iso, day) => [1, 2, 3, 4, 5, 6, 7].map(l => {
           const c = week.cellsByDay[day]?.[t.uid]?.[l];
           const cls = `${l === 1 && day > 0 ? 'sep' : ''} ${l % 2 === 0 ? 'alt' : ''}`;
-          return c?.hasClass ? `<td class="${cls} on">${escapeHtml(compactClass(c.classKey))}</td>` : `<td class="${cls}"></td>`;
+          const tap = tapCells ? ` data-uid="${escapeHtml(t.uid)}" data-day="${day}" data-lesson="${l}"` : '';
+          return c?.hasClass ? `<td class="${cls} on"${tap}>${escapeHtml(compactClass(c.classKey))}</td>` : `<td class="${cls}"></td>`;
         }).join('')).join('');
         return `<tr style="height:${rowH}px"><th class="name">${escapeHtml(t.name)}</th>${tds}</tr>`;
       }).join('') || '<tr><td colspan="36">لا يوجد معلمون في هذا القسم</td></tr>';
+      return `
+          <table>
+            <colgroup><col style="width:118px">${'<col>'.repeat(35)}</colgroup>
+            <thead>
+              <tr class="title"><th colspan="36">${escapeHtml(dept || 'جدول القسم')}</th></tr>
+              <tr class="days"><th class="corner" rowspan="2">المعلم</th>${dayHeads}</tr>
+              <tr class="nums">${lessonHeads}</tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>`;
+    }
+
+    function dsBuildWeekPdfPage(week, dept){
+      const host = document.createElement('div');
+      host.style.cssText = 'position:fixed;top:0;left:-10000px;width:1123px;background:#fff;z-index:-1';
       host.innerHTML = `
         <style>
-          #dsWeekPdf { width:1123px; min-height:794px; box-sizing:border-box; padding:26px 30px 24px; direction:rtl; background:#fff; color:#1e293b; font-family:var(--app-font); }
+          #dsWeekPdf { min-height:794px; padding:26px 30px 24px; }
           #dsWeekPdf .top { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
           #dsWeekPdf .lines { text-align:right; line-height:1.55; }
           #dsWeekPdf .lines div { font-size:12px; font-weight:700; color:#475569; }
           #dsWeekPdf .lines .school { font-size:17px; font-weight:900; color:#1e293b; }
           #dsWeekPdf .lines .range { font-size:11px; font-weight:800; color:#64748b; margin-top:2px; }
           #dsWeekPdf .top img { height:58px; object-fit:contain; }
-          #dsWeekPdf table { width:100%; border-collapse:collapse; table-layout:fixed; border:1.5px solid #334155; }
-          #dsWeekPdf thead .title th { background:#334155; color:#fff; font-size:17px; font-weight:900; padding:7px; }
-          #dsWeekPdf thead .days th { background:#475569; color:#fff; font-size:13px; font-weight:900; padding:6px 2px; }
-          #dsWeekPdf thead .days th small { display:block; font-size:8.5px; font-weight:700; opacity:.85; margin-top:1px; }
-          #dsWeekPdf thead .nums th { background:#64748b; color:#fff; font-size:10px; font-weight:800; padding:4px 0; border-left:1px solid rgba(255,255,255,.25); }
-          #dsWeekPdf th.corner { background:#334155; color:#fff; font-size:13px; font-weight:900; }
-          #dsWeekPdf tbody th.name { background:#f1f5f9; font-size:11px; font-weight:900; color:#1e293b; padding:2px 6px; text-align:center; border-top:1px solid #94a3b8; border-left:2px solid #334155; line-height:1.35; }
-          #dsWeekPdf tbody td { border-top:1px solid #cbd5e1; border-left:1px solid #e2e8f0; text-align:center; vertical-align:middle; font-size:9.5px; font-weight:900; color:#0f172a; padding:0 1px; white-space:nowrap; overflow:hidden; }
-          #dsWeekPdf tbody td.alt { background:#f8fafc; }
-          #dsWeekPdf tbody td.on { background:#e8f0f8; }
-          #dsWeekPdf .sep { border-right:2px solid #334155 !important; }
         </style>
-        <div id="dsWeekPdf">
+        <div id="dsWeekPdf" class="dw-paper">
           <div class="top">
             <div class="lines">
               <div>وزارة التربية والتعليم</div>
@@ -6533,15 +6642,7 @@
             </div>
             <img class="ds-pdf-logo" src="/images/schoollogo.png" alt="">
           </div>
-          <table>
-            <colgroup><col style="width:118px">${'<col>'.repeat(35)}</colgroup>
-            <thead>
-              <tr class="title"><th colspan="36">${escapeHtml(dept || 'جدول القسم')}</th></tr>
-              <tr class="days"><th class="corner" rowspan="2">المعلم</th>${dayHeads}</tr>
-              <tr class="nums">${lessonHeads}</tr>
-            </thead>
-            <tbody>${rows}</tbody>
-          </table>
+          ${dsWeekPaperTable(week, dept)}
         </div>`;
       return host;
     }

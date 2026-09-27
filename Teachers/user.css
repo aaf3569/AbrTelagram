@@ -1670,8 +1670,47 @@
     .ds-dl-status { font-size: .86rem; font-weight: 800; color: var(--muted); text-align: center; }
     .ds-dl-status.error { color: var(--danger); }
 
+    /* The week as the school's printed department timetable: the week PDF
+       page (#dsWeekPdf adds the school header) and, on phones, the week
+       sheet itself (.dw-paper-live, see .dw-paper-view). */
+    .dw-paper { width: 1123px; box-sizing: border-box; direction: rtl; background: #fff; color: #1e293b; font-family: var(--app-font); }
+    .dw-paper table { width: 100%; border-collapse: collapse; table-layout: fixed; border: 1.5px solid #334155; }
+    .dw-paper thead .title th { background: #334155; color: #fff; font-size: 17px; font-weight: 900; padding: 7px; }
+    .dw-paper thead .days th { background: #475569; color: #fff; font-size: 13px; font-weight: 900; padding: 6px 2px; }
+    .dw-paper thead .days th small { display: block; font-size: 8.5px; font-weight: 700; opacity: .85; margin-top: 1px; }
+    .dw-paper thead .nums th { background: #64748b; color: #fff; font-size: 10px; font-weight: 800; padding: 4px 0; border-left: 1px solid rgba(255,255,255,.25); }
+    .dw-paper th.corner { background: #334155; color: #fff; font-size: 13px; font-weight: 900; }
+    .dw-paper tbody th.name { background: #f1f5f9; font-size: 11px; font-weight: 900; color: #1e293b; padding: 2px 6px; text-align: center; border-top: 1px solid #94a3b8; border-left: 2px solid #334155; line-height: 1.35; }
+    .dw-paper tbody td { border-top: 1px solid #cbd5e1; border-left: 1px solid #e2e8f0; text-align: center; vertical-align: middle; font-size: 9.5px; font-weight: 900; color: #0f172a; padding: 0 1px; white-space: nowrap; overflow: hidden; }
+    .dw-paper tbody td.alt { background: #f8fafc; }
+    .dw-paper tbody td.on { background: #e8f0f8; }
+    .dw-paper .sep { border-right: 2px solid #334155 !important; }
+    .dw-paper-live { padding: 10px; }
+    .dw-paper-live td[data-uid] { cursor: pointer; }
+
+    .dw-paper-view, .dw-zoom-bar { display: none; }
+
     @media (max-width: 768px) {
-      .ds-toolbar { padding: 10px 12px; gap: 8px; }
+      /* Phone: the PDF-style page replaces the interactive week grid. */
+      #dwSheet .ds-table-shell { display: none; }
+      .dw-paper-view {
+        display: block; flex: 1 1 auto; min-height: 0; overflow: auto;
+        direction: ltr; background: #fff; border-top: 1px solid var(--border);
+        touch-action: pan-x pan-y; -webkit-overflow-scrolling: touch;
+      }
+      .dw-paper-canvas { width: max-content; }
+      .dw-zoom-bar {
+        display: flex; gap: 6px; position: absolute; left: 12px; bottom: calc(14px + env(safe-area-inset-bottom));
+        z-index: 3; padding: 5px; border-radius: 14px; background: rgba(255,255,255,.94);
+        border: 1px solid var(--border); box-shadow: 0 8px 22px rgba(15,23,42,.16);
+      }
+      .dw-zoom-btn {
+        width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--border);
+        background: #fff; color: var(--primary); font-size: .95rem; display: grid; place-items: center; cursor: pointer;
+      }
+      .dw-zoom-btn:disabled { opacity: .4; cursor: default; }
+      #dwStateOk { position: relative; }
+
       .ds-tool-btn { min-height: 44px; padding: 0 12px; font-size: .86rem; }
       .ds-tool-btn.icon { width: 44px; }
       .dw-toolbar { justify-content: center; }
