@@ -157,6 +157,7 @@
     }
     .new-schedule-btn:hover{ box-shadow: 0 8px 18px rgba(11,79,108,.12); }
     .new-schedule-btn:active{ transform:scale(.99); }
+    .new-schedule-btn.danger-btn{ color:var(--danger,#b42318); border-color:rgba(180,35,24,.35); }
     .new-schedule-btn.icon-btn{
       width:44px;
       padding:0;
@@ -1173,6 +1174,7 @@
         </button>
         <button id="csvImportBtn" class="new-schedule-btn" type="button" title="استيراد الجدول من CSV">📥 استيراد CSV</button>
         <button id="forceResaveAllBtn" class="new-schedule-btn" type="button" title="إعادة حفظ كل حصص كل الجداول بختم وقت جديد، ويصحّح تلقائيًّا أي حصة مسندة لحساب معلّم قديم/غير صحيح">🔄 إعادة حفظ الكل</button>
+        <button id="deleteAllSchedulesBtn" class="new-schedule-btn danger-btn" type="button" title="حذف كل حصص كل الجداول — الحضور والغياب والتغطيات السابقة لا تتأثر" hidden>🗑 حذف جميع الحصص</button>
       </div>
     </div>
   </header>
@@ -1524,6 +1526,7 @@
     const saveBtn = document.getElementById('saveBtn');
     const discardBtn = document.getElementById('discardBtn');
     const forceResaveAllBtn = document.getElementById('forceResaveAllBtn');
+    const deleteAllSchedulesBtn = document.getElementById('deleteAllSchedulesBtn');
     const floatingSaveBar = document.getElementById('floatingSaveBar');
     const unsavedModal = document.getElementById('unsavedModal');
     const unsavedLeaveBtn = document.getElementById('unsavedLeaveBtn');
@@ -3902,22 +3905,12 @@
         if(!proceed) return;
       }
 
-      // The CSV is the whole school's schedule: every lesson not in it is
-      // deleted, so stale docs from older imports or manual edits can't
-      // keep claiming a teacher's period next to the new one.
-      if(!window.confirm('سيصبح هذا الملف هو الجدول الأساسي: سيتم حذف جميع الحصص الحالية غير الموجودة في الملف. هل تريد المتابعة؟')) return;
-
       csvImportConfirmBtn.disabled = true;
       csvImportMsg.textContent = 'جارٍ الحفظ...';
       try{
         const base = kuwaitTodayISO();
         const start = startOfWeekSunday(base);
         const importWeekDates = [0,1,2,3,4].map(i => addDaysISO(start, i));
-
-        // Snapshot the existing lessons first; whatever the import doesn't
-        // rewrite is removed once every new lesson is safely written.
-        const existingSnap = await getDocs(collection(db, 'schedules'));
-        const importedIds = new Set();
 
         // Firestore batches cap at 500 writes — chunk defensively.
         let written = 0;
@@ -3938,7 +3931,6 @@
             // every time) this whole design depends on. dayIndex is
             // already known here, so build the same stable id directly.
             const id = `${grade}-${section}-${encodeURIComponent(trackKey)}-D${row.dayIndex}-L${row.lesson}`;
-            importedIds.add(id);
             batch.set(doc(db, 'schedules', id), {
               dayIndex: row.dayIndex,
               date: importWeekDates[row.dayIndex],
@@ -3961,17 +3953,7 @@
           written += chunk.length;
         }
 
-        const staleIds = existingSnap.docs.map(d => d.id).filter(id => !importedIds.has(id));
-        let removed = 0;
-        for(let offset = 0; offset < staleIds.length; offset += 450){
-          const batch = writeBatch(db);
-          staleIds.slice(offset, offset + 450).forEach(id => batch.delete(doc(db, 'schedules', id)));
-          await batch.commit();
-          removed += Math.min(450, staleIds.length - offset);
-        }
-
         addStatusLine('ok', `تم استيراد ${written} حصّة من ملف CSV.`);
-        if(removed) addStatusLine('ok', `تم حذف ${removed} حصّة قديمة غير موجودة في الملف.`);
         if(leftover.length){
           addStatusLine('warn', `تم تجاهل ${leftover.length} حصّة لعدم التطابق أو عدم اختيار معلّم.`);
         }
@@ -4752,7 +4734,44 @@
       }
     }
 
+    // Wipes the lessons (the `schedules` collection) only, e.g. before
+    // importing a fresh CSV. Nothing else points at a lesson doc:
+    // attendanceSessions, scheduleOverrides (covers), customDaySchedules and
+    // settings/lessonTimes are separate collections keyed by date/class/
+    // lesson number, so past attendance and covers stay exactly as they are.
+    async function deleteAllSchedules(){
+      if(loading) return;
+      const typed = window.prompt(
+        'سيتم حذف جميع الحصص في كل جداول المدرسة (كل الفصول).\n' +
+        'سجلات الحضور والغياب والتغطيات والأيام المخصّصة وأوقات الحصص لن تتأثر.\n\n' +
+        'للتأكيد اكتب: حذف'
+      );
+      if(typed == null) return;
+      if(typed.trim() !== 'حذف'){ openErrorModal('لم يتم الحذف — يجب كتابة كلمة «حذف» للتأكيد.'); return; }
+
+      setLoading(true, "جاري حذف جميع الحصص...");
+      setStatusHTML("");
+      try{
+        const snap = await getDocs(collection(db, 'schedules'));
+        const ids = snap.docs.map(d => d.id);
+        // Firestore batches cap at 500 writes — chunk defensively.
+        for(let offset = 0; offset < ids.length; offset += 450){
+          const batch = writeBatch(db);
+          ids.slice(offset, offset + 450).forEach(id => batch.delete(doc(db, 'schedules', id)));
+          await batch.commit();
+        }
+        setStatusHTML(`<div class="ok">تم حذف ${ids.length} حصة. يمكنك الآن استيراد الجدول الجديد من ملف CSV.</div>`);
+        if(selectedClassKey) await fetchExisting();
+      }catch(e){
+        console.error('[deleteAllSchedules]', e);
+        openErrorModal(`تعذّر حذف الحصص: ${(e && e.message) ? e.message : e}`);
+      }finally{
+        setLoading(false);
+      }
+    }
+
     saveBtn.addEventListener('click', saveAll);
+    deleteAllSchedulesBtn.addEventListener('click', deleteAllSchedules);
     discardBtn.addEventListener('click', discardAllChanges);
     forceResaveAllBtn.addEventListener('click', forceResaveAllSchedules);
     breakAfterLesson1Sel?.addEventListener('change', ()=> handleBreakSelectChange('first'));
@@ -4790,6 +4809,10 @@
             </div>`;
           return;
         }
+
+        // Wiping every class's lessons is admin-only, not for teachers who
+        // were only granted schedule editing.
+        deleteAllSchedulesBtn.hidden = role !== "admin";
 
         CLASSES_BY_GRADE = groupByGrade(await fetchClassList(db));
         ALL_CLASS_KEYS = GRADES.flatMap(g => CLASSES_BY_GRADE[g] || []);
