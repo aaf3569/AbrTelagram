@@ -668,6 +668,9 @@ async function buildTeacherLessonsForToday({
   lessonTimes,
   overrides,
   customLessonsByTeacher,
+  // Optional: this teacher's schedules docs, already loaded (the reminder
+  // sweep loads the whole day once — see loadTodaySchedulesByTeacher).
+  scheduleRows = null,
 }) {
   const byKey = new Map();
   const lessonTimeByIndex = new Map(
@@ -686,9 +689,9 @@ async function buildTeacherLessonsForToday({
     );
   } else {
     try {
-      const schedulesSnap = await db.collection("schedules").where("teacherUid", "==", teacherUid).get();
-      schedulesSnap.forEach((docSnap) => {
-        const row = docSnap.data() || {};
+      const rows = scheduleRows
+        || (await db.collection("schedules").where("teacherUid", "==", teacherUid).get()).docs.map((d) => d.data() || {});
+      rows.forEach((row) => {
         const lesson = Number(row.lesson ?? row.lessonIndex ?? row.lessonNumber);
         if (!Number.isFinite(lesson) || lesson < 1 || lesson > 7) return;
 
@@ -1471,6 +1474,58 @@ async function loadConnectedTeachersForSweep() {
   return Array.from(out.values());
 }
 
+/* ---- Reminder sweep read budget ----
+   The sweep runs every minute. Loading everything from Firestore on every
+   run (each connected teacher's schedules, the teachers list, lesson times,
+   covers, and 2-3 attendance reads per lesson for up to three hours after
+   it ends) cost tens of thousands of reads a day and used up the project's
+   daily Firestore quota. So now:
+   - nothing is read on Friday/Saturday or outside today's reminder hours;
+   - the day's data is read once and reused for a few minutes (covers) up
+     to half an hour (the timetable itself);
+   - once a lesson's attendance is known to be in, or a reminder has been
+     sent, it isn't looked up again that day. */
+const sweepCache = new Map(); // key -> { at, value }
+async function cachedForSweep(key, ttlMs, load) {
+  const hit = sweepCache.get(key);
+  if (hit && Date.now() - hit.at < ttlMs) return hit.value;
+  const value = await load();
+  sweepCache.set(key, { at: Date.now(), value });
+  return value;
+}
+
+const sweepMemo = { dateISO: "", submitted: new Set(), handled: new Set() };
+function sweepMemoFor(dateISO) {
+  if (sweepMemo.dateISO !== dateISO) {
+    sweepMemo.dateISO = dateISO;
+    sweepMemo.submitted.clear();
+    sweepMemo.handled.clear();
+  }
+  return sweepMemo;
+}
+
+// Today's schedules docs for the whole school in one query, grouped by
+// teacherUid (dayIndex is saved as a number, but also accepted as text).
+async function loadTodaySchedulesByTeacher(dayIndex) {
+  const out = new Map();
+  if (!isFirebaseReady() || dayIndex < 0 || dayIndex > 4) return out;
+  try {
+    const snap = await db.collection("schedules").where("dayIndex", "in", [dayIndex, String(dayIndex)]).get();
+    snap.forEach((docSnap) => {
+      const row = docSnap.data() || {};
+      const uid = String(row.teacherUid || "").trim();
+      if (!uid) return;
+      if (!out.has(uid)) out.set(uid, []);
+      out.get(uid).push(row);
+    });
+  } catch (error) {
+    // Rethrown so the empty result isn't cached — the next minute retries.
+    console.error(`[firebase] loadTodaySchedulesByTeacher failed dayIndex=${dayIndex}: ${error.message}`);
+    throw error;
+  }
+  return out;
+}
+
 async function runReminderSweep() {
   if (reminderSweepRunning) return;
   reminderSweepRunning = true;
@@ -1486,11 +1541,28 @@ async function runReminderSweep() {
     }
 
     const now = kuwaitNowContext();
-    const lessonTimes = await loadLessonTimes();
-    const overrides = await loadOverridesForDate(now.dateISO);
-    const customLessonsByTeacher = await loadCustomLessonsByTeacher(now.dayIndex, lessonTimes);
+    // No lessons on Friday/Saturday.
+    if (now.dayIndex < 0 || now.dayIndex > 4) return;
 
-    const connectedTeachers = await loadConnectedTeachersForSweep();
+    const lessonTimes = await cachedForSweep("lessonTimes", 30 * 60 * 1000, loadLessonTimes);
+    // Outside today's reminder hours — from the first lesson reminder to the
+    // last missed-attendance reminder — there is nothing to send.
+    const starts = lessonTimes.map((x) => parseTimeToMinutes(x.start)).filter(Number.isFinite);
+    const ends = lessonTimes.map((x) => parseTimeToMinutes(x.end)).filter(Number.isFinite);
+    if (starts.length && ends.length) {
+      const firstReminder = Math.min(...starts) - LESSON_REMINDER_LEAD_MINUTES - 5;
+      const lastReminder = Math.max(...ends) + 185;
+      if (now.nowMinutes < firstReminder || now.nowMinutes > lastReminder) return;
+    }
+
+    const memo = sweepMemoFor(now.dateISO);
+    const overrides = await cachedForSweep(`overrides|${now.dateISO}`, 3 * 60 * 1000, () => loadOverridesForDate(now.dateISO));
+    const customLessonsByTeacher = await cachedForSweep(`custom|${now.dateISO}`, 15 * 60 * 1000,
+      () => loadCustomLessonsByTeacher(now.dayIndex, lessonTimes));
+    const schedulesByTeacher = await cachedForSweep(`schedules|${now.dateISO}`, 30 * 60 * 1000,
+      () => loadTodaySchedulesByTeacher(now.dayIndex));
+
+    const connectedTeachers = await cachedForSweep("connectedTeachers", 10 * 60 * 1000, loadConnectedTeachersForSweep);
     if (!connectedTeachers.length) return;
 
     for (const teacherRow of connectedTeachers) {
@@ -1506,17 +1578,19 @@ async function runReminderSweep() {
         lessonTimes,
         overrides,
         customLessonsByTeacher,
+        scheduleRows: schedulesByTeacher.get(teacherUid) || [],
       });
       if (!lessons.length) continue;
 
       for (const item of lessons) {
+        const lessonKey = `${teacherUid}|${item.lesson}|${normalizeClassKey(item.classKey)}`;
         const lessonLabel =
           DEFAULT_LESSON_TIMES[item.lesson - 1]?.label || `الحصة ${toArabicDigits(item.lesson)}`;
 
         const inLessonReminderWindow =
           now.nowMinutes >= item.startMin - LESSON_REMINDER_LEAD_MINUTES &&
           now.nowMinutes < item.startMin;
-        if (inLessonReminderWindow) {
+        if (inLessonReminderWindow && !memo.handled.has(`${lessonKey}|lesson_start`)) {
           const meta = {
             dateISO: now.dateISO,
             teacherUid,
@@ -1526,6 +1600,8 @@ async function runReminderSweep() {
             timeKey: item.startMin,
           };
           const claim = await claimReminderSend(meta);
+          // Already sent (or being sent) by an earlier run — stop asking.
+          if (!claim.claimed && claim.ref) memo.handled.add(`${lessonKey}|lesson_start`);
           if (claim.claimed) {
             try {
               await sendTelegramMessage(
@@ -1536,6 +1612,7 @@ async function runReminderSweep() {
                 })
               );
               await markReminderSent(claim.ref, meta);
+              memo.handled.add(`${lessonKey}|lesson_start`);
               console.log(
                 `[reminder] sent type=lesson_start userId=${teacherUid} lesson=${item.lesson} classKey=${item.classKey}`
               );
@@ -1561,6 +1638,10 @@ async function runReminderSweep() {
           now.nowMinutes >= missedReminderStart && now.nowMinutes <= missedReminderEnd;
 
         if (!inAttendanceReminderWindow && !inMissedAttendanceWindow) continue;
+        // Attendance already in, or this window's reminder already done.
+        if (memo.submitted.has(lessonKey)) continue;
+        if (inAttendanceReminderWindow && memo.handled.has(`${lessonKey}|attendance_late`)) continue;
+        if (inMissedAttendanceWindow && memo.handled.has(`${lessonKey}|attendance_missed`)) continue;
 
         const attendanceState = await getAttendanceSessionState({
           dateISO: now.dateISO,
@@ -1568,7 +1649,10 @@ async function runReminderSweep() {
           classKey: item.classKey,
           teacherUid,
         });
-        if (attendanceState.attendanceSubmitted) continue;
+        if (attendanceState.attendanceSubmitted) {
+          memo.submitted.add(lessonKey);
+          continue;
+        }
 
         if (inAttendanceReminderWindow) {
           const lateMeta = {
@@ -1580,6 +1664,7 @@ async function runReminderSweep() {
             timeKey: attendanceReminderStart,
           };
           const lateClaim = await claimReminderSend(lateMeta);
+          if (!lateClaim.claimed && lateClaim.ref) memo.handled.add(`${lessonKey}|attendance_late`);
           if (lateClaim.claimed) {
             try {
               await sendTelegramMessage(
@@ -1590,6 +1675,7 @@ async function runReminderSweep() {
                 })
               );
               await markReminderSent(lateClaim.ref, lateMeta);
+              memo.handled.add(`${lessonKey}|attendance_late`);
               console.log(
                 `[reminder] sent type=attendance_late userId=${teacherUid} lesson=${item.lesson} classKey=${item.classKey}`
               );
@@ -1614,6 +1700,7 @@ async function runReminderSweep() {
             timeKey: missedReminderStart,
           };
           const missedClaim = await claimReminderSend(missedMeta);
+          if (!missedClaim.claimed && missedClaim.ref) memo.handled.add(`${lessonKey}|attendance_missed`);
           if (missedClaim.claimed) {
             try {
               await sendTelegramMessage(
@@ -1624,6 +1711,7 @@ async function runReminderSweep() {
                 })
               );
               await markReminderSent(missedClaim.ref, missedMeta);
+              memo.handled.add(`${lessonKey}|attendance_missed`);
               console.log(
                 `[reminder] sent type=attendance_missed userId=${teacherUid} lesson=${item.lesson} classKey=${item.classKey}`
               );
