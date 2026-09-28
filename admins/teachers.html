@@ -514,6 +514,7 @@
           <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
         </button>
         <div id="subjectsList" class="stack"></div>
+        <button id="downloadTeachersBtn" class="btn ghost" type="button" style="width:100%; margin-top:14px;">تنزيل قائمة المعلمين (Excel)</button>
       </section>
     </div>
   </main>
@@ -1339,6 +1340,77 @@
     function escapeHtml(str){
       return (str||'').toString().replace(/[&<>"]/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
     }
+
+    // ==== Teachers export: an .xlsx (opens in Google Sheets / Excel) with
+    // every teacher's name and UID, grouped by department — so the schedule CSVs can carry
+    // teacher UIDs for the import on adminschedule.html. ====
+    function loadExcelJs(){
+      if(window.ExcelJS) return Promise.resolve();
+      return new Promise((resolve,reject)=>{
+        const el=document.createElement('script');
+        el.src='https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js';
+        el.onload=()=>resolve();
+        el.onerror=()=>reject(new Error('exceljs_load_failed'));
+        document.head.appendChild(el);
+      });
+    }
+    const downloadTeachersBtn=document.getElementById('downloadTeachersBtn');
+    downloadTeachersBtn.addEventListener('click', async ()=>{
+      const original=downloadTeachersBtn.textContent;
+      downloadTeachersBtn.disabled=true;
+      downloadTeachersBtn.textContent='جاري التجهيز…';
+      try{
+        const [snap]=await Promise.all([getDocs(collection(db,'teachers')), loadExcelJs()]);
+        // The document ID is the UID — not the doc's own `uid` field, which
+        // can be stale (see loadCsvTeacherIndex() in adminschedule.html).
+        const rows=snap.docs.map(d=>{
+          const t=d.data()||{};
+          const isAdmin=(t.role||'').toString().toLowerCase()==='admin';
+          return {
+            uid:d.id,
+            name:(t.name||t.email||'').toString().trim(),
+            dept:isAdmin ? 'الإدارة' : (resolveDepartmentName(t.department||t.subject)||'غير محدد'),
+          };
+        }).sort((a,b)=>a.name.localeCompare(b.name,'ar'));
+
+        // One sheet, two columns (name, UID), teachers grouped under a
+        // heading row per department.
+        const wb=new window.ExcelJS.Workbook();
+        const ws=wb.addWorksheet('المعلمون', { views:[{ rightToLeft:true, state:'frozen', ySplit:1 }] });
+        ws.columns=[{ header:'اسم المعلم', width:40 }, { header:'User ID', width:34 }];
+        ws.getRow(1).eachCell(cell=>{
+          cell.font={ name:'Arial', size:12, bold:true, color:{ argb:'FFFFFFFF' } };
+          cell.fill={ type:'pattern', pattern:'solid', fgColor:{ argb:'FF0E3A5C' } };
+        });
+        [...subjectsKW, 'الإدارة', 'غير محدد'].forEach(dept=>{
+          const list=rows.filter(r=>r.dept===dept);
+          if(!list.length) return;
+          if(ws.rowCount>1) ws.addRow([]);
+          const head=ws.addRow([dept]);
+          ws.mergeCells(head.number,1,head.number,2);
+          head.getCell(1).font={ name:'Arial', size:12, bold:true };
+          head.getCell(1).fill={ type:'pattern', pattern:'solid', fgColor:{ argb:'FFDCE8F3' } };
+          list.forEach(r=>ws.addRow([r.name, r.uid]));
+        });
+
+        const buffer=await wb.xlsx.writeBuffer();
+        const blob=new Blob([buffer], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const url=URL.createObjectURL(blob);
+        const a=document.createElement('a');
+        a.href=url;
+        a.download=`قائمة-المعلمين-${new Date().toISOString().slice(0,10)}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(()=>URL.revokeObjectURL(url), 4000);
+      }catch(e){
+        console.error('[teachers-export] failed:', e?.message||e);
+        alert('تعذّر إنشاء ملف المعلمين.');
+      }finally{
+        downloadTeachersBtn.disabled=false;
+        downloadTeachersBtn.textContent=original;
+      }
+    });
     // أ/إ/آ→ا، ة→ه، ى→ي — each swap is one Arabic letter for another, so
     // match indices found on the normalized string line up character-for-
     // character with the original string for highlighting.
