@@ -1099,7 +1099,11 @@
     import { teacherScheduleUids } from "/shared/schedule-teacher-identity.js";
     import { mountTelegramSettings } from "/shared/telegram-settings.js";
     import { showActionPopup } from "/shared/action-popup.js";
-    import { mountAttendanceSheet, LESSON_END_GRACE_MINUTES } from "/shared/attendance.js";
+    // ?v= pins the copy this page was written against: /shared/* is cached
+    // for 5 minutes (_headers) while this HTML is always fresh, so right after
+    // a deploy the page could otherwise run against the previous module —
+    // bump it whenever this page starts relying on something new in there.
+    import { mountAttendanceSheet, LESSON_END_GRACE_MINUTES } from "/shared/attendance.js?v=2026-09-29b";
     import { mountStudentNotesSheet } from "/shared/student-notes-sheet.js";
     import { parseTimeToMinutes } from "/shared/kuwait-time.js";
     import { isTruthyFlag, canManageAttendance } from "/shared/auth-guard.js";
@@ -1146,6 +1150,7 @@
         maSavedListeners.forEach((fn) => { try { fn(); } catch (e) { console.error(e); } });
         if (dsPopoverEl.classList.contains('open')) dsClosePopover();
         if (dsSheetEl.classList.contains('open')) loadDeptSchedGridForDate(dsSelectedDate);
+        mcLivePrefetch = null; // a save changes the answer (now تعديل الغياب)
         if (mcSheetEl.classList.contains('open') && mcCurrentClass) mcRefreshAttendButtonState(mcCurrentClass);
         mcUpdateCurrentClassButtonHighlight();
       },
@@ -6052,6 +6057,7 @@
       mcStudentsList.innerHTML = '';
       mcStudentSearch.value = '';
       mcRefreshAttendButtonState(cls); // not awaited — never delays opening the sheet
+      mcPrefetchLive(cls);             // likewise — warms up تسجيل الغياب
       mcOpenSheet();
       await mcLoadStudentsForClass(cls);
     }
@@ -6505,7 +6511,12 @@
       }
       const pending = subPending;
       closeSubModal();
-      if (pending) dsAttendance.openForSubstitute({ ...pending, reason });
+      if (!pending) return;
+      mcLivePrefetch = null; // the sheet re-checks; don't reuse this answer after it
+      dsAttendance.openForSubstitute({ ...pending, reason }).catch((e) => {
+        console.error('[mcClasses] openForSubstitute:', e);
+        toast({ title: 'تعذّر فتح تسجيل الغياب', text: 'حاول مرة أخرى.', icon: 'fa-circle-exclamation' });
+      });
     });
     [subSelectWrap, subCustomWrap].forEach((el) =>
       el.addEventListener('animationend', () => el.classList.remove('shake')));
@@ -6522,21 +6533,48 @@
       not_logged_in: ['تسجيل الدخول', 'يرجى تسجيل الدخول أولاً.'],
     };
 
+    // Which lesson this class is in right now — started the moment the class
+    // sheet opens, so تسجيل الغياب usually finds the answer already waiting
+    // instead of making the teacher sit through the Firestore reads.
+    const MC_LIVE_PREFETCH_MS = 20000;
+    let mcLivePrefetch = null; // { cls, at, promise }
+    function mcPrefetchLive(cls){
+      if (!currentUser || !cls) return null;
+      const promise = dsAttendance.getClassLiveLesson(cls);
+      promise.catch(() => { if (mcLivePrefetch?.promise === promise) mcLivePrefetch = null; });
+      mcLivePrefetch = { cls, at: Date.now(), promise };
+      return promise;
+    }
+    function mcLiveFor(cls){
+      const p = mcLivePrefetch;
+      if (p && p.cls === cls && Date.now() - p.at < MC_LIVE_PREFETCH_MS) return p.promise;
+      return mcPrefetchLive(cls);
+    }
+
+    function mcSetAttendLoading(on){
+      mcAttendBtn.disabled = on;
+      mcAttendBtn.classList.toggle('is-loading', on);
+      mcAttendBtn.setAttribute('aria-busy', on ? 'true' : 'false');
+    }
+
     let mcAttendOpening = false;
     mcAttendBtn.addEventListener('click', async () => {
       if (mcAttendEditSessionId) { dsAttendance.openForEdit(mcAttendEditSessionId); return; }
       const cls = mcCurrentClass;
       if (!cls || mcAttendOpening) return;
       mcAttendOpening = true;
-      mcAttendBtn.disabled = true;
+      mcSetAttendLoading(true);
       try {
-        // This teacher's own current lesson is in this class — the usual flow.
-        const own = await dsAttendance.getCurrentLessonClass(false);
+        // Both checks at once: is this the teacher's own current lesson, and
+        // which lesson is this class in right now.
+        const [own, live] = await Promise.all([
+          dsAttendance.getCurrentLessonClass(false),
+          mcLiveFor(cls),
+        ]);
         if (own.ok && normalizeClassKey(own.classKey) === normalizeClassKey(cls)) {
           await dsAttendance.start();
           return;
         }
-        const live = await dsAttendance.getClassLiveLesson(cls);
         if (!live.ok) {
           const [title, text] = MC_LIVE_BLOCKED[live.reason] || MC_LIVE_BLOCKED.no_class_lesson_now;
           showBlockedPopup(title, text);
@@ -6550,7 +6588,7 @@
         toast({ title: 'تعذّر فتح تسجيل الغياب', text: 'حاول مرة أخرى.', icon: 'fa-circle-exclamation' });
       } finally {
         mcAttendOpening = false;
-        mcAttendBtn.disabled = false;
+        mcSetAttendLoading(false);
       }
     });
 

@@ -582,3 +582,27 @@ for (const mismatch of [{ classKey: '12 / 2 د' }, { date: '2026-09-13' }, { les
     assert.equal(harness.documents.get(`attendanceSessions/${SAFE_ID}`), original);
   });
 }
+
+// صفوف أخرى: teacher-a records a class whose lesson belongs to teacher-b.
+test('substitute attendance opens the sheet for another teacher\'s live lesson and saves the reason', async () => {
+  const harness = await fixture({
+    now: '12:30', session: null,
+    schedules: [{ teacherUid: 'teacher-b', teacherName: 'المعلم الآخر', classKey: CLASS, lesson: 6, dayIndex: 1 }],
+  });
+  const live = await harness.sheet.getClassLiveLesson(CLASS);
+  assert.equal(live.ok, true);
+  assert.equal(live.lesson, 6);
+  assert.equal(live.scheduledTeacherUid, 'teacher-b');
+  assert.equal(live.isMine, false);
+
+  await harness.sheet.openForSubstitute({ classKey: CLASS, lesson: live.lesson, reason: '  حصة   نشاط ' });
+  await harness.settle();
+  assertOpen(harness);
+
+  await harness.save();
+  const session = harness.writes.find(write => write.path === `attendanceSessions/${SAFE_ID}`);
+  assert.ok(session, 'session written under the class/lesson id');
+  assert.equal(session.data.teacherUid, 'teacher-a');
+  assert.equal(session.data.substituteReason, 'حصة نشاط');
+  assert.equal(session.data.originalTeacherUid, 'teacher-b');
+});

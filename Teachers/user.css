@@ -1880,6 +1880,13 @@
     }
     .mc-btn-download:hover { transform: translateY(-2px); border-color: var(--primary); box-shadow: 0 12px 24px rgba(2,43,66,.16); }
     .mc-btn-download:disabled { opacity: .6; cursor: default; transform: none; }
+    /* Instant feedback while تسجيل الغياب checks which lesson the class is in. */
+    .mc-btn-attend.is-loading { cursor: progress; opacity: .9; transform: none; }
+    .mc-btn-attend.is-loading::before {
+      content: ""; display: inline-block; width: 16px; height: 16px; margin-inline-end: 10px; vertical-align: -3px;
+      border: 2.5px solid rgba(255,255,255,.45); border-top-color: #fff; border-radius: 50%;
+      animation: spin .8s linear infinite;
+    }
     .mc-btn-attend.mc-attend-edit { background: linear-gradient(145deg, #c98a1f, var(--warning)); box-shadow: 0 10px 22px rgba(160,109,0,.28); }
     /* Phone: the actions take the whole row — تنزيل القائمة shrinks to a
        square icon on the right, تسجيل الغياب grows into the freed space. */

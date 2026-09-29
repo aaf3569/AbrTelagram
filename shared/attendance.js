@@ -1409,7 +1409,17 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
   // Who the schedule says teaches `classKey` at `lessonIndex` today — a
   // today-dated override (تغطية from جدول القسم) wins over the weekly
   // schedule. Best-effort, only used to label the record; never throws.
-  async function getScheduledTeacherForClassLesson(classKey, lessonIndex, dateISO) {
+  const SCHEDULED_TEACHER_CACHE_MS = 60 * 1000;
+  const scheduledTeacherCache = new Map(); // "date|lesson|class" -> { at, promise }
+  function getScheduledTeacherForClassLesson(classKey, lessonIndex, dateISO) {
+    const key = `${dateISO}|${lessonIndex}|${normalizeClassKeyForCompare(classKey)}`;
+    const hit = scheduledTeacherCache.get(key);
+    if (hit && Date.now() - hit.at < SCHEDULED_TEACHER_CACHE_MS) return hit.promise;
+    const promise = fetchScheduledTeacherForClassLesson(classKey, lessonIndex, dateISO);
+    scheduledTeacherCache.set(key, { at: Date.now(), promise });
+    return promise;
+  }
+  async function fetchScheduledTeacherForClassLesson(classKey, lessonIndex, dateISO) {
     const wanted = normalizeClassKeyForCompare(classKey);
     const matches = (row) => Number(row.lesson) === Number(lessonIndex)
       && normalizeClassKeyForCompare(classKeyFromScheduleRow(row)) === wanted;
@@ -1461,27 +1471,36 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
     const todayISO = kuwaitTodayISO();
     const candidates = [getActiveLessonIndex(), getGracePeriodLessonIndex()].filter(i => i !== null);
     if (!classKey || !candidates.length) return { ok: false, reason: "no_class_lesson_now" };
-    let fallback = null;
-    for (const lessonIndex of candidates) {
+    // Every lookup runs at once — one round trip instead of up to four in a
+    // row, which is what made the button feel stuck.
+    const results = await Promise.all(candidates.map(async (lessonIndex) => {
       const lt = LESSON_TIMES.find(l => l.index === lessonIndex);
-      const scheduled = await getScheduledTeacherForClassLesson(classKey, lessonIndex, todayISO);
-      const result = await resolveAttendanceSession({
-        ok: true, date: todayISO, lesson: lessonIndex, classKey,
-        lessonLabel: lt?.label || `الحصة ${lessonIndex}`,
-        activeStart: lt?.start || "00:00", activeEnd: lt?.end || "00:00",
-        teacherUid: user.uid, subject: scheduled?.subject || "",
+      const [scheduled, session] = await Promise.all([
+        getScheduledTeacherForClassLesson(classKey, lessonIndex, todayISO),
+        resolveAttendanceSession({
+          ok: true, date: todayISO, lesson: lessonIndex, classKey,
+          lessonLabel: lt?.label || `الحصة ${lessonIndex}`,
+          activeStart: lt?.start || "00:00", activeEnd: lt?.end || "00:00",
+          teacherUid: user.uid,
+        }),
+      ]);
+      if (!session.ok) return session;
+      return {
+        ...session, subject: scheduled?.subject || "",
         scheduledTeacherUid: scheduled?.uid || "", scheduledTeacherName: scheduled?.name || "",
         isMine: !!scheduled && scheduled.uid === user.uid,
-      });
-      if (result.ok) return result;
-      fallback = fallback || result;
-    }
-    return fallback;
+      };
+    }));
+    // The running lesson wins over one still in its grace window.
+    return results.find(r => r.ok) || results[0];
   }
 
   async function openForSubstitute({ classKey, lesson, reason } = {}) {
     reason = String(reason || "").replace(/\s+/g, " ").trim().slice(0, SUBSTITUTE_REASON_MAX);
-    if (!classKey || !reason) return;
+    if (!classKey || !reason) {
+      showError("تعذّر فتح تسجيل الغياب", "يرجى اختيار سبب التسجيل ثم المحاولة مرة أخرى.");
+      return;
+    }
     await withSkeletonOpen(async () => {
       // Re-resolved here: the clock (or someone else's save) may have moved
       // on while the reason popup was open.
