@@ -3,12 +3,13 @@
    {uid}.tours.swapRemovedV1 in Firestore, mirrored to localStorage), then
    never again on any device.
 
-   An intro popup explains the change; its button starts a spotlight tour:
-   ☰ → صفوف أخرى → a grade → a class → تسجيل الغياب. Each step can be done
-   by tapping the highlighted element itself or the bottom bar's button.
-   It only ever SHOWS where to tap — the last step's تسجيل الغياب tap is
-   swallowed, nothing is recorded. Every other tap on the page is blocked
-   while the tour runs, so the teacher can't wander off mid-step.
+   An intro popup explains the change; its button starts a two-step
+   spotlight tour: ☰ → صفوف أخرى. Each step can be done by tapping the
+   highlighted element itself or the bottom bar's button. Once صفوف أخرى
+   opens the tour ends there, and a closing card says what comes next
+   (pick the class, then تسجيل الغياب + reason) — the tour itself never
+   records anything. Every other tap on the page is blocked while it runs,
+   so the teacher can't wander off mid-step.
 
    The host page passes its own openers/elements in `hooks`; this module
    never reaches into the page's internals itself. */
@@ -18,13 +19,6 @@ const TOUR_ID = "swapRemovedV1";
 const COLLECTION = "feature_tours_seen";
 const LS_KEY = (uid) => `tour:${TOUR_ID}:${uid}`;
 const STYLE_ID = "swtStyles";
-const PATH_HTML = `
-      <div class="swt-path" aria-hidden="true">
-        <span class="swt-chip"><i class="fas fa-bars"></i> القائمة</span><span class="swt-path-sep"><i class="fas fa-chevron-left"></i></span>
-        <span class="swt-chip">صفوف أخرى</span><span class="swt-path-sep"><i class="fas fa-chevron-left"></i></span>
-        <span class="swt-chip">الفصل</span><span class="swt-path-sep"><i class="fas fa-chevron-left"></i></span>
-        <span class="swt-chip">تسجيل الغياب</span>
-      </div>`;
 const ar = (v) => String(v).replace(/\d/g, (d) => "٠١٢٣٤٥٦٧٨٩"[d]);
 const reduceMotion = () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
@@ -106,10 +100,6 @@ function ensureStyles() {
   .swt-body { padding: 18px 20px 20px; display: grid; gap: 14px; }
   .swt-text { margin: 0; color: #334155; font-weight: 700; font-size: .95rem; line-height: 1.75; text-align: center; }
   .swt-text b { color: #022b42; font-weight: 900; }
-  .swt-path { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px; }
-  .swt-chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 10px;
-    background: rgba(2,43,66,.07); color: #022b42; font-weight: 800; font-size: .8rem; }
-  .swt-path-sep { color: #94a3b8; font-size: .7rem; }
   .swt-intro .swt-body { gap: 16px; padding: 22px 20px 18px; }
   .swt-lead { margin: 0; text-align: center; color: #64748b; font-weight: 700; font-size: .92rem; }
   .swt-steps { display: grid; gap: 10px; }
@@ -178,8 +168,8 @@ function ensureStyles() {
 
 /* hooks: {
      toggleBtn, sidebar, openSidebar, closeSidebar,
-     otherClassesBtn, ocSheet, ocGroups, openOtherClasses, closeOtherClasses,
-     mcSheet, attendBtn, openClass(classKey), closeClass()
+     otherClassesBtn, ocSheet, openOtherClasses, closeOtherClasses,
+     mcSheet, closeClass()   // only used to tidy up if the teacher skips
    } */
 export async function maybeStartSwapRemovedTour({ db, uid, hooks }) {
   if (!db || !uid || !hooks) return;
@@ -191,9 +181,6 @@ export async function maybeStartSwapRemovedTour({ db, uid, hooks }) {
   const root = document.createElement("div");
   root.className = "swt-root";
   document.body.appendChild(root);
-
-  const openGroup = () => h.ocGroups.querySelector(".oc-group[open]");
-  const firstClassBtn = () => (openGroup() || h.ocGroups).querySelector(".oc-class-btn");
 
   const steps = [
     {
@@ -212,42 +199,7 @@ export async function maybeStartSwapRemovedTour({ db, uid, hooks }) {
       done: () => h.ocSheet.classList.contains("open"),
       advance: () => { h.closeSidebar(); h.openOtherClasses(); },
       scroll: true,
-    },
-    {
-      title: "اختر الصف",
-      text: "اضغط على الصف: <b>العاشر</b> أو <b>الحادي عشر</b> أو <b>الثاني عشر</b>.",
-      target: () => h.ocGroups.querySelector(".oc-group > summary"),
-      allow: (el) => !!el.closest(".oc-group > summary"),
-      done: () => !!openGroup() && h.ocSheet.classList.contains("open"),
-      advance: () => {
-        if (!h.ocSheet.classList.contains("open")) h.openOtherClasses();
-        const g = h.ocGroups.querySelector(".oc-group");
-        if (g) g.open = true;
-      },
-    },
-    {
-      title: "اختر الفصل",
-      text: "اختر الفصل الذي أنت فيه الآن — حتى لو لم يكن من فصولك.",
-      target: () => (openGroup()?.querySelector(".oc-grid")) || null,
-      allow: (el) => !!el.closest(".oc-class-btn"),
-      done: () => h.mcSheet.classList.contains("open"),
-      advance: () => {
-        const btn = firstClassBtn();
-        if (btn) btn.click();
-      },
-      scroll: true,
-    },
-    {
-      title: "سجّل الغياب",
-      text: "هنا تضغط <b>تسجيل الغياب</b>. إذا لم تكن حصتك سيُطلب منك اختيار السبب: <b>احتياط</b> أو <b>تبديل</b>، ثم تسجّل كالمعتاد. (في الجولة لن يُسجَّل شيء.)",
-      target: () => h.attendBtn,
-      // Tapping it only finishes the tour — the click never reaches the
-      // page, so no attendance is started.
-      allow: () => false,
-      onTargetTap: () => finish(),
-      done: () => false,
-      advance: () => finish(),
-      nextLabel: "إنهاء",
+      nextLabel: "افتح صفوف أخرى",
     },
   ];
 
@@ -317,6 +269,7 @@ export async function maybeStartSwapRemovedTour({ db, uid, hooks }) {
     const step = steps[stepIndex];
     if (step && step.done()) {
       if (stepIndex + 1 < steps.length) goTo(stepIndex + 1);
+      else return finish();
     }
     layout();
   }
@@ -391,13 +344,22 @@ export async function maybeStartSwapRemovedTour({ db, uid, hooks }) {
     teardown();
     markSeen(db, uid, "completed");
     [spot, arrow, bar, dim].forEach((x) => x.remove());
-    restorePage();
+    try { if (h.sidebar.classList.contains("open")) h.closeSidebar(); } catch {}
     showCard({
       hero: `<div class="swt-done-icon"><i class="fas fa-circle-check" aria-hidden="true"></i></div>
              <h2 class="swt-title">هذه هي الطريقة</h2>`,
       body: `
-        <p class="swt-text">عند دخولك حصة ليست في جدولك — <b>احتياط</b> أو <b>تبديل</b> — افتح <b>صفوف أخرى</b> من القائمة الجانبية، واختر الصف ثم الفصل، ثم اضغط <b>تسجيل الغياب</b> واختر السبب.</p>
-        ${PATH_HTML}`,
+        <p class="swt-lead">من هنا، عند دخولك حصة ليست في جدولك:</p>
+        <div class="swt-steps">
+          <div class="swt-step">
+            <span class="swt-step-icon"><i class="fas fa-users-rectangle" aria-hidden="true"></i></span>
+            <span class="swt-step-text"><b>اختر الصف ثم الفصل</b><small>الذي أنت فيه الآن</small></span>
+          </div>
+          <div class="swt-step">
+            <span class="swt-step-icon"><i class="fas fa-clipboard-check" aria-hidden="true"></i></span>
+            <span class="swt-step-text"><b>اضغط «تسجيل الغياب»</b><small>واختر السبب: احتياط أو تبديل</small></span>
+          </div>
+        </div>`,
       button: "حسناً",
       onButton: () => root.remove(),
     });
@@ -442,7 +404,7 @@ export async function maybeStartSwapRemovedTour({ db, uid, hooks }) {
         </div>
       </div>`,
     button: "حسناً، أرني كيف",
-    footer: `<p class="swt-foot">جولة قصيرة · ${ar(steps.length)} خطوات</p>`,
+    footer: `<p class="swt-foot">جولة قصيرة · خطوتان فقط</p>`,
     onButton: () => {
       goTo(0);
       timer = setInterval(checkProgress, 120);
