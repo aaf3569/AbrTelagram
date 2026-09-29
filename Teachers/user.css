@@ -2541,6 +2541,7 @@
     .dn-main { flex: 1; min-width: 0; display: grid; gap: 4px; }
     .dn-top { display: flex; align-items: center; gap: 8px; }
     .dn-name { color: var(--text); font-weight: 900; font-size: .98rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .dn-dept { color: var(--muted); font-weight: 700; font-size: .82rem; }
     .dn-new { flex-shrink: 0; padding: 2px 8px; border-radius: 999px; background: var(--danger); color: #fff; font-size: .7rem; font-weight: 900; }
     .dn-time { margin-inline-start: auto; flex-shrink: 0; color: var(--muted); font-weight: 700; font-size: .78rem; }
     .dn-line { color: var(--text-light, #475569); font-weight: 700; font-size: .9rem; }

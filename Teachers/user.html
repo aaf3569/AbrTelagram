@@ -320,7 +320,7 @@
       <h3 class="sheet-title">إشعارات القسم</h3>
     </div>
     <div class="sheet-body">
-      <p class="dn-hint">معلمو قسمك الذين سجّلوا الغياب لحصص ليست في جداولهم — آخر ٣٠ يوماً.</p>
+      <p class="dn-hint">تسجيلات الغياب لحصص ليست في جدول من سجّلها، عندما يكون المسجِّل أو صاحب الحصة من قسمك — آخر ٣٠ يوماً.</p>
       <div id="dnList" class="dn-list"></div>
     </div>
   </section>
@@ -1125,7 +1125,7 @@
     // for 5 minutes (_headers) while this HTML is always fresh, so right after
     // a deploy the page could otherwise run against the previous module —
     // bump it whenever this page starts relying on something new in there.
-    import { mountAttendanceSheet, LESSON_END_GRACE_MINUTES } from "/shared/attendance.js?v=2026-09-29c";
+    import { mountAttendanceSheet, LESSON_END_GRACE_MINUTES } from "/shared/attendance.js?v=2026-09-29d";
     import { mountStudentNotesSheet } from "/shared/student-notes-sheet.js";
     import { parseTimeToMinutes } from "/shared/kuwait-time.js";
     import { isTruthyFlag, canManageAttendance } from "/shared/auth-guard.js";
@@ -6709,12 +6709,14 @@
     ocClose.addEventListener('click', closeOtherClasses);
 
     /* ========= إشعارات القسم (department heads) =========
-       Colleagues in the head's department who took attendance for a lesson
-       that isn't theirs (صفوف أخرى). Those sessions carry substituteDeptDay
-       = "department|date" (see shared/attendance.js), so one live query with
-       an `in` over the last 30 days finds them — no composite index. The
-       badge counts ones created after the head last opened this sheet
-       (dept_notif_seen/{uid}.seenAt, so it's the same on every device). */
+       Attendance taken through صفوف أخرى where either side belongs to the
+       head's department: one of their teachers covered someone else's lesson,
+       someone covered one of their teachers' lessons, or both. Those sessions
+       carry substituteDeptDay / originalDeptDay = "department|date" (see
+       shared/attendance.js), so two live queries with an `in` over the last
+       30 days find them — no composite index. The badge counts ones created
+       after the head last opened this sheet (dept_notif_seen/{uid}.seenAt,
+       so it's the same on every device). */
     const sidebarDeptNotifs = document.getElementById('sidebarDeptNotifs');
     const deptNotifBadge = document.getElementById('deptNotifBadge');
     const sidebarToggleDot = document.getElementById('sidebarToggleDot');
@@ -6722,7 +6724,8 @@
     const dnList = document.getElementById('dnList');
     const DN_DAYS = 30; // Firestore's `in` takes at most 30 values
     const DN_SEEN_COLLECTION = 'dept_notif_seen';
-    let dnUnsub = null;
+    let dnUnsubs = [];
+    let dnBySide = { sub: new Map(), orig: new Map() };
     let dnItems = [];
     let dnSeenMs = 0;
     let dnNewIds = new Set(); // tagged "جديد" while the sheet is showing them
@@ -6770,19 +6773,39 @@
         const name = x.substituteTeacherName || '—';
         const lesson = LESSONS_AR[Number(x.lesson) - 1] || `الحصة ${toArabicDigits(x.lesson)}`;
         const isNew = dnNewIds.has(x.id);
+        const where = `<b><bdi>${escapeHtml(toArabicDigits(x.classKey || '—'))}</bdi></b> — ${escapeHtml(lesson)}`;
+        const orig = x.originalTeacherName ? escapeHtml(x.originalTeacherName) : '';
+        const mine = myDeptSchedDepartment;
+        const subMine = x.substituteDepartment === mine;
+        const origMine = x.originalDepartment === mine;
+        // Which side is this head's department on?
+        let line, tag;
+        if (subMine && origMine) {
+          line = `سجّل غياب ${where} بدلاً من زميله في القسم <b>${orig}</b>`;
+          tag = 'داخل القسم';
+        } else if (subMine) {
+          line = orig
+            ? `سجّل غياب ${where} بدلاً من <b>${orig}</b>${x.originalDepartment ? ` (قسم ${escapeHtml(x.originalDepartment)})` : ''}`
+            : `سجّل غياب ${where}`;
+          tag = 'معلم من قسمك';
+        } else {
+          line = `سجّل غياب حصة <b>${orig || 'معلم من قسمك'}</b> — ${where}`;
+          tag = 'حصة من قسمك';
+        }
+        const fromDept = !subMine && x.substituteDepartment ? ` · قسم ${escapeHtml(x.substituteDepartment)}` : '';
         html += `
           <div class="dn-card${isNew ? ' is-new' : ''}">
             <span class="dn-avatar" aria-hidden="true">${escapeHtml(name.trim().charAt(0) || '؟')}</span>
             <div class="dn-main">
               <div class="dn-top">
-                <b class="dn-name">${escapeHtml(name)}</b>
+                <b class="dn-name">${escapeHtml(name)}<span class="dn-dept">${fromDept}</span></b>
                 ${isNew ? '<span class="dn-new">جديد</span>' : ''}
                 <span class="dn-time">${escapeHtml(dnTimeLabel(x.createdAt))}</span>
               </div>
-              <div class="dn-line">سجّل غياب <b><bdi>${escapeHtml(toArabicDigits(x.classKey || '—'))}</bdi></b> — ${escapeHtml(lesson)}</div>
+              <div class="dn-line">${line}</div>
               <div class="dn-meta">
                 ${x.substituteReason ? `<span class="dn-reason">${escapeHtml(x.substituteReason)}</span>` : ''}
-                ${x.originalTeacherName ? `<span class="dn-orig">بدلاً من ${escapeHtml(x.originalTeacherName)}</span>` : ''}
+                <span class="dn-orig">${tag}</span>
               </div>
             </div>
           </div>`;
@@ -6820,21 +6843,26 @@
       if (currentUser?.uid !== uid) return;
       const today = kuwaitTodayISO();
       const keys = Array.from({ length: DN_DAYS }, (_, i) => `${department}|${addDaysISO(today, -i)}`);
-      dnUnsub = onSnapshot(
-        query(collection(db, 'attendanceSessions'), where('substituteDeptDay', 'in', keys)),
+      const listen = (side, field) => onSnapshot(
+        query(collection(db, 'attendanceSessions'), where(field, 'in', keys)),
         (snap) => {
-          dnItems = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+          dnBySide[side] = new Map(snap.docs.map(d => [d.id, { id: d.id, ...d.data() }]));
+          // A cover inside the department matches both queries — one card.
+          dnItems = [...new Map([...dnBySide.orig, ...dnBySide.sub]).values()]
             .filter(x => x.teacherUid !== uid) // the head's own records aren't news to them
             .sort((a, b) => dnMs(b.createdAt) - dnMs(a.createdAt));
           dnRenderBadge();
           if (dnSheet.classList.contains('open')) { dnMarkSeen(); dnRender(); }
         },
-        (e) => console.error('[deptNotifs] listener:', e)
+        (e) => console.error(`[deptNotifs] ${side} listener:`, e)
       );
+      dnUnsubs = [listen('sub', 'substituteDeptDay'), listen('orig', 'originalDeptDay')];
     }
 
     function stopDeptNotifs(){
-      if (dnUnsub) { dnUnsub(); dnUnsub = null; }
+      dnUnsubs.forEach(fn => fn());
+      dnUnsubs = [];
+      dnBySide = { sub: new Map(), orig: new Map() };
       dnItems = [];
       dnNewIds = new Set();
       sidebarDeptNotifs.hidden = true;

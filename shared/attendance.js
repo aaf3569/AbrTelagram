@@ -15,6 +15,7 @@ import {
 import {
   getOverriddenClassKeys, mergeCustomIntoLessonMap, classKeyFromRow, normalizeClassKey,
 } from "/shared/schedule-priority.js";
+import { resolveDepartmentName } from "/shared/departments.js";
 
 const STYLE_ID = "attendance-sheet-style";
 const ATTENDANCE_SESSIONS_COLLECTION = "attendanceSessions";
@@ -1447,9 +1448,11 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
         });
         if (row) hit = { uid: row.teacherUid, name: row.teacherName || "", subject: row.subject || "" };
       }
-      if (hit && !hit.name) {
+      if (hit) {
         const t = await getDoc(doc(db, "teachers", hit.uid));
-        if (t.exists()) hit.name = (t.data() || {}).name || "";
+        const td = t.exists() ? (t.data() || {}) : {};
+        if (!hit.name) hit.name = td.name || "";
+        hit.department = resolveDepartmentName(td.department || td.dept || td.subject || "") || "";
       }
       return hit;
     } catch (e) {
@@ -1488,6 +1491,7 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
       return {
         ...session, subject: scheduled?.subject || "",
         scheduledTeacherUid: scheduled?.uid || "", scheduledTeacherName: scheduled?.name || "",
+        scheduledTeacherDepartment: scheduled?.department || "",
         isMine: !!scheduled && scheduled.uid === user.uid,
       };
     }));
@@ -2347,12 +2351,18 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
           originalTeacherName: currentMeta?.scheduledTeacherName || null,
           // For إشعارات القسم: the recording teacher's department, plus a
           // "department|date" key the head's page queries with a single
-          // `in` filter (no composite index needed).
+          // `in` filter (no composite index needed)…
           ...(currentMeta?.substituteDepartment ? {
             substituteDepartment: currentMeta.substituteDepartment,
             substituteDeptDay: `${currentMeta.substituteDepartment}|${dateKW}`,
           } : {}),
           substituteTeacherName: currentMeta?.substituteTeacherName || null,
+          // …and the same for the teacher whose lesson it was, so their
+          // department head hears about it too.
+          ...(currentMeta?.scheduledTeacherDepartment ? {
+            originalDepartment: currentMeta.scheduledTeacherDepartment,
+            originalDeptDay: `${currentMeta.scheduledTeacherDepartment}|${dateKW}`,
+          } : {}),
         } : {}),
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),

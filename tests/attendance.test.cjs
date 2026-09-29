@@ -589,6 +589,7 @@ test('substitute attendance opens the sheet for another teacher\'s live lesson a
     now: '12:30', session: null,
     schedules: [{ teacherUid: 'teacher-b', teacherName: 'المعلم الآخر', classKey: CLASS, lesson: 6, dayIndex: 1 }],
   });
+  harness.documents.set('teachers/teacher-b', { name: 'المعلم الآخر', subject: 'الفيزياء' });
   const live = await harness.sheet.getClassLiveLesson(CLASS);
   assert.equal(live.ok, true);
   assert.equal(live.lesson, 6);
@@ -608,4 +609,6 @@ test('substitute attendance opens the sheet for another teacher\'s live lesson a
   assert.equal(session.data.substituteDepartment, 'الرياضيات');
   assert.equal(session.data.substituteDeptDay, `الرياضيات|${DATE}`);
   assert.equal(session.data.substituteTeacherName, 'المعلم الأول');
+  assert.equal(session.data.originalDepartment, 'الفيزياء والكيمياء');
+  assert.equal(session.data.originalDeptDay, `الفيزياء والكيمياء|${DATE}`);
 });
