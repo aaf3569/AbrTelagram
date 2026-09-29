@@ -96,30 +96,44 @@ const STYLES = `
   #attendanceSheet .select:focus{outline:none;box-shadow:0 0 0 3px rgba(3,60,84,.18), 0 18px 40px rgba(3,60,84,.32)}
   #attendanceSheet .select-wrap::after{content:"";position:absolute;top:50%;transform:translateY(-50%);inset-inline-start:14px;width:22px;height:22px;pointer-events:none;opacity:.95;background:url('data:image/svg+xml;utf8,<svg fill="%23ffffff" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>') no-repeat center / 20px 20px;filter:drop-shadow(0 1px 0 rgba(0,0,0,.15))}
   #attendanceSheet .hint{font-weight:800;color:var(--muted)}
-  #attConfirmModal .filter-buttons{display:flex;gap:10px;margin-bottom:16px;justify-content:center;flex-shrink:0}
-  #attConfirmModal .filter-btn{flex:0 1 160px;display:flex;align-items:center;justify-content:center;min-height:50px;border-radius:12px;font-weight:800;border:2px solid var(--border);background:#fff;color:var(--primary);cursor:pointer;transition:var(--transition)}
-  #attConfirmModal .present-count{text-align:center;font-weight:800;color:var(--green,#1a7f37)}
-  #attConfirmModal .filter-btn.active{background:var(--primary);color:#fff;border-color:var(--primary)}
-  #attConfirmModal #attFilterAbsent{color:var(--red,#b42318);border-color:rgba(180,35,24,.35)}
-  #attConfirmModal #attFilterAbsent.active{background:var(--red,#b42318);border-color:var(--red,#b42318);color:#fff}
-  #attConfirmModal #attFilterLate{color:var(--yellow,#a06d00);border-color:rgba(160,109,0,.35)}
-  #attConfirmModal #attFilterLate.active{background:var(--yellow,#a06d00);border-color:var(--yellow,#a06d00);color:#fff}
-  /* The card is a fixed-height flex column so a long absent/late list can
-     never push the save/cancel row off screen: names-list is the only part
-     that grows and scrolls (min-height:0 is what lets a flex child shrink
-     below its content size instead of overflowing its parent), while the
-     header and button row stay pinned. This also caps the card itself so it
-     can never stretch to fill the whole screen on phones where the host
-     page's own .modal/.card rules don't already constrain it. */
-  #attConfirmModal .card{width:min(480px,92vw);max-height:min(640px,88vh);display:flex;flex-direction:column;overflow:hidden}
-  #attConfirmModal .card > h3,#attConfirmModal .card > p{flex-shrink:0}
-  #attConfirmModal #attConfirmTitle{margin:0 0 14px;padding:16px 18px;border-radius:14px;background:linear-gradient(145deg,#065372,var(--primary,#033c54));color:#fff;text-align:center;line-height:1.7;box-shadow:0 8px 20px rgba(3,60,84,.18)}
-  #attConfirmModal .names-list{border:1px dashed var(--border);border-radius:14px;background:#fafcff;padding:12px;flex:1 1 auto;min-height:0;max-height:none;overflow-y:auto;-webkit-overflow-scrolling:touch}
-  #attConfirmModal .names-list ul{margin:0;padding-inline-start:18px}
-  #attConfirmModal .names-list li{margin:6px 0;font-weight:800}
-  #attConfirmModal .card > .row{flex-shrink:0;margin-top:12px;padding-bottom:env(safe-area-inset-bottom,0px)}
+  /* Save confirmation (تأكيد الحفظ): header, three count tiles (the
+     غياب / تأخير tiles double as the tabs for the name list), the list, and
+     a pinned footer. The card is a fixed-height flex column so a long list
+     scrolls inside it and never pushes the buttons off screen. */
+  #attConfirmModal .card.att-cf{width:min(440px,92vw);max-height:min(640px,88vh);display:flex;flex-direction:column;overflow:hidden;padding:0;border-radius:22px;background:#fff}
+  #attConfirmModal .att-cf-head{display:flex;align-items:center;gap:14px;padding:20px 20px 16px;flex-shrink:0}
+  #attConfirmModal .att-cf-icon{width:48px;height:48px;flex-shrink:0;border-radius:14px;display:grid;place-items:center;background:var(--primary-extra-light,#eef5fb);color:var(--primary,#033c54)}
+  #attConfirmModal .att-cf-icon svg{width:24px;height:24px}
+  #attConfirmModal .att-cf-heading{display:grid;gap:1px;min-width:0}
+  #attConfirmModal .att-cf-kicker{font-size:.78rem;font-weight:800;color:var(--muted,#6b7f9f)}
+  #attConfirmModal .att-cf-title{font-size:1.15rem;font-weight:900;color:var(--primary,#033c54);line-height:1.35}
+  #attConfirmModal .att-cf-sub{font-size:.84rem;font-weight:700;color:var(--muted,#6b7f9f)}
+  #attConfirmModal .att-cf-sub:empty{display:none}
+  #attConfirmModal .att-cf-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:0 20px;flex-shrink:0}
+  #attConfirmModal .att-cf-stat{display:grid;justify-items:center;gap:2px;padding:12px 6px;border-radius:16px;border:1.5px solid transparent;font-family:inherit;text-align:center;line-height:1.2}
+  #attConfirmModal .att-cf-stat b{font-size:1.6rem;font-weight:900}
+  #attConfirmModal .att-cf-stat span{font-size:.8rem;font-weight:800;opacity:.85}
+  #attConfirmModal .att-cf-stat.present{background:rgba(26,127,55,.07);color:var(--green,#1a7f37)}
+  #attConfirmModal .att-cf-stat.absent{background:rgba(180,35,24,.06);color:var(--red,#b42318)}
+  #attConfirmModal .att-cf-stat.late{background:rgba(160,109,0,.07);color:var(--yellow,#a06d00)}
+  #attConfirmModal button.att-cf-stat{cursor:pointer;transition:border-color .15s ease,box-shadow .15s ease,background-color .15s ease}
+  #attConfirmModal button.att-cf-stat.absent.active{border-color:var(--red,#b42318);background:rgba(180,35,24,.10);box-shadow:0 6px 16px rgba(180,35,24,.14)}
+  #attConfirmModal button.att-cf-stat.late.active{border-color:var(--yellow,#a06d00);background:rgba(160,109,0,.11);box-shadow:0 6px 16px rgba(160,109,0,.14)}
+  #attConfirmModal .att-cf-list-label{padding:16px 20px 8px;font-size:.8rem;font-weight:800;color:var(--muted,#6b7f9f);flex-shrink:0}
+  #attConfirmModal .names-list{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;margin:0 20px;border:1px solid var(--border,#e6edf7);border-radius:16px;background:#fbfcfe}
+  #attConfirmModal .names-list ul{list-style:none;margin:0;padding:4px 0}
+  #attConfirmModal .names-list li{display:flex;align-items:center;gap:10px;padding:10px 14px;font-weight:800;font-size:.95rem;color:var(--text,#0f172a);border-bottom:1px solid #eef2f7}
+  #attConfirmModal .names-list li:last-child{border-bottom:0}
+  #attConfirmModal .names-list .att-cf-n{width:24px;height:24px;flex-shrink:0;border-radius:8px;display:grid;place-items:center;font-size:.74rem;font-weight:900}
+  #attConfirmModal #attConfirmAbsentList .att-cf-n{background:rgba(180,35,24,.10);color:var(--red,#b42318)}
+  #attConfirmModal #attConfirmLateList .att-cf-n{background:rgba(160,109,0,.12);color:var(--yellow,#a06d00)}
+  #attConfirmModal .names-list li.att-cf-empty{justify-content:center;gap:8px;padding:22px 14px;color:var(--muted,#6b7f9f);font-weight:800;border:0}
+  #attConfirmModal .names-list li.att-cf-empty svg{width:18px;height:18px;color:var(--green,#1a7f37)}
+  #attConfirmModal .att-cf-foot{display:grid;grid-template-columns:1.6fr 1fr;gap:10px;margin:0;padding:16px 20px calc(16px + env(safe-area-inset-bottom,0px));flex-shrink:0}
+  #attConfirmModal .att-cf-foot .btn{width:100%;min-height:52px;margin:0}
   @media (max-width:480px){
-    #attConfirmModal .card{width:min(94vw,480px);max-height:min(560px,84vh)}
+    #attConfirmModal .card.att-cf{width:min(94vw,440px);max-height:min(600px,86vh)}
+    #attConfirmModal .att-cf-stat b{font-size:1.4rem}
   }
   /* Module-owned blocked modal (red X animation) */
   #attBlockedModal.modal.blocked-modal .overlay{background:rgba(15,23,42,.45);backdrop-filter:blur(6px)}
@@ -232,20 +246,28 @@ const SHEET_HTML = `
   </section>
   <div id="attConfirmModal" class="modal" aria-hidden="true">
     <div class="overlay"></div>
-    <div class="card" role="dialog" aria-modal="true" aria-labelledby="attConfirmTitle">
-      <h3 id="attConfirmTitle">تأكيد الحفظ | الحصة</h3>
-      <p id="attConfirmPresentCount" class="present-count">الحضور: 0</p>
-      <div class="filter-buttons">
-        <button id="attFilterAbsent" class="filter-btn active" type="button">الغياب (0)</button>
-        <button id="attFilterLate" class="filter-btn" type="button">التاخير (0)</button>
+    <div class="card att-cf" role="dialog" aria-modal="true" aria-labelledby="attConfirmTitle">
+      <div class="att-cf-head">
+        <span class="att-cf-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4.5V3h6v1.5"/><path d="M9 13l2 2 4-4"/></svg></span>
+        <div class="att-cf-heading">
+          <span class="att-cf-kicker">تأكيد الحفظ</span>
+          <div id="attConfirmTitle" class="att-cf-title">الحصة</div>
+          <span id="attConfirmSub" class="att-cf-sub"></span>
+        </div>
       </div>
+      <div class="att-cf-stats">
+        <div class="att-cf-stat present"><b id="attConfirmPresentCount">٠</b><span>حضور</span></div>
+        <button id="attFilterLate" class="att-cf-stat late" type="button" aria-pressed="false"><b id="attConfirmLateCount">٠</b><span>تأخير</span></button>
+        <button id="attFilterAbsent" class="att-cf-stat absent active" type="button" aria-pressed="true"><b id="attConfirmAbsentCount">٠</b><span>غياب</span></button>
+      </div>
+      <div id="attConfirmListLabel" class="att-cf-list-label">الطلاب الغائبون</div>
       <div class="names-list">
         <ul id="attConfirmAbsentList"></ul>
         <ul id="attConfirmLateList" style="display:none;"></ul>
       </div>
-      <div class="row">
-        <button id="attConfirmCancel" class="btn cancel" type="button">رجوع</button>
+      <div class="row att-cf-foot">
         <button id="attConfirmSave" class="btn primary" type="button">حفظ</button>
+        <button id="attConfirmCancel" class="btn cancel" type="button">رجوع</button>
       </div>
     </div>
   </div>
@@ -454,6 +476,10 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
     confirmModal: document.getElementById("attConfirmModal"),
     confirmTitle: document.getElementById("attConfirmTitle"),
     confirmPresentCount: document.getElementById("attConfirmPresentCount"),
+    confirmSub: document.getElementById("attConfirmSub"),
+    confirmAbsentCount: document.getElementById("attConfirmAbsentCount"),
+    confirmLateCount: document.getElementById("attConfirmLateCount"),
+    confirmListLabel: document.getElementById("attConfirmListLabel"),
     confirmAbsentList: document.getElementById("attConfirmAbsentList"),
     confirmLateList: document.getElementById("attConfirmLateList"),
     filterAbsent: document.getElementById("attFilterAbsent"),
@@ -2074,22 +2100,17 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
     const lessonIndex = parseInt(els.lessonSelect.value, 10);
     const lesson = LESSON_TIMES.find(l => l.index === lessonIndex);
     const lessonLabel = lesson ? lesson.label : `الحصة ${lessonIndex}`;
-    els.confirmTitle.textContent = `تأكيد الحفظ | ${lessonLabel}`;
-    els.confirmPresentCount.textContent = `الحضور: ${attStudentList.filter(s => attStatuses[s.uid || s.name] === "present").length}`;
-    els.filterAbsent.textContent = `الغياب (${absNames.length})`;
-    els.filterLate.textContent = `التاخير (${lateNames.length})`;
-    els.confirmAbsentList.innerHTML = "";
-    els.confirmLateList.innerHTML = "";
-    if (absNames.length) {
-      absNames.forEach(n => { const li = document.createElement("li"); li.textContent = n; els.confirmAbsentList.appendChild(li); });
-    } else {
-      const li = document.createElement("li"); li.textContent = "لا يوجد طلاب غائبون."; els.confirmAbsentList.appendChild(li);
-    }
-    if (lateNames.length) {
-      lateNames.forEach(n => { const li = document.createElement("li"); li.textContent = n; els.confirmLateList.appendChild(li); });
-    } else {
-      const li = document.createElement("li"); li.textContent = "لا يوجد طلاب متأخرون."; els.confirmLateList.appendChild(li);
-    }
+    els.confirmTitle.textContent = lessonLabel;
+    els.confirmSub.textContent = [
+      // Isolated so the class number and the reason never reorder each other.
+      currentMeta.classKey ? `\u2068${formatClassLabel(currentMeta.classKey)}\u2069` : "",
+      currentMeta.substituteReason || "",
+    ].filter(Boolean).join(" — ");
+    els.confirmPresentCount.textContent = toArabicDigits(attStudentList.filter(s => attStatuses[s.uid || s.name] === "present").length);
+    els.confirmAbsentCount.textContent = toArabicDigits(absNames.length);
+    els.confirmLateCount.textContent = toArabicDigits(lateNames.length);
+    fillConfirmList(els.confirmAbsentList, absNames, "لا يوجد طلاب غائبون");
+    fillConfirmList(els.confirmLateList, lateNames, "لا يوجد طلاب متأخرون");
     els.filterAbsent.click();
     pendingSave = {
       present, late, absent,
@@ -2104,6 +2125,31 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
     openModal(els.confirmModal);
     setTimeout(() => els.confirmSave.focus(), 0);
   });
+
+  function fillConfirmList(ul, names, emptyText) {
+    ul.innerHTML = "";
+    if (!names.length) {
+      const li = document.createElement("li");
+      li.className = "att-cf-empty";
+      li.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+      const text = document.createElement("span");
+      text.textContent = emptyText;
+      li.appendChild(text);
+      ul.appendChild(li);
+      return;
+    }
+    names.forEach((n, i) => {
+      const li = document.createElement("li");
+      const num = document.createElement("span");
+      num.className = "att-cf-n";
+      num.textContent = toArabicDigits(i + 1);
+      const name = document.createElement("span");
+      name.textContent = n;
+      li.appendChild(num);
+      li.appendChild(name);
+      ul.appendChild(li);
+    });
+  }
 
   els.confirmCancel.addEventListener("click", () => closeModal(els.confirmModal));
 
@@ -2345,18 +2391,18 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
     }
   });
 
-  els.filterAbsent.addEventListener("click", () => {
-    els.filterAbsent.classList.add("active");
-    els.filterLate.classList.remove("active");
-    els.confirmAbsentList.style.display = "block";
-    els.confirmLateList.style.display = "none";
-  });
-  els.filterLate.addEventListener("click", () => {
-    els.filterLate.classList.add("active");
-    els.filterAbsent.classList.remove("active");
-    els.confirmAbsentList.style.display = "none";
-    els.confirmLateList.style.display = "block";
-  });
+  function showConfirmList(which) {
+    const absent = which === "absent";
+    els.filterAbsent.classList.toggle("active", absent);
+    els.filterLate.classList.toggle("active", !absent);
+    els.filterAbsent.setAttribute("aria-pressed", String(absent));
+    els.filterLate.setAttribute("aria-pressed", String(!absent));
+    els.confirmAbsentList.style.display = absent ? "block" : "none";
+    els.confirmLateList.style.display = absent ? "none" : "block";
+    els.confirmListLabel.textContent = absent ? "الطلاب الغائبون" : "الطلاب المتأخرون";
+  }
+  els.filterAbsent.addEventListener("click", () => showConfirmList("absent"));
+  els.filterLate.addEventListener("click", () => showConfirmList("late"));
 
   const STATUS_LABELS_AR = { present: "حاضر", late: "متأخر", absent: "غائب" };
 
