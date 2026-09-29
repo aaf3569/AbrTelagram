@@ -1945,6 +1945,19 @@
     }
     .sub-select-wrap.invalid .sub-select-chev { color: var(--danger); }
     .sub-select-wrap.shake { animation: subShake .38s ease; }
+    /* سبب آخر… — free-text reason, shown only when that option is picked. */
+    .sub-custom-wrap[hidden] { display: none; }
+    .sub-custom-input {
+      width: 100%; height: 52px; border-radius: 14px; border: 1.5px solid var(--border);
+      background: #fff; padding: 0 14px; font-family: inherit; font-weight: 800; font-size: 1rem;
+      color: var(--text); transition: border-color .15s ease, box-shadow .15s ease;
+    }
+    .sub-custom-input::placeholder { color: #94a3b8; font-weight: 700; }
+    .sub-custom-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(2,43,66,.12); }
+    .sub-custom-wrap.invalid .sub-custom-input {
+      border-color: var(--danger); background: #fff5f5; box-shadow: 0 0 0 3px rgba(239,68,68,.16);
+    }
+    .sub-custom-wrap.shake { animation: subShake .38s ease; }
     @keyframes subShake {
       0%, 100% { transform: translateX(0); }
       20% { transform: translateX(-7px); } 40% { transform: translateX(6px); }
@@ -1976,7 +1989,7 @@
     .sub-modal-cancel:hover { background: #e6edf4; }
     @media (prefers-reduced-motion: reduce) {
       .sub-modal, .sub-modal-card { transition: none; }
-      .sub-select-wrap.shake { animation: none; }
+      .sub-select-wrap.shake, .sub-custom-wrap.shake { animation: none; }
     }
 
     /* Download choice popup (PDF / Excel) */

@@ -1403,7 +1403,8 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
   // scheduled for. The session is stored under the caller's own teacherUid
   // (firestore.rules' self branch, still anchored to the lesson's own time
   // window), with the reason and the scheduled teacher kept alongside it.
-  const SUBSTITUTE_REASONS = new Set(["احتياط", "تبديل"]);
+  // The reason is احتياط / تبديل or the teacher's own short text.
+  const SUBSTITUTE_REASON_MAX = 60;
 
   // Who the schedule says teaches `classKey` at `lessonIndex` today — a
   // today-dated override (تغطية from جدول القسم) wins over the weekly
@@ -1479,7 +1480,8 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
   }
 
   async function openForSubstitute({ classKey, lesson, reason } = {}) {
-    if (!classKey || !SUBSTITUTE_REASONS.has(reason)) return;
+    reason = String(reason || "").replace(/\s+/g, " ").trim().slice(0, SUBSTITUTE_REASON_MAX);
+    if (!classKey || !reason) return;
     await withSkeletonOpen(async () => {
       // Re-resolved here: the clock (or someone else's save) may have moved
       // on while the reason popup was open.

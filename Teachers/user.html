@@ -1010,12 +1010,17 @@
             <option value="" selected>اختر السبب…</option>
             <option value="احتياط">احتياط</option>
             <option value="تبديل">تبديل</option>
+            <option value="__custom">سبب آخر…</option>
           </select>
           <i class="fas fa-chevron-down sub-select-chev" aria-hidden="true"></i>
         </div>
+        <div id="subCustomWrap" class="sub-custom-wrap" hidden>
+          <input id="subReasonCustom" class="sub-custom-input" type="text" maxlength="60"
+                 placeholder="اكتب السبب…" aria-label="اكتب السبب" aria-describedby="subReasonError" autocomplete="off">
+        </div>
         <div id="subReasonError" class="sub-reason-error" role="alert" hidden>
           <i class="fas fa-circle-exclamation" aria-hidden="true"></i>
-          <span>يرجى اختيار السبب أولاً</span>
+          <span id="subReasonErrorText">يرجى اختيار السبب أولاً</span>
         </div>
       </div>
       <button id="subModalConfirm" class="sub-modal-confirm" type="button">
@@ -6421,23 +6426,40 @@
        Any teacher can open any class and take attendance for the lesson
        that class is in right now (by the bell times). When it isn't this
        teacher's own scheduled lesson, they confirm the class and pick why —
-       احتياط or تبديل — first; the reason is saved on the session. */
+       احتياط, تبديل, or their own short text (سبب آخر…) — first; the reason
+       is saved on the session. */
     const subModal = document.getElementById('subModal');
     const subModalClass = document.getElementById('subModalClass');
     const subModalMeta = document.getElementById('subModalMeta');
     const subReasonSelect = document.getElementById('subReasonSelect');
     const subSelectWrap = subReasonSelect.closest('.sub-select-wrap');
+    const subCustomWrap = document.getElementById('subCustomWrap');
+    const subReasonCustom = document.getElementById('subReasonCustom');
     const subReasonError = document.getElementById('subReasonError');
+    const subReasonErrorText = document.getElementById('subReasonErrorText');
     const subModalConfirm = document.getElementById('subModalConfirm');
     let subPending = null; // { classKey, lesson }
 
+    const subIsCustom = () => subReasonSelect.value === '__custom';
+    function subReason(){
+      return subIsCustom() ? subReasonCustom.value.replace(/\s+/g, ' ').trim() : subReasonSelect.value;
+    }
+    // The box that's missing the answer: the dropdown, or the text field
+    // once "سبب آخر…" is picked.
+    function subInvalidTarget(){
+      return subIsCustom() ? subCustomWrap : subSelectWrap;
+    }
     function subSetInvalid(invalid){
-      subSelectWrap.classList.toggle('invalid', invalid);
+      subSelectWrap.classList.toggle('invalid', invalid && !subIsCustom());
+      subCustomWrap.classList.toggle('invalid', invalid && subIsCustom());
+      subReasonErrorText.textContent = subIsCustom() ? 'يرجى كتابة السبب' : 'يرجى اختيار السبب أولاً';
       subReasonError.hidden = !invalid;
-      subReasonSelect.setAttribute('aria-invalid', invalid ? 'true' : 'false');
+      subReasonSelect.setAttribute('aria-invalid', invalid && !subIsCustom() ? 'true' : 'false');
+      subReasonCustom.setAttribute('aria-invalid', invalid && subIsCustom() ? 'true' : 'false');
     }
     function subSyncConfirm(){
-      const ready = !!subReasonSelect.value;
+      subCustomWrap.hidden = !subIsCustom();
+      const ready = !!subReason();
       subModalConfirm.classList.toggle('ready', ready);
       if (ready) subSetInvalid(false);
     }
@@ -6446,9 +6468,11 @@
       subModalClass.textContent = toArabicDigits(live.classKey);
       const lessonName = LESSONS_AR[live.lesson - 1] || live.lessonLabel || `الحصة ${toArabicDigits(live.lesson)}`;
       const time = `${toArabicDigits(live.activeStart)} – ${toArabicDigits(live.activeEnd)}`;
-      subModalMeta.innerHTML = `${escapeHtml(lessonName)} · ${escapeHtml(time)}`
+      // A dash, not "·" — next to Arabic digits a middle dot reads as a zero.
+      subModalMeta.innerHTML = `${escapeHtml(lessonName)} — <bdi>${escapeHtml(time)}</bdi>`
         + (live.scheduledTeacherName ? `<br>حصة المعلم <b>${escapeHtml(live.scheduledTeacherName)}</b>` : '');
       subReasonSelect.value = '';
+      subReasonCustom.value = '';
       subSetInvalid(false);
       subSyncConfirm();
       subModal.classList.add('open');
@@ -6460,22 +6484,31 @@
       subModal.setAttribute('aria-hidden', 'true');
       subPending = null;
     }
-    subReasonSelect.addEventListener('change', subSyncConfirm);
+    subReasonSelect.addEventListener('change', () => {
+      subSyncConfirm();
+      if (subIsCustom()) subReasonCustom.focus({ preventScroll: true });
+    });
+    subReasonCustom.addEventListener('input', subSyncConfirm);
+    subReasonCustom.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); subModalConfirm.click(); }
+    });
     subModalConfirm.addEventListener('click', () => {
-      const reason = subReasonSelect.value;
+      const reason = subReason();
       if (!reason) {
         subSetInvalid(true);
-        subSelectWrap.classList.remove('shake');
-        void subSelectWrap.offsetWidth; // restart the shake animation
-        subSelectWrap.classList.add('shake');
-        subReasonSelect.focus({ preventScroll: true });
+        const target = subInvalidTarget();
+        target.classList.remove('shake');
+        void target.offsetWidth; // restart the shake animation
+        target.classList.add('shake');
+        (subIsCustom() ? subReasonCustom : subReasonSelect).focus({ preventScroll: true });
         return;
       }
       const pending = subPending;
       closeSubModal();
       if (pending) dsAttendance.openForSubstitute({ ...pending, reason });
     });
-    subSelectWrap.addEventListener('animationend', () => subSelectWrap.classList.remove('shake'));
+    [subSelectWrap, subCustomWrap].forEach((el) =>
+      el.addEventListener('animationend', () => el.classList.remove('shake')));
     document.getElementById('subModalCancel').addEventListener('click', closeSubModal);
     subModal.querySelector('.sub-modal-backdrop').addEventListener('click', closeSubModal);
     document.addEventListener('keydown', (e) => {
