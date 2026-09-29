@@ -18,7 +18,13 @@ const TOUR_ID = "swapRemovedV1";
 const COLLECTION = "feature_tours_seen";
 const LS_KEY = (uid) => `tour:${TOUR_ID}:${uid}`;
 const STYLE_ID = "swtStyles";
-const POINTS_PER_STEP = 20;
+const PATH_HTML = `
+      <div class="swt-path" aria-hidden="true">
+        <span class="swt-chip"><i class="fas fa-bars"></i> القائمة</span><span class="swt-path-sep"><i class="fas fa-chevron-left"></i></span>
+        <span class="swt-chip">صفوف أخرى</span><span class="swt-path-sep"><i class="fas fa-chevron-left"></i></span>
+        <span class="swt-chip">الفصل</span><span class="swt-path-sep"><i class="fas fa-chevron-left"></i></span>
+        <span class="swt-chip">تسجيل الغياب</span>
+      </div>`;
 const ar = (v) => String(v).replace(/\d/g, (d) => "٠١٢٣٤٥٦٧٨٩"[d]);
 const reduceMotion = () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
@@ -139,9 +145,6 @@ function ensureStyles() {
   .swt-bar-title { flex: 1; min-width: 0; }
   .swt-bar-title small { display: block; color: #64748b; font-weight: 800; font-size: .72rem; }
   .swt-bar-title b { display: block; color: #022b42; font-weight: 900; font-size: 1.02rem; }
-  .swt-points { flex-shrink: 0; display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: 999px;
-    background: #fef3c7; color: #92400e; font-weight: 900; font-size: .82rem; }
-  .swt-points.bump { animation: swtBump .45s ease; }
   .swt-progress { height: 6px; border-radius: 99px; background: #e2e8f0; overflow: hidden; }
   .swt-progress i { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, #fbbf24, #f59e0b);
     transition: width .4s ease; }
@@ -150,28 +153,16 @@ function ensureStyles() {
   .swt-next { flex: 1; min-height: 48px; font-size: .98rem; }
   .swt-skip { min-height: 48px; padding: 0 16px; border-radius: 16px; border: 1px solid #e2e8f0; background: #f8fafc;
     color: #64748b; font-family: inherit; font-weight: 800; font-size: .88rem; cursor: pointer; }
-  .swt-float { position: fixed; pointer-events: none; color: #f59e0b; font-weight: 900; font-size: 1.15rem;
-    text-shadow: 0 2px 8px rgba(0,0,0,.35); animation: swtRise 1s ease-out forwards; }
-
   /* Finish */
-  .swt-done-trophy { width: 84px; height: 84px; margin: 6px auto 0; border-radius: 26px; display: grid; place-items: center;
-    background: linear-gradient(145deg, #fde68a, #f59e0b); color: #fff; font-size: 2.4rem;
-    box-shadow: 0 14px 34px rgba(245,158,11,.45); animation: swtPop .5s cubic-bezier(.2,1.6,.4,1); }
-  .swt-done-score { display: flex; justify-content: center; gap: 10px; }
-  .swt-done-score span { padding: 7px 12px; border-radius: 12px; background: #fef3c7; color: #92400e; font-weight: 900; font-size: .88rem; }
-  .swt-confetti { position: fixed; top: -12px; width: 9px; height: 14px; border-radius: 2px; pointer-events: none;
-    animation: swtFall linear forwards; }
+  .swt-done-icon { width: 72px; height: 72px; margin: 6px auto 0; border-radius: 22px; display: grid; place-items: center;
+    background: #fff; color: #047857; font-size: 2.1rem; box-shadow: 0 12px 28px rgba(0,0,0,.22); }
 
   @keyframes swtPulse { 0% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(1.18); } }
   @keyframes swtBounceUp { 0%,100% { transform: translateY(0); } 50% { transform: translateY(8px); } }
   @keyframes swtBounceDown { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
   @keyframes swtFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
-  @keyframes swtBump { 0% { transform: scale(1); } 40% { transform: scale(1.25); } 100% { transform: scale(1); } }
-  @keyframes swtRise { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(-46px); } }
-  @keyframes swtPop { from { transform: scale(.3); } to { transform: scale(1); } }
-  @keyframes swtFall { to { transform: translateY(110vh) rotate(720deg); } }
   @media (prefers-reduced-motion: reduce) {
-    .swt-spot::after, .swt-arrow, .swt-hero-new, .swt-done-trophy, .swt-points.bump { animation: none !important; }
+    .swt-spot::after, .swt-arrow, .swt-hero-new { animation: none !important; }
   }`;
   document.head.appendChild(style);
 }
@@ -247,12 +238,11 @@ export async function maybeStartSwapRemovedTour({ db, uid, hooks }) {
       onTargetTap: () => finish(),
       done: () => false,
       advance: () => finish(),
-      nextLabel: "إنهاء الجولة 🏁",
+      nextLabel: "إنهاء",
     },
   ];
 
   let stepIndex = -1;
-  let points = 0;
   let raf = 0;
   let timer = 0;
   let ended = false;
@@ -293,8 +283,7 @@ export async function maybeStartSwapRemovedTour({ db, uid, hooks }) {
     bar.innerHTML = `
       <div class="swt-bar-head">
         <span class="swt-step-num">${ar(stepIndex + 1)}</span>
-        <div class="swt-bar-title"><small>المهمة ${ar(stepIndex + 1)} من ${ar(steps.length)}</small><b>${step.title}</b></div>
-        <span class="swt-points"><i class="fas fa-star" aria-hidden="true"></i> ${ar(points)}</span>
+        <div class="swt-bar-title"><small>الخطوة ${ar(stepIndex + 1)} من ${ar(steps.length)}</small><b>${step.title}</b></div>
       </div>
       <div class="swt-progress" aria-hidden="true"><i style="width:${pct}%"></i></div>
       <p class="swt-bar-text">${step.text}</p>
@@ -306,24 +295,10 @@ export async function maybeStartSwapRemovedTour({ db, uid, hooks }) {
     bar.querySelector(".swt-skip").addEventListener("click", () => end("skipped"));
   }
 
-  function award(fromEl) {
-    points += POINTS_PER_STEP;
-    if (reduceMotion()) return;
-    const r = (fromEl && isVisible(fromEl)) ? fromEl.getBoundingClientRect() : bar.getBoundingClientRect();
-    const f = el("div", "swt-float");
-    f.textContent = `+${ar(POINTS_PER_STEP)} ⭐`;
-    f.style.left = `${r.left + r.width / 2 - 20}px`;
-    f.style.top = `${r.top - 10}px`;
-    root.appendChild(f);
-    setTimeout(() => f.remove(), 1000);
-  }
-
   function goTo(i) {
     stepIndex = i;
     scrolledFor = -1;
     renderBar();
-    const pts = bar.querySelector(".swt-points");
-    if (i > 0 && pts) { pts.classList.remove("bump"); void pts.offsetWidth; pts.classList.add("bump"); }
   }
 
   // Step progression runs on a timer, not requestAnimationFrame — rAF is
@@ -332,7 +307,6 @@ export async function maybeStartSwapRemovedTour({ db, uid, hooks }) {
     if (ended) return;
     const step = steps[stepIndex];
     if (step && step.done()) {
-      award(step.target());
       if (stepIndex + 1 < steps.length) goTo(stepIndex + 1);
     }
     layout();
@@ -405,35 +379,19 @@ export async function maybeStartSwapRemovedTour({ db, uid, hooks }) {
 
   function finish() {
     if (ended) return;
-    award(h.attendBtn);
     teardown();
     markSeen(db, uid, "completed");
     [spot, arrow, bar, dim].forEach((x) => x.remove());
     restorePage();
     showCard({
-      hero: `<div class="swt-done-trophy"><i class="fas fa-trophy" aria-hidden="true"></i></div>
-             <h2 class="swt-title">أحسنت! أنهيت الجولة 🎉</h2>`,
+      hero: `<div class="swt-done-icon"><i class="fas fa-circle-check" aria-hidden="true"></i></div>
+             <h2 class="swt-title">هذه هي الطريقة</h2>`,
       body: `
-        <p class="swt-text">أصبحت جاهزاً لتسجيل الغياب لأي فصل تدخله — <b>احتياط</b> أو <b>تبديل</b> — من <b>صفوف أخرى</b> مباشرة، بدون طلبات ولا انتظار موافقة.</p>
-        <div class="swt-done-score"><span>⭐ ${ar(points)} نقطة</span><span>🏅 خبير صفوف أخرى</span></div>`,
-      button: "يلا نبدأ",
+        <p class="swt-text">عند دخولك حصة ليست في جدولك — <b>احتياط</b> أو <b>تبديل</b> — افتح <b>صفوف أخرى</b> من القائمة الجانبية، واختر الصف ثم الفصل، ثم اضغط <b>تسجيل الغياب</b> واختر السبب.</p>
+        ${PATH_HTML}`,
+      button: "حسناً",
       onButton: () => root.remove(),
     });
-    confetti();
-  }
-
-  function confetti() {
-    if (reduceMotion()) return;
-    const colors = ["#fbbf24", "#f59e0b", "#10b981", "#3b82f6", "#ef4444", "#8b5cf6", "#065372"];
-    for (let i = 0; i < 70; i++) {
-      const c = el("i", "swt-confetti");
-      c.style.left = `${Math.random() * 100}vw`;
-      c.style.background = colors[i % colors.length];
-      c.style.animationDuration = `${1.8 + Math.random() * 1.6}s`;
-      c.style.animationDelay = `${Math.random() * 0.5}s`;
-      root.appendChild(c);
-      setTimeout(() => c.remove(), 4200);
-    }
   }
 
   function showCard({ hero, body, button, onButton }) {
@@ -463,16 +421,11 @@ export async function maybeStartSwapRemovedTour({ db, uid, hooks }) {
       </div>
       <h2 class="swt-title">أوقفنا آلية التبديل</h2>`,
     body: `
-      <p class="swt-text">لم تعد هناك <b>طلبات تبديل أو تغطية</b> ولا انتظار موافقة رئيس القسم.<br>
+      <p class="swt-text">لم تعد هناك <b>طلبات تبديل أو تغطية</b>.<br>
       إذا دخلت حصة ليست في جدولك — <b>احتياط</b> أو <b>تبديل</b> — سجّل غيابها مباشرة من <b>صفوف أخرى</b> في القائمة الجانبية.</p>
-      <div class="swt-path" aria-hidden="true">
-        <span class="swt-chip"><i class="fas fa-bars"></i> القائمة</span><span class="swt-path-sep"><i class="fas fa-chevron-left"></i></span>
-        <span class="swt-chip">صفوف أخرى</span><span class="swt-path-sep"><i class="fas fa-chevron-left"></i></span>
-        <span class="swt-chip">الفصل</span><span class="swt-path-sep"><i class="fas fa-chevron-left"></i></span>
-        <span class="swt-chip">تسجيل الغياب</span>
-      </div>
-      <div class="swt-meta"><span><i class="fas fa-stopwatch"></i> ٣٠ ثانية</span><span><i class="fas fa-flag-checkered"></i> ${ar(steps.length)} مهام</span><span>⭐ +${ar(steps.length * POINTS_PER_STEP)}</span></div>`,
-    button: "حسناً، أرني كيف 🚀",
+      ${PATH_HTML}
+      <div class="swt-meta"><span><i class="fas fa-stopwatch"></i> ٣٠ ثانية</span><span><i class="fas fa-list-ol"></i> ${ar(steps.length)} خطوات</span></div>`,
+    button: "حسناً، أرني كيف",
     onButton: () => {
       goTo(0);
       timer = setInterval(checkProgress, 120);
