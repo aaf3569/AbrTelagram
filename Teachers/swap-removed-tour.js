@@ -110,8 +110,17 @@ function ensureStyles() {
   .swt-chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 10px;
     background: rgba(2,43,66,.07); color: #022b42; font-weight: 800; font-size: .8rem; }
   .swt-path-sep { color: #94a3b8; font-size: .7rem; }
-  .swt-meta { display: flex; justify-content: center; gap: 14px; color: #64748b; font-weight: 800; font-size: .78rem; }
-  .swt-meta span { display: inline-flex; align-items: center; gap: 5px; }
+  .swt-intro .swt-body { gap: 16px; padding: 22px 20px 18px; }
+  .swt-lead { margin: 0; text-align: center; color: #64748b; font-weight: 700; font-size: .92rem; }
+  .swt-steps { display: grid; gap: 10px; }
+  .swt-step { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 16px;
+    background: #f5f8fb; border: 1px solid #e6edf4; }
+  .swt-step-icon { flex-shrink: 0; width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center;
+    background: #fff; color: #065372; font-size: 1.05rem; box-shadow: 0 2px 8px rgba(2,43,66,.08); }
+  .swt-step-text { display: grid; gap: 2px; text-align: right; }
+  .swt-step-text b { color: #022b42; font-weight: 900; font-size: .95rem; }
+  .swt-step-text small { color: #64748b; font-weight: 700; font-size: .8rem; }
+  .swt-foot { margin: -4px 0 0; text-align: center; color: #94a3b8; font-weight: 700; font-size: .76rem; }
   .swt-btn { min-height: 54px; border: none; border-radius: 16px; cursor: pointer; font-family: inherit;
     font-weight: 900; font-size: 1.05rem; display: inline-flex; align-items: center; justify-content: center; gap: 10px;
     background: linear-gradient(145deg, #065372, #022b42); color: #fff; box-shadow: 0 14px 30px rgba(2,43,66,.3);
@@ -394,12 +403,12 @@ export async function maybeStartSwapRemovedTour({ db, uid, hooks }) {
     });
   }
 
-  function showCard({ hero, body, button, onButton }) {
+  function showCard({ hero, body, button, footer = "", onButton }) {
     const intro = el("div", "swt-intro");
     intro.innerHTML = `
       <section class="swt-card" role="dialog" aria-modal="true">
         <div class="swt-hero">${hero}</div>
-        <div class="swt-body">${body}<button type="button" class="swt-btn">${button}</button></div>
+        <div class="swt-body">${body}<button type="button" class="swt-btn">${button}</button>${footer}</div>
       </section>`;
     root.appendChild(intro);
     requestAnimationFrame(() => intro.classList.add("open"));
@@ -421,11 +430,19 @@ export async function maybeStartSwapRemovedTour({ db, uid, hooks }) {
       </div>
       <h2 class="swt-title">أوقفنا آلية التبديل</h2>`,
     body: `
-      <p class="swt-text">لم تعد هناك <b>طلبات تبديل أو تغطية</b>.<br>
-      إذا دخلت حصة ليست في جدولك — <b>احتياط</b> أو <b>تبديل</b> — سجّل غيابها مباشرة من <b>صفوف أخرى</b> في القائمة الجانبية.</p>
-      ${PATH_HTML}
-      <div class="swt-meta"><span><i class="fas fa-stopwatch"></i> ٣٠ ثانية</span><span><i class="fas fa-list-ol"></i> ${ar(steps.length)} خطوات</span></div>`,
+      <p class="swt-lead">لم تعد هناك طلبات تبديل أو تغطية.</p>
+      <div class="swt-steps">
+        <div class="swt-step">
+          <span class="swt-step-icon"><i class="fas fa-user-clock" aria-hidden="true"></i></span>
+          <span class="swt-step-text"><b>دخلت حصة ليست في جدولك؟</b><small>احتياط أو تبديل</small></span>
+        </div>
+        <div class="swt-step">
+          <span class="swt-step-icon"><i class="fas fa-users-rectangle" aria-hidden="true"></i></span>
+          <span class="swt-step-text"><b>سجّل غيابها من «صفوف أخرى»</b><small>في القائمة الجانبية</small></span>
+        </div>
+      </div>`,
     button: "حسناً، أرني كيف",
+    footer: `<p class="swt-foot">جولة قصيرة · ${ar(steps.length)} خطوات</p>`,
     onButton: () => {
       goTo(0);
       timer = setInterval(checkProgress, 120);
