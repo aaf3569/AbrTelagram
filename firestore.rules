@@ -1171,6 +1171,20 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    /* ---------- feature_tours_seen ---------- */
+    // One doc per user: which one-time guides they've already been through
+    // (e.g. Teachers/swap-removed-tour.js), so each shows once per account.
+    match /feature_tours_seen/{uid} {
+      allow get: if signedIn() && (uid == request.auth.uid || isAdmin());
+      allow list: if isAdmin();
+      allow create, update: if signedIn()
+        && uid == request.auth.uid
+        && request.resource.data.keys().hasOnly(['tours', 'updatedAt'])
+        && (request.resource.data.tours is map)
+        && (request.resource.data.updatedAt is timestamp);
+      allow delete: if isAdmin();
+    }
+
     /* ---------- fallback ---------- */
     match /{document=**} {
       allow read, write: if false;

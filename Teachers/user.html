@@ -6800,7 +6800,28 @@
         loadTodayForTeacher(user.uid)
       ]);
 
+      maybeShowSwapRemovedTour(user.uid);
     });
+
+    // One-time guide: آلية التبديل was removed → take attendance from
+    // صفوف أخرى. Shown once per account (see Teachers/swap-removed-tour.js);
+    // loaded lazily so it can never block or break this page.
+    let swapTourStartedFor = '';
+    function maybeShowSwapRemovedTour(uid){
+      if (!uid || swapTourStartedFor === uid) return;
+      swapTourStartedFor = uid;
+      import('/teachers/swap-removed-tour.js')
+        .then(({ maybeStartSwapRemovedTour }) => maybeStartSwapRemovedTour({
+          db, uid,
+          hooks: {
+            toggleBtn: btnSidebarToggle, sidebar, openSidebar, closeSidebar,
+            otherClassesBtn: sidebarOtherClasses, ocSheet, ocGroups,
+            openOtherClasses, closeOtherClasses,
+            mcSheet: mcSheetEl, attendBtn: mcAttendBtn, closeClass: mcCloseSheet,
+          },
+        }))
+        .catch((e) => console.warn('[tour] swap-removed tour failed:', e?.message || e));
+    }
 
     /* ========= Tabs ========= */
     btnToday.addEventListener('click', async ()=>{
