@@ -418,7 +418,7 @@ function unlockBodyScroll(state) {
   state.locked = false;
 }
 
-export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivilegedEdit } = {}) {
+export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivilegedEdit, canEditOthers } = {}) {
   if (!db || !auth) {
     throw new Error("mountAttendanceSheet requires { db, auth }");
   }
@@ -429,6 +429,12 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
   // attendanceRecords writes. Regular teachers/heads/supervisors keep the
   // window since they only ever mount without this flag.
   let privilegedEdit = !!isPrivilegedEdit;
+  // Whether openForEdit may open a session some other teacher recorded.
+  // Only the teacher who took attendance edits it — unless the caller is an
+  // admin (or has إدارة الغياب). Defaults to privilegedEdit for the admin
+  // pages; Teachers/user.html mounts privileged (for جدول القسم's
+  // colleague flow) but turns this on only for إدارة الغياب holders.
+  let editOthers = canEditOthers === undefined ? privilegedEdit : !!canEditOthers;
 
   ensureStyles();
   injectMarkup();
@@ -583,6 +589,8 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
         m = "يوجد تسجيل غياب محفوظ لهذه الحصة."; break;
       case "time_locked":
         m = "انتهى وقت تسجيل الغياب لهذه الحصة."; break;
+      case "no_class_lesson_now":
+        m = "لا توجد حصة جارية الآن لتسجيل غياب هذا الفصل."; break;
       case "not_logged_in":
         m = "يرجى تسجيل الدخول أولاً."; break;
       case "lesson_times_unavailable":
@@ -1364,6 +1372,107 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
     return result.ok ? result : (graceResult?.ok ? graceResult : result);
   }
 
+  // صفوف أخرى: a teacher covering a colleague's lesson (احتياط) or teaching
+  // a swapped lesson (تبديل) records attendance for a class they aren't
+  // scheduled for. The session is stored under the caller's own teacherUid
+  // (firestore.rules' self branch, still anchored to the lesson's own time
+  // window), with the reason and the scheduled teacher kept alongside it.
+  const SUBSTITUTE_REASONS = new Set(["احتياط", "تبديل"]);
+
+  // Who the schedule says teaches `classKey` at `lessonIndex` today — a
+  // today-dated override (تغطية from جدول القسم) wins over the weekly
+  // schedule. Best-effort, only used to label the record; never throws.
+  async function getScheduledTeacherForClassLesson(classKey, lessonIndex, dateISO) {
+    const wanted = normalizeClassKeyForCompare(classKey);
+    const matches = (row) => Number(row.lesson) === Number(lessonIndex)
+      && normalizeClassKeyForCompare(classKeyFromScheduleRow(row)) === wanted;
+    try {
+      const dayIndex = getKuwaitDayIndexSunThu();
+      const [ovSnap, schedSnap] = await Promise.all([
+        getDocs(query(collection(db, "scheduleOverrides"), where("date", "==", dateISO), where("classKey", "==", classKey))),
+        dayIndex >= 0
+          ? getDocs(query(collection(db, "schedules"), where("classKey", "==", classKey), where("dayIndex", "==", dayIndex)))
+          : Promise.resolve(null),
+      ]);
+      let best = null;
+      ovSnap.forEach(d => {
+        const ov = d.data() || {};
+        if (ov.active === false || !ov.newTeacherUid || !matches(ov)) return;
+        if (!best || overrideCreatedMs(ov) >= overrideCreatedMs(best)) best = ov;
+      });
+      let hit = best ? { uid: best.newTeacherUid, name: best.newTeacherName || "", subject: best.subject || "" } : null;
+      if (!hit && schedSnap) {
+        let row = null;
+        schedSnap.forEach(d => {
+          const data = d.data() || {};
+          if (!data.teacherUid || !matches(data)) return;
+          if (!row || scheduleRowTimestampMs(data) > scheduleRowTimestampMs(row)) row = data;
+        });
+        if (row) hit = { uid: row.teacherUid, name: row.teacherName || "", subject: row.subject || "" };
+      }
+      if (hit && !hit.name) {
+        const t = await getDoc(doc(db, "teachers", hit.uid));
+        if (t.exists()) hit.name = (t.data() || {}).name || "";
+      }
+      return hit;
+    } catch (e) {
+      console.warn("[attendance] scheduled teacher lookup failed:", e?.message || e);
+      return null;
+    }
+  }
+
+  // The lesson `classKey` is in right now by the bell times — the running
+  // lesson first, then one that just ended but is still inside its grace
+  // window. Returns the same meta shape as getMyActiveLessonMetaForNow (with
+  // editSessionId when the caller already recorded it and can still edit),
+  // plus scheduledTeacherUid/Name and isMine.
+  async function getClassLiveLesson(classKey) {
+    const user = auth.currentUser;
+    if (!user) return { ok: false, reason: "not_logged_in" };
+    await ensureLessonTimes();
+    if (lessonTimesReadFailed) return { ok: false, reason: "lesson_times_unavailable" };
+    const todayISO = kuwaitTodayISO();
+    const candidates = [getActiveLessonIndex(), getGracePeriodLessonIndex()].filter(i => i !== null);
+    if (!classKey || !candidates.length) return { ok: false, reason: "no_class_lesson_now" };
+    let fallback = null;
+    for (const lessonIndex of candidates) {
+      const lt = LESSON_TIMES.find(l => l.index === lessonIndex);
+      const scheduled = await getScheduledTeacherForClassLesson(classKey, lessonIndex, todayISO);
+      const result = await resolveAttendanceSession({
+        ok: true, date: todayISO, lesson: lessonIndex, classKey,
+        lessonLabel: lt?.label || `الحصة ${lessonIndex}`,
+        activeStart: lt?.start || "00:00", activeEnd: lt?.end || "00:00",
+        teacherUid: user.uid, subject: scheduled?.subject || "",
+        scheduledTeacherUid: scheduled?.uid || "", scheduledTeacherName: scheduled?.name || "",
+        isMine: !!scheduled && scheduled.uid === user.uid,
+      });
+      if (result.ok) return result;
+      fallback = fallback || result;
+    }
+    return fallback;
+  }
+
+  async function openForSubstitute({ classKey, lesson, reason } = {}) {
+    if (!classKey || !SUBSTITUTE_REASONS.has(reason)) return;
+    await withSkeletonOpen(async () => {
+      // Re-resolved here: the clock (or someone else's save) may have moved
+      // on while the reason popup was open.
+      const meta = await getClassLiveLesson(classKey);
+      if (!meta.ok) {
+        showBlocked(meta.reason, meta.sessionProbe);
+        return false;
+      }
+      if (lesson && meta.lesson !== lesson) {
+        showBlocked("time_locked");
+        return false;
+      }
+      if (meta.editSessionId) return loadSessionForEdit(meta.editSessionId);
+      currentMeta = { ...meta, mode: "substitute", substituteReason: reason };
+      buildFixedLessonOption(meta.lesson, null, reason);
+      await loadStudentsForClass(meta.classKey);
+    });
+  }
+
   async function checkAllowed(showFeedback = true) {
     const meta = await getMyActiveLessonMetaForNow();
     if (!meta.ok) {
@@ -1860,8 +1969,8 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
         return false;
       }
       const data = snap.data() || {};
-      if (!privilegedEdit && (!auth.currentUser || data.teacherUid !== auth.currentUser.uid)) {
-        showError("تعذّر التعديل", "يمكنك تعديل تسجيلاتك فقط.");
+      if (!editOthers && (!auth.currentUser || data.teacherUid !== auth.currentUser.uid)) {
+        showError("تعذّر التعديل", "يمكن تعديل الغياب فقط من المعلم الذي سجّله.");
         return false;
       }
       const createdAt = data.createdAt || null;
@@ -1990,6 +2099,7 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
       mode: currentMeta.mode,
       sessionId: currentMeta.sessionId,
       sessionCutoffTs: currentMeta.sessionCutoffTs || null,
+      substituteReason: currentMeta.substituteReason || null,
     };
     openModal(els.confirmModal);
     setTimeout(() => els.confirmSave.focus(), 0);
@@ -2014,7 +2124,7 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
         return;
       }
       const uid = auth.currentUser.uid;
-      const { present, late, absent, dateKW, lessonIndex, lessonLabel, classKey, mode, sessionId, sessionCutoffTs: storedCutoffTs } = pendingSave;
+      const { present, late, absent, dateKW, lessonIndex, lessonLabel, classKey, mode, sessionId, sessionCutoffTs: storedCutoffTs, substituteReason } = pendingSave;
       const nameByUid = {};
       attStudentList.forEach(s => { if (s.uid) nameByUid[s.uid] = s.name; });
       const all = [
@@ -2098,7 +2208,7 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
           pendingSave = null;
           return;
         }
-      } else if (mode === "self") {
+      } else if (mode === "self" || mode === "substitute") {
         // Schedule eligibility and "not already taken" were both verified over
         // the network when the sheet opened; the only thing that can genuinely
         // change while filling the sheet is the clock — a sync check. (The
@@ -2158,6 +2268,13 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
         // this field. recordedByAdminUid keeps the real audit trail.
         teacherUid: mode === "admin" ? currentMeta.teacherUid : uid,
         ...(mode === "admin" ? { recordedByAdminUid: uid } : {}),
+        // صفوف أخرى: why this teacher recorded a class they aren't
+        // scheduled for, and whose lesson it was per the schedule.
+        ...(mode === "substitute" ? {
+          substituteReason,
+          originalTeacherUid: currentMeta?.scheduledTeacherUid || null,
+          originalTeacherName: currentMeta?.scheduledTeacherName || null,
+        } : {}),
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
         sessionStartTs: Timestamp.fromDate(sessionStartTs),
@@ -2324,6 +2441,8 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
     openForClass,
     openForEdit,
     openForAdminCreate,
+    openForSubstitute,
+    getClassLiveLesson,
     canEditSession(sessionData) { return isWithinAttendanceEditWindow(sessionData?.date, sessionData?.lesson, sessionData?.sessionCutoffTs); },
     // Use the same schedule/time resolution for the log, without excluding
     // lessons that already have attendance (the purpose of opening a log).
@@ -2336,7 +2455,8 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
     // (mountAttendanceSheet is called at module load) — e.g.
     // admin-late-attendance.html, which is also reachable by non-admin
     // allowMorningLate users who must keep the 45-minute window.
-    setPrivilegedEdit(v) { privilegedEdit = !!v; },
+    setPrivilegedEdit(v) { privilegedEdit = !!v; editOthers = !!v; },
+    setCanEditOthers(v) { editOthers = !!v; },
     close() { closeSheet(els.sheet); },
     refreshLessonTimes: () => ensureLessonTimes({ force: true }),
   };

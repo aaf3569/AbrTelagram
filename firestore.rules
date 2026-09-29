@@ -499,10 +499,24 @@ service cloud.firestore {
             || (('updatedBy' in request.resource.data) && request.resource.data.updatedBy == request.auth.uid)
           );
 
+        // Only the teacher who took the attendance edits it (or an admin /
+        // إدارة الغياب). A mirror belongs to whoever created it, or to the
+        // teacher of the attendanceSessions doc it mirrors (sessionId).
+        function mirrorOwnedByMe() {
+          let d = resource.data;
+          return (('createdBy' in d) && d.createdBy == request.auth.uid)
+            || (
+              ('sessionId' in d) && (d.sessionId is string)
+              && exists(/databases/$(database)/documents/attendanceSessions/$(d.sessionId))
+              && get(/databases/$(database)/documents/attendanceSessions/$(d.sessionId)).data.teacherUid == request.auth.uid
+            );
+        }
+
         allow update: if
-          isAdmin()
+          canManageAttendance()
           || (
             isTeacherSupervisorOrAdmin()
+            && mirrorOwnedByMe()
             && preserveOrInit('class')
             && preserveOrInit('date')
             && preserveOrInit('lessonIndex')
@@ -793,6 +807,8 @@ service cloud.firestore {
         canManageAttendance()
         || (
           isTeacherSupervisorOrAdmin()
+          && ('createdBy' in resource.data)
+          && resource.data.createdBy == request.auth.uid
           && preserveOrInit('class')
           && preserveOrInit('date')
           && preserveOrInit('lessonIndex')
@@ -869,235 +885,19 @@ service cloud.firestore {
     }
 
     /* ---------- swapRequests ---------- */
+    // Retired: the طلب تبديل / طلب تغطية request flow (and طلبات القسم) was
+    // removed from Teachers/user.html. A teacher now records attendance for
+    // a class they don't teach directly from صفوف أخرى, with a reason
+    // (احتياط / تبديل) stored on the attendance session itself. Old request
+    // documents stay readable by admins only; nobody can create new ones.
     match /swapRequests/{requestId} {
-
-      function isParticipant() {
-        return signedIn() && (
-          isAdmin()
-          || (resource.data.fromTeacherUid is string && resource.data.fromTeacherUid == request.auth.uid)
-          || (resource.data.toTeacherUid   is string && resource.data.toTeacherUid   == request.auth.uid)
-          || (resource.data.fromHeadUid    is string && resource.data.fromHeadUid    == request.auth.uid)
-          || (resource.data.toHeadUid      is string && resource.data.toHeadUid      == request.auth.uid)
-          || (resource.data.headUid        is string && resource.data.headUid        == request.auth.uid)
-          // Teachers/schoolschedule.html: a teacher filing this on behalf
-          // of a same-department colleague (fromTeacherUid names the
-          // colleague, not the filer) must still be able to see/track the
-          // request they just created.
-          || (resource.data.requestedByUid is string && resource.data.requestedByUid == request.auth.uid)
-        );
-      }
-
-      function isValidSwapStatus(s) {
-        return s is string && s in [
-          'pending_head_from',
-          'pending_head_to',
-          'pending_head',
-          'pending_teacher_to',
-          'accepted',
-          'denied'
-        ];
-      }
-
-      function isPendingSwapStatus(s) {
-        return s is string && s in [
-          'pending_head_from',
-          'pending_head_to',
-          'pending_head',
-          'pending_teacher_to'
-        ];
-      }
-
-      function swapCreateIsValid() {
-        return request.resource.data.type in ['swap','cover']
-          && isPendingSwapStatus(request.resource.data.status)
-          && isISODate(request.resource.data.date)
-          && isValidLessonIndex(request.resource.data.lesson)
-          && (
-            request.resource.data.fromTeacherUid == request.auth.uid
-            || (
-              // Teachers/schoolschedule.html: browsing the whole-school
-              // grid and clicking a lesson that isn't your own, you are
-              // personally volunteering as the counterpart (toTeacherUid)
-              // for THAT lesson (fromTeacherUid) — never naming two other
-              // people who never asked for this. requestedByUid records
-              // the filer for the audit trail and so isParticipant() lets
-              // them see/track what they just created; here it is always
-              // the same person as toTeacherUid, but kept as its own field
-              // for symmetry with the (unused in this branch) case where
-              // the two could differ.
-              request.resource.data.toTeacherUid == request.auth.uid
-              && nonEmptyString(request.resource.data.requestedByUid)
-              && request.resource.data.requestedByUid == request.auth.uid
-            )
-          )
-          && (request.resource.data.toTeacherUid is string && request.resource.data.toTeacherUid.size() > 0)
-          && (request.resource.data.fromHeadUid is string && request.resource.data.fromHeadUid.size() > 0)
-          && (request.resource.data.toHeadUid is string && request.resource.data.toHeadUid.size() > 0)
-          && (request.resource.data.fromDepartment is string && request.resource.data.fromDepartment.size() > 0)
-          && (request.resource.data.toDepartment is string && request.resource.data.toDepartment.size() > 0)
-          && (
-            !('fromClassKey' in request.resource.data)
-            || isValidClassKey(request.resource.data.fromClassKey)
-          )
-          && (
-            !('toClassKey' in request.resource.data)
-            || request.resource.data.toClassKey == null
-            || request.resource.data.toClassKey is string
-          )
-          && (
-            !('createdAt' in request.resource.data)
-            || request.resource.data.createdAt is timestamp
-          )
-          && (
-            !('respondedAt' in request.resource.data)
-            || request.resource.data.respondedAt == null
-            || request.resource.data.respondedAt is timestamp
-          )
-          && (
-            !('message' in request.resource.data)
-            || request.resource.data.message == null
-            || request.resource.data.message is string
-          )
-          && (
-            !('fromTeacherName' in request.resource.data)
-            || request.resource.data.fromTeacherName is string
-          )
-          && (
-            !('toTeacherName' in request.resource.data)
-            || request.resource.data.toTeacherName is string
-          )
-          && (
-            !('fromHeadName' in request.resource.data)
-            || request.resource.data.fromHeadName is string
-          )
-          && (
-            !('toHeadName' in request.resource.data)
-            || request.resource.data.toHeadName is string
-          )
-          && (
-            !('requestedByUid' in request.resource.data)
-            || nonEmptyString(request.resource.data.requestedByUid)
-          )
-          && (
-            !('requestedByName' in request.resource.data)
-            || request.resource.data.requestedByName is string
-          );
-      }
-
-      function swapUpdateKeysAreSafe() {
-        return request.resource.data.diff(resource.data).changedKeys().hasOnly([
-          'status',
-          'respondedAt',
-          'headStatus',
-          'headRespondedAt',
-          'headNote',
-          'toClassKey'
-        ]);
-      }
-
-      function swapTransitionAllowedForActor() {
-        let oldStatus = resource.data.status;
-        let newStatus = request.resource.data.status;
-
-        return
-          (
-            request.auth.uid == resource.data.fromHeadUid
-            && oldStatus == 'pending_head_from'
-            && newStatus in ['pending_head_to', 'accepted', 'denied']
-          )
-          ||
-          (
-            request.auth.uid == resource.data.toHeadUid
-            && oldStatus == 'pending_head_to'
-            && newStatus in ['accepted', 'denied']
-          )
-          ||
-          (
-            request.auth.uid == resource.data.toTeacherUid
-            && oldStatus == 'pending_teacher_to'
-            && newStatus in ['accepted', 'denied']
-          );
-      }
-
-      function swapUpdateValuesValid() {
-        return isValidSwapStatus(request.resource.data.status)
-          && (
-            !('respondedAt' in request.resource.data)
-            || request.resource.data.respondedAt == null
-            || request.resource.data.respondedAt is timestamp
-          )
-          && (
-            !('headRespondedAt' in request.resource.data)
-            || request.resource.data.headRespondedAt == null
-            || request.resource.data.headRespondedAt is timestamp
-          )
-          && (
-            !('headStatus' in request.resource.data)
-            || request.resource.data.headStatus is string
-          )
-          && (
-            !('headNote' in request.resource.data)
-            || request.resource.data.headNote == null
-            || request.resource.data.headNote is string
-          )
-          && (
-            !('toClassKey' in request.resource.data)
-            || request.resource.data.toClassKey == null
-            || request.resource.data.toClassKey is string
-          );
-      }
-
-      allow get, list: if isTeacherOrAdmin() && isParticipant();
-      allow create: if isTeacherOrAdmin() && swapCreateIsValid();
-
-      allow update: if
-        isAdmin()
-        || (
-          isTeacherOrAdmin()
-          && isParticipant()
-          && swapUpdateKeysAreSafe()
-          && swapUpdateValuesValid()
-          && swapTransitionAllowedForActor()
-        );
-
+      allow read: if isAdmin();
+      allow create, update: if false;
       allow delete: if isAdmin();
     }
 
     /* ---------- scheduleOverrides ---------- */
     match /scheduleOverrides/{overrideId} {
-
-      function linkedSwapRequestData() {
-        return (
-          ('swapRequestId' in request.resource.data)
-          && (request.resource.data.swapRequestId is string)
-          && exists(/databases/$(database)/documents/swapRequests/$(request.resource.data.swapRequestId))
-        )
-          ? get(/databases/$(database)/documents/swapRequests/$(request.resource.data.swapRequestId)).data
-          : null;
-      }
-
-      function canWriteOverrideFromSwapRequest() {
-        let req = linkedSwapRequestData();
-
-        return req != null
-          && signedIn()
-          && (
-            request.auth.uid == req.fromTeacherUid
-            || request.auth.uid == req.toTeacherUid
-            || request.auth.uid == req.fromHeadUid
-            || request.auth.uid == req.toHeadUid
-          )
-          && (req.status is string && req.status in ['pending_head_from','pending_head_to','pending_teacher_to','accepted'])
-          && isISODate(request.resource.data.date)
-          && request.resource.data.date == req.date
-          && isValidLessonIndex(request.resource.data.lesson)
-          && (request.resource.data.originalTeacherUid is string)
-          && (request.resource.data.newTeacherUid is string)
-          && (
-            (request.resource.data.originalTeacherUid == req.fromTeacherUid && request.resource.data.newTeacherUid == req.toTeacherUid)
-            || (request.resource.data.originalTeacherUid == req.toTeacherUid && request.resource.data.newTeacherUid == req.fromTeacherUid)
-          );
-      }
 
       allow read: if isTeacherSupervisorOrAdmin();
 
@@ -1105,7 +905,6 @@ service cloud.firestore {
         (
           hasScheduleEditPermission()
           || isHead()
-          || canWriteOverrideFromSwapRequest()
         )
         && isISODate(request.resource.data.date)
         && isValidLessonIndex(request.resource.data.lesson)
@@ -1279,11 +1078,14 @@ service cloud.firestore {
         // update rule below, so a department colleague can help take
         // attendance once but can't go back and change a colleague's
         // already-recorded data afterward; only the session's own teacher
-        // or an admin can do that.
+        // or an admin can do that. !exists(p) pins it to the batch that
+        // creates the session — a colleague can't add records to a session
+        // that was already saved.
         function canCreateRecordAsDeptColleague() {
           let p = /databases/$(database)/documents/attendanceSessions/$(sessionId);
           let s = getAfter(p).data;
           return existsAfter(p)
+            && !exists(p)
             && s.teacherUid != request.auth.uid
             && (s.sessionCutoffTs is timestamp)
             && request.time <= s.sessionCutoffTs

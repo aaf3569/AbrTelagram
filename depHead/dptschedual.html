@@ -1093,8 +1093,12 @@
       snap.forEach((sessionDoc) => {
         const session = sessionDoc.data() || {};
         const lesson = Number(session.lesson);
-        const cell = attendanceMap[session.teacherUid]?.[lesson];
-        if (!cell?.hasClass || cell.classKey !== session.classKey) return;
+        // A substitute's session (صفوف أخرى — احتياط/تبديل) is stored under
+        // their own uid; originalTeacherUid names the scheduled teacher.
+        const cell = [session.teacherUid, session.originalTeacherUid]
+          .map(uid => uid && attendanceMap[uid]?.[lesson])
+          .find(c => c?.hasClass && c.classKey === session.classKey);
+        if (!cell) return;
         cell.taken = true;
         cell.time = session.createdAt || session.sessionStartTs || null;
       });

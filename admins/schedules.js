@@ -225,6 +225,8 @@ export async function mountDeptSchedulesSheet(host, hooks = {}) {
     sessSnap.forEach((s) => {
       const x = s.data() || {};
       sessions.set(`${x.date}|${x.teacherUid}|${Number(x.lesson)}`, { id: s.id, ...x });
+      // Substitute sessions (صفوف أخرى) also count for the scheduled teacher.
+      if (x.originalTeacherUid) sessions.set(`${x.date}|${x.originalTeacherUid}|${Number(x.lesson)}`, { id: s.id, ...x });
     });
     const cells = dates.map((iso) => {
       const day = weekdayOf(iso);

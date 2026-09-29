@@ -816,151 +816,6 @@
       .more-actions .filter-btn { width: 100%; flex: initial; }
     }
 
-    /* طلبات القسم (department heads only) — ported from depHead/schedual.html.
-       #btnRequests starts hidden and is only ever revealed via JS for role 'head'. */
-    #btnRequests .request-count{
-      position:absolute; top:-7px; left:-7px; min-width:21px; height:21px;
-      padding:0 4px; border-radius:999px; display:inline-flex;
-      align-items:center; justify-content:center; background:var(--danger);
-      color:#fff; border:2px solid #fff; font-size:.7rem; font-weight:900;
-      line-height:1; box-shadow:0 2px 7px rgba(185,28,28,.3);
-    }
-    #btnRequests .request-count[hidden]{display:none;}
-
-    /* Current/past tabs at the top of طلبات القسم */
-    .requests-tabs {
-      display: flex;
-      gap: 6px;
-      padding: 4px;
-      background: var(--border-light);
-      border-radius: 14px;
-      margin-bottom: 16px;
-    }
-    .requests-tab {
-      flex: 1;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      min-height: 44px;
-      border: none;
-      border-radius: 11px;
-      background: transparent;
-      color: var(--muted);
-      font-family: inherit;
-      font-weight: 800;
-      font-size: 0.88rem;
-      cursor: pointer;
-      transition: var(--transition);
-    }
-    .requests-tab.active {
-      background: var(--card-bg);
-      color: var(--primary);
-      box-shadow: var(--shadow-1);
-    }
-    .requests-tab .tab-count {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-width: 20px;
-      height: 20px;
-      padding: 0 6px;
-      border-radius: 999px;
-      background: var(--border);
-      color: var(--text);
-      font-size: 0.74rem;
-      font-weight: 900;
-    }
-    .requests-tab.active .tab-count {
-      background: var(--primary-light);
-      color: var(--primary);
-    }
-    @media (max-width: 480px) {
-      .requests-tab span:not(.tab-count) { display: none; }
-      .requests-tab i { font-size: 1.05rem; }
-      .requests-tab .tab-count { display: inline-flex; }
-    }
-
-    /* Spacing between request cards — previously none, which is most of
-       why this sheet felt cramped on phone. */
-    #requestsContainer {
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-    }
-    .request-card {
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      padding: 18px;
-      background: var(--card-bg);
-      box-shadow: var(--shadow-1);
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-    }
-    .request-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding-bottom: 12px;
-      border-bottom: 1px solid var(--border-light);
-    }
-    .request-type {
-      padding: 4px 12px;
-      border-radius: 999px;
-      font-size: 0.85rem;
-      font-weight: 900;
-    }
-    .type-cover { background: rgba(59, 130, 246, 0.12); color: #1d4ed8; }
-    .type-swap { background: rgba(168, 85, 247, 0.12); color: #7c3aed; }
-    .request-body { display: flex; flex-direction: column; }
-    .request-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-weight: 700;
-      padding: 9px 0;
-      border-bottom: 1px solid var(--border-light);
-    }
-    .request-row:last-child { border-bottom: none; padding-bottom: 0; }
-    .request-row:first-child { padding-top: 0; }
-    .request-label {
-      color: var(--muted);
-      font-size: 0.85rem;
-      min-width: 70px;
-      flex-shrink: 0;
-    }
-    .request-value {
-      color: var(--text);
-      font-weight: 800;
-    }
-    .status-badge {
-      padding: 4px 12px;
-      border-radius: 999px;
-      font-size: 0.85rem;
-      font-weight: 900;
-    }
-    .status-pending { background: rgba(245, 158, 11, 0.12); color: #92400e; }
-    .status-accepted { background: rgba(16, 185, 129, 0.12); color: #065f46; }
-    .status-denied { background: rgba(239, 68, 68, 0.12); color: #991b1b; }
-    .request-footer {
-      display: flex;
-      gap: 10px;
-      margin-top: 2px;
-    }
-    @media (max-width: 768px) {
-      .request-footer { flex-wrap: wrap; }
-      .request-footer .filter-btn { flex: 1; min-width: 120px; }
-    }
-    /* Stack label above value instead of cramming them onto one line once
-       the value text (teacher names + subjects, notes...) gets long. */
-    @media (max-width: 480px) {
-      .request-card { padding: 14px; gap: 12px; }
-      .request-row { flex-direction: column; align-items: flex-start; gap: 3px; }
-      .request-label { min-width: 0; font-size: 0.78rem; }
-      .request-value { font-size: 0.92rem; }
-    }
-
     /* Modal - IMPROVED FOR MOBILE */
     .modal {
       position: fixed; inset: 0; z-index: 70;
@@ -1950,12 +1805,6 @@
     .ss-info-cell-label { color: var(--muted); font-weight: 800; font-size: .74rem; margin-bottom: 4px; }
     .ss-info-cell-value { color: var(--text); font-weight: 900; font-size: .92rem; line-height: 1.3; }
 
-    .ss-req-context {
-      display: flex; align-items: center; justify-content: center; gap: 8px;
-      padding: 9px 12px; border-radius: 12px; background: #fbfdff; border: 1px solid var(--border);
-      color: var(--muted); font-weight: 800; font-size: .82rem; text-align: center;
-    }
-
     .ss-pop-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 2px; }
     .ss-pop-btn {
       width: 100%; min-height: 50px; border-radius: 14px; cursor: pointer; font-family: inherit;
@@ -1965,25 +1814,6 @@
     .ss-pop-btn.solid { background: linear-gradient(145deg, var(--primary-2), var(--primary)); color: #fff; box-shadow: 0 14px 30px rgba(2,43,66,.26); }
     .ss-pop-btn.solid:hover { transform: translateY(-1px); }
     .ss-pop-btn:disabled { opacity: .55; cursor: not-allowed; transform: none !important; }
-
-    .ss-form-field { display: flex; flex-direction: column; gap: 6px; }
-    .ss-form-field label { font-weight: 800; font-size: .82rem; color: var(--muted); }
-    .ss-form-field select, .ss-form-field input {
-      width: 100%; height: 46px; border-radius: 12px; border: 1px solid var(--border);
-      background: #fff; padding: 0 12px; font-family: inherit; font-weight: 800; color: var(--text);
-      font-size: .9rem; transition: var(--transition);
-    }
-    .ss-form-field select:disabled, .ss-form-field input:disabled { background: var(--page); color: var(--muted); cursor: not-allowed; }
-    .ss-form-field select:focus, .ss-form-field input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(2,43,66,.10); }
-    .ss-form-hint { font-size: .78rem; color: var(--muted); font-weight: 700; margin-top: -2px; }
-
-    .ss-req-hint {
-      display: flex; align-items: flex-start; gap: 8px; padding: 11px 12px; border-radius: 14px;
-      background: var(--primary-light); border: 1px solid var(--border); color: var(--primary);
-      font-weight: 800; font-size: .84rem; line-height: 1.5;
-    }
-    .ss-req-hint.err { background: rgba(239,68,68,.10); border-color: rgba(239,68,68,.22); color: #991b1b; }
-    .ss-req-hint svg { width: 16px; height: 16px; flex-shrink: 0; margin-top: 2px; }
 
     /* ============================================================
        فصولي (mc*) — an in-page copy of Teachers/user.html's own class
@@ -2051,6 +1881,103 @@
     .mc-btn-download:hover { transform: translateY(-2px); border-color: var(--primary); box-shadow: 0 12px 24px rgba(2,43,66,.16); }
     .mc-btn-download:disabled { opacity: .6; cursor: default; transform: none; }
     .mc-btn-attend.mc-attend-edit { background: linear-gradient(145deg, #c98a1f, var(--warning)); box-shadow: 0 10px 22px rgba(160,109,0,.28); }
+    /* Phone: the actions take the whole row — تنزيل القائمة shrinks to a
+       square icon on the right, تسجيل الغياب grows into the freed space. */
+    @media (max-width: 600px) {
+      .mc-hero-actions { width: 100%; flex-wrap: nowrap; }
+      .mc-btn-attend { flex: 1; min-height: 58px; font-size: 1.08rem; }
+      .mc-btn-download {
+        width: 58px; min-height: 58px; padding: 0; flex-shrink: 0;
+        justify-content: center; font-size: 1.25rem;
+      }
+      .mc-btn-download span { display: none; }
+    }
+
+    /* صفوف أخرى — reason popup before taking attendance for a class the
+       teacher isn't scheduled to teach right now. */
+    .sub-modal {
+      position: fixed; inset: 0; z-index: 1150; display: grid; place-items: center; padding: 16px;
+      opacity: 0; visibility: hidden; pointer-events: none; transition: opacity .2s ease, visibility .2s ease;
+    }
+    .sub-modal.open { opacity: 1; visibility: visible; pointer-events: auto; }
+    .sub-modal-backdrop {
+      position: absolute; inset: 0; background: rgba(5, 15, 35, .56);
+      backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    }
+    .sub-modal-card {
+      position: relative; width: min(380px, calc(100vw - 32px)); background: #fff;
+      border: 1px solid var(--border); border-radius: 24px; padding: 24px 18px 18px;
+      box-shadow: 0 30px 70px rgba(10, 30, 60, .32); text-align: center;
+      display: grid; gap: 10px;
+      transform: translateY(12px) scale(.96); transition: transform .24s cubic-bezier(.22,.7,.25,1);
+    }
+    .sub-modal.open .sub-modal-card { transform: translateY(0) scale(1); }
+    .sub-modal-icon {
+      justify-self: center; width: 54px; height: 54px; border-radius: 16px; display: grid; place-items: center;
+      background: var(--primary-light); color: var(--primary); font-size: 1.35rem;
+    }
+    .sub-modal-title { margin: 0; font-size: 1.18rem; font-weight: 900; color: var(--primary); }
+    .sub-modal-text { margin: 0; font-size: .92rem; font-weight: 700; color: var(--muted); }
+    .sub-modal-class {
+      justify-self: center; min-width: 120px; padding: 8px 18px; border-radius: 14px;
+      background: linear-gradient(145deg, var(--primary-2), var(--primary)); color: #fff;
+      font-size: 1.45rem; font-weight: 900; letter-spacing: .5px;
+      box-shadow: 0 10px 22px rgba(2,43,66,.24);
+    }
+    .sub-modal-meta { font-size: .86rem; font-weight: 700; color: var(--muted); line-height: 1.6; }
+    .sub-modal-meta b { color: var(--text); font-weight: 900; }
+    .sub-modal-field { display: grid; gap: 6px; text-align: right; margin-top: 4px; }
+    .sub-modal-field label { font-weight: 900; font-size: .88rem; color: var(--primary); }
+    .sub-select-wrap { position: relative; }
+    .sub-select {
+      width: 100%; height: 52px; border-radius: 14px; border: 1.5px solid var(--border);
+      background: #fff; padding: 0 14px 0 40px; font-family: inherit; font-weight: 800; font-size: 1rem;
+      color: var(--text); appearance: none; -webkit-appearance: none; cursor: pointer;
+      transition: border-color .15s ease, box-shadow .15s ease;
+    }
+    .sub-select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(2,43,66,.12); }
+    .sub-select-chev {
+      position: absolute; left: 15px; top: 50%; transform: translateY(-50%);
+      color: var(--muted); font-size: .8rem; pointer-events: none;
+    }
+    .sub-select-wrap.invalid .sub-select {
+      border-color: var(--danger); background: #fff5f5; box-shadow: 0 0 0 3px rgba(239,68,68,.16);
+    }
+    .sub-select-wrap.invalid .sub-select-chev { color: var(--danger); }
+    .sub-select-wrap.shake { animation: subShake .38s ease; }
+    @keyframes subShake {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-7px); } 40% { transform: translateX(6px); }
+      60% { transform: translateX(-4px); } 80% { transform: translateX(3px); }
+    }
+    .sub-reason-error {
+      display: flex; align-items: center; gap: 6px; color: #b91c1c; font-weight: 800; font-size: .84rem;
+    }
+    .sub-reason-error[hidden] { display: none; }
+    .sub-modal-confirm {
+      margin-top: 6px; min-height: 56px; border-radius: 16px; border: none; cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+      font-family: inherit; font-weight: 900; font-size: 1.05rem;
+      /* Dimmed until a reason is picked — still clickable, so a tap
+         without one can point at the missing field. */
+      background: #e2e8f0; color: #64748b; box-shadow: none;
+      transition: background .2s ease, color .2s ease, box-shadow .2s ease, transform .2s ease;
+    }
+    .sub-modal-confirm.ready {
+      background: linear-gradient(145deg, var(--primary-2), var(--primary)); color: #fff;
+      box-shadow: 0 14px 30px rgba(2,43,66,.3);
+    }
+    .sub-modal-confirm.ready:hover { transform: translateY(-2px); }
+    .sub-modal-cancel {
+      min-height: 46px; border-radius: 14px; cursor: pointer;
+      border: 1px solid var(--border); background: #f1f5f9; color: var(--primary);
+      font-family: inherit; font-weight: 800; font-size: .95rem; transition: var(--transition);
+    }
+    .sub-modal-cancel:hover { background: #e6edf4; }
+    @media (prefers-reduced-motion: reduce) {
+      .sub-modal, .sub-modal-card { transition: none; }
+      .sub-select-wrap.shake { animation: none; }
+    }
 
     /* Download choice popup (PDF / Excel) */
     .dl-choice {
@@ -2206,14 +2133,6 @@
     .la-chip-value { color: var(--text); font-weight: 900; font-size: .86rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
     .la-actions { display: flex; flex-direction: column; gap: 10px; width: 100%; }
-    .la-actions-row { display: flex; gap: 10px; width: 100%; }
-    .la-btn-secondary {
-      flex: 1; height: 48px; border-radius: 14px; border: 1px solid rgba(2,43,66,.18);
-      background: #fff; color: var(--primary); font-weight: 800; font-size: .88rem;
-      cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-      transition: var(--transition); font-family: inherit;
-    }
-    .la-btn-secondary:hover { transform: translateY(-2px); box-shadow: var(--shadow-1); border-color: rgba(2,43,66,.32); }
     .la-btn-attendance {
       width: 100%; height: 66px; border-radius: 16px; border: none;
       background: linear-gradient(145deg, var(--primary-2), var(--primary)); color: #fff;
@@ -2233,7 +2152,6 @@
       .la-hero { padding: 16px; border-radius: 16px; }
       .la-hero-badge { width: 44px; height: 44px; border-radius: 13px; font-size: 1.1rem; }
       .la-btn-attendance { height: 62px; font-size: .95rem; }
-      .la-btn-secondary { height: 44px; font-size: .84rem; }
     }
 
     /* ========= الطلاب sheet (#supervisorStudentsSheet) =========

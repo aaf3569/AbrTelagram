@@ -86,11 +86,6 @@
 
       <div id="sidebarDeptGroup" class="sidebar-group" hidden>
         <div class="sidebar-section-label">القسم</div>
-        <button id="btnRequests" class="sidebar-link" type="button" hidden>
-          <i class="fas fa-inbox"></i>
-          <span class="request-label">طلبات القسم</span>
-          <span id="requestsPendingBadge" class="request-count" hidden aria-hidden="true"></span>
-        </button>
         <button id="sidebarHeadDept" class="sidebar-link" type="button" hidden>
           <i class="fas fa-users-gear"></i>
           <span>قسمي</span>
@@ -305,32 +300,6 @@
     <div class="sheet-body">
       <p class="oc-hint">اختر الصف ثم الفصل لعرض الطلاب وتسجيل الغياب.</p>
       <div id="ocGroups" class="oc-groups"></div>
-    </div>
-  </section>
-
-  <!-- REQUESTS SHEET (department heads only) -->
-  <section id="requestsSheet" class="sheet" aria-hidden="true">
-    <div class="sheet-header">
-      <button id="closeRequests" class="back-btn" type="button">
-        <i class="fas fa-arrow-right"></i>
-        <span>رجوع</span>
-      </button>
-      <h3 class="sheet-title">طلبات القسم</h3>
-    </div>
-    <div class="sheet-body">
-      <div class="requests-tabs" role="tablist">
-        <button type="button" class="requests-tab active" id="tabCurrentRequests" role="tab" aria-selected="true">
-          <i class="fas fa-clock"></i>
-          <span>الطلبات الحالية</span>
-          <span class="tab-count" id="countCurrentRequests" hidden>0</span>
-        </button>
-        <button type="button" class="requests-tab" id="tabPastRequests" role="tab" aria-selected="false">
-          <i class="fas fa-clock-rotate-left"></i>
-          <span>الطلبات السابقة</span>
-          <span class="tab-count" id="countPastRequests" hidden>0</span>
-        </button>
-      </div>
-      <div id="requestsContainer"></div>
     </div>
   </section>
 
@@ -1007,11 +976,13 @@
       <div class="mc-hero">
         <h2 id="mcClassHeroName" class="mc-class-name">—</h2>
         <div class="mc-hero-actions">
-          <button id="mcAttendBtn" class="mc-btn-attend" type="button">تسجيل الغياب</button>
-          <button id="mcDownloadBtn" class="mc-btn-download" type="button">
+          <!-- First in the DOM = on the right in RTL, beside تسجيل الغياب;
+               icon-only on phones (see .mc-btn-download in user.css). -->
+          <button id="mcDownloadBtn" class="mc-btn-download" type="button" aria-label="تنزيل القائمة" title="تنزيل القائمة">
             <i class="fas fa-file-arrow-down" aria-hidden="true"></i>
             <span>تنزيل القائمة</span>
           </button>
+          <button id="mcAttendBtn" class="mc-btn-attend" type="button">تسجيل الغياب</button>
         </div>
       </div>
       <div class="mc-input-wrap">
@@ -1021,6 +992,39 @@
       <div id="mcStudentsList" class="mc-student-grid"></div>
     </div>
   </section>
+
+  <!-- صفوف أخرى: taking attendance for a class this teacher isn't
+       scheduled to teach right now — confirm the class and pick why. -->
+  <div id="subModal" class="sub-modal" aria-hidden="true">
+    <div class="sub-modal-backdrop"></div>
+    <div class="sub-modal-card" role="dialog" aria-modal="true" aria-labelledby="subModalTitle">
+      <span class="sub-modal-icon"><i class="fas fa-user-clock" aria-hidden="true"></i></span>
+      <h3 id="subModalTitle" class="sub-modal-title">تسجيل الغياب لفصل آخر</h3>
+      <p class="sub-modal-text">أنت على وشك تسجيل الغياب للفصل</p>
+      <div id="subModalClass" class="sub-modal-class">—</div>
+      <div id="subModalMeta" class="sub-modal-meta">—</div>
+      <div class="sub-modal-field">
+        <label for="subReasonSelect">سبب التسجيل</label>
+        <div class="sub-select-wrap">
+          <select id="subReasonSelect" class="sub-select" aria-describedby="subReasonError">
+            <option value="" selected>اختر السبب…</option>
+            <option value="احتياط">احتياط</option>
+            <option value="تبديل">تبديل</option>
+          </select>
+          <i class="fas fa-chevron-down sub-select-chev" aria-hidden="true"></i>
+        </div>
+        <div id="subReasonError" class="sub-reason-error" role="alert" hidden>
+          <i class="fas fa-circle-exclamation" aria-hidden="true"></i>
+          <span>يرجى اختيار السبب أولاً</span>
+        </div>
+      </div>
+      <button id="subModalConfirm" class="sub-modal-confirm" type="button">
+        <i class="fas fa-clipboard-check" aria-hidden="true"></i>
+        <span>تسجيل الغياب</span>
+      </button>
+      <button id="subModalCancel" class="sub-modal-cancel" type="button">إلغاء</button>
+    </div>
+  </div>
 
   <!-- Download choice: PDF or Excel -->
   <div id="dlChoiceModal" class="dl-choice" aria-hidden="true">
@@ -1079,8 +1083,7 @@
     import {
       initializeFirestore, persistentSingleTabManager,
       collection, getDocs, query, where, doc, getDoc, setDoc,
-      addDoc, serverTimestamp, updateDoc, runTransaction,
-      limit, orderBy, onSnapshot
+      serverTimestamp, updateDoc, onSnapshot
     } from "/shared/firebase.js";
     import {
       getOverriddenClassKeys, mergeCustomIntoLessonMap, classKeyFromRow, normalizeClassKey
@@ -1131,6 +1134,9 @@
     const maSavedListeners = new Set();
     const dsAttendance = mountAttendanceSheet({
       db, auth, isPrivilegedEdit: true,
+      // Only the teacher who took attendance may edit it; switched on for
+      // إدارة الغياب holders once the profile loads (see onAuthStateChanged).
+      canEditOthers: false,
       onSaved: () => {
         maSavedListeners.forEach((fn) => { try { fn(); } catch (e) { console.error(e); } });
         if (dsPopoverEl.classList.contains('open')) dsClosePopover();
@@ -1143,35 +1149,6 @@
     // فصولي's "فتح صفحة الطالب" — same shared student-profile sheet
     // Teachers/user.html itself uses.
     const studentNotes = mountStudentNotesSheet({ db, auth });
-
-    /* ========= Telegram backend (طلبات القسم notifications) ========= */
-    const TELEGRAM_BACKEND_BASE_URL = (() => {
-      const fromWindow = String(window.__TELEGRAM_BACKEND_BASE_URL || '').trim();
-      if (fromWindow) return fromWindow.replace(/\/+$/, '');
-      const fromStorage = String(localStorage.getItem('telegramBackendBaseUrl') || '').trim();
-      if (fromStorage) return fromStorage.replace(/\/+$/, '');
-      return 'https://abrschool-bot.onrender.com';
-    })();
-    function backendApiUrl(path){
-      const cleanPath = `/${String(path || '').replace(/^\/+/, '')}`;
-      return `${TELEGRAM_BACKEND_BASE_URL}${cleanPath}`;
-    }
-    // Best-effort — a swap request already saved successfully in Firestore
-    // regardless of whether this notification goes through, so failures
-    // here are swallowed rather than surfaced as a request-creation error.
-    async function notifySwapRequest(requestId){
-      if(!requestId || !auth.currentUser) return;
-      try{
-        const idToken = await auth.currentUser.getIdToken();
-        await fetch(backendApiUrl('/api/telegram/notify-swap-request'), {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
-          body: JSON.stringify({ requestId }),
-        });
-      }catch(e){
-        console.warn('[telegram] notify-swap-request failed:', e?.message || e);
-      }
-    }
 
     /* ========= Constants ========= */
     const DAYS_AR = ["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس"]; // Sun→Thu
@@ -1412,16 +1389,6 @@
     const btnDownloadPdf = document.getElementById('btnDownloadPdf');
     const btnMore  = document.getElementById('btnMore');
 
-    const btnRequests = document.getElementById('btnRequests');
-    const requestsPendingBadge = document.getElementById('requestsPendingBadge');
-    const requestsSheet = document.getElementById('requestsSheet');
-    const closeRequests = document.getElementById('closeRequests');
-    const requestsContainer = document.getElementById('requestsContainer');
-    const tabCurrentRequests = document.getElementById('tabCurrentRequests');
-    const tabPastRequests = document.getElementById('tabPastRequests');
-    const countCurrentRequests = document.getElementById('countCurrentRequests');
-    const countPastRequests = document.getElementById('countPastRequests');
-
     const moreSheet   = document.getElementById('moreSheet');
     const closeMore   = document.getElementById('closeMore');
     const classPicker = document.getElementById('classPicker');
@@ -1453,10 +1420,8 @@
     let currentView = 'today'; // today | week
     let activeTodayISO = null; // what is rendered in day view
     let activeTodayByLesson = new Map(); // current day map for click
-    let activeTodayMeta = new Map(); // lesson -> meta for swap/cover
+    let activeTodayMeta = new Map(); // lesson -> meta for the إدارة الحصة popup
     let activeDayCustomTimes = null; // today's enabled custom schedule's own per-lesson times, if any
-
-    let unsubPendingRequests = null;
 
     const cache = {
       teacherWeek: new Map(), // uid -> Map(iso -> Map(lesson->classText))
@@ -1928,37 +1893,6 @@
       list.sort((a,b)=> a.name.localeCompare(b.name,'ar'));
       cache.teacherList = list;
       return list;
-    }
-
-    async function getTeachersByDepartment(department) {
-      const teachers = await loadTeachersList();
-      const normalizedDepartment = resolveDepartmentName(department);
-      return teachers.filter(teacher => {
-        const teacherDepartment = teacher.normalizedDepartment || resolveDepartmentName(teacher.department || teacher.subject || '');
-        return teacherDepartment === normalizedDepartment &&
-               teacher.uid !== currentUser?.uid;
-      }).sort((a, b) => a.name.localeCompare(b.name, 'ar'));
-    }
-
-    /* ========= Find Head of Department ========= */
-    async function findHeadOfDepartment(department){
-      const normalizedDepartment = resolveDepartmentName(department);
-      if(!normalizedDepartment) return null;
-      try{
-        const teachers = await loadTeachersList();
-        const headDoc = teachers.find(t=>
-          (t.role || '').toString().toLowerCase() === 'head' &&
-          (t.normalizedDepartment || resolveDepartmentName(t.department || t.subject || '')) === normalizedDepartment
-        );
-        if(!headDoc) return null;
-        return {
-          uid: headDoc.uid,
-          name: headDoc.name
-        };
-      }catch(e){
-        console.error('Error finding head:', e);
-        return null;
-      }
     }
 
     /* ========= Overrides ========= */
@@ -2556,47 +2490,11 @@
       return `${grade} / ${section}${track ? ` ${track}` : ''}`.trim();
     }
 
-    function isSchoolDayISO(iso){
-      if (!iso) return false;
-      const day = isoToUTCDate(iso).getUTCDay();
-      return day >= 0 && day <= 4;
-    }
-
-    function isPastISO(iso){
-      if (!iso) return false;
-      return iso < kuwaitTodayISO();
-    }
-
     function normalizeLessonNumber(value){
       const lesson = Number(value);
       if (!Number.isFinite(lesson)) return null;
       if (lesson < 1 || lesson > FIXED_LESSON_COUNT) return null;
       return Math.floor(lesson);
-    }
-
-    async function getTeacherSlotsForDate(uid, dateISO){
-      if (!uid || !dateISO) return [];
-      const map = await buildTodayMapWithOverrides(uid, dateISO);
-      const slots = [];
-      for (let i = 1; i <= FIXED_LESSON_COUNT; i++) {
-        const hit = map.get(String(i));
-        if (!hit || hit._coveredAway) continue;
-        slots.push({
-          date: dateISO,
-          lesson: i,
-          classKey: hit.classKey || buildClassKeyFromScheduleData(hit) || '—',
-          subject: hit.subject || '',
-          teacherUid: uid
-        });
-      }
-      return slots;
-    }
-
-    async function getTeacherSlotForDateLesson(uid, dateISO, lesson){
-      const lessonNum = normalizeLessonNumber(lesson);
-      if (!uid || !dateISO || !lessonNum) return null;
-      const slots = await getTeacherSlotsForDate(uid, dateISO);
-      return slots.find(x => x.lesson === lessonNum) || null;
     }
 
     async function loadTodayForTeacher(uid, dateISO){
@@ -4013,35 +3911,8 @@
       });
     }
 
-    /* ========= Swap/Cover UX ========= */
-
-    function lessonInfoBox(meta){
-      const dayName = (meta.date === kuwaitTodayISO()) ? 'اليوم' : (dayNameByISO(meta.date) || meta.date);
-      return `
-        <div class="info-grid">
-          <div class="info-box">
-            <div class="info-k"><i class="far fa-calendar"></i> التاريخ</div>
-            <div class="info-v">${escapeHtml(dayName)} | ${escapeHtml(meta.date)}</div>
-          </div>
-          <div class="info-box">
-            <div class="info-k"><i class="far fa-clock"></i> الوقت</div>
-            <div class="info-v">${escapeHtml(lessonTimeLabel(meta.lesson))}</div>
-          </div>
-          <div class="info-box">
-            <div class="info-k"><i class="fas fa-hashtag"></i> الحصة</div>
-            <div class="info-v">${escapeHtml(LESSONS_AR[meta.lesson-1] || `الحصة #${meta.lesson}`)} (#${meta.lesson})</div>
-          </div>
-          <div class="info-box">
-            <div class="info-k"><i class="fas fa-users"></i> الصف</div>
-            <div class="info-v">${escapeHtml(meta.classKey || '—')}</div>
-          </div>
-        </div>
-      `;
-    }
-
-    // إدارة الحصة popup's own hero + chip layout — a dedicated function
-    // (not lessonInfoBox, which openRequestModal's cover/swap form still
-    // uses) so this redesign stays scoped to this one popup.
+    /* ========= إدارة الحصة (lesson popup) ========= */
+    // The popup's own hero + chip layout.
     function lessonActionsHero(meta){
       const dayName = (meta.date === kuwaitTodayISO()) ? 'اليوم' : (dayNameByISO(meta.date) || meta.date);
       const lessonName = LESSONS_AR[meta.lesson-1] || `الحصة #${meta.lesson}`;
@@ -4072,14 +3943,6 @@
       `;
     }
 
-    function slotSummaryLine(slot){
-      if(!slot) return '—';
-      const lesson = normalizeLessonNumber(slot.lesson) || 1;
-      const dayName = dayNameByISO(slot.date) || slot.date || '—';
-      const classKey = slot.classKey || '—';
-      return `${dayName} | ${slot.date} | ${LESSONS_AR[lesson-1] || `الحصة #${lesson}`} (#${lesson}) | ${classKey}`;
-    }
-
     function openLessonActionsModal(slotOrLesson){
       let meta = null;
       if (typeof slotOrLesson === 'number') {
@@ -4097,7 +3960,7 @@
       }
 
       if(!meta || !meta.date || !meta.lesson || meta._coveredAway){
-        toast({ title: 'لا يمكن إنشاء طلب', text: 'هذه الحصة ليست متاحة للطلب.', icon: 'fa-circle-exclamation' });
+        toast({ title: 'الحصة غير متاحة', text: 'لا يمكن فتح هذه الحصة.', icon: 'fa-circle-exclamation' });
         return;
       }
 
@@ -4105,14 +3968,6 @@
 
       const footer = `
         <div class="la-actions">
-          <div class="la-actions-row">
-            <button id="actCover" class="la-btn-secondary" type="button">
-              <i class="fas fa-user-check"></i> طلب تغطية
-            </button>
-            <button id="actSwap" class="la-btn-secondary" type="button">
-              <i class="fas fa-right-left"></i> طلب تبديل
-            </button>
-          </div>
           <button id="actAttendance" class="la-btn-attendance" type="button">
             <i class="fas fa-clipboard-check"></i>
             <span>تسجيل الغياب</span>
@@ -4164,1245 +4019,6 @@
         } finally {
           button.disabled = false;
         }
-      });
-      document.getElementById('actCover').addEventListener('click', ()=> openRequestModal('cover', meta));
-      document.getElementById('actSwap').addEventListener('click', ()=> openRequestModal('swap', meta));
-    }
-
-    function teacherSelectOptions(list, excludeUid){
-      const filtered = (list || []).filter(t => t.uid !== excludeUid);
-      const options = filtered.map(t => {
-        const dep = resolveDepartmentName(t.normalizedDepartment || t.department || t.subject || '');
-        const depSuffix = dep ? ` - ${escapeHtml(dep)}` : '';
-        return `<option value="${escapeHtml(t.uid)}">${escapeHtml(t.name)}${depSuffix}</option>`;
-      }).join('');
-      return `<option value="">اختر المعلّم...</option>${options}`;
-    }
-
-    async function openRequestModal(type, meta){
-      const isSwap = type === 'swap';
-      const todayISO = kuwaitTodayISO();
-      const myName = currentTeacherProfile?.name || currentTeacherProfile?.teacherName || currentTeacherProfile?.fullName || currentTeacherProfile?.displayName || '';
-      const teachers = await loadTeachersList();
-
-      const fromDepartment = resolveDepartmentName(
-        currentTeacherProfile?.department || currentTeacherProfile?.subject || ''
-      );
-      let fromHead = null;
-      if (fromDepartment) {
-        fromHead = await findHeadOfDepartment(fromDepartment);
-      }
-
-      if (!fromHead) {
-        toast({
-          title: 'خطأ',
-          text: 'لا يمكن العثور على رئيس القسم الخاص بك. تأكد من أن قسمك له رئيس معيّن.',
-          icon: 'fa-triangle-exclamation',
-          ms: 5000
-        });
-        return;
-      }
-
-      const defaultFromDate = safeText(meta?.date || todayISO).trim() || todayISO;
-      const defaultFromLesson = normalizeLessonNumber(meta?.lesson);
-      const defaultFromClassKey = safeText(meta?.classKey).trim() || '—';
-
-      const departmentSet = new Set(DEPARTMENT_LIST);
-      teachers.forEach(t => {
-        const dep = resolveDepartmentName(t.normalizedDepartment || t.department || t.subject || '');
-        if (dep) departmentSet.add(dep);
-      });
-      const departmentOptions = Array.from(departmentSet)
-        .sort((a, b) => a.localeCompare(b, 'ar'))
-        .map(dep => `<option value="${escapeHtml(dep)}">${escapeHtml(dep)}</option>`)
-        .join('');
-
-      let body = `
-        ${lessonInfoBox({ ...meta, date: defaultFromDate, lesson: defaultFromLesson || 1, classKey: defaultFromClassKey })}
-        <div class="split">
-          <div class="info-box">
-            <div class="info-k"><i class="fas fa-calendar-day"></i> 1) اختر تاريخ حصتك</div>
-            <div class="input-wrap" style="margin-top:10px">
-              <input id="reqFromDate" class="input" type="date" min="${todayISO}" value="${escapeHtml(defaultFromDate)}" />
-            </div>
-            <div class="muted" style="margin-top:8px">يمكنك اختيار اليوم الحالي أو أي يوم مستقبلي.</div>
-          </div>
-          <div class="info-box">
-            <div class="info-k"><i class="far fa-clock"></i> 2) اختر حصتك</div>
-            <div class="input-wrap" style="margin-top:10px">
-              <select id="reqFromLesson" class="select">
-                <option value="">اختر الحصة...</option>
-              </select>
-            </div>
-            <div class="muted" style="margin-top:8px" id="reqFromPreview">—</div>
-          </div>
-        </div>
-      `;
-
-      if (isSwap) {
-        body += `
-          <div class="split">
-            <div class="info-box">
-              <div class="info-k"><i class="fas fa-building"></i> 3) اختر القسم</div>
-              <div class="input-wrap" style="margin-top:10px">
-                <select id="reqDepartment" class="select">
-                  <option value="">اختر القسم...</option>
-                  ${departmentOptions}
-                </select>
-              </div>
-            </div>
-            <div class="info-box">
-              <div class="info-k"><i class="fas fa-user"></i> 4) اختر المعلّم</div>
-              <div class="input-wrap" style="margin-top:10px">
-                <select id="reqTeacherUid" class="select" disabled>
-                  <option value="">اختر المعلّم...</option>
-                </select>
-              </div>
-              <div class="muted" style="margin-top:8px" id="teacherSelectMessage">اختر القسم أولاً.</div>
-            </div>
-          </div>
-          <div class="split">
-            <div class="info-box">
-              <div class="info-k"><i class="fas fa-calendar-week"></i> 5) تاريخ حصة المعلّم الآخر</div>
-              <div class="input-wrap" style="margin-top:10px">
-                <input id="reqToDate" class="input" type="date" min="${todayISO}" value="${escapeHtml(defaultFromDate)}" />
-              </div>
-            </div>
-            <div class="info-box">
-              <div class="info-k"><i class="far fa-clock"></i> 6) حصة المعلّم الآخر</div>
-              <div class="input-wrap" style="margin-top:10px">
-                <select id="reqToLesson" class="select" disabled>
-                  <option value="">اختر الحصة...</option>
-                </select>
-              </div>
-              <div class="muted" style="margin-top:8px" id="reqToPreview">اختر المعلّم أولاً.</div>
-            </div>
-          </div>
-        `;
-      } else {
-        body += `
-          <div class="split">
-            <div class="info-box">
-              <div class="info-k"><i class="fas fa-building"></i> 3) اختر القسم</div>
-              <div class="input-wrap" style="margin-top:10px">
-                <select id="reqDepartment" class="select">
-                  <option value="">كل الأقسام</option>
-                  ${departmentOptions}
-                </select>
-              </div>
-              <div class="muted" style="margin-top:8px">اختر قسمًا لعرض معلّميه فقط.</div>
-            </div>
-            <div class="info-box">
-              <div class="info-k"><i class="fas fa-user"></i> 4) اختر المعلّم للتغطية</div>
-              <div class="input-wrap" style="margin-top:10px">
-                <select id="reqTeacherUid" class="select">
-                  ${teacherSelectOptions(teachers, currentUser.uid)}
-                </select>
-              </div>
-              <div class="muted" style="margin-top:8px" id="teacherSelectMessage">يمكنك اختيار أي معلّم حتى لو لم يكن لديه حصة في هذا الوقت.</div>
-            </div>
-          </div>
-        `;
-      }
-
-      body += `
-        <div class="info-box">
-          <div class="info-k"><i class="fas fa-message"></i> ملاحظة (اختياري)</div>
-          <div class="input-wrap" style="margin-top:10px">
-            <input id="reqMessage" class="input" maxlength="160" placeholder="مثال: عندي ظرف، هل يناسبك التبديل؟" />
-          </div>
-        </div>
-        <div id="reqStateHint" class="hint">
-          <i class="fas fa-circle-info" style="margin-top:2px"></i>
-          <div>حدد تفاصيل الحصص لإكمال الطلب.</div>
-        </div>
-      `;
-
-      const actionTitle = isSwap ? 'طلب تبديل' : 'طلب تغطية';
-      const footer = `
-        <button id="sendReq" class="filter-btn btn-solid" type="button" disabled>
-          <i class="fas fa-paper-plane"></i> إرسال الطلب
-        </button>
-        <button id="backToActions" class="filter-btn btn-ghost" type="button">
-          <i class="fas fa-arrow-right"></i> رجوع
-        </button>
-      `;
-
-      openModal({ title: actionTitle, bodyHtml: body, footerHtml: footer });
-      document.getElementById('backToActions').addEventListener('click', ()=> openLessonActionsModal(meta));
-
-      const sendBtn = document.getElementById('sendReq');
-      const hintEl = document.getElementById('reqStateHint');
-      const fromDateInput = document.getElementById('reqFromDate');
-      const fromLessonSelect = document.getElementById('reqFromLesson');
-      const fromPreview = document.getElementById('reqFromPreview');
-      const teacherSelect = document.getElementById('reqTeacherUid');
-      const reqMessage = document.getElementById('reqMessage');
-
-      // Both request types now have a department filter above the teacher
-      // list, so these are no longer swap-only.
-      const departmentSelect = document.getElementById('reqDepartment');
-      const teacherMessage = document.getElementById('teacherSelectMessage');
-      const toDateInput = isSwap ? document.getElementById('reqToDate') : null;
-      const toLessonSelect = isSwap ? document.getElementById('reqToLesson') : null;
-      const toPreview = isSwap ? document.getElementById('reqToPreview') : null;
-
-      const state = {
-        fromSlots: [],
-        toSlots: [],
-        fromSlot: null,
-        toSlot: null,
-        toUid: '',
-        toDepartment: ''
-      };
-      let fromLoadToken = 0;
-      let toLoadToken = 0;
-
-      function setHint(text, isError = false){
-        if (!hintEl) return;
-        hintEl.style.background = isError ? 'rgba(239, 68, 68, 0.12)' : 'rgba(2, 43, 66, 0.06)';
-        hintEl.style.borderColor = isError ? 'rgba(239, 68, 68, 0.25)' : 'rgba(2, 43, 66, 0.10)';
-        hintEl.style.color = isError ? '#991b1b' : 'var(--primary)';
-        hintEl.innerHTML = `
-          <i class="fas ${isError ? 'fa-triangle-exclamation' : 'fa-circle-info'}" style="margin-top:2px"></i>
-          <div>${escapeHtml(text)}</div>
-        `;
-      }
-
-      function fillSlotSelect(selectEl, slots, placeholder){
-        if (!selectEl) return;
-        const options = (slots || []).map(slot => `
-          <option value="${slot.lesson}">
-            ${escapeHtml(LESSONS_AR[slot.lesson-1] || `الحصة #${slot.lesson}`)} (#${slot.lesson}) • ${escapeHtml(lessonTimeLabel(slot.lesson))} • ${escapeHtml(slot.classKey || '—')}
-          </option>
-        `).join('');
-        selectEl.innerHTML = `<option value="">${escapeHtml(placeholder)}</option>${options}`;
-      }
-
-      function updateSlotPreview(el, slot, fallbackText){
-        if (!el) return;
-        if (!slot) {
-          el.textContent = fallbackText;
-          return;
-        }
-        el.textContent = slotSummaryLine(slot);
-      }
-
-      function validateDateInput(dateISO){
-        if (!dateISO) return 'اختر التاريخ.';
-        if (isPastISO(dateISO)) return 'لا يمكن اختيار تاريخ ماضٍ.';
-        if (!isSchoolDayISO(dateISO)) return 'اختر يومًا دراسيًا من الأحد إلى الخميس.';
-        return '';
-      }
-
-      function syncSendState(){
-        const srcDateErr = validateDateInput(fromDateInput.value);
-        if (srcDateErr) {
-          sendBtn.disabled = true;
-          setHint(`الحصة الأساسية: ${srcDateErr}`, true);
-          return;
-        }
-        if (!state.fromSlot) {
-          sendBtn.disabled = true;
-          setHint('اختر حصتك الأساسية أولاً.', true);
-          return;
-        }
-        if (!state.toUid) {
-          sendBtn.disabled = true;
-          setHint('اختر المعلّم المطلوب.', true);
-          return;
-        }
-        if (state.toUid === currentUser.uid) {
-          sendBtn.disabled = true;
-          setHint('لا يمكنك إرسال طلب لنفسك.', true);
-          return;
-        }
-
-        if (isSwap) {
-          const toDateErr = validateDateInput(toDateInput.value);
-          if (toDateErr) {
-            sendBtn.disabled = true;
-            setHint(`حصة المعلّم الآخر: ${toDateErr}`, true);
-            return;
-          }
-          if (!state.toSlot) {
-            sendBtn.disabled = true;
-            setHint('اختر حصة المعلّم الآخر لإتمام التبديل.', true);
-            return;
-          }
-          sendBtn.disabled = false;
-          setHint(`سيتم التبديل بين: ${slotSummaryLine(state.fromSlot)} ⇄ ${slotSummaryLine(state.toSlot)}`, false);
-          return;
-        }
-
-        sendBtn.disabled = false;
-        setHint(`سيتم إرسال طلب تغطية للحصة: ${slotSummaryLine(state.fromSlot)}`, false);
-      }
-
-      async function refreshFromSlots(preferredLesson = null){
-        const token = ++fromLoadToken;
-        const dateISO = safeText(fromDateInput.value).trim();
-        state.fromSlots = [];
-        state.fromSlot = null;
-        fillSlotSelect(fromLessonSelect, [], 'اختر الحصة...');
-        updateSlotPreview(fromPreview, null, 'اختر التاريخ ثم الحصة.');
-
-        const dateErr = validateDateInput(dateISO);
-        if (dateErr) {
-          syncSendState();
-          return;
-        }
-
-        const slots = await getTeacherSlotsForDate(currentUser.uid, dateISO);
-        if (token !== fromLoadToken) return;
-        state.fromSlots = slots;
-        fillSlotSelect(fromLessonSelect, slots, slots.length ? 'اختر الحصة...' : 'لا توجد حصص في هذا التاريخ');
-
-        const selected = normalizeLessonNumber(preferredLesson || fromLessonSelect.value);
-        if (selected && slots.some(s => s.lesson === selected)) {
-          fromLessonSelect.value = String(selected);
-        } else if (defaultFromLesson && slots.some(s => s.lesson === defaultFromLesson)) {
-          fromLessonSelect.value = String(defaultFromLesson);
-        } else if (slots.length === 1) {
-          fromLessonSelect.value = String(slots[0].lesson);
-        }
-
-        const chosenLesson = normalizeLessonNumber(fromLessonSelect.value);
-        state.fromSlot = chosenLesson ? (slots.find(s => s.lesson === chosenLesson) || null) : null;
-        updateSlotPreview(fromPreview, state.fromSlot, slots.length ? 'اختر الحصة.' : 'لا توجد حصص لك في هذا التاريخ.');
-        syncSendState();
-      }
-
-      async function refreshTargetSlots(preferredLesson = null){
-        if (!isSwap) return;
-        const token = ++toLoadToken;
-        state.toSlots = [];
-        state.toSlot = null;
-        fillSlotSelect(toLessonSelect, [], 'اختر الحصة...');
-        updateSlotPreview(toPreview, null, 'اختر المعلّم والتاريخ.');
-        toLessonSelect.disabled = true;
-
-        const toUid = safeText(teacherSelect.value).trim();
-        state.toUid = toUid;
-        const dateISO = safeText(toDateInput.value).trim();
-
-        const dateErr = validateDateInput(dateISO);
-        if (!toUid || dateErr) {
-          syncSendState();
-          return;
-        }
-
-        const slots = await getTeacherSlotsForDate(toUid, dateISO);
-        if (token !== toLoadToken) return;
-        state.toSlots = slots;
-        fillSlotSelect(toLessonSelect, slots, slots.length ? 'اختر الحصة...' : 'لا توجد حصص للمعلم في هذا التاريخ');
-        toLessonSelect.disabled = !slots.length;
-
-        const selected = normalizeLessonNumber(preferredLesson || toLessonSelect.value);
-        if (selected && slots.some(s => s.lesson === selected)) {
-          toLessonSelect.value = String(selected);
-        } else if (slots.length === 1) {
-          toLessonSelect.value = String(slots[0].lesson);
-        }
-
-        const chosenLesson = normalizeLessonNumber(toLessonSelect.value);
-        state.toSlot = chosenLesson ? (slots.find(s => s.lesson === chosenLesson) || null) : null;
-        updateSlotPreview(toPreview, state.toSlot, slots.length ? 'اختر حصة المعلم.' : 'لا توجد حصص في هذا التاريخ.');
-        syncSendState();
-      }
-
-      if (isSwap) {
-        departmentSelect.addEventListener('change', async () => {
-          const selectedDepartment = resolveDepartmentName(departmentSelect.value);
-          state.toDepartment = selectedDepartment;
-          teacherSelect.innerHTML = '<option value="">اختر المعلّم...</option>';
-          teacherSelect.disabled = true;
-          teacherMessage.textContent = selectedDepartment ? 'جاري تحميل المعلمين...' : 'اختر القسم أولاً.';
-          state.toUid = '';
-          await refreshTargetSlots();
-
-          if (!selectedDepartment) {
-            syncSendState();
-            return;
-          }
-
-          const departmentTeachers = await getTeachersByDepartment(selectedDepartment);
-          if (!departmentTeachers.length) {
-            teacherMessage.textContent = 'لا يوجد معلمون في هذا القسم.';
-            syncSendState();
-            return;
-          }
-
-          teacherSelect.disabled = false;
-          teacherMessage.textContent = 'اختر المعلّم.';
-          departmentTeachers.forEach(teacher => {
-            const opt = document.createElement('option');
-            opt.value = teacher.uid;
-            opt.textContent = teacher.name;
-            teacherSelect.appendChild(opt);
-          });
-          syncSendState();
-        });
-
-        teacherSelect.addEventListener('change', async () => {
-          const selectedTeacher = teachers.find(t => t.uid === teacherSelect.value);
-          if (selectedTeacher && !state.toDepartment) {
-            state.toDepartment = resolveDepartmentName(
-              selectedTeacher.normalizedDepartment || selectedTeacher.department || selectedTeacher.subject || ''
-            );
-          }
-          await refreshTargetSlots();
-        });
-        toDateInput.addEventListener('change', async () => {
-          await refreshTargetSlots();
-        });
-        toLessonSelect.addEventListener('change', () => {
-          const chosenLesson = normalizeLessonNumber(toLessonSelect.value);
-          state.toSlot = chosenLesson ? (state.toSlots.find(s => s.lesson === chosenLesson) || null) : null;
-          updateSlotPreview(toPreview, state.toSlot, state.toSlots.length ? 'اختر حصة المعلم.' : 'لا توجد حصص في هذا التاريخ.');
-          syncSendState();
-        });
-      } else {
-        // Narrow the teacher list to one department. Unlike the swap flow,
-        // the list starts populated with everyone and the filter is optional
-        // — a cover can legitimately be asked of a teacher in another
-        // department, so "كل الأقسام" has to stay reachable.
-        departmentSelect.addEventListener('change', () => {
-          const selected = resolveDepartmentName(departmentSelect.value);
-          // Widened to every subject eligible under this department, not
-          // just an exact department-name match — الجغرافيا والتاريخ and
-          // العلوم الفلسفية share one academic supervision at this school,
-          // so picking either one should also surface the other's
-          // teachers as valid cover candidates.
-          const eligibleSubjects = selected ? getDepartmentSubjectFilters(selected) : null;
-          const inDepartment = selected
-            ? teachers.filter(t => {
-                const subject = (t.subject || '').toString().trim();
-                if (subject && eligibleSubjects.includes(subject)) return true;
-                return resolveDepartmentName(t.normalizedDepartment || t.department || t.subject || '') === selected;
-              })
-            : teachers;
-
-          teacherSelect.innerHTML = teacherSelectOptions(inDepartment, currentUser.uid);
-          state.toUid = '';
-          state.toDepartment = selected;
-
-          const count = inDepartment.filter(t => t.uid !== currentUser.uid).length;
-          if (!selected) {
-            teacherMessage.textContent = 'يمكنك اختيار أي معلّم حتى لو لم يكن لديه حصة في هذا الوقت.';
-          } else if (!count) {
-            teacherMessage.textContent = 'لا يوجد معلمون في هذا القسم.';
-          } else {
-            teacherMessage.textContent = 'اختر المعلّم من هذا القسم.';
-          }
-          syncSendState();
-        });
-
-        teacherSelect.addEventListener('change', () => {
-          state.toUid = safeText(teacherSelect.value).trim();
-          syncSendState();
-        });
-      }
-
-      fromDateInput.addEventListener('change', async () => {
-        await refreshFromSlots();
-      });
-      fromLessonSelect.addEventListener('change', () => {
-        const chosenLesson = normalizeLessonNumber(fromLessonSelect.value);
-        state.fromSlot = chosenLesson ? (state.fromSlots.find(s => s.lesson === chosenLesson) || null) : null;
-        updateSlotPreview(fromPreview, state.fromSlot, state.fromSlots.length ? 'اختر الحصة.' : 'لا توجد حصص لك في هذا التاريخ.');
-        syncSendState();
-      });
-
-      await refreshFromSlots(defaultFromLesson);
-      if (!isSwap) {
-        state.toUid = safeText(teacherSelect.value).trim();
-        syncSendState();
-      }
-
-      sendBtn.addEventListener('click', async ()=>{
-        const toUid = safeText(teacherSelect.value).trim();
-        if (!toUid) {
-          toast({ title: 'ناقص', text: 'اختر المعلّم أولاً.', icon: 'fa-circle-exclamation' });
-          return;
-        }
-        if (toUid === currentUser.uid) {
-          toast({ title: 'غير صالح', text: 'لا يمكنك إرسال طلب لنفسك.', icon: 'fa-circle-exclamation' });
-          return;
-        }
-
-        const sourceDate = safeText(fromDateInput.value).trim();
-        const sourceLesson = normalizeLessonNumber(fromLessonSelect.value);
-        const sourceSlot = await getTeacherSlotForDateLesson(currentUser.uid, sourceDate, sourceLesson);
-        if (!sourceSlot) {
-          toast({ title: 'تعذّر إكمال الطلب', text: 'تعذّر العثور على حصتك في التاريخ/الحصة المحددة.', icon: 'fa-circle-exclamation' });
-          return;
-        }
-
-        const targetTeacher = teachers.find(t => t.uid === toUid) || null;
-        const toName = targetTeacher?.name || (await getTeacherName(toUid));
-        let toDepartment = isSwap
-          ? resolveDepartmentName(state.toDepartment || departmentSelect?.value || '')
-          : resolveDepartmentName(targetTeacher?.normalizedDepartment || targetTeacher?.department || targetTeacher?.subject || '');
-
-        if (!toDepartment) {
-          toDepartment = resolveDepartmentName(targetTeacher?.subject || '');
-        }
-        if (!toDepartment) {
-          toast({
-            title: 'خطأ',
-            text: 'قسم المعلم المطلوب غير محدد. يرجى تحديث بيانات المعلم أولاً.',
-            icon: 'fa-triangle-exclamation'
-          });
-          return;
-        }
-
-        let targetSlot = null;
-        if (isSwap) {
-          const targetDate = safeText(toDateInput.value).trim();
-          const targetLesson = normalizeLessonNumber(toLessonSelect.value);
-          targetSlot = await getTeacherSlotForDateLesson(toUid, targetDate, targetLesson);
-          if (!targetSlot) {
-            toast({
-              title: 'تعذّر إتمام التبديل',
-              text: 'المعلم المطلوب لا يملك حصة في التاريخ/الحصة المحددة.',
-              icon: 'fa-circle-exclamation'
-            });
-            return;
-          }
-        }
-
-        let toHead = null;
-        if (toDepartment === fromDepartment) {
-          toHead = fromHead;
-        } else {
-          toHead = await findHeadOfDepartment(toDepartment);
-          if (!toHead) {
-            toast({
-              title: 'خطأ',
-              text: 'لا يمكن العثور على رئيس قسم المعلّم المطلوب. تأكد من أن قسمه له رئيس معيّن.',
-              icon: 'fa-triangle-exclamation',
-              ms: 5000
-            });
-            return;
-          }
-        }
-
-        try{
-          const qDup = query(
-            collection(db,'swapRequests'),
-            where('fromTeacherUid','==', currentUser.uid),
-            where('date','==', sourceSlot.date),
-            where('lesson','==', sourceSlot.lesson),
-            where('status','in', ['pending_head_from', 'pending_head_to', 'pending_head']),
-            limit(1)
-          );
-          const dup = await getDocs(qDup);
-          if(!dup.empty){
-            toast({ title: 'موجود مسبقاً', text: 'يوجد طلب معلّق لهذه الحصة بالفعل.', icon: 'fa-clock' });
-            closeModal();
-            return;
-          }
-        }catch(e){
-          console.warn('dup check skipped', e);
-        }
-
-        sendBtn.setAttribute('disabled','disabled');
-        sendBtn.classList.add('loading');
-
-        try{
-          const msg = safeText(reqMessage.value).trim();
-          const fromName = myName || (await getTeacherName(currentUser.uid));
-
-          const newRequestRef = await addDoc(collection(db,'swapRequests'), {
-            date: sourceSlot.date,
-            lesson: sourceSlot.lesson,
-            fromDate: sourceSlot.date,
-            fromLesson: sourceSlot.lesson,
-            fromClassKey: sourceSlot.classKey,
-            toDate: isSwap ? targetSlot.date : null,
-            toLesson: isSwap ? targetSlot.lesson : null,
-            toClassKey: isSwap ? targetSlot.classKey : null,
-            type,
-            requestVersion: 2,
-
-            fromTeacherUid: currentUser.uid,
-            fromTeacherName: fromName,
-            fromDepartment,
-            fromSubject: currentTeacherProfile?.subject || '',
-
-            toTeacherUid: toUid,
-            toTeacherName: toName,
-            toDepartment,
-            toSubject: targetTeacher?.subject || '',
-
-            fromHeadUid: fromHead.uid,
-            fromHeadName: fromHead.name,
-            toHeadUid: toHead.uid,
-            toHeadName: toHead.name,
-
-            status: 'pending_head_from',
-            stage: 'head_from',
-
-            message: msg || null,
-            createdAt: serverTimestamp(),
-
-            headUid: fromHead.uid,
-            headName: fromHead.name,
-            headStatus: 'pending',
-            headRespondedAt: null,
-            headNote: null,
-            respondedAt: null
-          });
-
-          toast({ title: 'تم', text: 'تم إرسال الطلب.', icon: 'fa-check-circle' });
-          notifySwapRequest(newRequestRef.id);
-          closeModal();
-        }catch(e){
-          console.error(e);
-          toast({ title: 'خطأ', text: 'فشل إرسال الطلب.', icon: 'fa-exclamation-circle' });
-        }finally{
-          sendBtn.classList.remove('loading');
-          syncSendState();
-        }
-      });
-    }
-
-    /* ========= Requests Sheet (طلبات القسم — department heads only) =========
-       Ported from depHead/schedual.html so heads no longer need that separate
-       page. headUid is set once auth confirms currentRole === 'head'. */
-    let headUid = '';
-    let unsubRequestsFrom = null;
-    let unsubRequestsTo = null;
-    let requestsFromMap = new Map();
-    let requestsToMap = new Map();
-    let requestsMap = new Map();
-    let requestsTab = 'current'; // 'current' = still pending on someone | 'past' = accepted/denied
-    const PAST_REQUEST_STATUSES = new Set(['accepted', 'denied']);
-
-    function openRequestsSheet(){
-      requestsSheet.classList.add('open');
-      requestsSheet.setAttribute('aria-hidden','false');
-      document.body.style.overflow = 'hidden';
-      requestsTab = 'current';
-      tabCurrentRequests.classList.add('active');
-      tabCurrentRequests.setAttribute('aria-selected','true');
-      tabPastRequests.classList.remove('active');
-      tabPastRequests.setAttribute('aria-selected','false');
-      renderAllRequests();
-    }
-
-    function closeRequestsSheet(){
-      requestsSheet.classList.remove('open');
-      requestsSheet.setAttribute('aria-hidden','true');
-      document.body.style.overflow = '';
-    }
-
-    function stopRequestsListeners(){
-      if(unsubRequestsFrom) unsubRequestsFrom();
-      if(unsubRequestsTo) unsubRequestsTo();
-      unsubRequestsFrom = null;
-      unsubRequestsTo = null;
-      requestsFromMap.clear();
-      requestsToMap.clear();
-      requestsMap.clear();
-      requestsPendingBadge.hidden = true;
-      btnRequests.setAttribute('aria-label', 'طلبات القسم');
-    }
-
-    function setRequestsTab(tab){
-      requestsTab = tab;
-      tabCurrentRequests.classList.toggle('active', tab === 'current');
-      tabCurrentRequests.setAttribute('aria-selected', tab === 'current' ? 'true' : 'false');
-      tabPastRequests.classList.toggle('active', tab === 'past');
-      tabPastRequests.setAttribute('aria-selected', tab === 'past' ? 'true' : 'false');
-      renderAllRequests();
-    }
-    tabCurrentRequests.addEventListener('click', () => setRequestsTab('current'));
-    tabPastRequests.addEventListener('click', () => setRequestsTab('past'));
-
-    function renderAllRequests(){
-      const all = Array.from(requestsMap.values()).sort((a, b) => {
-        const aTime = a.request.createdAt?.toMillis() || 0;
-        const bTime = b.request.createdAt?.toMillis() || 0;
-        return bTime - aTime;
-      });
-
-      const currentCount = all.filter(({request}) => !PAST_REQUEST_STATUSES.has(request.status)).length;
-      const pastCount = all.length - currentCount;
-      const pendingForHead = all.filter(({request}) =>
-        (request.status === 'pending_head_from' && request.fromHeadUid === headUid) ||
-        (request.status === 'pending_head_to' && request.toHeadUid === headUid)
-      ).length;
-      requestsPendingBadge.hidden = pendingForHead === 0;
-      requestsPendingBadge.textContent = pendingForHead > 99 ? '٩٩+' : toArabicDigits(pendingForHead);
-      btnRequests.setAttribute('aria-label', pendingForHead
-        ? `طلبات القسم، ${toArabicDigits(pendingForHead)} بانتظار موافقتك`
-        : 'طلبات القسم');
-      countCurrentRequests.hidden = currentCount === 0;
-      countCurrentRequests.textContent = String(currentCount);
-      countPastRequests.hidden = pastCount === 0;
-      countPastRequests.textContent = String(pastCount);
-
-      const visible = all.filter(({request}) =>
-        requestsTab === 'past' ? PAST_REQUEST_STATUSES.has(request.status) : !PAST_REQUEST_STATUSES.has(request.status)
-      );
-
-      requestsContainer.innerHTML = '';
-      if(visible.length === 0){
-        requestsContainer.innerHTML = `<div style="text-align:center; padding:40px; color:var(--muted); font-weight:700;">${requestsTab === 'past' ? 'لا توجد طلبات سابقة.' : 'لا توجد طلبات حالياً.'}</div>`;
-        return;
-      }
-
-      visible.forEach(({id, request}) => {
-        const card = renderRequestCard(id, request);
-        requestsContainer.appendChild(card);
-      });
-
-      requestsContainer.querySelectorAll('.btn-approve').forEach(btn => {
-        btn.addEventListener('click', () => handleRequestApprove(btn.dataset.id));
-      });
-      requestsContainer.querySelectorAll('.btn-deny').forEach(btn => {
-        btn.addEventListener('click', () => handleRequestDeny(btn.dataset.id));
-      });
-    }
-
-    function renderRequestCard(requestDocId, request){
-      const card = document.createElement('div');
-      card.className = 'request-card';
-      card.dataset.id = requestDocId;
-
-      const typeLabel = request.type === 'cover' ? 'تغطية' : 'تبديل';
-      const typeClass = request.type === 'cover' ? 'type-cover' : 'type-swap';
-
-      let statusLabel = '';
-      let statusClass = '';
-      switch(request.status) {
-        case 'pending_head_from':
-          statusLabel = 'بانتظار موافقة رئيس قسم المرسل';
-          statusClass = 'status-pending';
-          break;
-        case 'pending_head_to':
-          statusLabel = 'بانتظار موافقة رئيس قسم المستلم';
-          statusClass = 'status-pending';
-          break;
-        case 'accepted':
-          statusLabel = 'مقبول';
-          statusClass = 'status-accepted';
-          break;
-        case 'denied':
-          statusLabel = 'مرفوض';
-          statusClass = 'status-denied';
-          break;
-        default:
-          statusLabel = request.status || '—';
-          statusClass = 'status-pending';
-      }
-
-      const isToMe = request.toHeadUid === headUid;
-      const isFromMe = request.fromHeadUid === headUid;
-
-      // Show action buttons only when THIS head must act
-      let actionsHtml = '';
-      if(request.status === 'pending_head_from' && isFromMe){
-        actionsHtml = `
-          <button class="filter-btn btn-solid btn-approve" data-id="${requestDocId}">
-            <i class="fas fa-check"></i> موافقة
-          </button>
-          <button class="filter-btn btn-danger btn-deny" data-id="${requestDocId}">
-            <i class="fas fa-xmark"></i> رفض
-          </button>
-        `;
-      } else if(request.status === 'pending_head_to' && isToMe){
-        actionsHtml = `
-          <button class="filter-btn btn-solid btn-approve" data-id="${requestDocId}">
-            <i class="fas fa-check"></i> قبول
-          </button>
-          <button class="filter-btn btn-danger btn-deny" data-id="${requestDocId}">
-            <i class="fas fa-xmark"></i> رفض
-          </button>
-        `;
-      }
-
-      const fromDate = request.fromDate || request.date || '—';
-      const fromLessonNumber = Number(request.fromLesson || request.lesson) || 0;
-      const fromLessonLabel = fromLessonNumber ? `${LESSONS_AR[fromLessonNumber - 1] || `الحصة #${fromLessonNumber}`} (#${fromLessonNumber})` : '—';
-      const toDate = request.toDate || '—';
-      const toLessonNumber = Number(request.toLesson) || 0;
-      const toLessonLabel = toLessonNumber ? `${LESSONS_AR[toLessonNumber - 1] || `الحصة #${toLessonNumber}`} (#${toLessonNumber})` : '—';
-
-      card.innerHTML = `
-        <div class="request-header">
-          <span class="request-type ${typeClass}">${typeLabel}</span>
-          <span class="status-badge ${statusClass}">${statusLabel}</span>
-        </div>
-        <div class="request-body">
-          <div class="request-row">
-            <span class="request-label"><i class="far fa-calendar"></i> تاريخ الحصة الأساسية</span>
-            <span class="request-value">${escapeHtml(fromDate)}</span>
-          </div>
-          <div class="request-row">
-            <span class="request-label"><i class="far fa-clock"></i> الحصة الأساسية</span>
-            <span class="request-value">${escapeHtml(fromLessonLabel)}</span>
-          </div>
-          ${request.type === 'swap' ? `
-          <div class="request-row">
-            <span class="request-label"><i class="fas fa-calendar-week"></i> تاريخ الحصة المقابلة</span>
-            <span class="request-value">${escapeHtml(toDate)}</span>
-          </div>
-          <div class="request-row">
-            <span class="request-label"><i class="fas fa-arrows-left-right"></i> الحصة المقابلة</span>
-            <span class="request-value">${escapeHtml(toLessonLabel)}</span>
-          </div>
-          ` : ''}
-          <div class="request-row">
-            <span class="request-label"><i class="fas fa-users"></i> الصف</span>
-            <span class="request-value">${escapeHtml(request.fromClassKey || '—')}</span>
-          </div>
-          <div class="request-row">
-            <span class="request-label"><i class="fas fa-user"></i> المرسل</span>
-            <span class="request-value">${escapeHtml(request.fromTeacherName || '—')} (${escapeHtml(request.fromSubject || '—')})</span>
-          </div>
-          <div class="request-row">
-            <span class="request-label"><i class="fas fa-user-tie"></i> المُرسل إليه</span>
-            <span class="request-value">${escapeHtml(request.toTeacherName || '—')} (${escapeHtml(request.toSubject || '—')})</span>
-          </div>
-          ${request.message ? `
-          <div class="request-row">
-            <span class="request-label"><i class="fas fa-message"></i> الملاحظة</span>
-            <span class="request-value">${escapeHtml(request.message)}</span>
-          </div>
-          ` : ''}
-        </div>
-        ${actionsHtml ? `<div class="request-footer">${actionsHtml}</div>` : ''}
-      `;
-
-      return card;
-    }
-
-    function loadRequests(){
-      requestsContainer.innerHTML = '<div style="text-align:center; padding:20px; color:var(--muted);">جاري التحميل...</div>';
-      stopRequestsListeners();
-
-      const qFrom = query(
-        collection(db,'swapRequests'),
-        where('fromHeadUid','==', headUid),
-        orderBy('createdAt','desc')
-      );
-
-      const qTo = query(
-        collection(db,'swapRequests'),
-        where('toHeadUid','==', headUid),
-        orderBy('createdAt','desc')
-      );
-
-      unsubRequestsFrom = onSnapshot(qFrom, (snap) => {
-        requestsFromMap = new Map(snap.docs.map((requestDoc) =>
-          [requestDoc.id, { id: requestDoc.id, request: requestDoc.data() }]));
-        requestsMap = new Map([...requestsFromMap, ...requestsToMap]);
-        renderAllRequests();
-      }, (error) => {
-        console.error('Error loading fromHeadUid requests:', error);
-        toast({ title: 'خطأ', text: 'حدث خطأ في تحميل بعض الطلبات.', icon: 'fa-triangle-exclamation' });
-      });
-
-      unsubRequestsTo = onSnapshot(qTo, (snap) => {
-        requestsToMap = new Map(snap.docs.map((requestDoc) =>
-          [requestDoc.id, { id: requestDoc.id, request: requestDoc.data() }]));
-        requestsMap = new Map([...requestsFromMap, ...requestsToMap]);
-        renderAllRequests();
-      }, (error) => {
-        console.error('Error loading toHeadUid requests:', error);
-        toast({ title: 'خطأ', text: 'حدث خطأ في تحميل بعض الطلبات.', icon: 'fa-triangle-exclamation' });
-      });
-
-    }
-
-    async function handleRequestApprove(requestId){
-      try {
-        await runTransaction(db, async (tx) => {
-          const requestRef = doc(db, 'swapRequests', requestId);
-          const requestSnap = await tx.get(requestRef);
-
-          if(!requestSnap.exists()) {
-            throw new Error('الطلب غير موجود');
-          }
-
-          const request = requestSnap.data();
-
-          if(request.status === 'pending_head_from' && request.fromHeadUid === headUid) {
-            if(request.fromDepartment === request.toDepartment || request.toHeadUid === request.fromHeadUid) {
-              tx.update(requestRef, { status: 'accepted', respondedAt: serverTimestamp() });
-              await createOverridesInTransaction(tx, request, requestId);
-            } else {
-              tx.update(requestRef, { status: 'pending_head_to', respondedAt: serverTimestamp() });
-            }
-          } else if(request.status === 'pending_head_to' && request.toHeadUid === headUid) {
-            tx.update(requestRef, { status: 'accepted', respondedAt: serverTimestamp() });
-            await createOverridesInTransaction(tx, request, requestId);
-          } else {
-            throw new Error('غير مصرح لك بالموافقة على هذا الطلب في هذه المرحلة');
-          }
-        });
-
-        toast({ title: 'تم القبول', text: 'تمت الموافقة على الطلب بنجاح.', icon: 'fa-circle-check' });
-        // A no-op on the backend unless this approval just handed the
-        // request to the OTHER department's head (status → pending_head_to).
-        notifySwapRequest(requestId);
-
-        if(currentView === 'today' && activeTodayISO === kuwaitTodayISO()){
-          loadTodayForTeacher(currentUser.uid);
-        } else if (currentView === 'week') {
-          loadWeekForTeacher(currentUser.uid);
-        }
-      } catch (error) {
-        console.error('Error approving request:', error);
-        toast({ title: 'خطأ', text: error.message || 'تعذّر تنفيذ العملية.', icon: 'fa-triangle-exclamation' });
-      }
-    }
-
-    async function handleRequestDeny(requestId){
-      try {
-        const requestRef = doc(db, 'swapRequests', requestId);
-        const requestSnap = await getDoc(requestRef);
-
-        if(!requestSnap.exists()) return;
-
-        const request = requestSnap.data();
-
-        if((request.status === 'pending_head_from' && request.fromHeadUid === headUid) ||
-           (request.status === 'pending_head_to' && request.toHeadUid === headUid)) {
-          await updateDoc(requestRef, { status: 'denied', respondedAt: serverTimestamp() });
-          toast({ title: 'تم الرفض', text: 'تم رفض الطلب.', icon: 'fa-circle-xmark' });
-        } else {
-          toast({ title: 'غير مصرح', text: 'غير مصرح لك برفض هذا الطلب.', icon: 'fa-circle-exclamation' });
-        }
-      } catch (error) {
-        console.error('Error denying request:', error);
-        toast({ title: 'خطأ', text: 'تعذّر تنفيذ العملية.', icon: 'fa-triangle-exclamation' });
-      }
-    }
-
-    async function createOverridesInTransaction(tx, request, requestId){
-      const fromDate = request.fromDate || request.date;
-      const fromLesson = Number(request.fromLesson || request.lesson);
-
-      if(request.type === 'cover') {
-        const overrideId = `cover_${fromDate}_${fromLesson}_${request.fromTeacherUid}_${request.toTeacherUid}`;
-        const overrideRef = doc(db, 'scheduleOverrides', overrideId);
-        tx.set(overrideRef, {
-          date: fromDate, lesson: fromLesson, classKey: request.fromClassKey,
-          originalTeacherUid: request.fromTeacherUid, newTeacherUid: request.toTeacherUid,
-          active: true, createdAt: serverTimestamp(), sourceRequestId: requestId, type: 'cover'
-        }, { merge: true });
-      } else if(request.type === 'swap') {
-        const toDate = request.toDate || fromDate;
-        const toLesson = Number(request.toLesson || request.lesson);
-
-        const overrideId1 = `swapA_${fromDate}_${fromLesson}_${request.fromTeacherUid}_${request.toTeacherUid}`;
-        const overrideRef1 = doc(db, 'scheduleOverrides', overrideId1);
-        tx.set(overrideRef1, {
-          date: fromDate, lesson: fromLesson, classKey: request.fromClassKey,
-          originalTeacherUid: request.fromTeacherUid, newTeacherUid: request.toTeacherUid,
-          active: true, createdAt: serverTimestamp(), sourceRequestId: requestId, type: 'swap'
-        }, { merge: true });
-
-        const toClassKey = request.toClassKey || '—';
-        const overrideId2 = `swapB_${toDate}_${toLesson}_${request.toTeacherUid}_${request.fromTeacherUid}`;
-        const overrideRef2 = doc(db, 'scheduleOverrides', overrideId2);
-        tx.set(overrideRef2, {
-          date: toDate, lesson: toLesson, classKey: toClassKey,
-          originalTeacherUid: request.toTeacherUid, newTeacherUid: request.fromTeacherUid,
-          active: true, createdAt: serverTimestamp(), sourceRequestId: requestId, type: 'swap'
-        }, { merge: true });
-      }
-    }
-
-    /* ========= Incoming requests listener ========= */
-    function buildIncomingRequestText(req){
-      const fromName = req.fromTeacherName || 'معلّم';
-      const typeLabel = (req.type === 'cover') ? 'تغطية' : 'تبديل';
-      const fromLesson = Number(req.fromLesson || req.lesson) || 1;
-      const fromDate = req.fromDate || req.date || kuwaitTodayISO();
-      const lessonLabel = LESSONS_AR[fromLesson - 1] || `حصة #${fromLesson}`;
-      const timeLabel = lessonTimeLabel(fromLesson);
-      const cls = req.fromClassKey || '—';
-      const toDate = req.toDate || null;
-      const toLesson = Number(req.toLesson) || 0;
-      const targetLine = (req.type === 'swap' && toDate && toLesson)
-        ? ` • مقابل: ${toDate} • ${LESSONS_AR[toLesson - 1] || `حصة #${toLesson}`}`
-        : '';
-      return {
-        title: `طلب ${typeLabel} جديد`,
-        body: `
-          <div class="hint" style="background:rgba(245, 158, 11, 0.12); border-color:rgba(245, 158, 11, 0.25); color:#7c2d12;">
-            <i class="fas fa-bell" style="margin-top:2px"></i>
-            <div>
-              <div style="font-weight:900; margin-bottom:4px">${escapeHtml(fromName)} يطلب ${typeLabel}</div>
-              <div style="color:rgba(124,45,18,0.85)">
-                ${escapeHtml(fromDate)} • ${escapeHtml(lessonLabel)} • ${escapeHtml(timeLabel)} • ${escapeHtml(cls)}${escapeHtml(targetLine)}
-              </div>
-            </div>
-          </div>
-        `
-      };
-    }
-
-    async function openIncomingRequestModal(requestDocId, reqData){
-      const req = reqData || {};
-
-      if (req.status !== 'pending_teacher_to') {
-        toast({
-          title: 'طلب غير صالح',
-          text: 'هذا الطلب ليس في مرحلة الانتظار منك.',
-          icon: 'fa-circle-exclamation'
-        });
-        return;
-      }
-
-      const fromName = req.fromTeacherName || await getTeacherName(req.fromTeacherUid);
-      const typeLabel = (req.type === 'cover') ? 'تغطية' : 'تبديل';
-      const sourceDate = req.fromDate || req.date || kuwaitTodayISO();
-      const sourceLesson = Number(req.fromLesson || req.lesson) || 1;
-      const targetDate = req.toDate || sourceDate;
-      const targetLesson = Number(req.toLesson) || 0;
-
-      let myLessonsHtml = '';
-      if(req.type === 'swap' && !targetLesson){
-        const myMap = await buildTodayMapWithOverrides(currentUser.uid, targetDate);
-        const items = [];
-        for(let i=1;i<=FIXED_LESSON_COUNT;i++){
-          const hit = myMap.get(String(i));
-          if(hit && !hit._coveredAway){
-            const classKey = hit.classKey || `${hit.grade||''} / ${hit.section||''}${hit.track? ' '+hit.track : ''}` || '—';
-            items.push({ lesson: i, classKey });
-          }
-        }
-        const opts = items.length
-          ? items.map(x=> `<option value="${x.lesson}">${escapeHtml(LESSONS_AR[x.lesson-1])} (#${x.lesson}) • ${escapeHtml(lessonTimeLabel(x.lesson))} • ${escapeHtml(x.classKey)}</option>`).join('')
-          : `<option value="">لا توجد حصص متاحة في التاريخ المحدد</option>`;
-
-        myLessonsHtml = `
-          <div class="info-box">
-            <div class="info-k"><i class="fas fa-right-left"></i> اختر حصتك للتبديل</div>
-            <div class="input-wrap" style="margin-top:10px">
-              <select id="swapMyLesson" class="select">
-                <option value="">اختر الحصة...</option>
-                ${opts}
-              </select>
-            </div>
-            <div class="muted" style="margin-top:8px">
-              اختر الحصة التي ستعطيها للمعلّم الآخر في تاريخ ${escapeHtml(targetDate)}.
-            </div>
-          </div>
-        `;
-      }
-
-      const body = `
-        ${buildIncomingRequestText({ ...req, fromTeacherName: fromName }).body}
-        <div class="info-grid">
-          <div class="info-box">
-            <div class="info-k"><i class="far fa-calendar"></i> التاريخ</div>
-            <div class="info-v">${escapeHtml(sourceDate)}</div>
-          </div>
-          <div class="info-box">
-            <div class="info-k"><i class="far fa-clock"></i> الوقت</div>
-            <div class="info-v">${escapeHtml(lessonTimeLabel(sourceLesson))}</div>
-          </div>
-          <div class="info-box">
-            <div class="info-k"><i class="fas fa-users"></i> الصف</div>
-            <div class="info-v">${escapeHtml(req.fromClassKey || '—')}</div>
-          </div>
-          <div class="info-box">
-            <div class="info-k"><i class="fas fa-message"></i> الملاحظة</div>
-            <div class="info-v">${escapeHtml(req.message || '—')}</div>
-          </div>
-          ${req.type === 'swap' ? `
-          <div class="info-box">
-            <div class="info-k"><i class="fas fa-calendar-week"></i> تاريخ الحصة المقابلة</div>
-            <div class="info-v">${escapeHtml(targetDate)}</div>
-          </div>
-          <div class="info-box">
-            <div class="info-k"><i class="fas fa-arrows-left-right"></i> الحصة المقابلة</div>
-            <div class="info-v">${escapeHtml(targetLesson ? `${LESSONS_AR[targetLesson - 1] || `حصة #${targetLesson}`} • ${lessonTimeLabel(targetLesson)}` : 'سيتم اختيارها عند القبول')}</div>
-          </div>
-          ` : ''}
-        </div>
-        ${myLessonsHtml}
-        <div class="hint">
-          <i class="fas fa-circle-info" style="margin-top:2px"></i>
-          <div>
-            <div style="font-weight:900; margin-bottom:2px">تنبيه</div>
-            <div style="color:rgba(2,43,66,0.75)">
-              عند القبول سيتم إنشاء تعديل (Override) حسب التاريخ والحصة المحددين في الطلب.
-            </div>
-          </div>
-        </div>
-      `;
-
-      const footer = `
-        <button id="reqAccept" class="filter-btn btn-solid" type="button">
-          <i class="fas fa-check"></i> قبول
-        </button>
-        <button id="reqDeny" class="filter-btn btn-danger" type="button">
-          <i class="fas fa-xmark"></i> رفض
-        </button>
-        <button id="reqClose" class="filter-btn btn-ghost" type="button">
-          <i class="fas fa-arrow-right"></i> إغلاق
-        </button>
-      `;
-
-      openModal({
-        title: `طلب ${typeLabel}`,
-        bodyHtml: body,
-        footerHtml: footer
-      });
-
-      document.getElementById('reqClose').addEventListener('click', closeModal);
-
-      document.getElementById('reqDeny').addEventListener('click', async () => {
-        try {
-          await updateDoc(doc(db, 'swapRequests', requestDocId), {
-            status: 'denied',
-            respondedAt: serverTimestamp()
-          });
-          toast({
-            title: 'تم الرفض',
-            text: 'تم رفض الطلب.',
-            icon: 'fa-circle-xmark'
-          });
-          closeModal();
-        } catch (e) {
-          console.error(e);
-          toast({
-            title: 'خطأ',
-            text: 'تعذّر رفض الطلب.',
-            icon: 'fa-triangle-exclamation'
-          });
-        }
-      });
-
-      document.getElementById('reqAccept').addEventListener('click', async () => {
-        const btn = document.getElementById('reqAccept');
-        btn.setAttribute('disabled','disabled');
-        btn.classList.add('loading');
-
-        try {
-          await runTransaction(db, async (tx) => {
-            const reqRef = doc(db, 'swapRequests', requestDocId);
-            const snap = await tx.get(reqRef);
-            if (!snap.exists()) throw new Error('missing');
-
-            const data = snap.data();
-            if (data.status !== 'pending_teacher_to') throw new Error('already_done');
-            if (data.toTeacherUid !== currentUser.uid) throw new Error('forbidden');
-
-            const fromDateISO = data.fromDate || data.date;
-            const fromLesson = Number(data.fromLesson || data.lesson);
-
-            if (data.type === 'cover') {
-              const overrideId = `${fromDateISO}_${fromLesson}_${data.fromTeacherUid}`;
-              tx.set(doc(db, 'scheduleOverrides', overrideId), {
-                date: fromDateISO,
-                lesson: fromLesson,
-                classKey: data.fromClassKey,
-                originalTeacherUid: data.fromTeacherUid,
-                newTeacherUid: data.toTeacherUid,
-                swapRequestId: requestDocId,
-                createdAt: serverTimestamp(),
-                active: true
-              }, { merge: true });
-            }
-
-            if (data.type === 'swap') {
-              const toDateISO = data.toDate || fromDateISO;
-              let toLesson = Number(data.toLesson) || 0;
-              if (!toLesson) {
-                toLesson = Number(document.getElementById('swapMyLesson')?.value);
-              }
-              if (!toLesson) throw new Error('missing_my_lesson');
-
-              const overrideA = `${fromDateISO}_${fromLesson}_${data.fromTeacherUid}`;
-              const overrideB = `${toDateISO}_${toLesson}_${data.toTeacherUid}`;
-
-              tx.set(doc(db, 'scheduleOverrides', overrideA), {
-                date: fromDateISO,
-                lesson: fromLesson,
-                classKey: data.fromClassKey,
-                originalTeacherUid: data.fromTeacherUid,
-                newTeacherUid: data.toTeacherUid,
-                swapRequestId: requestDocId,
-                createdAt: serverTimestamp(),
-                active: true
-              }, { merge: true });
-
-              tx.set(doc(db, 'scheduleOverrides', overrideB), {
-                date: toDateISO,
-                lesson: toLesson,
-                classKey: data.toClassKey || '—',
-                originalTeacherUid: data.toTeacherUid,
-                newTeacherUid: data.fromTeacherUid,
-                swapRequestId: requestDocId,
-                createdAt: serverTimestamp(),
-                active: true
-              }, { merge: true });
-            }
-
-            tx.update(reqRef, {
-              status: 'accepted',
-              respondedAt: serverTimestamp()
-            });
-          });
-
-          toast({
-            title: 'تم القبول',
-            text: 'تم تطبيق التعديل بنجاح.',
-            icon: 'fa-circle-check'
-          });
-
-          closeModal();
-          await loadTodayForTeacher(currentUser.uid);
-
-        } catch (e) {
-          console.error(e);
-          const errMsg = e.message === 'missing_my_lesson' 
-            ? 'يجب اختيار حصة للتبديل.'
-            : 'تعذّر قبول الطلب.';
-          toast({
-            title: 'خطأ',
-            text: errMsg,
-            icon: 'fa-triangle-exclamation'
-          });
-        } finally {
-          btn.classList.remove('loading');
-          btn.removeAttribute('disabled');
-        }
-      });
-    }
-
-    function startPendingRequestsListener(){
-      if(unsubPendingRequests) { unsubPendingRequests(); unsubPendingRequests = null; }
-      if(!currentUser?.uid) return;
-
-      const qPending = query(
-        collection(db,'swapRequests'),
-        where('toTeacherUid','==', currentUser.uid),
-        where('status','==', 'pending_teacher_to'),
-        orderBy('createdAt','desc'),
-        limit(10)
-      );
-
-      unsubPendingRequests = onSnapshot(qPending, (snap)=>{
-        snap.docChanges().forEach((ch)=>{
-          if(ch.type !== 'added') return;
-
-          const id = ch.doc.id;
-          const data = ch.doc.data();
-
-          openIncomingRequestModal(id, data);
-        });
-      }, (err)=>{
-        console.error(err);
       });
     }
 
@@ -5502,7 +4118,6 @@
       const sheets = [
         [moreSheet, () => btnMore],
         [ocSheet, () => sidebarOtherClasses],
-        [requestsSheet, () => btnRequests],
         [dsSheetEl, () => sidebarDeptSchedule],
         [document.getElementById('tsSheet'), () => document.getElementById('sidebarTeacherSchedules')],
         [document.getElementById('dwSheet'), () => sidebarDeptSchedule],
@@ -5812,8 +4427,12 @@
       snap.forEach(sessionDoc => {
         const session = sessionDoc.data() || {};
         const lesson = Number(session.lesson);
-        const cell = dsAttendanceMap[session.teacherUid]?.[lesson];
-        if (!cell?.hasClass || cell.classKey !== session.classKey) return;
+        // A substitute's session (صفوف أخرى — احتياط/تبديل) is stored under
+        // their own uid; originalTeacherUid names the scheduled teacher.
+        const cell = [session.teacherUid, session.originalTeacherUid]
+          .map(uid => uid && dsAttendanceMap[uid]?.[lesson])
+          .find(c => c?.hasClass && c.classKey === session.classKey);
+        if (!cell) return;
         cell.taken = true;
         cell.time = session.createdAt || session.sessionStartTs || null;
       });
@@ -6178,6 +4797,8 @@
       attSnap.forEach(sessionDoc => {
         const x = sessionDoc.data() || {};
         taken.set(`${x.date}|${x.teacherUid}|${Number(x.lesson)}`, x);
+        // Substitute sessions (صفوف أخرى) also count for the scheduled teacher.
+        if (x.originalTeacherUid) taken.set(`${x.date}|${x.originalTeacherUid}|${Number(x.lesson)}`, x);
       });
       const cellsByDay = dates.map((iso, day) => {
         const cells = Object.create(null);
@@ -6724,16 +5345,11 @@
 
     /* ========= جدول المدرسة (ssSheet) =========
        An in-page copy of Teachers/schoolschedule.html's whole-school grid
-       (every teacher, grouped by department) + its lesson popover and
-       طلب تبديل request form — that file is never navigated to or edited
-       (per instruction), this reimplements it as a sheet inside this page
-       instead. Reuses this page's own already-loaded helpers
-       (loadTeachersList, findHeadOfDepartment, getTeacherSlotsForDate,
-       LESSONS_AR, lessonTimeLabel, isPastISO, isSchoolDayISO,
-       kuwaitTodayISO, notifySwapRequest, toast) rather than duplicating
-       them — this page already implements the same طلب تبديل flow for
-       its own schedule, so the swapRequests document shape here is
-       exactly what it already writes elsewhere. Every identifier is
+       (every teacher, grouped by department) + its lesson popover — that
+       file is never navigated to or edited (per instruction), this
+       reimplements it as a sheet inside this page instead. Reuses this
+       page's own already-loaded helpers (loadTeachersList, LESSONS_AR,
+       lessonTimeLabel, toast) rather than duplicating them. Every identifier is
        "ss"-prefixed to stay clear of this page's own schedule code and
        of the دs (جدول القسم) sheet above. */
     const ssSheetEl = document.getElementById('ssSheet');
@@ -6917,9 +5533,7 @@
       requestAnimationFrame(() => { ssSyncTheadH(); ssSyncDeptLabelCenter(); });
     }
 
-    /* ========= Lesson popover — info view, then (on demand) the طلب
-       تبديل request form view, swapped in place within the same
-       popover. ========= */
+    /* ========= Lesson popover — read-only lesson info. ========= */
     function ssClosePopover(){
       ssPopBackdrop.classList.remove('open');
       ssPopoverEl.classList.remove('open');
@@ -6946,7 +5560,6 @@
 
     function ssRenderLessonInfoView(){
       const meta = ssCurrentLessonMeta;
-      const isOwnLesson = !!currentUser && meta.teacherUid === currentUser.uid;
       ssPopoverEl.classList.remove('ss-popover-wide');
       ssPopBack.classList.add('ss-pop-back-hidden');
       ssPopTitleText.textContent = meta.teacherName;
@@ -6970,195 +5583,7 @@
             <div class="ss-info-cell-value">${escapeHtml(meta.subject || '—')}</div>
           </div>
         </div>
-        ${isOwnLesson ? '' : `
-        <div class="ss-pop-actions">
-          <button type="button" class="ss-pop-btn solid" id="ssActSwap">طلب تبديل</button>
-        </div>
-        `}
       `;
-      if (!isOwnLesson) {
-        document.getElementById('ssActSwap').addEventListener('click', () => ssOpenRequestForm());
-      }
-    }
-
-    /* ========= Request form (طلب تبديل) — same shape/flow as this
-       page's own existing swap-request modal (see openRequestModal
-       above), except the signed-in viewer is always personally the other
-       side of the request (toTeacherUid): clicking a cell already names
-       everything about that lesson, so the only thing left to pick is
-       which of the viewer's own lessons to offer in exchange. ========= */
-    async function ssOpenRequestForm(){
-      const meta = ssCurrentLessonMeta;
-
-      if (!currentUser){ ssToast('يرجى تسجيل الدخول أولاً.', true); return; }
-      if (!meta.department){
-        ssToast('لا يمكن تحديد قسم هذا المعلّم. يرجى تحديث بيانات المعلّم أولاً.', true);
-        return;
-      }
-      if (!myDeptSchedDepartment){
-        ssToast('لا يمكن تحديد قسمك. يرجى تحديث بياناتك أولاً.', true);
-        return;
-      }
-      const fromHead = await findHeadOfDepartment(meta.department);
-      if (!fromHead){
-        ssToast('لا يمكن العثور على رئيس قسم هذا المعلّم. تأكد من أن القسم له رئيس معيّن.', true);
-        return;
-      }
-      const toHead = myDeptSchedDepartment === meta.department ? fromHead : await findHeadOfDepartment(myDeptSchedDepartment);
-      if (!toHead){
-        ssToast('لا يمكن العثور على رئيس قسمك. تأكد من أن قسمك له رئيس معيّن.', true);
-        return;
-      }
-
-      ssPopoverEl.classList.add('ss-popover-wide');
-      ssPopBack.classList.remove('ss-pop-back-hidden');
-      ssPopTitleText.textContent = 'طلب تبديل';
-      ssPopSub.textContent = `${meta.teacherName} — ${LESSONS_AR[meta.lesson-1]}`;
-
-      ssPopBody.innerHTML = '';
-      const form = document.createElement('div');
-      form.style.display = 'flex';
-      form.style.flexDirection = 'column';
-      form.style.gap = '14px';
-      form.innerHTML = `
-        <div class="ss-req-context">${escapeHtml(toArabicDigits(meta.classKey))} — ${escapeHtml(toArabicDigits(ssFmtDateLong(ssSelectedDate)))}</div>
-        <div class="ss-form-field">
-          <label for="ssReqMyDate">اختر حصتك — التاريخ</label>
-          <input id="ssReqMyDate" type="date" min="${kuwaitTodayISO()}" value="${escapeHtml(meta.date)}" />
-        </div>
-        <div class="ss-form-field">
-          <label for="ssReqMyLesson">اختر حصتك — الحصة</label>
-          <select id="ssReqMyLesson" disabled>
-            <option value="">جارٍ التحميل...</option>
-          </select>
-          <div class="ss-form-hint" id="ssMySlotPreview">—</div>
-        </div>
-        <div id="ssReqHint" class="ss-req-hint">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
-          <div>اختر حصتك لإكمال الطلب.</div>
-        </div>
-        <button type="button" class="ss-pop-btn solid" id="ssSendReq" disabled>إرسال الطلب</button>
-      `;
-      ssPopBody.appendChild(form);
-
-      const reqHintEl = document.getElementById('ssReqHint');
-      const sendBtn = document.getElementById('ssSendReq');
-      const myDateInput = document.getElementById('ssReqMyDate');
-      const myLessonSelect = document.getElementById('ssReqMyLesson');
-      const mySlotPreview = document.getElementById('ssMySlotPreview');
-
-      const state = { mySlot: null, mySlots: [] };
-
-      function setHint(text, isError){
-        reqHintEl.classList.toggle('err', !!isError);
-        reqHintEl.querySelector('div').textContent = text;
-      }
-
-      function syncSendState(){
-        const dateErr = !myDateInput.value ? 'اختر التاريخ.'
-          : isPastISO(myDateInput.value) ? 'لا يمكن اختيار تاريخ ماضٍ.'
-          : !isSchoolDayISO(myDateInput.value) ? 'اختر يومًا دراسيًا من الأحد إلى الخميس.'
-          : '';
-        if (dateErr){ sendBtn.disabled = true; setHint(dateErr, true); return; }
-        if (!state.mySlot){ sendBtn.disabled = true; setHint('اختر حصتك لإتمام التبديل.', true); return; }
-        sendBtn.disabled = false;
-        setHint(`سيتم تبديل حصتك (${LESSONS_AR[state.mySlot.lesson-1]} — ${toArabicDigits(state.mySlot.classKey)}) مع حصة ${meta.teacherName}.`, false);
-      }
-
-      async function refreshMySlots(){
-        state.mySlots = []; state.mySlot = null;
-        myLessonSelect.innerHTML = '<option value="">اختر الحصة...</option>';
-        myLessonSelect.disabled = true;
-        mySlotPreview.textContent = 'اختر التاريخ.';
-        const dateISO = myDateInput.value;
-        if (!dateISO || isPastISO(dateISO) || !isSchoolDayISO(dateISO)){ syncSendState(); return; }
-        const slots = await getTeacherSlotsForDate(currentUser.uid, dateISO);
-        state.mySlots = slots;
-        if (!slots.length){
-          mySlotPreview.textContent = 'لا توجد لديك حصص في هذا التاريخ.';
-          syncSendState();
-          return;
-        }
-        myLessonSelect.disabled = false;
-        myLessonSelect.innerHTML = '<option value="">اختر الحصة...</option>' + slots.map(s =>
-          `<option value="${s.lesson}">${escapeHtml(LESSONS_AR[s.lesson-1])} — ${escapeHtml(toArabicDigits(s.classKey))}</option>`
-        ).join('');
-        if (slots.length === 1) myLessonSelect.value = String(slots[0].lesson);
-        state.mySlot = slots.find(s => String(s.lesson) === myLessonSelect.value) || null;
-        mySlotPreview.textContent = state.mySlot ? `${LESSONS_AR[state.mySlot.lesson-1]} — ${toArabicDigits(state.mySlot.classKey)}` : 'اختر الحصة.';
-        syncSendState();
-      }
-
-      myDateInput.addEventListener('change', refreshMySlots);
-      myLessonSelect.addEventListener('change', () => {
-        state.mySlot = state.mySlots.find(s => String(s.lesson) === myLessonSelect.value) || null;
-        mySlotPreview.textContent = state.mySlot ? `${LESSONS_AR[state.mySlot.lesson-1]} — ${toArabicDigits(state.mySlot.classKey)}` : 'اختر الحصة.';
-        syncSendState();
-      });
-      refreshMySlots();
-
-      sendBtn.addEventListener('click', async () => {
-        const targetSlot = state.mySlot;
-        if (!targetSlot){ ssToast('اختر حصتك أولاً.', true); return; }
-
-        sendBtn.disabled = true;
-        try {
-          const dup = await getDocs(query(
-            collection(db, 'swapRequests'),
-            where('fromTeacherUid', '==', meta.teacherUid),
-            where('date', '==', meta.date),
-            where('lesson', '==', meta.lesson),
-            where('status', 'in', ['pending_head_from', 'pending_head_to', 'pending_head']),
-            limit(1)
-          ));
-          if (!dup.empty){ ssToast('يوجد طلب معلّق لهذه الحصة بالفعل.', true); ssClosePopover(); return; }
-        } catch (e) { console.warn('[ssSheet] dup check skipped', e); }
-
-        try {
-          const myDisplayName = currentTeacherProfile?.name || currentTeacherProfile?.teacherName
-            || currentTeacherProfile?.fullName || currentTeacherProfile?.displayName
-            || currentUser.displayName || currentUser.email || '';
-          const payload = {
-            date: meta.date, lesson: meta.lesson,
-            fromDate: meta.date, fromLesson: meta.lesson, fromClassKey: meta.classKey,
-            toDate: targetSlot.date,
-            toLesson: targetSlot.lesson,
-            toClassKey: targetSlot.classKey,
-            type: 'swap', requestVersion: 2,
-
-            fromTeacherUid: meta.teacherUid,
-            fromTeacherName: meta.teacherName,
-            fromDepartment: meta.department,
-            fromSubject: meta.subject || '',
-
-            toTeacherUid: currentUser.uid,
-            toTeacherName: myDisplayName,
-            toDepartment: myDeptSchedDepartment,
-            toSubject: currentTeacherProfile?.subject || '',
-
-            fromHeadUid: fromHead.uid, fromHeadName: fromHead.name,
-            toHeadUid: toHead.uid, toHeadName: toHead.name,
-
-            status: 'pending_head_from', stage: 'head_from',
-            message: null, createdAt: serverTimestamp(),
-
-            headUid: fromHead.uid, headName: fromHead.name,
-            headStatus: 'pending', headRespondedAt: null, headNote: null, respondedAt: null,
-
-            requestedByUid: currentUser.uid,
-            requestedByName: myDisplayName,
-          };
-          const newRequestRef = await addDoc(collection(db, 'swapRequests'), payload);
-          ssToast('تم إرسال الطلب.');
-          notifySwapRequest(newRequestRef.id);
-          ssClosePopover();
-        } catch (e) {
-          console.error('[ssSheet] send request failed:', e);
-          ssToast('فشل إرسال الطلب.', true);
-        } finally {
-          sendBtn.disabled = false;
-        }
-      });
     }
 
     document.addEventListener('click', (e) => {
@@ -7577,7 +6002,22 @@
       try {
         const current = await dsAttendance.getCurrentLessonClass(false);
         if (token !== mcAttendButtonToken) return;
-        if (!current.ok || normalizeClassKey(current.classKey) !== normalizeClassKey(cls)) return;
+        if (!current.ok || normalizeClassKey(current.classKey) !== normalizeClassKey(cls)) {
+          // Not this teacher's own lesson — they may still have recorded
+          // this class's live lesson as احتياط/تبديل (صفوف أخرى).
+          const subSnap = await getDocs(query(
+            collection(db, 'attendanceSessions'),
+            where('classKey', '==', cls),
+            where('teacherUid', '==', currentUser.uid),
+            where('date', '==', kuwaitTodayISO())
+          ));
+          if (token !== mcAttendButtonToken) return;
+          const liveSession = subSnap.docs.find(d => dsIsLessonLiveNow(Number(d.data().lesson)));
+          if (!liveSession) return;
+          mcAttendEditSessionId = liveSession.id;
+          mcSetAttendButtonMode('edit');
+          return;
+        }
 
         const snap = await getDocs(query(
           collection(db, 'attendanceSessions'),
@@ -7977,9 +6417,108 @@
     }
 
 
-    mcAttendBtn.addEventListener('click', () => {
-      if (mcAttendEditSessionId) dsAttendance.openForEdit(mcAttendEditSessionId);
-      else dsAttendance.start();
+    /* ========= صفوف أخرى — attendance for a class you don't teach =========
+       Any teacher can open any class and take attendance for the lesson
+       that class is in right now (by the bell times). When it isn't this
+       teacher's own scheduled lesson, they confirm the class and pick why —
+       احتياط or تبديل — first; the reason is saved on the session. */
+    const subModal = document.getElementById('subModal');
+    const subModalClass = document.getElementById('subModalClass');
+    const subModalMeta = document.getElementById('subModalMeta');
+    const subReasonSelect = document.getElementById('subReasonSelect');
+    const subSelectWrap = subReasonSelect.closest('.sub-select-wrap');
+    const subReasonError = document.getElementById('subReasonError');
+    const subModalConfirm = document.getElementById('subModalConfirm');
+    let subPending = null; // { classKey, lesson }
+
+    function subSetInvalid(invalid){
+      subSelectWrap.classList.toggle('invalid', invalid);
+      subReasonError.hidden = !invalid;
+      subReasonSelect.setAttribute('aria-invalid', invalid ? 'true' : 'false');
+    }
+    function subSyncConfirm(){
+      const ready = !!subReasonSelect.value;
+      subModalConfirm.classList.toggle('ready', ready);
+      if (ready) subSetInvalid(false);
+    }
+    function openSubModal(live){
+      subPending = { classKey: live.classKey, lesson: live.lesson };
+      subModalClass.textContent = toArabicDigits(live.classKey);
+      const lessonName = LESSONS_AR[live.lesson - 1] || live.lessonLabel || `الحصة ${toArabicDigits(live.lesson)}`;
+      const time = `${toArabicDigits(live.activeStart)} – ${toArabicDigits(live.activeEnd)}`;
+      subModalMeta.innerHTML = `${escapeHtml(lessonName)} · ${escapeHtml(time)}`
+        + (live.scheduledTeacherName ? `<br>حصة المعلم <b>${escapeHtml(live.scheduledTeacherName)}</b>` : '');
+      subReasonSelect.value = '';
+      subSetInvalid(false);
+      subSyncConfirm();
+      subModal.classList.add('open');
+      subModal.setAttribute('aria-hidden', 'false');
+      setTimeout(() => subReasonSelect.focus({ preventScroll: true }), 50);
+    }
+    function closeSubModal(){
+      subModal.classList.remove('open');
+      subModal.setAttribute('aria-hidden', 'true');
+      subPending = null;
+    }
+    subReasonSelect.addEventListener('change', subSyncConfirm);
+    subModalConfirm.addEventListener('click', () => {
+      const reason = subReasonSelect.value;
+      if (!reason) {
+        subSetInvalid(true);
+        subSelectWrap.classList.remove('shake');
+        void subSelectWrap.offsetWidth; // restart the shake animation
+        subSelectWrap.classList.add('shake');
+        subReasonSelect.focus({ preventScroll: true });
+        return;
+      }
+      const pending = subPending;
+      closeSubModal();
+      if (pending) dsAttendance.openForSubstitute({ ...pending, reason });
+    });
+    subSelectWrap.addEventListener('animationend', () => subSelectWrap.classList.remove('shake'));
+    document.getElementById('subModalCancel').addEventListener('click', closeSubModal);
+    subModal.querySelector('.sub-modal-backdrop').addEventListener('click', closeSubModal);
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && subModal.classList.contains('open')) closeSubModal();
+    });
+
+    const MC_LIVE_BLOCKED = {
+      no_class_lesson_now: ['لا توجد حصة الآن', 'يمكن تسجيل الغياب أثناء الحصة الجارية فقط.'],
+      already_taken: ['تم تسجيل الغياب', 'يوجد تسجيل غياب محفوظ لهذه الحصة من معلم آخر.'],
+      lesson_times_unavailable: ['تعذّر التحميل', 'تعذّر تحميل أوقات الحصص. تحقق من الاتصال وحاول مرة أخرى.'],
+      not_logged_in: ['تسجيل الدخول', 'يرجى تسجيل الدخول أولاً.'],
+    };
+
+    let mcAttendOpening = false;
+    mcAttendBtn.addEventListener('click', async () => {
+      if (mcAttendEditSessionId) { dsAttendance.openForEdit(mcAttendEditSessionId); return; }
+      const cls = mcCurrentClass;
+      if (!cls || mcAttendOpening) return;
+      mcAttendOpening = true;
+      mcAttendBtn.disabled = true;
+      try {
+        // This teacher's own current lesson is in this class — the usual flow.
+        const own = await dsAttendance.getCurrentLessonClass(false);
+        if (own.ok && normalizeClassKey(own.classKey) === normalizeClassKey(cls)) {
+          await dsAttendance.start();
+          return;
+        }
+        const live = await dsAttendance.getClassLiveLesson(cls);
+        if (!live.ok) {
+          const [title, text] = MC_LIVE_BLOCKED[live.reason] || MC_LIVE_BLOCKED.no_class_lesson_now;
+          showBlockedPopup(title, text);
+          return;
+        }
+        if (live.editSessionId) { dsAttendance.openForEdit(live.editSessionId); return; }
+        if (live.isMine) { await dsAttendance.start(); return; }
+        openSubModal(live);
+      } catch (e) {
+        console.error('[mcClasses] attend:', e);
+        toast({ title: 'تعذّر فتح تسجيل الغياب', text: 'حاول مرة أخرى.', icon: 'fa-circle-exclamation' });
+      } finally {
+        mcAttendOpening = false;
+        mcAttendBtn.disabled = false;
+      }
     });
 
     function mcOpenSheet(){
@@ -8073,8 +6612,6 @@
 
     btnMore.addEventListener('click', () => { closeSidebar(); openMore(); });
     closeMore.addEventListener('click', closeMoreSheet);
-    btnRequests.addEventListener('click', () => { closeSidebar(); openRequestsSheet(); });
-    closeRequests.addEventListener('click', closeRequestsSheet);
 
     btnSidebarToggle.addEventListener('click', openSidebar);
     sidebarClose.addEventListener('click', closeSidebar);
@@ -8163,9 +6700,6 @@
       if(!user){
         pendingSignOutTimer = setTimeout(() => {
           pendingSignOutTimer = null;
-          stopRequestsListeners();
-          headUid = '';
-          btnRequests.hidden = true;
           sidebarDeptGroup.hidden = true;
           sidebarSupervisorGroup.hidden = true;
           sidebarSupervisorStudents.hidden = true;
@@ -8173,6 +6707,7 @@
           sidebarEditSchedule.hidden = true;
           sidebarHeadDept.hidden = true;
           sidebarAttendanceGroup.hidden = true;
+          dsAttendance.setCanEditOthers(false);
           closeAllManageAttendanceSheets();
           stopPresenceHeartbeat();
           currentUser = null;
@@ -8185,9 +6720,6 @@
         return;
       }
 
-      stopRequestsListeners();
-      headUid = '';
-      btnRequests.hidden = true;
       sidebarDeptGroup.hidden = true;
       sidebarSupervisorGroup.hidden = true;
       sidebarSupervisorStudents.hidden = true;
@@ -8195,6 +6727,7 @@
       sidebarEditSchedule.hidden = true;
       sidebarHeadDept.hidden = true;
       sidebarAttendanceGroup.hidden = true;
+      dsAttendance.setCanEditOthers(false);
       currentUser = user;
       // آخر ظهور in admins/teachers.html (and depHead/department.html)
       // reads presence/{uid}; this is the page teachers actually live on,
@@ -8239,9 +6772,8 @@
             const allowEditSchedule = isTruthyFlag(perms.allowEditSchedule);
             // إدارة الغياب — strictly true, like firestore.rules' check.
             const allowManageAttendance = canManageAttendance(currentTeacherProfile);
-            // Department heads (role: 'head') get their own القسم group —
-            // طلبات القسم (btnRequests, shown further below once headUid is
-            // set) plus قسمي.
+            dsAttendance.setCanEditOthers(allowManageAttendance);
+            // Department heads (role: 'head') get their own القسم group (قسمي).
             const isHead = currentRole === 'head';
             sidebarSupervisorStudents.hidden = !allowSupervisorStudents;
             // The الغياب group has its own تسجيل التأخير الصباحي, so the
@@ -8268,13 +6800,6 @@
         loadTodayForTeacher(user.uid)
       ]);
 
-      if(currentRole === 'head'){
-        headUid = user.uid;
-        btnRequests.hidden = false;
-        loadRequests();
-      }
-
-      startPendingRequestsListener();
     });
 
     /* ========= Tabs ========= */
