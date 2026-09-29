@@ -2509,3 +2509,52 @@
 #supervisorStudentsSheet .warning-progress-fill.excused-level-3 { background: #6d28d9; }
 #supervisorStudentsSheet .warning-scale { display: flex; justify-content: space-between; margin-top: 6px; font-size: 0.76rem; font-weight: 700; color: var(--muted); }
 #supervisorStudentsSheet .warning-next-hint { margin-top: 10px; font-size: 0.86rem; font-weight: 700; color: var(--text); text-align: center; }
+
+    /* ========= إشعارات القسم (department heads) ========= */
+    .sidebar-count {
+      margin-inline-start: auto; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px;
+      display: inline-flex; align-items: center; justify-content: center;
+      background: var(--danger); color: #fff; font-size: .74rem; font-weight: 900; line-height: 1;
+      box-shadow: 0 2px 8px rgba(185,28,28,.3);
+    }
+    .sidebar-count[hidden] { display: none; }
+    /* Tells a head there's something new without opening the sidebar. */
+    .toggle-dot {
+      position: absolute; top: -4px; left: -4px; width: 13px; height: 13px; border-radius: 50%;
+      background: var(--danger); border: 2px solid #fff; box-shadow: 0 2px 6px rgba(185,28,28,.35);
+    }
+    .toggle-dot[hidden] { display: none; }
+
+    .dn-hint { margin: 0; color: var(--muted); font-weight: 700; font-size: .9rem; }
+    .dn-list { display: grid; gap: 10px; }
+    .dn-day { margin-top: 8px; color: var(--muted); font-weight: 900; font-size: .82rem; }
+    .dn-day:first-child { margin-top: 0; }
+    .dn-card {
+      display: flex; align-items: flex-start; gap: 12px; padding: 14px;
+      background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow-1);
+    }
+    .dn-card.is-new { border-color: rgba(4,69,99,.35); background: linear-gradient(0deg, rgba(4,69,99,.04), rgba(4,69,99,.04)), var(--card-bg); }
+    .dn-avatar {
+      width: 42px; height: 42px; flex-shrink: 0; border-radius: 13px; display: grid; place-items: center;
+      background: var(--primary-light); color: var(--primary); font-weight: 900; font-size: 1.05rem;
+    }
+    .dn-main { flex: 1; min-width: 0; display: grid; gap: 4px; }
+    .dn-top { display: flex; align-items: center; gap: 8px; }
+    .dn-name { color: var(--text); font-weight: 900; font-size: .98rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .dn-new { flex-shrink: 0; padding: 2px 8px; border-radius: 999px; background: var(--danger); color: #fff; font-size: .7rem; font-weight: 900; }
+    .dn-time { margin-inline-start: auto; flex-shrink: 0; color: var(--muted); font-weight: 700; font-size: .78rem; }
+    .dn-line { color: var(--text-light, #475569); font-weight: 700; font-size: .9rem; }
+    .dn-line b { color: var(--primary); font-weight: 900; }
+    .dn-meta { display: flex; flex-wrap: wrap; gap: 6px; }
+    .dn-meta:empty { display: none; }
+    .dn-reason { padding: 3px 10px; border-radius: 999px; background: rgba(245,158,11,.14); color: #92400e; font-weight: 800; font-size: .78rem; }
+    .dn-orig { padding: 3px 10px; border-radius: 999px; background: #f1f5f9; color: var(--muted); font-weight: 800; font-size: .78rem; }
+    .dn-empty {
+      display: grid; justify-items: center; gap: 6px; padding: 40px 16px; text-align: center;
+      color: var(--muted); font-weight: 700; font-size: .9rem;
+    }
+    .dn-empty b { color: var(--text); font-size: 1rem; }
+    .dn-empty-icon {
+      width: 56px; height: 56px; border-radius: 18px; display: grid; place-items: center; margin-bottom: 4px;
+      background: var(--primary-light); color: var(--primary); font-size: 1.3rem;
+    }

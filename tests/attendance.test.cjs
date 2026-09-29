@@ -595,7 +595,7 @@ test('substitute attendance opens the sheet for another teacher\'s live lesson a
   assert.equal(live.scheduledTeacherUid, 'teacher-b');
   assert.equal(live.isMine, false);
 
-  await harness.sheet.openForSubstitute({ classKey: CLASS, lesson: live.lesson, reason: '  حصة   نشاط ' });
+  await harness.sheet.openForSubstitute({ classKey: CLASS, lesson: live.lesson, reason: '  حصة   نشاط ', department: 'الرياضيات', teacherName: 'المعلم الأول' });
   await harness.settle();
   assertOpen(harness);
 
@@ -605,4 +605,7 @@ test('substitute attendance opens the sheet for another teacher\'s live lesson a
   assert.equal(session.data.teacherUid, 'teacher-a');
   assert.equal(session.data.substituteReason, 'حصة نشاط');
   assert.equal(session.data.originalTeacherUid, 'teacher-b');
+  assert.equal(session.data.substituteDepartment, 'الرياضيات');
+  assert.equal(session.data.substituteDeptDay, `الرياضيات|${DATE}`);
+  assert.equal(session.data.substituteTeacherName, 'المعلم الأول');
 });

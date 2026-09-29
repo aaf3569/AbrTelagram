@@ -55,6 +55,7 @@
     <div class="header-container">
       <button id="btnSidebarToggle" class="sidebar-toggle-btn" type="button" aria-label="فتح القائمة" aria-controls="sidebar" aria-expanded="false">
         <i class="fas fa-bars"></i>
+        <span id="sidebarToggleDot" class="toggle-dot" hidden></span>
       </button>
       <h1 class="site-title">ثانوية أحمد البشر الرومي</h1>
     </div>
@@ -86,6 +87,11 @@
 
       <div id="sidebarDeptGroup" class="sidebar-group" hidden>
         <div class="sidebar-section-label">القسم</div>
+        <button id="sidebarDeptNotifs" class="sidebar-link" type="button" hidden>
+          <i class="fas fa-bell" aria-hidden="true"></i>
+          <span>إشعارات القسم</span>
+          <span id="deptNotifBadge" class="sidebar-count" hidden></span>
+        </button>
         <button id="sidebarHeadDept" class="sidebar-link" type="button" hidden>
           <i class="fas fa-users-gear"></i>
           <span>قسمي</span>
@@ -300,6 +306,22 @@
     <div class="sheet-body">
       <p class="oc-hint">اختر الصف ثم الفصل لعرض الطلاب وتسجيل الغياب.</p>
       <div id="ocGroups" class="oc-groups"></div>
+    </div>
+  </section>
+
+  <!-- إشعارات القسم (department heads): colleagues in this department who
+       took attendance for a lesson that isn't theirs (صفوف أخرى). -->
+  <section id="dnSheet" class="sheet" aria-hidden="true">
+    <div class="sheet-header">
+      <button id="dnClose" class="back-btn" type="button">
+        <i class="fas fa-arrow-right"></i>
+        <span>رجوع</span>
+      </button>
+      <h3 class="sheet-title">إشعارات القسم</h3>
+    </div>
+    <div class="sheet-body">
+      <p class="dn-hint">معلمو قسمك الذين سجّلوا الغياب لحصص ليست في جداولهم — آخر ٣٠ يوماً.</p>
+      <div id="dnList" class="dn-list"></div>
     </div>
   </section>
 
@@ -1103,7 +1125,7 @@
     // for 5 minutes (_headers) while this HTML is always fresh, so right after
     // a deploy the page could otherwise run against the previous module —
     // bump it whenever this page starts relying on something new in there.
-    import { mountAttendanceSheet, LESSON_END_GRACE_MINUTES } from "/shared/attendance.js?v=2026-09-29b";
+    import { mountAttendanceSheet, LESSON_END_GRACE_MINUTES } from "/shared/attendance.js?v=2026-09-29c";
     import { mountStudentNotesSheet } from "/shared/student-notes-sheet.js";
     import { parseTimeToMinutes } from "/shared/kuwait-time.js";
     import { isTruthyFlag, canManageAttendance } from "/shared/auth-guard.js";
@@ -4128,6 +4150,7 @@
       const sheets = [
         [moreSheet, () => btnMore],
         [ocSheet, () => sidebarOtherClasses],
+        [dnSheet, () => sidebarDeptNotifs],
         [dsSheetEl, () => sidebarDeptSchedule],
         [document.getElementById('tsSheet'), () => document.getElementById('sidebarTeacherSchedules')],
         [document.getElementById('dwSheet'), () => sidebarDeptSchedule],
@@ -6513,7 +6536,11 @@
       closeSubModal();
       if (!pending) return;
       mcLivePrefetch = null; // the sheet re-checks; don't reuse this answer after it
-      dsAttendance.openForSubstitute({ ...pending, reason }).catch((e) => {
+      dsAttendance.openForSubstitute({
+        ...pending, reason,
+        department: myDeptSchedDepartment,
+        teacherName: currentTeacherProfile?.name || currentUser?.displayName || '',
+      }).catch((e) => {
         console.error('[mcClasses] openForSubstitute:', e);
         toast({ title: 'تعذّر فتح تسجيل الغياب', text: 'حاول مرة أخرى.', icon: 'fa-circle-exclamation' });
       });
@@ -6681,6 +6708,155 @@
     sidebarOtherClasses.addEventListener('click', () => { closeSidebar(); openOtherClasses(); });
     ocClose.addEventListener('click', closeOtherClasses);
 
+    /* ========= إشعارات القسم (department heads) =========
+       Colleagues in the head's department who took attendance for a lesson
+       that isn't theirs (صفوف أخرى). Those sessions carry substituteDeptDay
+       = "department|date" (see shared/attendance.js), so one live query with
+       an `in` over the last 30 days finds them — no composite index. The
+       badge counts ones created after the head last opened this sheet
+       (dept_notif_seen/{uid}.seenAt, so it's the same on every device). */
+    const sidebarDeptNotifs = document.getElementById('sidebarDeptNotifs');
+    const deptNotifBadge = document.getElementById('deptNotifBadge');
+    const sidebarToggleDot = document.getElementById('sidebarToggleDot');
+    const dnSheet = document.getElementById('dnSheet');
+    const dnList = document.getElementById('dnList');
+    const DN_DAYS = 30; // Firestore's `in` takes at most 30 values
+    const DN_SEEN_COLLECTION = 'dept_notif_seen';
+    let dnUnsub = null;
+    let dnItems = [];
+    let dnSeenMs = 0;
+    let dnNewIds = new Set(); // tagged "جديد" while the sheet is showing them
+
+    const dnMs = (t) => (t && typeof t.toMillis === 'function') ? t.toMillis() : 0;
+    const dnUnread = () => dnItems.filter(x => dnMs(x.createdAt) > dnSeenMs);
+
+    function dnRenderBadge(){
+      const n = dnUnread().length;
+      deptNotifBadge.hidden = n === 0;
+      deptNotifBadge.textContent = n > 99 ? '٩٩+' : toArabicDigits(n);
+      sidebarToggleDot.hidden = n === 0;
+      sidebarDeptNotifs.setAttribute('aria-label', n ? `إشعارات القسم، ${toArabicDigits(n)} جديدة` : 'إشعارات القسم');
+    }
+
+    function dnDayLabel(iso){
+      const today = kuwaitTodayISO();
+      if (iso === today) return 'اليوم';
+      if (iso === addDaysISO(today, -1)) return 'أمس';
+      const d = isoToUTCDate(iso);
+      return new Intl.DateTimeFormat('ar-KW', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' }).format(d);
+    }
+    function dnTimeLabel(t){
+      const ms = dnMs(t);
+      return ms ? new Intl.DateTimeFormat('ar-KW', { hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Kuwait' }).format(new Date(ms)) : '';
+    }
+
+    function dnRender(){
+      if (!dnItems.length) {
+        dnList.innerHTML = `
+          <div class="dn-empty">
+            <span class="dn-empty-icon"><i class="fas fa-bell-slash" aria-hidden="true"></i></span>
+            <b>لا توجد إشعارات</b>
+            <span>عندما يسجّل أحد معلمي قسمك الغياب لحصة ليست في جدوله ستظهر هنا.</span>
+          </div>`;
+        return;
+      }
+      let html = '';
+      let lastDay = '';
+      dnItems.forEach(x => {
+        if (x.date !== lastDay) {
+          lastDay = x.date;
+          html += `<div class="dn-day">${escapeHtml(dnDayLabel(x.date))}</div>`;
+        }
+        const name = x.substituteTeacherName || '—';
+        const lesson = LESSONS_AR[Number(x.lesson) - 1] || `الحصة ${toArabicDigits(x.lesson)}`;
+        const isNew = dnNewIds.has(x.id);
+        html += `
+          <div class="dn-card${isNew ? ' is-new' : ''}">
+            <span class="dn-avatar" aria-hidden="true">${escapeHtml(name.trim().charAt(0) || '؟')}</span>
+            <div class="dn-main">
+              <div class="dn-top">
+                <b class="dn-name">${escapeHtml(name)}</b>
+                ${isNew ? '<span class="dn-new">جديد</span>' : ''}
+                <span class="dn-time">${escapeHtml(dnTimeLabel(x.createdAt))}</span>
+              </div>
+              <div class="dn-line">سجّل غياب <b><bdi>${escapeHtml(toArabicDigits(x.classKey || '—'))}</bdi></b> — ${escapeHtml(lesson)}</div>
+              <div class="dn-meta">
+                ${x.substituteReason ? `<span class="dn-reason">${escapeHtml(x.substituteReason)}</span>` : ''}
+                ${x.originalTeacherName ? `<span class="dn-orig">بدلاً من ${escapeHtml(x.originalTeacherName)}</span>` : ''}
+              </div>
+            </div>
+          </div>`;
+      });
+      dnList.innerHTML = html;
+    }
+
+    // Everything currently loaded counts as seen. Only writes when there was
+    // actually something unread, so opening the sheet costs nothing otherwise.
+    function dnMarkSeen(){
+      const unread = dnUnread();
+      if (!unread.length || !currentUser) return;
+      unread.forEach(x => dnNewIds.add(x.id));
+      const newest = Math.max(...unread.map(x => dnMs(x.createdAt)));
+      dnSeenMs = Math.max(Date.now(), newest);
+      dnRenderBadge();
+      setDoc(doc(db, DN_SEEN_COLLECTION, currentUser.uid), { seenAt: serverTimestamp() })
+        .catch(e => console.warn('[deptNotifs] mark seen failed:', e?.message || e));
+    }
+
+    async function startDeptNotifs(){
+      stopDeptNotifs();
+      const uid = currentUser?.uid;
+      const department = myDeptSchedDepartment;
+      if (!uid || !department) return;
+      sidebarDeptNotifs.hidden = false;
+      try {
+        const seen = await getDoc(doc(db, DN_SEEN_COLLECTION, uid));
+        dnSeenMs = dnMs(seen.exists() ? seen.data().seenAt : null);
+      } catch (e) {
+        // Can't tell what was already seen — don't flood the badge.
+        console.warn('[deptNotifs] seen read failed:', e?.message || e);
+        dnSeenMs = Date.now();
+      }
+      if (currentUser?.uid !== uid) return;
+      const today = kuwaitTodayISO();
+      const keys = Array.from({ length: DN_DAYS }, (_, i) => `${department}|${addDaysISO(today, -i)}`);
+      dnUnsub = onSnapshot(
+        query(collection(db, 'attendanceSessions'), where('substituteDeptDay', 'in', keys)),
+        (snap) => {
+          dnItems = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+            .filter(x => x.teacherUid !== uid) // the head's own records aren't news to them
+            .sort((a, b) => dnMs(b.createdAt) - dnMs(a.createdAt));
+          dnRenderBadge();
+          if (dnSheet.classList.contains('open')) { dnMarkSeen(); dnRender(); }
+        },
+        (e) => console.error('[deptNotifs] listener:', e)
+      );
+    }
+
+    function stopDeptNotifs(){
+      if (dnUnsub) { dnUnsub(); dnUnsub = null; }
+      dnItems = [];
+      dnNewIds = new Set();
+      sidebarDeptNotifs.hidden = true;
+      dnRenderBadge();
+    }
+
+    function openDeptNotifs(){
+      dnNewIds = new Set();
+      dnMarkSeen();
+      dnRender();
+      dnSheet.classList.add('open');
+      dnSheet.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+    }
+    function closeDeptNotifs(){
+      dnSheet.classList.remove('open');
+      dnSheet.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = '';
+    }
+    sidebarDeptNotifs.addEventListener('click', () => { closeSidebar(); openDeptNotifs(); });
+    document.getElementById('dnClose').addEventListener('click', closeDeptNotifs);
+
     btnMore.addEventListener('click', () => { closeSidebar(); openMore(); });
     closeMore.addEventListener('click', closeMoreSheet);
 
@@ -6778,6 +6954,8 @@
           sidebarEditSchedule.hidden = true;
           sidebarHeadDept.hidden = true;
           sidebarAttendanceGroup.hidden = true;
+          stopDeptNotifs();
+          closeDeptNotifs();
           dsAttendance.setCanEditOthers(false);
           closeAllManageAttendanceSheets();
           stopPresenceHeartbeat();
@@ -6798,6 +6976,7 @@
       sidebarEditSchedule.hidden = true;
       sidebarHeadDept.hidden = true;
       sidebarAttendanceGroup.hidden = true;
+      stopDeptNotifs();
       dsAttendance.setCanEditOthers(false);
       currentUser = user;
       // آخر ظهور in admins/teachers.html (and depHead/department.html)
@@ -6857,6 +7036,7 @@
             if (!allowManageAttendance) closeAllManageAttendanceSheets();
             sidebarHeadDept.hidden = !isHead;
             sidebarDeptGroup.hidden = !isHead;
+            if (isHead) startDeptNotifs(); else stopDeptNotifs();
 
             // Own classes plus anything being covered today — same
             // convention as Teachers/user.html's own class buttons.

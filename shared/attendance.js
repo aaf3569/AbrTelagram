@@ -1495,7 +1495,7 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
     return results.find(r => r.ok) || results[0];
   }
 
-  async function openForSubstitute({ classKey, lesson, reason } = {}) {
+  async function openForSubstitute({ classKey, lesson, reason, department = "", teacherName = "" } = {}) {
     reason = String(reason || "").replace(/\s+/g, " ").trim().slice(0, SUBSTITUTE_REASON_MAX);
     if (!classKey || !reason) {
       showError("تعذّر فتح تسجيل الغياب", "يرجى اختيار سبب التسجيل ثم المحاولة مرة أخرى.");
@@ -1514,7 +1514,11 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
         return false;
       }
       if (meta.editSessionId) return loadSessionForEdit(meta.editSessionId);
-      currentMeta = { ...meta, mode: "substitute", substituteReason: reason };
+      currentMeta = {
+        ...meta, mode: "substitute", substituteReason: reason,
+        substituteDepartment: String(department || "").trim(),
+        substituteTeacherName: String(teacherName || "").trim(),
+      };
       buildFixedLessonOption(meta.lesson, null, reason);
       await loadStudentsForClass(meta.classKey);
     });
@@ -2341,6 +2345,14 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
           substituteReason,
           originalTeacherUid: currentMeta?.scheduledTeacherUid || null,
           originalTeacherName: currentMeta?.scheduledTeacherName || null,
+          // For إشعارات القسم: the recording teacher's department, plus a
+          // "department|date" key the head's page queries with a single
+          // `in` filter (no composite index needed).
+          ...(currentMeta?.substituteDepartment ? {
+            substituteDepartment: currentMeta.substituteDepartment,
+            substituteDeptDay: `${currentMeta.substituteDepartment}|${dateKW}`,
+          } : {}),
+          substituteTeacherName: currentMeta?.substituteTeacherName || null,
         } : {}),
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),

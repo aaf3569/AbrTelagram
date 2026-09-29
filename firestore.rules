@@ -1185,6 +1185,19 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    /* ---------- dept_notif_seen ---------- */
+    // When a department head last opened إشعارات القسم (Teachers/user.html)
+    // — the badge counts substitute records created after it.
+    match /dept_notif_seen/{uid} {
+      allow get: if signedIn() && (uid == request.auth.uid || isAdmin());
+      allow list: if isAdmin();
+      allow create, update: if signedIn()
+        && uid == request.auth.uid
+        && request.resource.data.keys().hasOnly(['seenAt'])
+        && (request.resource.data.seenAt is timestamp);
+      allow delete: if isAdmin();
+    }
+
     /* ---------- fallback ---------- */
     match /{document=**} {
       allow read, write: if false;
