@@ -361,7 +361,8 @@ export async function maybeStartSwapRemovedTour({ db, uid, hooks }) {
           </div>
         </div>`,
       button: "حسناً",
-      onButton: () => root.remove(),
+      // Back to the main page (الرئيسية) once they've read it.
+      onButton: () => { restorePage(); root.remove(); },
     });
   }
 
