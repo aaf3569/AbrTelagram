@@ -132,63 +132,26 @@ function ensureStyles() {
   .swt-arrow.up { animation: swtBounceUp 1s ease-in-out infinite; }
   .swt-arrow.down { animation: swtBounceDown 1s ease-in-out infinite; }
 
-  /* Coach card (bottom, or top when the target is low on screen).
-     Navy with the same amber as the spotlight ring, so the card and the
-     thing it points at read as one. The step tracker shows it's short,
-     the tap hint points at the real button, and "التالي" only unlocks
-     after a brief read so it can't be tapped through blind. */
+  /* Bottom (or top) bar */
   .swt-bar { position: fixed; left: 50%; width: min(460px, calc(100vw - 20px)); pointer-events: auto;
-    transform: translateX(-50%); transition: top .25s ease, bottom .25s ease; }
+    background: #fff; border-radius: 22px; padding: 14px 16px 16px; box-shadow: 0 20px 50px rgba(2,20,34,.4);
+    transform: translateX(-50%); display: grid; gap: 10px; transition: top .25s ease, bottom .25s ease; }
   .swt-bar.bottom { bottom: max(12px, env(safe-area-inset-bottom)); }
   .swt-bar.top { top: max(12px, env(safe-area-inset-top)); }
-  .swt-card2 { position: relative; overflow: hidden; border-radius: 24px; padding: 16px 16px 14px; display: grid; gap: 14px;
-    color: #fff; background:
-      radial-gradient(120% 90% at 100% 0%, rgba(251,191,36,.22), transparent 55%),
-      radial-gradient(90% 80% at 0% 100%, rgba(56,189,248,.14), transparent 60%),
-      linear-gradient(160deg, #0a4d6b 0%, #03283f 55%, #021c2d 100%);
-    border: 1px solid rgba(251,191,36,.28);
-    box-shadow: 0 24px 60px rgba(2,12,24,.55), inset 0 1px 0 rgba(255,255,255,.08);
-    animation: swtCardIn .38s cubic-bezier(.2,.9,.25,1); }
-
-  .swt-track { display: flex; align-items: center; gap: 8px; }
-  .swt-track-step { display: inline-flex; align-items: center; gap: 7px; padding: 5px 11px 5px 6px; border-radius: 999px;
-    background: rgba(255,255,255,.07); color: rgba(255,255,255,.55); font-size: .78rem; font-weight: 800; white-space: nowrap; }
-  .swt-track-step i { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-style: normal;
-    font-size: .74rem; font-weight: 900; background: rgba(255,255,255,.12); color: rgba(255,255,255,.7); }
-  .swt-track-step.is-current { background: rgba(251,191,36,.16); color: #fde68a; }
-  .swt-track-step.is-current i { background: #fbbf24; color: #3b2600; box-shadow: 0 0 0 4px rgba(251,191,36,.18); }
-  .swt-track-step.is-done { color: #86efac; }
-  .swt-track-step.is-done i { background: #22c55e; color: #fff; }
-  .swt-track-line { flex: 1; height: 2px; border-radius: 2px; background: rgba(255,255,255,.14); min-width: 14px; }
-  .swt-track-line.is-done { background: linear-gradient(90deg, #22c55e, #fbbf24); }
-  .swt-skip { margin-inline-start: auto; background: none; border: 0; padding: 6px 4px; cursor: pointer;
-    color: rgba(255,255,255,.55); font-family: inherit; font-weight: 800; font-size: .8rem; }
-  .swt-skip:hover { color: #fff; }
-
-  .swt-main { display: flex; align-items: center; gap: 14px; animation: swtFadeUp .35s ease both; }
-  .swt-main-icon { flex-shrink: 0; width: 58px; height: 58px; border-radius: 18px; display: grid; place-items: center;
-    background: linear-gradient(145deg, #fcd34d, #f59e0b); color: #3b2600; font-size: 1.45rem;
-    box-shadow: 0 10px 24px rgba(245,158,11,.35), inset 0 1px 0 rgba(255,255,255,.45); }
-  .swt-main-text { min-width: 0; display: grid; gap: 4px; }
-  .swt-main-text b { font-size: 1.15rem; font-weight: 900; line-height: 1.35; color: #fff; }
-  .swt-main-text p { margin: 0; font-size: .9rem; font-weight: 600; line-height: 1.6; color: rgba(226,238,247,.86); }
-  .swt-main-text p b { font-size: inherit; color: #fde68a; font-weight: 900; }
-
-  .swt-hint { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px;
-    background: rgba(251,191,36,.10); border: 1px dashed rgba(251,191,36,.45); color: #fde68a; font-weight: 800; font-size: .86rem; }
-  .swt-hint i { font-size: 1.05rem; animation: swtTap 1.3s ease-in-out infinite; }
-
-  .swt-next { position: relative; overflow: hidden; width: 100%; min-height: 50px; border: 0; border-radius: 15px; cursor: pointer;
-    font-family: inherit; font-weight: 900; font-size: .98rem; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-    background: #fbbf24; color: #2a1b00; box-shadow: 0 10px 24px rgba(251,191,36,.28);
-    transition: transform .15s ease, background-color .2s ease, color .2s ease, box-shadow .2s ease; }
-  .swt-next:hover { transform: translateY(-1px); }
-  /* Brief "read first" moment: the button fills up, then unlocks. */
-  .swt-next.is-waiting { cursor: default; background: rgba(255,255,255,.1); color: rgba(255,255,255,.55); box-shadow: none; transform: none; }
-  .swt-next.is-waiting::before { content: ""; position: absolute; inset: 0; transform-origin: right center;
-    background: rgba(251,191,36,.22); animation: swtFill var(--swt-wait, 1400ms) linear forwards; }
-  .swt-next > * { position: relative; }
-
+  .swt-bar-head { display: flex; align-items: center; gap: 10px; }
+  .swt-step-num { flex-shrink: 0; width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center;
+    background: linear-gradient(145deg, #065372, #022b42); color: #fff; font-weight: 900; font-size: 1rem; }
+  .swt-bar-title { flex: 1; min-width: 0; }
+  .swt-bar-title small { display: block; color: #64748b; font-weight: 800; font-size: .72rem; }
+  .swt-bar-title b { display: block; color: #022b42; font-weight: 900; font-size: 1.02rem; }
+  .swt-progress { height: 6px; border-radius: 99px; background: #e2e8f0; overflow: hidden; }
+  .swt-progress i { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, #fbbf24, #f59e0b);
+    transition: width .4s ease; }
+  .swt-bar-text { margin: 0; color: #334155; font-weight: 700; font-size: .9rem; line-height: 1.65; }
+  .swt-bar-actions { display: flex; gap: 10px; }
+  .swt-next { flex: 1; min-height: 48px; font-size: .98rem; }
+  .swt-skip { min-height: 48px; padding: 0 16px; border-radius: 16px; border: 1px solid #e2e8f0; background: #f8fafc;
+    color: #64748b; font-family: inherit; font-weight: 800; font-size: .88rem; cursor: pointer; }
   /* Finish */
   .swt-done-icon { width: 72px; height: 72px; margin: 6px auto 0; border-radius: 22px; display: grid; place-items: center;
     background: #fff; color: #047857; font-size: 2.1rem; box-shadow: 0 12px 28px rgba(0,0,0,.22); }
@@ -197,12 +160,8 @@ function ensureStyles() {
   @keyframes swtBounceUp { 0%,100% { transform: translateY(0); } 50% { transform: translateY(8px); } }
   @keyframes swtBounceDown { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
   @keyframes swtFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
-  @keyframes swtCardIn { from { opacity: 0; transform: translateY(14px) scale(.98); } to { opacity: 1; transform: none; } }
-  @keyframes swtFadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
-  @keyframes swtTap { 0%,100% { transform: translateY(0); } 45% { transform: translateY(-3px) scale(1.08); } }
-  @keyframes swtFill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
   @media (prefers-reduced-motion: reduce) {
-    .swt-spot::after, .swt-arrow, .swt-hero-new, .swt-card2, .swt-main, .swt-hint i { animation: none !important; }
+    .swt-spot::after, .swt-arrow, .swt-hero-new { animation: none !important; }
   }`;
   document.head.appendChild(style);
 }
@@ -226,10 +185,7 @@ export async function maybeStartSwapRemovedTour({ db, uid, hooks }) {
   const steps = [
     {
       title: "افتح القائمة الجانبية",
-      text: "كل ما تحتاجه موجود في القائمة — ابدأ بزر <b>☰</b> في أعلى الشاشة.",
-      short: "القائمة",
-      icon: "fa-bars",
-      hint: "اضغط على الزر المضيء في الأعلى",
+      text: "اضغط زر القائمة <b>☰</b> في أعلى الشاشة.",
       target: () => h.toggleBtn,
       allow: (el) => h.toggleBtn.contains(el),
       done: () => h.sidebar.classList.contains("open"),
@@ -237,10 +193,7 @@ export async function maybeStartSwapRemovedTour({ db, uid, hooks }) {
     },
     {
       title: "اختر «صفوف أخرى»",
-      text: "هنا تجد <b>كل فصول المدرسة</b> — ومنها تسجّل الغياب لأي حصة تدخلها.",
-      short: "صفوف أخرى",
-      icon: "fa-users-rectangle",
-      hint: "اضغط على «صفوف أخرى» المضيئة",
+      text: "من القائمة اضغط <b>صفوف أخرى</b> — فيها كل فصول المدرسة.",
       target: () => h.otherClassesBtn,
       allow: (el) => h.otherClassesBtn.contains(el),
       done: () => h.ocSheet.classList.contains("open"),
@@ -285,38 +238,21 @@ export async function maybeStartSwapRemovedTour({ db, uid, hooks }) {
   const onKey = (e) => { if (!ended && stepIndex >= 0 && e.key === "Escape") { e.preventDefault(); e.stopPropagation(); } };
   window.addEventListener("keydown", onKey, true);
 
-  const READ_WAIT_MS = 1400;
-  let readTimer = 0;
-
   function renderBar() {
     const step = steps[stepIndex];
-    const track = steps.map((st, i) => {
-      const state = i < stepIndex ? "is-done" : i === stepIndex ? "is-current" : "";
-      const line = i < steps.length - 1 ? `<span class="swt-track-line${i < stepIndex ? " is-done" : ""}"></span>` : "";
-      return `<span class="swt-track-step ${state}"><i>${i < stepIndex ? "✓" : ar(i + 1)}</i>${st.short}</span>${line}`;
-    }).join("");
+    const pct = Math.round((stepIndex / steps.length) * 100);
     bar.innerHTML = `
-      <div class="swt-card2">
-        <div class="swt-track" aria-label="الخطوة ${ar(stepIndex + 1)} من ${ar(steps.length)}">
-          ${track}
-          <button type="button" class="swt-skip">تخطي</button>
-        </div>
-        <div class="swt-main">
-          <span class="swt-main-icon" aria-hidden="true"><i class="fas ${step.icon}"></i></span>
-          <div class="swt-main-text">
-            <b>${step.title}</b>
-            <p>${step.text}</p>
-          </div>
-        </div>
-        <div class="swt-hint"><i class="fas fa-hand-pointer" aria-hidden="true"></i><span>${step.hint}</span></div>
-        <button type="button" class="swt-next is-waiting" style="--swt-wait:${READ_WAIT_MS}ms" aria-disabled="true">
-          <span>${step.nextLabel || "التالي"}</span><i class="fas fa-arrow-left" aria-hidden="true"></i>
-        </button>
+      <div class="swt-bar-head">
+        <span class="swt-step-num">${ar(stepIndex + 1)}</span>
+        <div class="swt-bar-title"><small>الخطوة ${ar(stepIndex + 1)} من ${ar(steps.length)}</small><b>${step.title}</b></div>
+      </div>
+      <div class="swt-progress" aria-hidden="true"><i style="width:${pct}%"></i></div>
+      <p class="swt-bar-text">${step.text}</p>
+      <div class="swt-bar-actions">
+        <button type="button" class="swt-btn swt-next">${step.nextLabel || "حسناً، التالي"}</button>
+        <button type="button" class="swt-skip">تخطي</button>
       </div>`;
-    const next = bar.querySelector(".swt-next");
-    clearTimeout(readTimer);
-    readTimer = setTimeout(() => { next.classList.remove("is-waiting"); next.removeAttribute("aria-disabled"); }, READ_WAIT_MS);
-    next.addEventListener("click", () => { if (!next.classList.contains("is-waiting")) steps[stepIndex]?.advance(); });
+    bar.querySelector(".swt-next").addEventListener("click", () => steps[stepIndex]?.advance());
     bar.querySelector(".swt-skip").addEventListener("click", () => end("skipped"));
   }
 
@@ -384,7 +320,6 @@ export async function maybeStartSwapRemovedTour({ db, uid, hooks }) {
     ended = true;
     cancelAnimationFrame(raf);
     clearInterval(timer);
-    clearTimeout(readTimer);
     ["click", "pointerdown", "mousedown"].forEach((t) => window.removeEventListener(t, guard, true));
     window.removeEventListener("keydown", onKey, true);
   }
