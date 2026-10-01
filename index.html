@@ -404,8 +404,8 @@
        Loading Overlay — white→sky splash: the school emblem springs in,
        sparks burst, the greeting rises, the user's name pops in, and a
        navy "liquid" rises from the bottom as the loader. On the way out
-       the liquid sweeps up and off the top, leaving a plain page-coloured
-       screen behind so the next page loads in without a flash.
+       the liquid pulls up and off the top, dragging the next page's
+       header up behind it into place, so that page loads in seamlessly.
        Every animation is keyed off .show, so it replays from the start
        each time the overlay opens (not once, invisibly, at page load).
        =========================== */
@@ -555,11 +555,12 @@
     .loader-pill i { font-size: 1.15rem; flex-shrink: 0; }
     .loader-overlay.show .loader-pill { animation: loaderPillIn .6s .75s var(--ld-ease) forwards; }
 
-    /* Plain page colour that fades in under the liquid on the way out */
+    /* The next page's background colour, faded in under the liquid on the
+       way out (teachers' page; .to-admin swaps in the admin page's) */
     .loader-reveal {
       position: absolute;
       inset: 0;
-      background: #f6f8fb;
+      background: #f8fafc;
       opacity: 0;
     }
 
@@ -590,21 +591,117 @@
     }
     .loader-wave.front { fill: var(--ld-navy-800); }
     .loader-wave.back { fill: #2a9fd0; opacity: .35; height: 58px; }
-    /* Trailing wave under the liquid, only seen as it sweeps off the top */
-    .loader-wave.tail {
-      bottom: auto;
-      top: calc(100% - 2px);
-      fill: var(--ld-teal);
-      transform: scaleY(-1);
-    }
     .loader-overlay.show .loader-wave.front { animation: loaderWaveX 5s linear infinite; }
     .loader-overlay.show .loader-wave.back { animation: loaderWaveX 8s linear infinite reverse; }
-    .loader-overlay.show .loader-wave.tail { animation: loaderWaveTail 6s linear infinite; }
 
-    /* ---------- Exit: content lifts away, liquid sweeps up and off ---------- */
+    /* The destination page's header, hanging off the liquid's bottom edge.
+       It's off-screen while the liquid bobs; the exit sweep drags it up and
+       parks it at the very top, exactly where the next page draws its own
+       header. Default = teachers/user.html's header; .to-admin below
+       copies admins/adminpage.html's instead. */
+    .loader-header {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: rgba(255, 255, 255, 0.85);
+      border-bottom: 1px solid rgba(2, 43, 66, 0.08);
+      box-shadow: 0 6px 18px rgba(2, 43, 66, 0.12);
+      padding: 16px 20px;
+      line-height: 1.6;
+    }
+    .loader-header-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 44px;
+    }
+    .loader-header-btn {
+      position: absolute;
+      right: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      border: 1px solid rgba(2, 43, 66, 0.2);
+      background: #fff;
+      color: #022b42;
+      font-size: 1.05rem;
+      box-shadow: 0 4px 12px rgba(2, 43, 66, 0.08);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .loader-header-logo { display: none; }
+    .loader-header-title {
+      font-weight: 900;
+      font-size: clamp(1.2rem, 2.5vw, 1.5rem);
+      color: #022b42;
+      text-align: center;
+      padding: 0 60px 0 16px;
+      white-space: nowrap;
+    }
+    @media (max-width: 768px) {
+      .loader-overlay:not(.to-admin) .loader-header { padding: 14px 16px; }
+      .loader-overlay:not(.to-admin) .loader-header-title { font-size: clamp(0.7rem, calc(7vw - 8px), 1.2rem); }
+    }
+
+    /* admins/adminpage.html header */
+    .loader-overlay.to-admin .loader-reveal { background: #f6f8fb; }
+    .loader-overlay.to-admin .loader-header {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 255, 255, 0.68);
+      border-bottom-color: rgba(3, 60, 84, 0.08);
+      box-shadow: 0 2px 10px rgba(3, 60, 84, 0.06);
+      line-height: normal;
+    }
+    .loader-overlay.to-admin .loader-header-inner { display: contents; }
+    .loader-overlay.to-admin .loader-header-btn {
+      right: 14px;
+      width: 42px;
+      height: 42px;
+      border-color: rgba(3, 60, 84, 0.2);
+      color: #033C54;
+      box-shadow: 0 8px 22px rgba(3, 60, 84, 0.14);
+    }
+    .loader-overlay.to-admin .loader-header-title {
+      padding: 0;
+      color: #033C54;
+      letter-spacing: .2px;
+      font-size: clamp(1.1rem, 2.4vw, 1.5rem);
+      text-shadow: 0 1px 0 rgba(255, 255, 255, .6);
+    }
+    @media (max-width: 480px) {
+      .loader-overlay.to-admin .loader-header { padding-inline: 64px; }
+      .loader-overlay.to-admin .loader-header-title {
+        font-size: clamp(1rem, 5vw, 1.25rem);
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+    }
+    @media (min-width: 1024px) {
+      .loader-overlay.to-admin .loader-header { padding: 20px 40px; gap: 14px; }
+      .loader-overlay.to-admin .loader-header-logo {
+        display: block;
+        width: 38px;
+        height: 38px;
+        object-fit: contain;
+        filter: drop-shadow(0 4px 10px rgba(3, 60, 84, .25));
+      }
+      .loader-overlay.to-admin .loader-header-title { font-size: 1.35rem; }
+    }
+
+    /* ---------- Exit: content lifts away, the liquid pulls up and off,
+       and the header it drags behind it lands at the top ---------- */
     .loader-overlay.show.leaving .loader-center { animation: loaderCenterOut .45s var(--ld-ease) forwards; }
     .loader-overlay.show.leaving .loader-reveal { animation: loaderFadeIn .25s .2s ease forwards; }
-    .loader-overlay.show.leaving .loader-liquid { animation: loaderSweep 1.05s cubic-bezier(.7, 0, .3, 1) forwards; }
+    .loader-overlay.show.leaving .loader-liquid { animation: loaderSweep 1.15s cubic-bezier(.7, 0, .25, 1) forwards; }
 
     @keyframes loaderFadeIn { to { opacity: 1; } }
     @keyframes loaderFloat { 50% { transform: translateY(-6px); } }
@@ -626,11 +723,10 @@
     @keyframes loaderFill { from { transform: translateY(100%); } to { transform: translateY(80%); } }
     @keyframes loaderBob { from { transform: translateY(80%); } to { transform: translateY(77.5%); } }
     @keyframes loaderWaveX { from { transform: translateX(0); } to { transform: translateX(-50%); } }
-    @keyframes loaderWaveTail { from { transform: translateX(-50%) scaleY(-1); } to { transform: translateX(0) scaleY(-1); } }
     @keyframes loaderCenterOut { to { opacity: 0; transform: translateY(calc(-50% - 30px)) scale(.94); } }
     @keyframes loaderSweep {
       from { transform: translateY(79%); }
-      to   { transform: translateY(calc(-100% - 80px)); }
+      to   { transform: translateY(-100%); }
     }
 
     /* Responsive adjustments */
@@ -748,7 +844,13 @@
       <svg class="loader-wave back" viewBox="0 0 2880 100" preserveAspectRatio="none"><path d="M0 50 Q 180 14 360 50 T 720 50 T 1080 50 T 1440 50 T 1800 50 T 2160 50 T 2520 50 T 2880 50 V100 H0 Z"/></svg>
       <svg class="loader-wave front" viewBox="0 0 2880 100" preserveAspectRatio="none"><path d="M0 50 Q 180 14 360 50 T 720 50 T 1080 50 T 1440 50 T 1800 50 T 2160 50 T 2520 50 T 2880 50 V100 H0 Z"/></svg>
       <div class="loader-liquid-body"></div>
-      <svg class="loader-wave tail" viewBox="0 0 2880 100" preserveAspectRatio="none"><path d="M0 50 Q 180 14 360 50 T 720 50 T 1080 50 T 1440 50 T 1800 50 T 2160 50 T 2520 50 T 2880 50 V100 H0 Z"/></svg>
+      <div class="loader-header">
+        <div class="loader-header-inner">
+          <span class="loader-header-btn"><i class="fas fa-bars"></i></span>
+          <img class="loader-header-logo" src="./images/schoollogo.png" alt="">
+          <span class="loader-header-title">ثانوية أحمد البشر الرومي</span>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -915,7 +1017,7 @@
     // Loader overlay animation
     let loaderShownAtMs = null;
     const REDIRECT_DELAY_MS = 2300; // hold time before the closing transition begins
-    const EXIT_DURATION_MS = 1100;  // liquid sweeps up and off, then the page navigates
+    const EXIT_DURATION_MS = 1300;  // liquid pulls up, the header lands, then the page navigates
     let isLoginAttemptInProgress = false;
     let redirectScheduled = false;
 
@@ -1091,7 +1193,9 @@
       }
       // Play the closing sweep before the hard navigation, so the animation
       // resolves (on a plain page-coloured screen) instead of being cut off
-      // mid-frame by the browser unloading the page.
+      // mid-frame by the browser unloading the page. The header it lands
+      // copies whichever page comes next.
+      loader.classList.toggle('to-admin', route.includes('/admins/'));
       loader.classList.add('leaving');
       setTimeout(() => {
         window.location.href = route;
