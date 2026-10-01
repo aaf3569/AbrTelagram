@@ -225,6 +225,15 @@
       caret-color: var(--primary);
     }
 
+    /* كلمة المرور is a plain text field masked here instead of
+       type="password" — iOS keys its Password AutoFill bar off password
+       fields, so this keeps that bar from popping up on the login page.
+       Browsers without -webkit-text-security get type="password" back
+       from the script (see passwordMaskSupported). */
+    .form-input.masked {
+      -webkit-text-security: disc;
+    }
+
     /* A field without a leading icon (كلمة المرور) still needs room at its start. */
     .input-container > .form-input:first-child {
       padding-inline-start: 18px;
@@ -797,7 +806,7 @@
       <div class="form-group">
         <label for="loginPassword" class="form-label">كلمة المرور</label>
         <div class="input-container">
-          <input type="password" id="loginPassword" class="form-input" placeholder="••••••••" autocomplete="current-password">
+          <input type="text" id="loginPassword" class="form-input masked" placeholder="••••••••" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
           <button type="button" class="password-toggle" id="togglePassword" aria-label="إظهار كلمة المرور">
             <i class="fas fa-eye"></i>
           </button>
@@ -968,10 +977,20 @@
     }
 
     // Password visibility toggle
+    // Masked with CSS (see .form-input.masked) so iOS doesn't treat this as
+    // a password field. Where that property isn't supported, fall back to a
+    // real password field so the password is never shown in plain text.
+    const passwordMaskSupported = window.CSS?.supports?.('-webkit-text-security', 'disc') ?? false;
+    if (!passwordMaskSupported) passEl.type = 'password';
+
     let passwordVisible = false;
     function togglePasswordVisibility() {
       passwordVisible = !passwordVisible;
-      passEl.type = passwordVisible ? 'text' : 'password';
+      if (passwordMaskSupported) {
+        passEl.classList.toggle('masked', !passwordVisible);
+      } else {
+        passEl.type = passwordVisible ? 'text' : 'password';
+      }
       eyeIcon.className = passwordVisible ? 'fas fa-eye-slash' : 'fas fa-eye';
       togglePasswordBtn.setAttribute('aria-label', passwordVisible ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور');
 
