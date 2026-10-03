@@ -553,7 +553,10 @@
     }
     .loader-pill[hidden] { display: none; }
     .loader-pill i { font-size: 1.15rem; flex-shrink: 0; }
-    .loader-overlay.show .loader-pill { animation: loaderPillIn .6s .75s var(--ld-ease) forwards; }
+    .loader-overlay.show .loader-pill { animation: loaderPillIn .5s .45s var(--ld-ease) forwards; }
+    /* A name that only arrives after the overlay opened pops in right away
+       rather than waiting out the intro delay a second time */
+    .loader-overlay.show .loader-pill.late { animation-delay: 0s; }
 
     /* The next page's background colour, faded in under the liquid on the
        way out (teachers' page; .to-admin swaps in the admin page's) */
@@ -1042,8 +1045,23 @@
     // the overlay opened (profile lookup), un-hiding it plays its pop-in then.
     function setLoaderWelcomeName(name) {
       const safeName = (name || '').toString().trim();
+      if (safeName && loaderName.hidden && loader.classList.contains('show')) {
+        loaderName.classList.add('late');
+      }
       loaderNameText.textContent = safeName;
       loaderName.hidden = !safeName;
+    }
+
+    // The user's name, remembered per account on this device. Sign-ins
+    // persist across browser restarts, so the usual way in is a fresh tab
+    // with nothing in sessionStorage; without this the name would have to
+    // wait for the Firestore profile lookup before it could appear.
+    const NAME_CACHE_PREFIX = 'loaderName:';
+    function getCachedName(uid) {
+      try { return uid ? localStorage.getItem(NAME_CACHE_PREFIX + uid) || '' : ''; } catch { return ''; }
+    }
+    function cacheName(uid, name) {
+      try { if (uid && name) localStorage.setItem(NAME_CACHE_PREFIX + uid, name); } catch {}
     }
 
     function showLoader(name) {
@@ -1058,6 +1076,7 @@
       loader.classList.remove('show');
       loader.classList.remove('leaving');
       loaderLiquid.style.removeProperty('--sweep-from');
+      loaderName.classList.remove('late');
       loaderShownAtMs = null;
       document.body.style.overflow = '';
     }
@@ -1281,6 +1300,7 @@
 
         const uid = cred.user.uid;
         const profile = await getUserProfile(uid);
+        cacheName(uid, profile.name);
         const route = getRouteForProfile(profile);
         if (!route) {
           await signOut(auth);
@@ -1333,11 +1353,15 @@
 
       const flowStartedAt = loaderShownAtMs || Date.now();
       const storedAuth = getStoredAuthInfo();
+      const knownName = storedAuth?.name || getCachedName(user.uid);
       if (!loader.classList.contains('show')) {
-        showLoader(storedAuth?.name || '');
+        showLoader(knownName);
+      } else if (knownName) {
+        setLoaderWelcomeName(knownName);
       }
 
       const profile = await getUserProfile(user.uid);
+      cacheName(user.uid, profile.name);
       const route = getRouteForProfile(profile);
       if (!route) {
         sessionStorage.removeItem('auth');
@@ -1360,7 +1384,7 @@
         ts: Date.now()
       };
       sessionStorage.setItem('auth', JSON.stringify(authInfo));
-      setLoaderWelcomeName(profile.name || storedAuth?.name || '');
+      setLoaderWelcomeName(profile.name || knownName || '');
 
       scheduleRedirectWithElapsed(profile, flowStartedAt);
     });
