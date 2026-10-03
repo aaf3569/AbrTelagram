@@ -591,6 +591,16 @@
     }
     .loader-wave.front { fill: var(--ld-navy-800); }
     .loader-wave.back { fill: #2a9fd0; opacity: .35; height: 58px; }
+    /* Give every moving piece its own compositor layer for as long as the
+       overlay is up. The layers are built in the first frame, while the
+       overlay is still fading in from transparent, so the motion never has
+       to stop and repaint mid-way (the exit sweep used to hitch on that). */
+    .loader-overlay.show .loader-center,
+    .loader-overlay.show .loader-emblem,
+    .loader-overlay.show .loader-tile,
+    .loader-overlay.show .loader-liquid,
+    .loader-overlay.show .loader-wave { will-change: transform; }
+    .loader-overlay.show .loader-reveal { will-change: opacity; }
     .loader-overlay.show .loader-wave.front { animation: loaderWaveX 5s linear infinite; }
     .loader-overlay.show .loader-wave.back { animation: loaderWaveX 8s linear infinite reverse; }
 
@@ -725,8 +735,10 @@
     @keyframes loaderBob { from { transform: translateY(80%); } to { transform: translateY(77.5%); } }
     @keyframes loaderWaveX { from { transform: translateX(0); } to { transform: translateX(-50%); } }
     @keyframes loaderCenterOut { to { opacity: 0; transform: translateY(calc(-50% - 30px)) scale(.94); } }
+    /* Starts from wherever the bob left the liquid (--sweep-from, set in JS
+       as the exit begins), so the hand-over from bob to sweep has no jump */
     @keyframes loaderSweep {
-      from { transform: translateY(79%); }
+      from { transform: translateY(var(--sweep-from, 79%)); }
       to   { transform: translateY(-100%); }
     }
 
@@ -829,7 +841,7 @@
         <span class="loader-spark sm" style="--x:-6px;--y:-84px"></span>
         <span class="loader-spark sm" style="--x:34px;--y:86px"></span>
         <span class="loader-tile">
-          <img class="loader-logo" src="./images/WhiteLogo.png" alt="">
+          <img class="loader-logo" src="./images/WhiteLogo-loader.png" width="640" height="258" alt="">
         </span>
       </div>
       <div class="loader-mask"><h2 class="loader-title">مرحباً بك</h2></div>
@@ -899,6 +911,10 @@
     const loader = document.getElementById('loader');
     const loaderName = document.getElementById('loaderName');
     const loaderNameText = document.getElementById('loaderNameText');
+    const loaderLiquid = loader.querySelector('.loader-liquid');
+    // Decode the emblem now, not on the frame it first fades in (a decode
+    // there stalls the spring-in for a beat).
+    loader.querySelector('.loader-logo').decode?.().catch(() => {});
     function normalizeRole(value) {
       return (value || '').toString().trim().toLowerCase();
     }
@@ -1041,6 +1057,7 @@
     function hideLoader() {
       loader.classList.remove('show');
       loader.classList.remove('leaving');
+      loaderLiquid.style.removeProperty('--sweep-from');
       loaderShownAtMs = null;
       document.body.style.overflow = '';
     }
@@ -1116,7 +1133,13 @@
       const pageUrl = sameOriginUrl(route, location.href);
       const res = await warmUrl(pageUrl);
       if (!res) return;
-      const page = new DOMParser().parseFromString(await res.text(), 'text/html');
+      const html = await res.text();
+      // Parsing a whole page is a solid chunk of main-thread work; let it
+      // wait for an idle moment so it never lands on an animation frame.
+      await new Promise((resolve) => (window.requestIdleCallback
+        ? requestIdleCallback(resolve, { timeout: 600 })
+        : setTimeout(resolve, 50)));
+      const page = new DOMParser().parseFromString(html, 'text/html');
       const attr = (el) => el.getAttribute('href') || el.getAttribute('src');
       const jobs = [];
 
@@ -1197,6 +1220,10 @@
       // mid-frame by the browser unloading the page. The header it lands
       // copies whichever page comes next.
       loader.classList.toggle('to-admin', route.includes('/admins/'));
+      // Hand the sweep the liquid's live position, mid-bob, so it picks up
+      // from exactly there instead of snapping to a fixed starting point.
+      const liveY = new DOMMatrixReadOnly(getComputedStyle(loaderLiquid).transform).m42;
+      loaderLiquid.style.setProperty('--sweep-from', `${liveY}px`);
       loader.classList.add('leaving');
       setTimeout(() => {
         window.location.href = route;
