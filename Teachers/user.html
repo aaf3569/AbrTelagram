@@ -1261,6 +1261,20 @@
       parentEl.appendChild(divider);
     }
 
+    // Row template for the today .table: auto for the day header, the
+    // column titles and each break divider, 1fr for each lesson. Stored as
+    // --today-rows on the table; only the tablet today-locked CSS in
+    // user.css reads it, so the lessons share whatever height the screen
+    // has left. (Phones use .compact-table and never show .table.)
+    function setTodayTableRows(tableEl, { withBreaks = true } = {}){
+      const rows = ['auto', 'auto'];
+      for(let i=1;i<=FIXED_LESSON_COUNT;i++){
+        rows.push('1fr');
+        if(withBreaks && getOpportunityLabelsForLesson(i).length) rows.push('auto');
+      }
+      tableEl.style.setProperty('--today-rows', rows.join(' '));
+    }
+
     function lessonMetaHtml(lessonNumber, overrideTimes){
       const lesson = normalizeLessonNumber(lessonNumber) || 1;
       const lessonLabel = LESSONS_AR[lesson - 1] || `الحصة #${lesson}`;
@@ -2030,6 +2044,7 @@
           <div class="cell skel-cell"><div class="skel skel-line"></div></div>
         `;
       }
+      setTodayTableRows(wrap, { withBreaks: false });
 
       const compactWrap = document.createElement('div');
       compactWrap.className = 'compact-table';
@@ -2174,6 +2189,7 @@
         wrap.appendChild(cClass);
         renderOpportunityDivider(wrap, i, highlight);
       }
+      setTodayTableRows(wrap);
 
       const compactWrap = document.createElement('div');
       compactWrap.className = 'compact-table';
