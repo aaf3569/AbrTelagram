@@ -35,6 +35,7 @@ export async function fetchStudentAttendanceData(db, studentId) {
     return a.date < b.date ? 1 : -1;
   });
 
+  // Lesson count — kept for callers that still show it that way.
   const present = rows.filter((r) => r.status === "present").length;
   const late = rows.filter((r) => r.status === "late").length + morningLateRows.length;
   const allAbsences = rows.filter((r) => r.status === "absent");
@@ -43,6 +44,7 @@ export async function fetchStudentAttendanceData(db, studentId) {
   // one warning ladder, even when its lessons have mixed excuse states.
   const absent = absenceDays.filter((day) => !day.excused).length;
   const excused = absenceDays.filter((day) => day.excused).length;
+  const presentDays = countPresentDays(rows, absenceDays);
 
   const combinedLates = [
     ...rows.filter((r) => r.status === "late"),
@@ -51,8 +53,62 @@ export async function fetchStudentAttendanceData(db, studentId) {
     if (a.date === b.date) return (b.time || "").localeCompare(a.time || "");
     return a.date < b.date ? 1 : -1;
   });
+  const lateAbsenceDays = groupLatesIntoAbsenceDays(combinedLates);
 
-  return { rows, morningLateRows, present, late, absent, excused, allAbsences, absenceDays, combinedLates };
+  return {
+    rows, morningLateRows, present, presentDays, late, absent, excused,
+    allAbsences, absenceDays, combinedLates, lateAbsenceDays,
+  };
+}
+
+// Days the student attended: dates with at least one present or late lesson.
+// A date that is already an absence day (any lesson absent) isn't counted
+// here as well, so حضور and غياب never count the same day twice.
+export function countPresentDays(rows, absenceDays = []) {
+  const absenceDates = new Set(absenceDays.map((day) => day.date));
+  const dates = new Set();
+  for (const row of rows) {
+    if (row.status !== "present" && row.status !== "late") continue;
+    const date = String(row.date || "").slice(0, 10);
+    if (date && !absenceDates.has(date)) dates.add(date);
+  }
+  return dates.size;
+}
+
+// School rule: every LATES_PER_ABSENCE_DAY lates (lesson lates and morning
+// lates together) count as one unexcused absence day. Lates are used up
+// oldest first, so each derived day can list exactly which lates made it.
+export const LATES_PER_ABSENCE_DAY = 5;
+export function groupLatesIntoAbsenceDays(lates) {
+  const oldestFirst = [...lates].sort((a, b) => {
+    if (a.date === b.date) return (a.time || "").localeCompare(b.time || "");
+    return a.date < b.date ? -1 : 1;
+  });
+  const groups = [];
+  for (let i = 0; i + LATES_PER_ABSENCE_DAY <= oldestFirst.length; i += LATES_PER_ABSENCE_DAY) {
+    groups.push({ number: groups.length + 1, lates: oldestFirst.slice(i, i + LATES_PER_ABSENCE_DAY) });
+  }
+  // Newest first, like the other lists.
+  return groups.reverse();
+}
+
+export function makeLateAbsenceTile(group) {
+  const div = document.createElement("div");
+  div.className = "att-tile will-change att-tile-from-lates";
+  const left = document.createElement("div");
+  left.className = "att-left";
+  const title = document.createElement("div");
+  title.className = "att-title";
+  title.textContent = `غياب محتسب من التأخير (${toArabicDigits(group.number)})`;
+  const sub = document.createElement("div");
+  sub.className = "att-sub";
+  sub.textContent = `نتيجة ${toArabicDigits(group.lates.length)} تأخيرات: ${group.lates.map((r) => toArabicDigits(r.date || "—")).join("، ")}`;
+  const badge = document.createElement("span");
+  badge.className = "badge b-late-absence";
+  badge.textContent = "بسبب التأخير";
+  left.append(title, sub);
+  div.append(left, badge);
+  return div;
 }
 
 export function groupAbsencesByDay(rows) {

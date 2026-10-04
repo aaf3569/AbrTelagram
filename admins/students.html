@@ -13,7 +13,7 @@
 <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js" crossorigin>
 <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js" crossorigin>
 <link rel="modulepreload" href="/shared/attendance.js">
-<link rel="modulepreload" href="/shared/attendance-tiles.js">
+<link rel="modulepreload" href="/shared/attendance-tiles.js?v=2026-10-04">
 <link rel="modulepreload" href="/shared/class-registry.js">
 <link rel="modulepreload" href="/shared/firebase.js">
 <link rel="modulepreload" href="/shared/warning-system.js">
@@ -1274,6 +1274,19 @@ html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%;
   .sheet-title{ font-size:1.15rem; }
   .modal, .reorder-modal{ max-width:640px; }
 }
+
+/* كل ٥ تأخيرات = يوم غياب: the derived absence days in الغيابات, and the
+   notes that explain them. */
+.b-late-absence{ background:#fff4e5; color:#b45309; border:1px solid rgba(180,83,9,.28) }
+.att-tile.att-tile-from-lates{ cursor:default; border-style:dashed; border-color:rgba(180,83,9,.35); background:#fffbf5 }
+.att-tile.att-tile-from-lates:hover{ transform:none; box-shadow:none; background:#fffbf5 }
+.stat-note{ margin-top:4px; font-size:.74rem; font-weight:800; color:#b45309 }
+.stat-note:empty{ display:none }
+.late-rule-note{ margin:4px 0 2px; font-size:.84rem; font-weight:700; color:#6b7f9f }
+.late-rule-note b{ color:#b45309 }
+#attDetailBody .row[hidden], #lateDetailActions[hidden], .late-rule-note[hidden]{ display:none !important }
+#lateDetailActions{ display:flex; margin-top:6px }
+#lateDetailActions .btn{ flex:1; height:48px }
 </style>
 
   <!-- iOS home screen icon -->
@@ -1859,7 +1872,7 @@ html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%;
         </div>
         <div class="stats-grid" style="align-items:stretch;">
           <div class="stat-card stat-present"> <div class="stat-title">إجمالي الحضور</div> <div id="totPresent" class="stat-value">—</div> </div>
-          <div class="stat-card stat-absent"> <div class="stat-title">أيام الغياب بدون عذر</div> <div id="totAbsent" class="stat-value">—</div> </div>
+          <div class="stat-card stat-absent"> <div class="stat-title">أيام الغياب بدون عذر</div> <div id="totAbsent" class="stat-value">—</div> <div id="totAbsentFromLates" class="stat-note"></div> </div>
           <div class="stat-card stat-late"> <div class="stat-title">إجمالي التأخير</div> <div id="totLate" class="stat-value">—</div> </div>
         </div>
       </div>
@@ -1880,6 +1893,7 @@ html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%;
           <span>0</span><span>5</span><span>8</span><span>11</span><span>15+</span>
         </div>
         <div id="warningNextHint" class="warning-next-hint">لا توجد غيابات بدون عذر بعد.</div>
+        <div id="warningLatesNote" class="late-rule-note" hidden></div>
       </div>
 
       <div id="warningBlockExcused" class="analytics-card">
@@ -1911,6 +1925,7 @@ html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%;
         <div class="row" style="justify-content:space-between; align-items:center;">
           <div class="label" style="margin:0;">التأخيرات</div> <span id="lateCountPill" class="pill y">تأخير: 0</span>
         </div>
+        <div id="lateRuleNote" class="late-rule-note"></div>
         <div id="latesList" class="att-group"></div>
       </div>
     </div>
@@ -2030,9 +2045,16 @@ html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%;
       <div class="row"><span class="label" style="min-width:110px;">التاريخ:</span><span id="dDate">—</span></div>
       <div class="row"><span class="label" style="min-width:110px;">الحصة:</span><span id="dLesson">—</span></div>
       <div class="row"><span class="label" style="min-width:110px;">الفصل:</span><span id="dClass">—</span></div>
+      <div id="dSubjectRow" class="row" hidden><span class="label" style="min-width:110px;">المادة:</span><span id="dSubject">—</span></div>
+      <div id="dLessonTeacherRow" class="row" hidden><span class="label" style="min-width:110px;">معلّم الحصة:</span><span id="dLessonTeacher">—</span></div>
       <div class="row"><span class="label" style="min-width:110px;">أُضيفت بواسطة:</span><span id="dTeacher">—</span></div>
       <div class="row"><span class="label" style="min-width:110px;">وقت الإضافة:</span><span id="dCreatedAt">—</span></div>
       <div class="row"><span class="label" style="min-width:110px;">آخر تعديل:</span><span id="dUpdatedAt">—</span></div>
+      <div id="dUpdatedByRow" class="row" hidden><span class="label" style="min-width:110px;">عُدّلت بواسطة:</span><span id="dUpdatedBy">—</span></div>
+      <!-- Lates: details first, editing only from this button. -->
+      <div id="lateDetailActions" hidden>
+        <button id="lateEditBtn" class="btn primary" type="button">تعديل</button>
+      </div>
       <!-- NEW: Excused Absence Reason Display -->
       <div id="excusedReasonRow" class="row" style="display:none;">
         <span class="label" style="min-width:110px;">سبب الغياب بعذر:</span>
@@ -2087,7 +2109,7 @@ html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%;
 <div id="specialCaseModal" class="modal-overlay">
   <div class="modal">
     <div class="modal-header">
-      <h3 class="modal-title">سبب الحالة الخاصة</h3>
+      <h3 class="modal-title">الحالة الخاصة</h3>
       <button id="closeSpecialCaseModal" class="modal-close" aria-label="إغلاق">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M18 6L6 18M6 6l12 12"/>
@@ -2096,11 +2118,11 @@ html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%;
     </div>
     <div class="modal-body">
       <div class="field">
-        <div class="label">السبب <span style="color: var(--red);">*</span></div>
+        <div class="label">الملاحظة التي تظهر للمعلمين <span style="color: var(--red);">*</span></div>
         <div class="input-wrap">
-          <textarea id="specialCaseReasonInput" class="input" placeholder="أدخل سبب الحالة الخاصة" rows="4"></textarea>
+          <textarea id="specialCaseReasonInput" class="input" placeholder="مثال: يُسمح له بالخروج إلى الحمام" rows="4"></textarea>
         </div>
-        <div id="specialCaseReasonError" class="validation-error">السبب مطلوب</div>
+        <div id="specialCaseReasonError" class="validation-error">الملاحظة مطلوبة</div>
       </div>
     </div>
     <div class="modal-footer">
@@ -2216,7 +2238,7 @@ import { initializeApp, getApp, getApps } from "/shared/firebase.js";
 import { getAuth, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from "/shared/firebase.js";
 import { initializeFirestore, persistentSingleTabManager, collection, collectionGroup, getDocs, query, where, orderBy, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp, writeBatch, arrayUnion, arrayRemove } from "/shared/firebase.js";
 import { mountAttendanceSheet } from "/shared/attendance.js";
-import { fetchStudentAttendanceData, makeAttTile, makeMorningLateTile, makeAbsenceDayTile } from "/shared/attendance-tiles.js";
+import { fetchStudentAttendanceData, makeAttTile, makeMorningLateTile, makeAbsenceDayTile, makeLateAbsenceTile, LATES_PER_ABSENCE_DAY } from "/shared/attendance-tiles.js?v=2026-10-04";
 import { renderWarningState, renderExcusedWarningState } from "/shared/warning-system.js";
 import { DEFAULT_CLASS_LIST, fetchClassList, groupByGrade, availableNumbersToAdd, buildClassKey, primeClassList, parseClassKey } from "/shared/class-registry.js";
 import { getDisplaySubjectForClass, getDisplaySubjectForTeacherClass } from "/shared/departments.js";
@@ -2414,6 +2436,17 @@ const dClass = document.getElementById('dClass');
 const dTeacher = document.getElementById('dTeacher');
 const dCreatedAt = document.getElementById('dCreatedAt');
 const dUpdatedAt = document.getElementById('dUpdatedAt');
+const dSubjectRow = document.getElementById('dSubjectRow');
+const dSubject = document.getElementById('dSubject');
+const dLessonTeacherRow = document.getElementById('dLessonTeacherRow');
+const dLessonTeacher = document.getElementById('dLessonTeacher');
+const dUpdatedByRow = document.getElementById('dUpdatedByRow');
+const dUpdatedBy = document.getElementById('dUpdatedBy');
+const lateDetailActions = document.getElementById('lateDetailActions');
+const lateEditBtn = document.getElementById('lateEditBtn');
+const totAbsentFromLates = document.getElementById('totAbsentFromLates');
+const warningLatesNote = document.getElementById('warningLatesNote');
+const lateRuleNote = document.getElementById('lateRuleNote');
 // Edit status form
 const statusEditForm = document.getElementById('statusEditForm');
 const statusOptions = document.querySelectorAll('.status-option');
@@ -3085,7 +3118,7 @@ saveSpecialCase.addEventListener('click', async () => {
     resetModalInputs();
   } catch (error) {
     console.error('[saveSpecialCase]', error);
-    alert('حدث خطأ أثناء حفظ السبب');
+    alert('حدث خطأ أثناء حفظ الملاحظة');
   }
 });
 
@@ -5018,6 +5051,8 @@ async function loadStudentAttendance(studentId){
   absencesList.innerHTML = '<div class="loading"><div class="spinner"></div><div class="muted">جاري تحميل بيانات الحضور...</div></div>';
   latesList.innerHTML = '';
   totPresent.textContent = '—'; totAbsent.textContent = '—'; totLate.textContent = '—';
+  totAbsentFromLates.textContent = ''; lateRuleNote.textContent = '';
+  warningLatesNote.hidden = true; warningLatesNote.textContent = '';
   absentCountPill.textContent = 'أيام غياب: ٠'; lateCountPill.textContent = 'تأخير: 0';
   warningAbsenceCount.textContent = '0';
   warningLevelBadge.textContent = 'لا يوجد';
@@ -5033,16 +5068,31 @@ async function loadStudentAttendance(studentId){
   warningNextHintExcused.textContent = '—';
 
   try{
-    const { rows, absenceDays, combinedLates, present, late, absent, excused } = await fetchStudentAttendanceData(db, studentId);
+    const { rows, absenceDays, combinedLates, presentDays, late, absent, excused, lateAbsenceDays } = await fetchStudentAttendanceData(db, studentId);
     currentStudentAttendance = rows;
 
-    totPresent.textContent = toArabicDigits(present);
-    totLate.textContent = toArabicDigits(late);
-    totAbsent.textContent = toArabicDigits(absent);
-    absentCountPill.textContent = `أيام غياب: ${toArabicDigits(absenceDays.length)}`;
-    lateCountPill.textContent = `تأخير: ${toArabicDigits(late)}`;
+    // Every LATES_PER_ABSENCE_DAY lates add one unexcused absence day — to
+    // the count, the warning ladder and the الغيابات list, each labelled as
+    // coming from lates.
+    const fromLates = lateAbsenceDays.length;
+    const absentTotal = absent + fromLates;
+    const latesTowardNext = late % LATES_PER_ABSENCE_DAY;
 
-    renderWarningState(absent, {
+    totPresent.textContent = toArabicDigits(presentDays);
+    totLate.textContent = toArabicDigits(late);
+    totAbsent.textContent = toArabicDigits(absentTotal);
+    totAbsentFromLates.textContent = fromLates ? `منها ${toArabicDigits(fromLates)} بسبب التأخير` : '';
+    absentCountPill.textContent = `أيام غياب: ${toArabicDigits(absenceDays.length + fromLates)}`;
+    lateCountPill.textContent = `تأخير: ${toArabicDigits(late)}`;
+    lateRuleNote.innerHTML = `كل <b>${toArabicDigits(LATES_PER_ABSENCE_DAY)} تأخيرات</b> تُحتسب يوم غياب بدون عذر`
+      + (late ? ` — متبقٍّ ${toArabicDigits(LATES_PER_ABSENCE_DAY - latesTowardNext)} ${LATES_PER_ABSENCE_DAY - latesTowardNext === 1 ? 'تأخير' : 'تأخيرات'} لاحتساب يوم غياب جديد` : '')
+      + '.';
+    if (fromLates) {
+      warningLatesNote.hidden = false;
+      warningLatesNote.innerHTML = `يشمل <b>${toArabicDigits(fromLates)}</b> ${fromLates === 1 ? 'يوم غياب محتسبًا' : 'أيام غياب محتسبة'} من التأخير (كل ${toArabicDigits(LATES_PER_ABSENCE_DAY)} تأخيرات = يوم).`;
+    }
+
+    renderWarningState(absentTotal, {
       countEl: warningAbsenceCount,
       badgeEl: warningLevelBadge,
       progressFillEl: warningProgressFill,
@@ -5059,6 +5109,7 @@ async function loadStudentAttendance(studentId){
     const absencesFragment = document.createDocumentFragment();
     const latesFragment = document.createDocumentFragment();
 
+    lateAbsenceDays.forEach(group=> absencesFragment.appendChild(makeLateAbsenceTile(group)));
     absenceDays.forEach(day=> absencesFragment.appendChild(makeAbsenceDayTile(day, openAbsenceDay)));
     // Lesson lates and morning lates share one list, newest first (already merged by fetchStudentAttendanceData).
     combinedLates.forEach(r=> latesFragment.appendChild(r.source==='morningLate' ? makeMorningLateTile(r, openMorningLateDetail) : makeAttTile(r, openAttDetail)));
@@ -5066,7 +5117,7 @@ async function loadStudentAttendance(studentId){
     absencesList.innerHTML = ''; latesList.innerHTML = '';
     absencesList.appendChild(absencesFragment); latesList.appendChild(latesFragment);
 
-    if(absenceDays.length===0){
+    if(absenceDays.length===0 && fromLates===0){
       const empty=document.createElement('div'); empty.className='muted'; empty.textContent='لا توجد حالات غياب.'; absencesList.appendChild(empty);
     }
     if(combinedLates.length===0){
@@ -5148,11 +5199,17 @@ async function openAttDetail(r){
   // still go through the shared attendance sheet, which writes back to the
   // real session + records — saveStatusBtn below now does the same
   // real-record write for absences, see its handler.
+  //
+  // Lates now open this same detail sheet first (who recorded it, when, the
+  // lesson's subject and teacher), with تعديل at the bottom — that button
+  // is what goes on to the attendance sheet (modern) or the status form.
   const isModernRecord = !!(r.sessionId && r.sessionPath && r.sessionPath.startsWith('attendanceSessions/'));
-  if (r.status !== 'absent' && isModernRecord) {
-    attendance.openForEdit(r.sessionId);
-    return;
-  }
+  const isLate = r.status === 'late';
+  editAttBtn.style.display = isLate ? 'none' : '';
+  lateDetailActions.hidden = !isLate;
+  dSubjectRow.hidden = true;
+  dLessonTeacherRow.hidden = true;
+  dUpdatedByRow.hidden = true;
 
   currentAttendanceRecord = r;
   attDetailTitle.textContent = r.status==='late' ? 'تفاصيل التأخير' : 'تفاصيل الغياب';
@@ -5173,21 +5230,20 @@ async function openAttDetail(r){
   dLesson.textContent = r.lessonLabel || ('حصة '+ (r.lessonIndex || '—'));
   dClass.textContent = r.class || '—';
   
-  const uid = r.updatedBy || r.createdBy;
+  // Absences keep their original "who" (last writer) and show at once;
+  // lates also load the attendance session for the full audit trail.
   dTeacher.textContent = '—';
-  if(uid){
-    if(teacherNameCache.has(uid)){
-      dTeacher.textContent = teacherNameCache.get(uid);
-    }else{
-      try{ const t = await getDoc(doc(db,'teachers', uid)); const name = t.exists() ? (t.data().name || uid) : uid; teacherNameCache.set(uid, name); dTeacher.textContent = name; }
-      catch{ dTeacher.textContent = uid; }
-    }
+  dCreatedAt.textContent = '—';
+  dUpdatedAt.textContent = '—';
+  if (!isLate) {
+    teacherDisplayName(r.updatedBy || r.createdBy).then((name) => { if (currentAttendanceRecord === r) dTeacher.textContent = name; });
+    const cAt = tsToDate(r.createdAt); const uAt = tsToDate(r.updatedAt);
+    dCreatedAt.textContent = cAt ? fmtDT(cAt) : '—';
+    dUpdatedAt.textContent = uAt ? fmtDT(uAt) : (cAt ? fmtDT(cAt) : '—');
+  } else {
+    fillLateAuditDetails(r, isModernRecord);
   }
-  
-  const cAt = tsToDate(r.createdAt); const uAt = tsToDate(r.updatedAt);
-  dCreatedAt.textContent = cAt ? fmtDT(cAt) : '—';
-  dUpdatedAt.textContent = uAt ? fmtDT(uAt) : (cAt ? fmtDT(cAt) : '—');
-  
+
   statusEditForm.classList.remove('active');
   statusOptions.forEach(opt => opt.classList.remove('selected'));
   statusOptions.forEach(opt => { if(opt.dataset.status === r.status) { opt.classList.add('selected'); } });
@@ -5202,7 +5258,69 @@ async function openAttDetail(r){
   openSheet(attDetailSheet);
 }
 
-closeAttDetail.addEventListener('click', ()=> { 
+async function teacherDisplayName(uid){
+  if(!uid) return '—';
+  if(teacherNameCache.has(uid)) return teacherNameCache.get(uid);
+  try{
+    const t = await getDoc(doc(db,'teachers', uid));
+    const name = t.exists() ? (t.data().name || uid) : uid;
+    teacherNameCache.set(uid, name);
+    return name;
+  }catch{ return uid; }
+}
+
+// Who recorded a late and when. Modern records point at their
+// attendanceSessions doc, which holds the lesson's subject and teacher,
+// when it was first recorded, and recordedByAdminUid when an admin
+// recorded it on the teacher's behalf.
+async function fillLateAuditDetails(r, isModernRecord){
+  let session = null;
+  if (isModernRecord) {
+    try{
+      const s = await getDoc(doc(db, 'attendanceSessions', r.sessionId));
+      if (s.exists()) session = s.data();
+    }catch(e){ console.warn('[lateDetail] session read failed:', e?.message || e); }
+  }
+  if (currentAttendanceRecord !== r) return;
+
+  const adminUid = session?.recordedByAdminUid || null;
+  const creatorUid = adminUid || r.createdBy || session?.teacherUid || r.updatedBy || null;
+  const createdAt = tsToDate(session?.createdAt) || tsToDate(r.createdAt);
+  const updatedAt = tsToDate(r.updatedAt) || tsToDate(session?.updatedAt);
+  const edited = !!(r.updatedBy && (r.updatedBy !== creatorUid
+    || (createdAt && updatedAt && updatedAt.getTime() - createdAt.getTime() > 60 * 1000)));
+
+  dCreatedAt.textContent = createdAt ? fmtDT(createdAt) : '—';
+  dUpdatedAt.textContent = updatedAt ? fmtDT(updatedAt) : (createdAt ? fmtDT(createdAt) : '—');
+  if (session?.subject) { dSubject.textContent = session.subject; dSubjectRow.hidden = false; }
+
+  const [creatorName, lessonTeacherName, editorName] = await Promise.all([
+    teacherDisplayName(creatorUid),
+    session?.teacherName ? Promise.resolve(session.teacherName) : (session?.teacherUid ? teacherDisplayName(session.teacherUid) : Promise.resolve('')),
+    edited ? teacherDisplayName(r.updatedBy) : Promise.resolve(''),
+  ]);
+  if (currentAttendanceRecord !== r) return;
+  dTeacher.textContent = adminUid ? `${creatorName} (الإدارة نيابةً عن المعلّم)` : creatorName;
+  if (lessonTeacherName && lessonTeacherName !== creatorName) {
+    dLessonTeacher.textContent = lessonTeacherName;
+    dLessonTeacherRow.hidden = false;
+  }
+  if (edited) { dUpdatedBy.textContent = editorName; dUpdatedByRow.hidden = false; }
+}
+
+lateEditBtn.addEventListener('click', () => {
+  const r = currentAttendanceRecord;
+  if (!r) return;
+  const isModernRecord = !!(r.sessionId && r.sessionPath && r.sessionPath.startsWith('attendanceSessions/'));
+  if (isModernRecord) {
+    closeSheet(attDetailSheet);
+    attendance.openForEdit(r.sessionId);
+    return;
+  }
+  statusEditForm.classList.add('active');
+});
+
+closeAttDetail.addEventListener('click', ()=> {
   closeSheet(attDetailSheet); 
   statusEditForm.classList.remove('active');
   excusedReasonRow.style.display = 'none';
