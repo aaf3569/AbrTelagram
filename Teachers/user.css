@@ -1220,56 +1220,6 @@
       .modal-close { width: 40px; height: 40px; }
       .info-box { padding: 10px; }
     }
-    /* جدولي on tablets: same idea as the phone's today-locked block above —
-       the whole day fits the screen, no page scroll — but keeping the
-       tablet's own two-column table. The lesson rows share whatever height
-       is left: grid-template-rows comes from --today-rows, set by
-       setTodayTableRows() in user.html (auto for the header, column titles
-       and break dividers, 1fr per lesson). The table keeps a hidden
-       internal scroll only as a fallback for an unusually short screen.
-
-       Touch screens 769–1366px wide and at least 500px tall only. Phones
-       never match: portrait is ≤768px wide, and a phone turned sideways is
-       under 500px tall. Desktops never match either (fine pointer). */
-    @media (min-width: 769px) and (max-width: 1366px) and (min-height: 500px) and (pointer: coarse) {
-      body.today-locked { height: 100vh; height: 100dvh; min-height: 0; overflow: hidden; }
-      body.today-locked main {
-        min-height: 0; overflow: hidden;
-        display: flex; flex-direction: column;
-        padding: 0 0 env(safe-area-inset-bottom, 0px);
-      }
-      /* Edge to edge like the phone: no max-width, and the card loses its
-         floating look (radius, side borders, shadow). width:100% keeps the
-         board full width as a flex item — see the phone block's note on
-         auto margins. */
-      body.today-locked .board { width: 100%; max-width: none; margin: 0; flex: 1 1 auto; min-height: 0; }
-      body.today-locked .board > .card {
-        flex: 1 1 auto; min-height: 0;
-        display: flex; flex-direction: column;
-        overflow: hidden;
-        border-radius: 0; border: none; box-shadow: none;
-        padding: 14px 16px 10px;
-      }
-      body.today-locked #containerMain { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
-      body.today-locked .table {
-        flex: 1 1 auto; min-height: 0;
-        grid-template-rows: var(--today-rows, none);
-        row-gap: 6px;
-        /* Keep the current lesson's outer ring inside the scroll area. */
-        padding: 4px;
-        overflow-y: auto; -webkit-overflow-scrolling: touch;
-        scrollbar-width: none; -ms-overflow-style: none;
-      }
-      body.today-locked .table::-webkit-scrollbar { display: none; }
-      body.today-locked .table .cell { min-height: 0; padding: 6px 12px; }
-      body.today-locked .table .th { padding: 10px; }
-      body.today-locked .table .header-full { padding: 10px 16px; }
-      body.today-locked .table .header-full.header-has-live { padding: 0; }
-      body.today-locked .table .header-full.header-has-live .header-day-row,
-      body.today-locked .table .header-live { padding: 9px 12px; }
-      body.today-locked .table .opportunity-divider { margin: 2px 0; }
-      body.today-locked #status.status-message { flex-shrink: 0; }
-    }
     @media (min-width: 769px) { .compact-table { display: none; } }
     @media (max-width: 480px) {
       .badge { padding: 6px 10px; }
