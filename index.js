@@ -30,7 +30,7 @@ const PORT = Number(process.env.PORT || 3000);
 const TELEGRAM_BOT_TOKEN = String(process.env.TELEGRAM_BOT_TOKEN || "").trim();
 const TELEGRAM_BOT_USERNAME = String(process.env.TELEGRAM_BOT_USERNAME || "").trim();
 const KUWAIT_TIMEZONE = "Asia/Kuwait";
-const LESSON_REMINDER_LEAD_MINUTES = 5;
+const LESSON_REMINDER_LEAD_MINUTES = 10;
 const REMINDER_CLAIM_STALE_MINUTES = 3;
 const TELEGRAM_REQUEST_TIMEOUT_MS = Math.max(
   3000,
@@ -2351,7 +2351,7 @@ app.get("/api/telegram/debug-reminders", async (req, res) => {
         classKey: item.classKey,
         teacherUid: userId,
       });
-      const before5Window = now.nowMinutes >= item.startMin - LESSON_REMINDER_LEAD_MINUTES && now.nowMinutes < item.startMin;
+      const lessonReminderWindow = now.nowMinutes >= item.startMin - LESSON_REMINDER_LEAD_MINUTES && now.nowMinutes < item.startMin;
       const attendanceReminderStart = item.startMin + ATTENDANCE_REMINDER_DELAY_MINUTES;
       const lateWindow = now.nowMinutes >= attendanceReminderStart && now.nowMinutes <= item.endMin + 15;
       const missedReminderStart = item.endMin + 16;
@@ -2398,7 +2398,7 @@ app.get("/api/telegram/debug-reminders", async (req, res) => {
           checkedSessionIds: attendanceState.checkedSessionIds,
         },
         windows: {
-          before5Window,
+          lessonReminderWindow,
           lateWindow,
           missedWindow,
         },
