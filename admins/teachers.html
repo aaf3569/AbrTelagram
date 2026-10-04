@@ -213,6 +213,17 @@
        sidebar). */
     .sidebar-desktop-head{display:flex;flex-direction:column;margin-bottom:12px}
     .sidebar-heading{font-size:.8rem;font-weight:900;color:#8a9bb3;padding-inline-start:2px;margin-top:6px}
+    /* Teacher count + Telegram-connected count, above the search. */
+    .teacher-stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+    .teacher-stat{display:flex;flex-direction:column;align-items:flex-start;gap:4px;min-width:0;padding:12px 14px;border-radius:14px;border:1px solid #d6e4f2;background:#fff;box-shadow:0 3px 10px rgba(3,60,84,.06);font-family:inherit;text-align:right}
+    .teacher-stat-value{font-size:1.5rem;font-weight:900;line-height:1.1;color:var(--primary)}
+    .teacher-stat-label{display:flex;align-items:center;gap:5px;font-size:.78rem;font-weight:800;color:#8a9bb3;white-space:nowrap}
+    .teacher-stat-icon{width:13px;height:13px;flex-shrink:0;stroke:currentColor;stroke-width:2.2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+    .teacher-stat-telegram{cursor:pointer;transition:border-color .15s ease,box-shadow .15s ease,background .15s ease}
+    .teacher-stat-telegram .teacher-stat-value,.teacher-stat-telegram .teacher-stat-label{color:#1c8fc7}
+    .teacher-stat-telegram:hover{border-color:rgba(34,158,217,.45);box-shadow:0 6px 16px rgba(34,158,217,.14)}
+    .teacher-stat-telegram:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+    .teacher-stat-telegram.subject-selected{background:#f0f9fe;border-color:rgba(34,158,217,.55)}
     .teacher-search-wrap{position:relative;margin-bottom:12px}
     .teacher-search-box{display:flex;align-items:center;gap:8px;height:48px;padding:0 14px;border-radius:14px;border:1px solid #d6e4f2;background:#fff;box-shadow:0 3px 10px rgba(3,60,84,.06);transition:border-color .15s ease,box-shadow .15s ease}
     .teacher-search-box:focus-within{border-color:rgba(3,60,84,.4);box-shadow:0 0 0 3px rgba(3,60,84,.08)}
@@ -380,7 +391,10 @@
       }
       body:has(#stateTeachers.active) #desktopWelcome{display:flex}
       body:has(#subjectSheet.open) #desktopWelcome,
-      body:has(#teacherSheet.open) #desktopWelcome{display:none}
+      body:has(#teacherSheet.open) #desktopWelcome,
+      body:has(#telegramSheet.open) #desktopWelcome{display:none}
+      .teacher-stat{padding:10px 12px;border-radius:12px}
+      .teacher-stat-value{font-size:1.3rem}
       .desktop-welcome-inner{text-align:center;max-width:340px;display:flex;flex-direction:column;align-items:center;gap:14px}
       .desktop-welcome-icon{width:68px;height:68px;border-radius:20px;display:grid;place-items:center;background:linear-gradient(160deg,#eef6fb,#e2eef8);color:var(--primary);box-shadow:inset 0 0 0 1px rgba(3,60,84,.08)}
       .desktop-welcome-icon svg{width:30px;height:30px;stroke:currentColor;stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round}
@@ -429,21 +443,24 @@
       #teacherSheet .profile-shell{width:100%}
 
       #subjectSheet .sheet-body > .section:first-of-type,
-      #adminsSheet .sheet-body > .section:first-of-type{
+      #adminsSheet .sheet-body > .section:first-of-type,
+      #telegramSheet .sheet-body > .section:first-of-type{
         background:transparent;border:none;box-shadow:none;padding:0;
       }
       #subjectSheet .sheet-body > .section:last-of-type,
-      #adminsSheet .sheet-body > .section:last-of-type{padding:0;overflow:hidden;flex-shrink:0}
+      #adminsSheet .sheet-body > .section:last-of-type,
+      #telegramSheet .sheet-body > .section:last-of-type{padding:0;overflow:hidden;flex-shrink:0}
       #subjectSheet .sheet-body > .section:last-of-type > .label,
-      #adminsSheet .sheet-body > .section:last-of-type > .label{
+      #adminsSheet .sheet-body > .section:last-of-type > .label,
+      #telegramSheet .sheet-body > .section:last-of-type > .label{
         padding:16px 20px;margin:0;border-bottom:1px solid var(--border);font-size:1rem;
       }
-      #teachersList.stack,#adminsList.stack{gap:0}
-      #teachersList .teacher-item,#adminsList .teacher-item{
+      #teachersList.stack,#adminsList.stack,#telegramList.stack{gap:0}
+      #teachersList .teacher-item,#adminsList .teacher-item,#telegramList .teacher-item{
         border-radius:0;border:none;box-shadow:none;padding:15px 20px;
       }
-      #teachersList .teacher-item:hover,#adminsList .teacher-item:hover{transform:none;background:#f8fbff;box-shadow:none;border-color:transparent}
-      #teachersList .teacher-item + .teacher-item,#adminsList .teacher-item + .teacher-item{border-top:1px solid var(--border)}
+      #teachersList .teacher-item:hover,#adminsList .teacher-item:hover,#telegramList .teacher-item:hover{transform:none;background:#f8fbff;box-shadow:none;border-color:transparent}
+      #teachersList .teacher-item + .teacher-item,#adminsList .teacher-item + .teacher-item,#telegramList .teacher-item + .teacher-item{border-top:1px solid var(--border)}
       #teachersList .teachers-separator{height:1px;background:var(--border);margin:0}
       .teacher-editing .profile-actions-card{bottom:16px}
       #subjectsList .subject .subject-count{flex:0 0 auto;min-width:24px;height:20px;font-size:.72rem;padding:0 7px}
@@ -500,6 +517,16 @@
 
       <section id="stateTeachers" class="state" aria-label="اختر المادة">
         <div class="sidebar-desktop-head">
+          <div class="teacher-stats">
+            <div class="teacher-stat">
+              <span id="statTeachersCount" class="teacher-stat-value">—</span>
+              <span class="teacher-stat-label">المعلمون</span>
+            </div>
+            <button id="statTelegramBtn" class="teacher-stat teacher-stat-telegram" type="button" aria-label="عرض المعلمين المتصلين بتيليجرام">
+              <span id="statTelegramCount" class="teacher-stat-value">—</span>
+              <span class="teacher-stat-label"><svg class="teacher-stat-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>متصلون بتيليجرام</span>
+            </button>
+          </div>
           <div class="teacher-search-wrap">
             <div class="teacher-search-box">
               <svg class="teacher-search-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
@@ -642,6 +669,30 @@
           </div>
           <div id="edOk" class="ok"></div><div id="edErr" class="err"></div>
         </section>
+      </div>
+    </div>
+  </section>
+
+  <section id="telegramSheet" class="sheet" aria-hidden="true">
+    <div class="sheet-header">
+      <button id="closeTelegram" class="back-btn" aria-label="رجوع"><svg class="back-btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg><span>رجوع</span></button>
+      <h3 class="sheet-title">المتصلون بتيليجرام</h3>
+    </div>
+    <div class="sheet-body">
+      <div class="section">
+        <div class="row" style="justify-content:space-between;">
+          <div class="subject-summary">
+            <div class="label" style="margin:0;">المعلمون الذين ربطوا حساباتهم ببوت تيليجرام</div>
+            <div id="telegramSummary" class="subject-summary-count">—</div>
+          </div>
+          <div class="subject-actions">
+            <button id="refreshTelegram" class="btn ghost" type="button" aria-label="تحديث القائمة">تحديث</button>
+          </div>
+        </div>
+      </div>
+      <div class="section">
+        <div class="label">قائمة المتصلين</div>
+        <div id="telegramList" class="stack"></div>
       </div>
     </div>
   </section>
@@ -1025,6 +1076,14 @@
     const refreshAdmins=document.getElementById('refreshAdmins');
     const openAddAdmin=document.getElementById('openAddAdmin');
     const adminsList=document.getElementById('adminsList');
+    const statTeachersCount=document.getElementById('statTeachersCount');
+    const statTelegramCount=document.getElementById('statTelegramCount');
+    const statTelegramBtn=document.getElementById('statTelegramBtn');
+    const telegramSheet=document.getElementById('telegramSheet');
+    const closeTelegram=document.getElementById('closeTelegram');
+    const refreshTelegram=document.getElementById('refreshTelegram');
+    const telegramSummary=document.getElementById('telegramSummary');
+    const telegramList=document.getElementById('telegramList');
     const adminSheet=document.getElementById('adminSheet');
     const closeAdmin=document.getElementById('closeAdmin');
     const adminTitle=document.getElementById('adminTitle');
@@ -1337,7 +1396,81 @@
         allTeachersCache=snap.docs.map(d=>({ uid:d.id, ...d.data() }));
       }catch(e){ console.error('[teacher-search] cache load failed:', e?.message||e); allTeachersCache=[]; }
       updateSubjectCounts();
+      updateTeacherStats();
     }
+
+    // ==== Sidebar stats: teacher count + Telegram-connected count. ====
+    // Same rule the bot server uses to pick who gets reminders
+    // (loadConnectedTeachersForSweep in index.js): flagged connected AND has
+    // a chat id. Admin accounts are left out, same as the department counts.
+    function isTelegramConnected(t){
+      return t.telegramConnected===true && !!String(t.telegramChatId||'').trim();
+    }
+    function nonAdminTeachers(){
+      return allTeachersCache.filter(t=>(t.role||'').toString().toLowerCase()!=='admin');
+    }
+    function updateTeacherStats(){
+      if(!allTeachersCache.length){ statTeachersCount.textContent='—'; statTelegramCount.textContent='—'; return; }
+      const teachers=nonAdminTeachers();
+      statTeachersCount.textContent=toArabicDigits(String(teachers.length));
+      statTelegramCount.textContent=toArabicDigits(String(teachers.filter(isTelegramConnected).length));
+      if(telegramSheet.classList.contains('open')) renderTelegramList();
+    }
+
+    let telegramListPresenceUnsubs=[];
+    function clearTelegramListPresence(){
+      telegramListPresenceUnsubs.forEach(unsub=>unsub());
+      telegramListPresenceUnsubs=[];
+    }
+    function renderTelegramList(){
+      clearTelegramListPresence();
+      telegramList.innerHTML='';
+      const teachers=nonAdminTeachers();
+      const connected=teachers.filter(isTelegramConnected)
+        .sort((a,b)=>(a.name||'').toString().localeCompare((b.name||'').toString(),'ar'));
+      telegramSummary.textContent=`${toArabicDigits(String(connected.length))} من أصل ${toArabicDigits(String(teachers.length))} معلم`;
+      if(!connected.length){
+        const empty=document.createElement('div');
+        empty.className='teacher-item teacher-empty';
+        empty.textContent='لا يوجد معلمون متصلون بتيليجرام بعد.';
+        telegramList.appendChild(empty);
+        return;
+      }
+      connected.forEach(t=>{
+        const civilId=getTeacherCivilId(t);
+        const dept=resolveDepartmentName(t.department||t.subject)||'';
+        const row=buildPersonRow({ name: t.name||civilId||t.email||t.uid, meta: [dept, civilId||t.email||''].filter(Boolean).join(' · ') });
+        row.el.addEventListener('click',()=>{
+          teacherOpenedFromTelegram=true;
+          openTeacherEditor(t.uid,{ syncRoute:true });
+        });
+        telegramList.appendChild(row.el);
+        telegramListPresenceUnsubs.push(watchPresence(db, t.uid, (state)=>applyPresence(row, state)));
+      });
+    }
+    function openTelegramPanel(){
+      Array.from(subjectsList.children).forEach(b=>b.classList.remove('subject-selected'));
+      openAdminsTop.classList.remove('subject-selected');
+      statTelegramBtn.classList.add('subject-selected');
+      [subjectSheet,teacherSheet,adminsSheet,adminSheet].forEach(s=>closeSheet(s));
+      openSheet(telegramSheet);
+      // Show what's already loaded straight away, then refresh — a teacher
+      // may have connected since this page was opened.
+      if(allTeachersCache.length) renderTelegramList();
+      else telegramSummary.textContent='جاري التحميل…';
+      loadAllTeachersCache();
+    }
+    function closeTelegramPanel(){
+      closeSheet(telegramSheet);
+      clearTelegramListPresence();
+      statTelegramBtn.classList.remove('subject-selected');
+    }
+    // Set when a profile is opened from the Telegram list, so رجوع on the
+    // profile goes back there instead of to the teacher's department.
+    let teacherOpenedFromTelegram=false;
+    statTelegramBtn.addEventListener('click', openTelegramPanel);
+    closeTelegram.addEventListener('click', closeTelegramPanel);
+    refreshTelegram.addEventListener('click', ()=>loadAllTeachersCache());
     function escapeHtml(str){
       return (str||'').toString().replace(/[&<>"]/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
     }
@@ -1497,6 +1630,7 @@
       if(!t) return;
       closeTeacherSearchResults();
       teacherSearchInput.blur();
+      teacherOpenedFromTelegram=false;
       if((t.role||'').toString().toLowerCase()==='admin') openAdminEditor(t.uid);
       else openTeacherEditor(t.uid);
     }
@@ -1848,6 +1982,8 @@
       // sheets rendered at once — the new one didn't visibly appear until
       // some later interaction happened to close the stale one.
       [teacherSheet,adminsSheet,adminSheet].forEach(s=>closeSheet(s));
+      closeTelegramPanel();
+      teacherOpenedFromTelegram=false;
       openSheet(subjectSheet);
       loadTeachers(label);
       // Desktop sidebar only — highlights which subject is currently open.
@@ -1867,6 +2003,8 @@
       // Same reasoning as openSubject() above — must not leave another
       // sheet's .open class in place on the desktop shell.
       [subjectSheet,teacherSheet,adminSheet].forEach(s=>closeSheet(s));
+      closeTelegramPanel();
+      teacherOpenedFromTelegram=false;
       openSheet(adminsSheet);
       loadAdmins();
     }
@@ -2101,6 +2239,13 @@
     });
     function closeTeacherView(){
       if(unsubscribeTeacherPresence){ unsubscribeTeacherPresence(); unsubscribeTeacherPresence=null; }
+      if(teacherOpenedFromTelegram){
+        teacherOpenedFromTelegram=false;
+        if(getRouteTeacherId()){ clearTeacherRoute(); syncTeacherRouteMode(); }
+        closeSheet(teacherSheet);
+        openTelegramPanel();
+        return;
+      }
       if(getRouteTeacherId()){
         clearTeacherRoute();
         syncTeacherRouteMode();
@@ -2332,7 +2477,8 @@
         edClasses.innerHTML='';const cls=Array.isArray(d.classes)?d.classes:[];if(!cls.length)edClasses.appendChild(makeClassRow(""));else cls.forEach(v=>edClasses.appendChild(makeClassRow(v)));
         setTeacherEditMode(false);
         updateProfileSummary();
-        [subjectSheet,adminsSheet,adminSheet].forEach(s=>closeSheet(s));
+        [subjectSheet,adminsSheet,adminSheet,telegramSheet].forEach(s=>closeSheet(s));
+        clearTelegramListPresence();
         openSheet(teacherSheet);
         if(syncRoute){ setTeacherRoute(uid); }
         syncTeacherRouteMode();
@@ -2550,6 +2696,13 @@
       const routeTeacherId = getRouteTeacherId();
       syncTeacherRouteMode();
       if(!routeTeacherId){
+        // Browser back from a profile opened out of the Telegram list.
+        if(teacherOpenedFromTelegram && teacherSheet.classList.contains('open')){
+          teacherOpenedFromTelegram=false;
+          closeSheet(teacherSheet);
+          openTelegramPanel();
+          return;
+        }
         closeSheet(teacherSheet);
         return;
       }
@@ -2580,6 +2733,8 @@
           return;
         }
         [subjectSheet,teacherSheet,adminsSheet,adminSheet].forEach(s=>closeSheet(s));
+        closeTelegramPanel();
+        teacherOpenedFromTelegram=false;
         openAdminsTop.classList.remove('subject-selected');
         Array.from(subjectsList.children).forEach(b=>b.classList.remove('subject-selected'));
         if(addTeacherModal.classList.contains('active')) closeModal(addTeacherModal);
