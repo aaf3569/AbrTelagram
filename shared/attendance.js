@@ -15,6 +15,11 @@ import {
 import {
   getOverriddenClassKeys, mergeCustomIntoLessonMap, classKeyFromRow, normalizeClassKey,
 } from "/shared/schedule-priority.js";
+// Namespace import for the newer lesson-name helpers: a browser can pair
+// this file with a cached older schedule-priority.js for a few minutes
+// after a deploy (see _headers), and a missing named export would stop
+// this whole module loading. A missing namespace property just falls back.
+import * as SchedulePriority from "/shared/schedule-priority.js";
 import { resolveDepartmentName } from "/shared/departments.js";
 
 const STYLE_ID = "attendance-sheet-style";
@@ -1175,7 +1180,9 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
     for (const row of rows) {
       const lessons = Array.isArray(row.lessons) ? row.lessons : [];
       const times = Array.isArray(row.times) ? row.times : [];
-      const max = Math.min(7, Number(row.lessonCount) || lessons.length || times.length || 7);
+      // Custom schedules can run past the normal day's 7 lessons (up to 12,
+      // the most firestore.rules' isValidLessonIndex accepts).
+      const max = Math.min(12, Number(row.lessonCount) || lessons.length || times.length || 7);
       for (let i = 0; i < max; i++) {
         const lesson = lessons[i] || {};
         if ((lesson.teacherUid || "").toString() !== teacherUid) continue;
@@ -1200,6 +1207,9 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
           subject: (lesson.subject || "").toString(),
           activeStart: (slot.start || fb.start || "00:00").toString(),
           activeEnd: (slot.end || fb.end || "00:00").toString(),
+          // The slot's own name (e.g. حصة مستقطعة, or a renumbered ordinal) —
+          // shown in the sheet and saved as the session's lessonLabel.
+          ...(SchedulePriority.customLessonLabel ? { lessonLabel: SchedulePriority.customLessonLabel(times, i) } : {}),
           teacherUid,
           scheduleData: { ...lesson, ...row, _source: "custom_weekly", _coveredAway: false },
         };
@@ -1593,23 +1603,30 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
       : (classText || DEFAULT_SHEET_TITLE);
   }
 
-  function buildLessonOption(currentLessonIndex) {
+  // meta (optional) is the lesson being opened. A custom-schedule lesson
+  // brings its own name and bell times (lessonLabel/activeStart/activeEnd),
+  // and may be past the normal day's lessons (no LESSON_TIMES entry at all).
+  function buildLessonOption(currentLessonIndex, meta = null) {
     els.lessonPicker.style.display = "none";
     els.lessonSelect.innerHTML = "";
     const l = LESSON_TIMES.find(x => x.index === currentLessonIndex);
-    if (!l) {
+    const isCustom = meta?.scheduleData?._source === "custom_weekly";
+    const start = (isCustom && meta.activeStart) || l?.start;
+    const end = (isCustom && meta.activeEnd) || l?.end;
+    const label = (isCustom && meta.lessonLabel) || l?.label || (isCustom ? `الحصة ${currentLessonIndex}` : "");
+    if (!label || !start || !end) {
       updateSheetTitle();
       setControlsEnabled(false);
       return;
     }
     const opt = document.createElement("option");
     opt.value = String(currentLessonIndex);
-    opt.textContent = `${l.label} — ${l.start} – ${l.end}`;
+    opt.textContent = `${label} — ${start} – ${end}`;
     opt.selected = true;
     opt.disabled = true;
     els.lessonSelect.appendChild(opt);
     els.lessonSelect.disabled = true;
-    updateSheetTitle(l.label);
+    updateSheetTitle(label);
     setControlsEnabled(true);
   }
 
@@ -1962,7 +1979,7 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
       return;
     }
     currentMeta = { ...meta, mode: "self" };
-    buildLessonOption(meta.lesson);
+    buildLessonOption(meta.lesson, meta);
     openSheet(els.sheet);
     await loadStudentsForClass(meta.classKey);
   }
@@ -2041,6 +2058,9 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
         ok: true, mode: "edit", date: sessionDate,
         classKey, lesson: lessonIndex, sessionId, createdAt,
         sessionCutoffTs: data.sessionCutoffTs || null,
+        // Keep the name it was recorded under (a custom lesson's own name)
+        // instead of re-deriving the generic one on save.
+        ...(lessonLabel ? { lessonLabel } : {}),
       };
       buildFixedLessonOption(lessonIndex, lessonLabel);
       // Keep save disabled until BOTH reads succeed. A failed status read
@@ -2128,7 +2148,7 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
     });
     const lessonIndex = parseInt(els.lessonSelect.value, 10);
     const lesson = LESSON_TIMES.find(l => l.index === lessonIndex);
-    const lessonLabel = lesson ? lesson.label : `الحصة ${lessonIndex}`;
+    const lessonLabel = currentMeta?.lessonLabel || (lesson ? lesson.label : `الحصة ${lessonIndex}`);
     els.confirmTitle.textContent = lessonLabel;
     els.confirmSub.textContent = [
       // Isolated so the class number and the reason never reorder each other.

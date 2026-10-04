@@ -1116,6 +1116,11 @@
     import {
       getOverriddenClassKeys, mergeCustomIntoLessonMap, classKeyFromRow, normalizeClassKey
     } from "/shared/schedule-priority.js";
+    // Namespace import for the newer custom-lesson name helpers — a cached
+    // older schedule-priority.js (up to 5 min after a deploy, see _headers)
+    // would make a missing named export stop this whole page loading; a
+    // missing namespace property just falls back to the standard names.
+    import * as SchedulePriority from "/shared/schedule-priority.js";
     import { fetchClassList, sortClassList, primeClassList } from "/shared/class-registry.js";
     import { DEPARTMENT_LIST, resolveDepartmentName, getDepartmentSubjectFilters } from "/shared/departments.js";
     import { getDayScheduleHighlight } from "/shared/day-schedule-highlight.js";
@@ -1126,7 +1131,7 @@
     // for 5 minutes (_headers) while this HTML is always fresh, so right after
     // a deploy the page could otherwise run against the previous module —
     // bump it whenever this page starts relying on something new in there.
-    import { mountAttendanceSheet, LESSON_END_GRACE_MINUTES } from "/shared/attendance.js?v=2026-09-29d";
+    import { mountAttendanceSheet, LESSON_END_GRACE_MINUTES } from "/shared/attendance.js?v=2026-10-04";
     import { mountStudentNotesSheet } from "/shared/student-notes-sheet.js";
     import { parseTimeToMinutes } from "/shared/kuwait-time.js";
     import { isTruthyFlag, canManageAttendance } from "/shared/auth-guard.js";
@@ -1191,6 +1196,9 @@
     ];
     let LESSONS_AR = [...DEFAULT_LESSONS_AR];
     let FIXED_LESSON_COUNT = 7;
+    // A custom-schedule day can run past FIXED_LESSON_COUNT, up to this
+    // (firestore.rules' isValidLessonIndex allows lessons 1–12).
+    const MAX_CUSTOM_LESSONS = 12;
 
     // Fetched from settings/classes inside onAuthStateChanged below, before
     // initClassPicker() (the "download all classes" picker/PDF feature —
@@ -1261,9 +1269,10 @@
       parentEl.appendChild(divider);
     }
 
-    function lessonMetaHtml(lessonNumber, overrideTimes){
+    // labelOverride: a custom schedule slot's own name (todayLessonLabel).
+    function lessonMetaHtml(lessonNumber, overrideTimes, labelOverride){
       const lesson = normalizeLessonNumber(lessonNumber) || 1;
-      const lessonLabel = LESSONS_AR[lesson - 1] || `الحصة #${lesson}`;
+      const lessonLabel = labelOverride || LESSONS_AR[lesson - 1] || `الحصة #${lesson}`;
       const t = overrideTimes && overrideTimes.start && overrideTimes.end ? overrideTimes : null;
       const timeAttrs = t ? ` data-lesson-time-start="${escapeHtml(t.start)}" data-lesson-time-end="${escapeHtml(t.end)}"` : '';
       return `
@@ -1722,14 +1731,30 @@
 
     // "الحصة الرابعة" -> "الرابعة" — the header countdown names the lesson
     // on its own, so repeating "الحصة" next to it is redundant.
+    // On a day with an enabled custom schedule, its slots can run past the
+    // normal day's lessons and carry their own names (e.g. حصة مستقطعة,
+    // see customLessonLabel in shared/schedule-priority.js).
+    function todayLessonTotal(dayCustomTimes){
+      return Math.max(FIXED_LESSON_COUNT, Math.min(MAX_CUSTOM_LESSONS, dayCustomTimes?.length || 0));
+    }
+    function todayLessonLabel(lessonNumber, dayCustomTimes){
+      if (dayCustomTimes && SchedulePriority.customLessonLabel) {
+        return SchedulePriority.customLessonLabel(dayCustomTimes, lessonNumber - 1);
+      }
+      return '';
+    }
+
     function shortLessonLabel(lessonNumber){
+      if (activeDayCustomTimes && SchedulePriority.customLessonShortLabel) {
+        return SchedulePriority.customLessonShortLabel(activeDayCustomTimes, lessonNumber - 1);
+      }
       const full = LESSONS_AR[lessonNumber - 1] || '';
       const stripped = full.replace(/^الحصة\s*/, '').trim();
       return stripped || `#${lessonNumber}`;
     }
 
     function getTodayDisplayTimes(entriesByLesson, dayCustomTimes){
-      return Array.from({ length: FIXED_LESSON_COUNT }, (_, index) => {
+      return Array.from({ length: todayLessonTotal(dayCustomTimes) }, (_, index) => {
         const lesson = index + 1;
         const hit = entriesByLesson.get(String(lesson));
         return resolveDisplayLessonTimes(hit, dayCustomTimes, lesson) || LESSON_TIMES[index];
@@ -2118,15 +2143,17 @@
       wrap.appendChild(thR);
       wrap.appendChild(thL);
 
-      for(let i=1;i<=FIXED_LESSON_COUNT;i++){
+      const lessonTotal = todayLessonTotal(dayCustomTimes);
+      for(let i=1;i<=lessonTotal;i++){
         const hit = entriesByLesson.get(String(i));
         const customTimes = resolveDisplayLessonTimes(hit, dayCustomTimes, i);
+        const customLabel = todayLessonLabel(i, dayCustomTimes);
 
         const cLesson = document.createElement('div');
         cLesson.className='cell';
         cLesson.dataset.rowRole = 'lesson';
         cLesson.dataset.lessonIndex = String(i);
-        cLesson.innerHTML = lessonMetaHtml(i, customTimes);
+        cLesson.innerHTML = lessonMetaHtml(i, customTimes, customLabel);
         const cClass  = document.createElement('div');
         cClass.className='cell';
         cClass.dataset.rowRole = 'class';
@@ -2161,7 +2188,9 @@
             teacherName: hit.teacherName || currentTeacherProfile?.name || '',
             _isOverride: !!hit._isOverride,
             _coveredAway: !!hit._coveredAway,
-            _overrideInfo: hit._overrideInfo || null
+            _overrideInfo: hit._overrideInfo || null,
+            lessonLabel: customLabel,
+            customTimes
           });
         }
 
@@ -2196,7 +2225,7 @@
       compactThClass.innerHTML = '<i class="fas fa-users"></i> الصف';
       compactWrap.appendChild(compactThClass);
 
-      for(let i=1;i<=FIXED_LESSON_COUNT;i++){
+      for(let i=1;i<=lessonTotal;i++){
         const hit = entriesByLesson.get(String(i));
         const customTimes = resolveDisplayLessonTimes(hit, dayCustomTimes, i);
 
@@ -2204,7 +2233,7 @@
         compactLesson.className = 'compact-cell lesson-cell';
         compactLesson.dataset.rowRole = 'lesson';
         compactLesson.dataset.lessonIndex = String(i);
-        compactLesson.innerHTML = lessonMetaHtml(i, customTimes);
+        compactLesson.innerHTML = lessonMetaHtml(i, customTimes, todayLessonLabel(i, dayCustomTimes));
 
         const compactClass = document.createElement('div');
         compactClass.className = 'compact-cell';
@@ -2500,9 +2529,13 @@
         }
       }
 
+      // A custom schedule can run past the normal day's lessons (up to 12,
+      // see MAX_CUSTOM_LESSONS) — read all of its slots, not just the first 7.
+      const customLessonLimit = Math.min(12, Math.max(FIXED_LESSON_COUNT,
+        ...customRows.map(row => Number(row?.lessonCount) || 0)));
       const scheduleUids = await getScheduleUids(uid);
       for(const scheduleUid of [...scheduleUids].reverse()){
-        mergeCustomIntoLessonMap(byLesson, scheduleUid, customRows, { fixedLessonCount: FIXED_LESSON_COUNT });
+        mergeCustomIntoLessonMap(byLesson, scheduleUid, customRows, { fixedLessonCount: customLessonLimit });
       }
 
       return byLesson;
@@ -2526,7 +2559,8 @@
     function normalizeLessonNumber(value){
       const lesson = Number(value);
       if (!Number.isFinite(lesson)) return null;
-      if (lesson < 1 || lesson > FIXED_LESSON_COUNT) return null;
+      // Past the normal day's count only happens on a custom-schedule day.
+      if (lesson < 1 || lesson > Math.max(FIXED_LESSON_COUNT, MAX_CUSTOM_LESSONS)) return null;
       return Math.floor(lesson);
     }
 
@@ -3948,7 +3982,7 @@
     // The popup's own hero + chip layout.
     function lessonActionsHero(meta){
       const dayName = (meta.date === kuwaitTodayISO()) ? 'اليوم' : (dayNameByISO(meta.date) || meta.date);
-      const lessonName = LESSONS_AR[meta.lesson-1] || `الحصة #${meta.lesson}`;
+      const lessonName = meta.lessonLabel || LESSONS_AR[meta.lesson-1] || `الحصة #${meta.lesson}`;
       return `
         <div class="la-hero">
           <div class="la-hero-main">
@@ -3969,7 +4003,7 @@
             <span class="la-chip-icon"><i class="far fa-clock"></i></span>
             <div class="la-chip-text">
               <div class="la-chip-label">الوقت</div>
-              <div class="la-chip-value">${escapeHtml(lessonTimeLabel(meta.lesson))}</div>
+              <div class="la-chip-value">${escapeHtml(lessonTimeLabel(meta.lesson, meta.customTimes))}</div>
             </div>
           </div>
         </div>
@@ -3988,7 +4022,9 @@
           classKey: safeText(slotOrLesson.classKey).trim() || '—',
           teacherUid: slotOrLesson.teacherUid || currentUser?.uid || '',
           teacherName: slotOrLesson.teacherName || '',
-          subject: slotOrLesson.subject || ''
+          subject: slotOrLesson.subject || '',
+          lessonLabel: slotOrLesson.lessonLabel || '',
+          customTimes: slotOrLesson.customTimes || null
         };
       }
 

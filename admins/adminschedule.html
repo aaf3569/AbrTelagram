@@ -1070,6 +1070,26 @@
       background:#fff;
     }
 
+    /* إضافة حصة popup (custom schedules) + the time editor's name field. */
+    .al-card{ width:min(520px, 100%); }
+    .al-field{ display:grid; gap:8px; margin-bottom:14px; }
+    .al-label{ font-size:13px; font-weight:900; color:var(--primary); }
+    .al-choice{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .al-option{
+      display:flex; align-items:flex-start; gap:8px; cursor:pointer;
+      padding:10px 12px; border:1px solid var(--border); border-radius:12px; background:#fff;
+      transition: border-color .12s ease, background .12s ease;
+    }
+    .al-option:has(input:checked){ border-color:rgba(3,60,84,.45); background:var(--page); }
+    .al-option input{ margin-top:3px; accent-color:var(--primary); }
+    .al-option span{ display:grid; gap:2px; }
+    .al-option b{ font-size:13px; font-weight:900; color:var(--text); }
+    .al-option small{ font-size:12px; font-weight:800; color:var(--muted); }
+    #addLessonWarn:empty{ display:none; }
+    #addLessonModal .time-inputs{ margin:4px 0 10px; }
+    #timeNameRow{ margin-top:-4px; }
+    @media (max-width:520px){ .al-choice{ grid-template-columns:1fr; } }
+
     /* Time inputs */
     .time-inputs{
       display:grid;
@@ -1267,11 +1287,69 @@
           <input type="time" id="endTimeInput" class="time-input" min="06:00" max="14:30" step="300">
         </div>
       </div>
+      <!-- Custom schedules only: rename a slot (empty = automatic number). -->
+      <div id="timeNameRow" class="al-field custom-hidden">
+        <label class="al-label" for="timeNameInput">اسم الحصة</label>
+        <input id="timeNameInput" class="input" type="text" maxlength="40" placeholder="اتركه فارغًا للترقيم التلقائي (مثال: حصة مستقطعة)">
+      </div>
       <div class="pop-desc">يتم تطبيق الأوقات على جميع الجداول الأسبوعية.</div>
       <div class="pop-actions">
         <button id="timeRemoveLessonBtn" class="btn danger custom-hidden" type="button">حذف الحصة</button>
         <button id="timeCancelBtn" class="btn" type="button">إلغاء</button>
         <button id="timeSaveBtn" class="btn primary" type="button">حفظ الوقت</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- إضافة حصة to a custom schedule: where it goes, what it's called, and
+       its times. Inserted into every class's copy of the schedule — see
+       spliceLessonAcrossClasses(). -->
+  <div id="addLessonModal" class="modal" aria-hidden="true">
+    <div class="modal-card al-card" role="dialog" aria-modal="true" aria-labelledby="addLessonTitle">
+      <div class="pop-title-row">
+        <div id="addLessonTitle" class="pop-title">إضافة حصة</div>
+        <button id="addLessonXBtn" class="pop-close" type="button" aria-label="إغلاق">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+
+      <div class="al-field">
+        <label class="al-label" for="addLessonPosition">مكان الحصة</label>
+        <select id="addLessonPosition" class="themed-select"></select>
+        <div id="addLessonNeighbors" class="pop-desc"></div>
+      </div>
+
+      <div class="al-field">
+        <div class="al-label">اسم الحصة</div>
+        <div class="al-choice" role="radiogroup" aria-label="اسم الحصة">
+          <label class="al-option">
+            <input type="radio" name="addLessonNameMode" value="numbered" checked>
+            <span><b>ترقيم تلقائي</b><small id="addLessonNumberedPreview">—</small></span>
+          </label>
+          <label class="al-option">
+            <input type="radio" name="addLessonNameMode" value="custom">
+            <span><b>اسم مخصص</b><small>مثل: حصة مستقطعة</small></span>
+          </label>
+        </div>
+        <input id="addLessonNameInput" class="input custom-hidden" type="text" maxlength="40" placeholder="اكتب اسم الحصة (مثال: حصة مستقطعة)">
+      </div>
+
+      <div class="time-inputs">
+        <div class="time-input-group">
+          <label for="addLessonStart">وقت بداية الحصة</label>
+          <input type="time" id="addLessonStart" class="time-input" step="300">
+        </div>
+        <div class="time-input-group">
+          <label for="addLessonEnd">وقت نهاية الحصة</label>
+          <input type="time" id="addLessonEnd" class="time-input" step="300">
+        </div>
+      </div>
+      <div id="addLessonWarn" class="pop-desc err"></div>
+      <div class="pop-desc">تُضاف الحصة لهذا الجدول في جميع الفصول، وتنتقل الحصص التي بعدها خانة واحدة. حدّد المادة والمعلم لكل فصل من الجدول بعد الإضافة.</div>
+
+      <div class="pop-actions">
+        <button id="addLessonCancelBtn" class="btn" type="button">إلغاء</button>
+        <button id="addLessonConfirmBtn" class="btn primary" type="button">إضافة الحصة</button>
       </div>
     </div>
   </div>
@@ -1467,6 +1545,11 @@
     import { kuwaitDateTimeToDate, addMinutesToDate } from "/shared/kuwait-time.js";
     import { LESSON_END_GRACE_MINUTES } from "/shared/attendance.js";
     import { initAdminTeacherSearch } from "/shared/admin-teacher-search.js";
+    // Custom-schedule lesson names (customLessonLabel & co.). A namespace
+    // import so a browser still holding an older cached copy of this shared
+    // file for a few minutes after a deploy (see _headers) falls back to the
+    // standard names instead of failing to load the page.
+    import * as SchedulePriority from "/shared/schedule-priority.js";
 
 
 
@@ -1568,6 +1651,19 @@
     const timeCancelBtn = document.getElementById('timeCancelBtn');
     const timeSaveBtn = document.getElementById('timeSaveBtn');
     const timeRemoveLessonBtn = document.getElementById('timeRemoveLessonBtn');
+    const timeNameRow = document.getElementById('timeNameRow');
+    const timeNameInput = document.getElementById('timeNameInput');
+    const addLessonModal = document.getElementById('addLessonModal');
+    const addLessonXBtn = document.getElementById('addLessonXBtn');
+    const addLessonPosition = document.getElementById('addLessonPosition');
+    const addLessonNeighbors = document.getElementById('addLessonNeighbors');
+    const addLessonNumberedPreview = document.getElementById('addLessonNumberedPreview');
+    const addLessonNameInput = document.getElementById('addLessonNameInput');
+    const addLessonStart = document.getElementById('addLessonStart');
+    const addLessonEnd = document.getElementById('addLessonEnd');
+    const addLessonWarn = document.getElementById('addLessonWarn');
+    const addLessonCancelBtn = document.getElementById('addLessonCancelBtn');
+    const addLessonConfirmBtn = document.getElementById('addLessonConfirmBtn');
 
     // Create custom schedule modal refs
     const createScheduleModal = document.getElementById('createScheduleModal');
@@ -1801,7 +1897,7 @@
       errorModal.setAttribute('aria-hidden', 'true');
       if(!modal.classList.contains('show') && !timeModal.classList.contains('show')
         && !createScheduleModal.classList.contains('show') && !settingsModal.classList.contains('show')
-        && !csvImportModal.classList.contains('show')){
+        && !csvImportModal.classList.contains('show') && !addLessonModal.classList.contains('show')){
         overlay.classList.remove('show');
       }
     }
@@ -2166,10 +2262,12 @@
       if(lessonIndex < 0 || lessonIndex >= schedule.lessonCount) return;
 
       currentTimeEditCtx = { kind:'custom', scheduleId, lessonIndex };
-      const lessonName = lessonLabel(lessonIndex + 1);
+      const lessonName = customSlotLabel(schedule.times, lessonIndex);
       timeModalTitle.textContent = `تعديل وقت ${lessonName} - ${schedule.name || 'جدول إضافي'}`;
       timeModalDesc.textContent = "يمكنك تعديل وقت هذه الحصة لهذا الجدول فقط، أو حذف الحصة من نفس النافذة.";
       timeRemoveLessonBtn.classList.toggle('custom-hidden', schedule.lessonCount <= 1);
+      timeNameRow.classList.remove('custom-hidden');
+      timeNameInput.value = customSlotName(schedule.times?.[lessonIndex]);
 
       const t = schedule.times?.[lessonIndex] || defaultLessonTimeAt(lessonIndex);
       startTimeInput.value = t.start || "00:00";
@@ -2187,6 +2285,8 @@
       startTimeInput.value = "";
       endTimeInput.value = "";
       timeRemoveLessonBtn.classList.add('custom-hidden');
+      timeNameRow.classList.add('custom-hidden');
+      timeNameInput.value = "";
       timeModalDesc.textContent = "يتم تطبيق الأوقات على جميع الجداول الأسبوعية.";
     }
 
@@ -2775,6 +2875,7 @@
         closeCreateScheduleModal();
         closeSettingsModal();
         closeErrorModal();
+        closeAddLessonModal();
       }
     });
 
@@ -2839,7 +2940,8 @@
           if (timeStrToMinutes(endTime) <= timeStrToMinutes(startTime)) {
             addStatusLine("err", "وقت النهاية يجب أن يكون بعد وقت البداية");
           } else {
-            schedule.times[idx] = { start: startTime, end: endTime };
+            const name = timeNameInput.value.trim();
+            schedule.times[idx] = { start: startTime, end: endTime, ...(name ? { label: name } : {}) };
             setDirty(true);
             renderCustomSchedules();
             // The custom schedule's bell times are one shared property of the
@@ -2869,9 +2971,11 @@
       setDirty(true);
       renderCustomSchedules();
       closeTimeModal();
-      // lessonCount/times are shared across every class — push immediately,
-      // same as a time edit.
-      propagateSharedScheduleFields(schedule, { times: schedule.times, lessonCount: schedule.lessonCount });
+      // Shift every class's lessons too (not just this one), along with the
+      // shared lessonCount/times — see spliceLessonAcrossClasses().
+      spliceLessonAcrossClasses(schedule, { removeAt: idx }).then((ok)=>{
+        if(!ok) openErrorModal('تم حذف الحصة هنا، لكن تعذّر تحديث باقي الفصول. أعد المحاولة.');
+      });
     });
 
     function lessonLabel(index){
@@ -2881,6 +2985,60 @@
       const full = lessonLabel(index);
       if(full.startsWith('الحصة ')) return full.replace(/^الحصة\s+/, '');
       return `#${index}`;
+    }
+
+    // A custom schedule's slot names: its own label (e.g. حصة مستقطعة) or an
+    // automatic number that skips named slots — see customLessonLabel in
+    // shared/schedule-priority.js, which every teacher-facing page uses too.
+    const MAX_CUSTOM_LESSONS = 12;
+    function customSlotLabel(times, idx){
+      return SchedulePriority.customLessonLabel ? SchedulePriority.customLessonLabel(times, idx) : lessonLabel(idx + 1);
+    }
+    function customSlotShortLabel(times, idx){
+      return SchedulePriority.customLessonShortLabel ? SchedulePriority.customLessonShortLabel(times, idx) : lessonNameOnly(idx + 1);
+    }
+    function customSlotName(slot){
+      return typeof slot?.label === 'string' ? slot.label.trim() : '';
+    }
+    // Firestore rejects undefined, so `label` is only present when set.
+    function serializeCustomTime(t, idx){
+      const label = customSlotName(t);
+      return {
+        start: (t?.start || defaultLessonTimeAt(idx).start).toString(),
+        end: (t?.end || defaultLessonTimeAt(idx).end).toString(),
+        ...(label ? { label } : {})
+      };
+    }
+
+    // Inserting or removing a slot moves every later lesson one place — in
+    // EVERY class's copy of the schedule, not only the class on screen, or
+    // the other classes' subject/teacher assignments would end up one slot
+    // off. Writes each class's shifted lessons together with the shared
+    // lessonCount/times in one batch. The schedule passed in already has its
+    // new lessonCount/times. Returns false (and logs) on failure.
+    async function spliceLessonAcrossClasses(schedule, { insertAt = null, removeAt = null } = {}){
+      try{
+        const snap = await getDocs(query(collection(db, 'customDaySchedules'), where('id', '==', schedule.id)));
+        if(snap.empty) return true;
+        const oldCount = insertAt !== null ? schedule.lessonCount - 1 : schedule.lessonCount + 1;
+        const times = schedule.times.slice(0, schedule.lessonCount).map(serializeCustomTime);
+        const batch = writeBatch(db);
+        snap.forEach((d)=>{
+          const x = d.data() || {};
+          if(x.deletedAt) return;
+          const lessons = (Array.isArray(x.lessons) ? x.lessons : []).map(normalizeLesson);
+          while(lessons.length < oldCount) lessons.push(normalizeLesson({}));
+          lessons.length = oldCount;
+          if(insertAt !== null) lessons.splice(insertAt, 0, normalizeLesson({}));
+          if(removeAt !== null) lessons.splice(removeAt, 1);
+          batch.set(d.ref, { lessons, lessonCount: schedule.lessonCount, times, updatedAt: serverTimestamp() }, { merge: true });
+        });
+        await batch.commit();
+        return true;
+      }catch(e){
+        console.error('[spliceLessonAcrossClasses]', e);
+        return false;
+      }
     }
 
     function normalizeLesson(v){
@@ -3071,10 +3229,7 @@
       if(schedule.times.length > schedule.lessonCount){
         schedule.times.length = schedule.lessonCount;
       }
-      schedule.times = schedule.times.map((t, idx)=>({
-        start: (t?.start || defaultLessonTimeAt(idx).start).toString(),
-        end: (t?.end || defaultLessonTimeAt(idx).end).toString()
-      }));
+      schedule.times = schedule.times.map(serializeCustomTime);
     }
 
     function makeCustomSchedule(seed = {}){
@@ -3112,9 +3267,10 @@
         // since a special day (e.g. a Saturday event) commonly needs its own
         // bell times distinct from the normal school day.
         const t = schedule.times[timeIndex] || defaultLessonTimeAt(timeIndex);
+        // A custom-named slot shows its name alone (no "الحصة" word above).
         h.innerHTML = `
-          <div class="lesson-word">الحصة</div>
-          <div class="lesson-name">${lessonNameOnly(i)}</div>
+          <div class="lesson-word">${customSlotName(t) ? '&nbsp;' : 'الحصة'}</div>
+          <div class="lesson-name">${escapeHtml(customSlotShortLabel(schedule.times, timeIndex))}</div>
           <div class="time-display">${to12HourLabel(t.end)} - ${to12HourLabel(t.start)}</div>
         `;
         h.addEventListener('click', ()=> openCustomTimeEditor(schedule.id, timeIndex));
@@ -3138,7 +3294,7 @@
         btn.addEventListener('click', async ()=>{
           const dayNameLocal = Number.isInteger(schedule.dayIndex) ? CUSTOM_DAYS_AR[schedule.dayIndex] : '—';
           await openAssignmentEditor({
-            title: `${dayNameLocal} • ${lessonLabel(i)}`,
+            title: `${dayNameLocal} • ${customSlotLabel(schedule.times, i - 1)}`,
             classKey: schedule.classKey,
             current: normalizeLesson(schedule.values[i - 1]),
             onApply(next){
@@ -3219,13 +3375,8 @@
           // previously every slot below FIXED_LESSON_COUNT was unconditionally
           // overwritten with the site-wide time here, silently discarding
           // whatever the admin had just edited in the grid above.
-          times: Array.from({ length: schedule.lessonCount }, (_, idx) => {
-            const t = schedule.times[idx] || defaultLessonTimeAt(idx);
-            return {
-              start: (t?.start || defaultLessonTimeAt(idx).start).toString(),
-              end: (t?.end || defaultLessonTimeAt(idx).end).toString()
-            };
-          }),
+          times: Array.from({ length: schedule.lessonCount }, (_, idx) =>
+            serializeCustomTime(schedule.times[idx] || defaultLessonTimeAt(idx), idx)),
           updatedAt: serverTimestamp()
         };
 
@@ -3434,15 +3585,7 @@
         await switchCustomScheduleClass(schedule, classSelLocal.value, gridHost, statusNode, gradeSelLocal, classSelLocal);
       });
 
-      addBtn.addEventListener('click', ()=>{
-        schedule.lessonCount += 1;
-        ensureCustomLessons(schedule);
-        ensureCustomTimes(schedule);
-        setDirty(true);
-        renderCustomGrid(schedule, gridHost, statusNode);
-        // lessonCount/times are shared across every class — push immediately.
-        propagateSharedScheduleFields(schedule, { times: schedule.times, lessonCount: schedule.lessonCount });
-      });
+      addBtn.addEventListener('click', ()=> openAddLessonModal(schedule, gridHost, statusNode));
       remBtn.addEventListener('click', ()=>{
         if(schedule.lessonCount <= 1) return;
         schedule.lessonCount -= 1;
@@ -3458,6 +3601,157 @@
       renderCustomGrid(schedule, gridHost, statusNode);
       customSchedulesWrap.appendChild(item);
     }
+
+    /* ======= إضافة حصة popup (custom schedules) ======= */
+    let addLessonCtx = null;
+    const minutesToHHMM = (mins)=>{
+      const m = Math.max(0, Math.min(23 * 60 + 59, Math.round(mins)));
+      return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+    };
+    const addLessonNameMode = ()=> document.querySelector('input[name="addLessonNameMode"]:checked')?.value || 'numbered';
+
+    function openAddLessonModal(schedule, gridHost, statusNode){
+      if(schedule.lessonCount >= MAX_CUSTOM_LESSONS){
+        openErrorModal(`الحد الأقصى ${MAX_CUSTOM_LESSONS} حصة لهذا الجدول.`);
+        return;
+      }
+      addLessonCtx = { scheduleId: schedule.id, gridHost, statusNode };
+      addLessonPosition.innerHTML = '';
+      for(let pos = 0; pos <= schedule.lessonCount; pos++){
+        const opt = document.createElement('option');
+        opt.value = String(pos);
+        if(pos === 0) opt.textContent = `في البداية (قبل ${customSlotLabel(schedule.times, 0)})`;
+        else if(pos === schedule.lessonCount) opt.textContent = `بعد ${customSlotLabel(schedule.times, pos - 1)} (في النهاية)`;
+        else opt.textContent = `بعد ${customSlotLabel(schedule.times, pos - 1)}`;
+        addLessonPosition.appendChild(opt);
+      }
+      addLessonPosition.value = String(schedule.lessonCount);
+      document.querySelector('input[name="addLessonNameMode"][value="numbered"]').checked = true;
+      addLessonNameInput.value = '';
+      addLessonNameInput.classList.add('custom-hidden');
+      addLessonConfirmBtn.disabled = false;
+      refreshAddLessonPosition({ resetTimes: true });
+      overlay.classList.add('show');
+      addLessonModal.classList.add('show');
+      addLessonModal.setAttribute('aria-hidden', 'false');
+      addLessonPosition.focus();
+    }
+
+    function closeAddLessonModal(){
+      if(!addLessonModal.classList.contains('show')) return;
+      addLessonModal.classList.remove('show');
+      addLessonModal.setAttribute('aria-hidden', 'true');
+      overlay.classList.remove('show');
+      addLessonCtx = null;
+    }
+
+    function refreshAddLessonPosition({ resetTimes = false } = {}){
+      const schedule = findCustomScheduleById(addLessonCtx?.scheduleId);
+      if(!schedule) return;
+      const pos = Number(addLessonPosition.value);
+      const prev = schedule.times[pos - 1] || null;
+      const next = pos < schedule.lessonCount ? (schedule.times[pos] || null) : null;
+      // Isolated left-to-right so "9:35 AM – 10:20 AM" doesn't get its
+      // parts reordered inside the Arabic sentence.
+      const span = (t)=> `⁦${to12HourLabel(t.start)} – ${to12HourLabel(t.end)}⁩`;
+      addLessonNeighbors.textContent = [
+        prev ? `قبلها: ${customSlotLabel(schedule.times, pos - 1)} (${span(prev)})` : '',
+        next ? `بعدها: ${customSlotLabel(schedule.times, pos)} (${span(next)})` : ''
+      ].filter(Boolean).join(' • ');
+
+      // What the automatic number would come out as at this position.
+      const preview = [...schedule.times];
+      preview.splice(pos, 0, { start: '00:00', end: '00:00' });
+      addLessonNumberedPreview.textContent = `ستكون: ${customSlotLabel(preview, pos)}`;
+
+      if(resetTimes){
+        // Fill a real gap (a break) exactly; otherwise start 5 minutes after
+        // the lesson before, for 45 minutes.
+        let start = prev?.end ? timeStrToMinutes(prev.end) + 5
+          : (next?.start ? timeStrToMinutes(next.start) - 50 : 7 * 60 + 55);
+        let end = start + 45;
+        if(prev?.end && next?.start){
+          const gapStart = timeStrToMinutes(prev.end);
+          const gapEnd = timeStrToMinutes(next.start);
+          if(gapEnd - gapStart >= 15){ start = gapStart; end = gapEnd; }
+        }
+        addLessonStart.value = minutesToHHMM(start);
+        addLessonEnd.value = minutesToHHMM(end);
+      }
+      validateAddLesson();
+    }
+
+    // Returns the blocking error (or ''); overlaps are only warned about,
+    // since the admin may move the neighbouring lessons afterwards.
+    function validateAddLesson(){
+      const schedule = findCustomScheduleById(addLessonCtx?.scheduleId);
+      if(!schedule) return 'missing';
+      const pos = Number(addLessonPosition.value);
+      const start = addLessonStart.value, end = addLessonEnd.value;
+      let error = '';
+      let warning = '';
+      if(!start || !end) error = 'حدّد وقت البداية والنهاية.';
+      else if(timeStrToMinutes(end) <= timeStrToMinutes(start)) error = 'وقت النهاية يجب أن يكون بعد وقت البداية.';
+      else {
+        const prev = schedule.times[pos - 1];
+        const next = pos < schedule.lessonCount ? schedule.times[pos] : null;
+        const clashes = [];
+        if(prev?.end && timeStrToMinutes(start) < timeStrToMinutes(prev.end)) clashes.push(customSlotLabel(schedule.times, pos - 1));
+        if(next?.start && timeStrToMinutes(end) > timeStrToMinutes(next.start)) clashes.push(customSlotLabel(schedule.times, pos));
+        if(clashes.length) warning = `تنبيه: الوقت يتداخل مع ${clashes.join(' و ')} — عدّل وقتها بعد الإضافة إن لزم.`;
+      }
+      addLessonWarn.textContent = error || warning;
+      return error;
+    }
+
+    addLessonPosition.addEventListener('change', ()=> refreshAddLessonPosition({ resetTimes: true }));
+    addLessonStart.addEventListener('input', validateAddLesson);
+    addLessonEnd.addEventListener('input', validateAddLesson);
+    document.querySelectorAll('input[name="addLessonNameMode"]').forEach((radio)=>{
+      radio.addEventListener('change', ()=>{
+        const custom = addLessonNameMode() === 'custom';
+        addLessonNameInput.classList.toggle('custom-hidden', !custom);
+        if(custom) addLessonNameInput.focus();
+      });
+    });
+    addLessonCancelBtn.addEventListener('click', closeAddLessonModal);
+    addLessonXBtn.addEventListener('click', closeAddLessonModal);
+
+    addLessonConfirmBtn.addEventListener('click', async ()=>{
+      const ctx = addLessonCtx;
+      const schedule = findCustomScheduleById(ctx?.scheduleId);
+      if(!schedule) return;
+      if(validateAddLesson()) return;
+      const custom = addLessonNameMode() === 'custom';
+      const name = addLessonNameInput.value.trim();
+      if(custom && !name){
+        addLessonWarn.textContent = 'اكتب اسم الحصة، أو اختر الترقيم التلقائي.';
+        addLessonNameInput.focus();
+        return;
+      }
+      if(schedule.lessonCount >= MAX_CUSTOM_LESSONS) return;
+      const pos = Number(addLessonPosition.value);
+      const slot = { start: addLessonStart.value, end: addLessonEnd.value, ...(custom ? { label: name } : {}) };
+
+      addLessonConfirmBtn.disabled = true;
+      schedule.values.splice(pos, 0, normalizeLesson({}));
+      schedule.times.splice(pos, 0, slot);
+      schedule.lessonCount += 1;
+      ensureCustomLessons(schedule);
+      ensureCustomTimes(schedule);
+      setDirty(true);
+      renderCustomGrid(schedule, ctx.gridHost, ctx.statusNode);
+      closeAddLessonModal();
+
+      const ok = await spliceLessonAcrossClasses(schedule, { insertAt: pos });
+      const added = customSlotLabel(schedule.times, pos);
+      if(ctx.statusNode){
+        ctx.statusNode.innerHTML = ok
+          ? `<div class="ok">تمت إضافة (${escapeHtml(added)}) لهذا الجدول في جميع الفصول.</div>`
+          : `<div class="err">أُضيفت (${escapeHtml(added)}) هنا، لكن تعذّر تحديث باقي الفصول. أعد المحاولة.</div>`;
+      }
+      if(!ok) openErrorModal('تعذّر إضافة الحصة لباقي الفصول.');
+    });
 
     function renderCustomSchedules(){
       customSchedulesWrap.innerHTML = '';
@@ -4242,6 +4536,8 @@
           closeTimeModal();
         } else if (createScheduleModal.classList.contains('show')) {
           closeCreateScheduleModal();
+        } else if (addLessonModal.classList.contains('show')) {
+          closeAddLessonModal();
         }
       }
     });

@@ -54,6 +54,25 @@ const DEFAULT_LESSON_TIMES = [
   { index: 7, label: "الحصة السابعة", start: "13:15", end: "13:55" },
 ];
 
+// A custom schedule slot's name — a copy of customLessonLabel in
+// shared/schedule-priority.js (keep the two in sync): a slot's own `label`
+// if it has one (e.g. "حصة مستقطعة"), otherwise its ordinal counting only
+// the unnamed slots, so a named slot doesn't renumber the lessons after it.
+const LESSON_ORDINALS_AR = [
+  "الأولى", "الثانية", "الثالثة", "الرابعة", "الخامسة", "السادسة",
+  "السابعة", "الثامنة", "التاسعة", "العاشرة", "الحادية عشرة", "الثانية عشرة",
+];
+function customLessonLabel(times, index) {
+  const slotName = (slot) => (typeof slot?.label === "string" ? slot.label.trim() : "");
+  const own = slotName(times?.[index]);
+  if (own) return own;
+  let n = 0;
+  for (let i = 0; i <= index; i += 1) {
+    if (!slotName(times?.[i])) n += 1;
+  }
+  return LESSON_ORDINALS_AR[n - 1] ? `الحصة ${LESSON_ORDINALS_AR[n - 1]}` : `الحصة ${toArabicDigits(n)}`;
+}
+
 const app = express();
 // Render sits in front of this app as a reverse proxy — without this,
 // every request's req.ip resolves to Render's proxy hop instead of the
@@ -626,7 +645,8 @@ async function loadCustomLessonsByTeacher(dayIndex, lessonTimes) {
 
       const lessons = Array.isArray(row.lessons) ? row.lessons : [];
       const times = Array.isArray(row.times) ? row.times : [];
-      const lessonCount = Math.min(7, Number(row.lessonCount) || lessons.length || 7);
+      // Custom schedules can run past the normal day's 7 lessons (up to 12).
+      const lessonCount = Math.min(12, Number(row.lessonCount) || lessons.length || 7);
 
       for (let i = 0; i < lessonCount; i += 1) {
         const lessonRow = lessons[i] || {};
@@ -651,6 +671,7 @@ async function loadCustomLessonsByTeacher(dayIndex, lessonTimes) {
           startMin,
           endMin,
           source: "custom",
+          label: customLessonLabel(times, i),
         });
       }
     });
@@ -1590,7 +1611,7 @@ async function runReminderSweep() {
       for (const item of lessons) {
         const lessonKey = `${teacherUid}|${item.lesson}|${normalizeClassKey(item.classKey)}`;
         const lessonLabel =
-          DEFAULT_LESSON_TIMES[item.lesson - 1]?.label || `الحصة ${toArabicDigits(item.lesson)}`;
+          item.label || DEFAULT_LESSON_TIMES[item.lesson - 1]?.label || `الحصة ${toArabicDigits(item.lesson)}`;
 
         const inLessonReminderWindow =
           now.nowMinutes >= item.startMin - LESSON_REMINDER_LEAD_MINUTES &&
@@ -2383,7 +2404,7 @@ app.get("/api/telegram/debug-reminders", async (req, res) => {
 
       lessonChecks.push({
         lesson: item.lesson,
-        lessonLabel: DEFAULT_LESSON_TIMES[item.lesson - 1]?.label || `الحصة_${toArabicDigits(item.lesson)}`,
+        lessonLabel: item.label || DEFAULT_LESSON_TIMES[item.lesson - 1]?.label || `الحصة_${toArabicDigits(item.lesson)}`,
         classKey: item.classKey,
         start: toTimeLabel(item.startMin),
         end: toTimeLabel(item.endMin),
