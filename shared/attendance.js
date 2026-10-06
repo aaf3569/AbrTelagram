@@ -166,6 +166,21 @@ const STYLES = `
   #attendanceSheet .sk-badge{height:22px;width:38px;border-radius:10px;flex-shrink:0}
   #attendanceSheet .sk-seg{height:48px;width:100%;border-radius:14px}
   @keyframes attSkShimmer{to{transform:translateX(100%)}}
+  /* Edit mode (تعديل الغياب): the counts + save button are pinned to the
+     bottom of the screen, and light up once any status differs from what
+     was saved — so an edit can't be left unsaved by accident. */
+  #attendanceSheet.att-editing .sheet-body{padding-bottom:0}
+  #attendanceSheet.att-editing .stats{position:sticky;bottom:0;z-index:5;flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));margin-top:auto;border-radius:18px 18px 0 0;border-bottom:0;box-shadow:0 -10px 30px rgba(3,60,84,.14);transition:border-color .25s ease,box-shadow .25s ease,background-color .25s ease}
+  #attendanceSheet.att-editing .chips{gap:6px}
+  #attendanceSheet.att-editing .pill{padding:6px 11px;font-size:.86rem}
+  #attendanceSheet.att-editing .submit-row{flex:1 1 200px;flex-direction:column;align-items:stretch;gap:4px}
+  #attendanceSheet.att-editing .btn.submit{width:100%;min-height:54px;background:#e7edf3;color:#6b7f9f;box-shadow:none;transition:background .25s ease,color .25s ease,box-shadow .25s ease,transform .15s ease}
+  #attendanceSheet .att-dirty-hint{display:none;text-align:center;font-size:.8rem;font-weight:800;color:#b45309}
+  #attendanceSheet.att-editing.att-dirty .stats{background:#f3fbf5;border-color:rgba(22,163,74,.45);box-shadow:0 -10px 34px rgba(22,163,74,.28)}
+  #attendanceSheet.att-editing.att-dirty .btn.submit{background:linear-gradient(145deg,#22c55e,#15803d);color:#fff;animation:attSaveGlow 1.6s ease-in-out infinite}
+  #attendanceSheet.att-editing.att-dirty .att-dirty-hint{display:block}
+  @keyframes attSaveGlow{0%,100%{box-shadow:0 10px 26px rgba(22,163,74,.40),0 0 0 0 rgba(34,197,94,.55)}50%{box-shadow:0 12px 32px rgba(22,163,74,.55),0 0 0 8px rgba(34,197,94,0)}}
+  @media (prefers-reduced-motion:reduce){#attendanceSheet.att-editing.att-dirty .btn.submit{animation:none;box-shadow:0 0 0 3px rgba(34,197,94,.45)}}
   /* Module-owned success celebration — looping green checkmark draw on a
      white/blurred backdrop, dismissed only via the labeled button below the
      text (no small icon-only close button — easy to miss and, since this
@@ -246,6 +261,7 @@ const SHEET_HTML = `
         </div>
         <div class="submit-row">
           <button id="attSubmitBtn" class="btn submit" type="button">حفظ التقرير</button>
+          <span class="att-dirty-hint" role="status">لديك تغييرات غير محفوظة</span>
         </div>
       </div>
     </div>
@@ -555,7 +571,23 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
       els.lessonDetailModal,
     ].some((el) => el?.classList.contains("open"));
   }
+  // Edit mode only: the statuses as saved, to tell whether anything has
+  // changed since (lights up the pinned save button). null = not editing.
+  let editBaseline = null;
+  function setEditMode(on) {
+    editBaseline = on ? { ...attStatuses } : null;
+    els.sheet.classList.toggle("att-editing", on);
+    els.submitBtn.textContent = on ? "حفظ التغييرات" : "حفظ التقرير";
+    updateDirty();
+  }
+  function updateDirty() {
+    const dirty = !!editBaseline && Object.keys({ ...editBaseline, ...attStatuses })
+      .some(k => editBaseline[k] !== attStatuses[k]);
+    els.sheet.classList.toggle("att-dirty", dirty);
+  }
+
   function openSheet(el) {
+    if (el === els.sheet) setEditMode(false);
     el.classList.add("open");
     el.setAttribute("aria-hidden", "false");
     lockBodyScroll(scrollState);
@@ -565,7 +597,10 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
   function closeSheet(el) {
     el.classList.remove("open");
     el.setAttribute("aria-hidden", "true");
-    if (el === els.sheet) els.sheetTitle.textContent = DEFAULT_SHEET_TITLE;
+    if (el === els.sheet) {
+      els.sheetTitle.textContent = DEFAULT_SHEET_TITLE;
+      setEditMode(false);
+    }
     if (!anyOwnUiOpen()) {
       unlockBodyScroll(scrollState);
       document.querySelector("main")?.removeAttribute("inert");
@@ -1818,6 +1853,7 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
     els.countPresent.textContent = `حضور: ${present}`;
     els.countLate.textContent = `تأخير: ${late}`;
     els.countAbsent.textContent = `غياب: ${absent}`;
+    updateDirty();
   }
 
   function setStatus(student, status, btnP, btnL, btnA, card) {
@@ -2072,6 +2108,7 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
         ]);
         const failed = results.find(result => result.status === "rejected");
         if (failed) throw failed.reason;
+        setEditMode(true);
       } catch (e) {
         currentMeta = null;
         setControlsEnabled(false);
