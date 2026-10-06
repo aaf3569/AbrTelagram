@@ -6033,7 +6033,7 @@
         btn.className = 'sidebar-class-btn';
         btn.dataset.classKey = cls;
         btn.textContent = toArabicDigits(cls);
-        btn.addEventListener('click', () => { closeSidebar(); mcOpenClassView(cls); });
+        btn.addEventListener('click', () => { closeSidebar(); mcOpenClassView(cls, { showNotes: true }); });
         sidebarClassesButtons.appendChild(btn);
       });
       mcUpdateCurrentClassButtonHighlight();
@@ -6142,8 +6142,12 @@
       }
     }
 
-    async function mcOpenClassView(cls){
+    // showNotes: the ملاحظات مسجّلة card is for فصولي (the teacher's own
+    // classes) only, not صفوف أخرى.
+    async function mcOpenClassView(cls, { showNotes = false } = {}){
       mcCurrentClass = cls;
+      mcShowNotes = showNotes;
+      mcNotesBtn.hidden = !showNotes;
       mcClassHeroName.textContent = toArabicDigits(cls);
       mcSheetTitle.textContent = `طلاب ${toArabicDigits(cls)}`;
       mcStudentsList.innerHTML = '';
@@ -6210,7 +6214,7 @@
       students = mcSortStudentsByNumber(students);
       mcCachedStudents = students;
       mcRenderStudentsGrid(students);
-      mcLoadNotesCounts(students); // not awaited — the list shows straight away
+      if (mcShowNotes) mcLoadNotesCounts(students); // not awaited — the list shows straight away
     }
 
     function mcRenderStudentsGrid(list){
@@ -6290,6 +6294,7 @@
     let mcNotesByStudent = new Map(); // student uid -> { positive, negative, general }
     let mcNotesState = 'idle';         // 'loading' | 'ready' | 'error'
     let mcNotesToken = 0;
+    let mcShowNotes = false;
 
     async function mcFetchStudentNoteCounts(teacherUid, studentUid){
       const snaps = await Promise.all(MC_NOTE_TYPES.map(t =>
