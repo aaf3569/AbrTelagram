@@ -148,6 +148,17 @@
     .class-chips{display:flex;flex-wrap:wrap;gap:8px}
     .class-chip{height:32px;display:inline-flex;align-items:center;padding:0 10px;border-radius:999px;background:#f3f8fd;border:1px solid #d8e8f8;color:#0f2743;font-size:.82rem;font-weight:800}
     .class-empty{color:#7b8ea8;font-size:.88rem}
+    /* Teacher profile, view mode: one big tappable row per class. */
+    #classesView{display:grid;gap:10px}
+    .teacher-editing #classesView{display:none}
+    .class-open{display:flex;align-items:center;gap:14px;width:100%;min-height:68px;padding:12px 14px;border:1px solid var(--border);border-radius:14px;background:#fff;box-shadow:var(--shadow-1);color:#0f2743;font-family:inherit;text-align:start;cursor:pointer;transition:.15s ease}
+    .class-open:hover{transform:translateY(-2px);border-color:rgba(3,60,84,.35);box-shadow:0 12px 28px rgba(3,60,84,.16)}
+    .class-open-icon{width:44px;height:44px;flex-shrink:0;border-radius:12px;display:grid;place-items:center;background:linear-gradient(145deg,#065372,#033C54);color:#fff;box-shadow:0 8px 18px rgba(3,60,84,.22)}
+    .class-open-icon svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+    .class-open-text{display:grid;gap:2px;flex:1;min-width:0}
+    .class-open-name{font-size:1.25rem;font-weight:900;color:#033C54;line-height:1.2}
+    .class-open-sub{font-size:.82rem;font-weight:700;color:var(--muted)}
+    .class-open-chev{width:18px;height:18px;flex-shrink:0;fill:none;stroke:#033C54;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
     .permissions-view{display:flex;flex-wrap:wrap;gap:8px;min-height:34px}
     .perm-chip{height:34px;display:inline-flex;align-items:center;padding:0 12px;border-radius:999px;background:#edf7f1;border:1px solid #ccead8;color:#126a2e;font-size:.84rem;font-weight:900}
     .perm-empty{color:#7b8ea8;font-size:.88rem}
@@ -885,6 +896,8 @@
     import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signOut, EmailAuthProvider, reauthenticateWithCredential } from "/shared/firebase.js";
     import { initializeFirestore, persistentSingleTabManager, collection, getDocs, query, where, doc, getDoc, setDoc, updateDoc, deleteField, serverTimestamp } from "/shared/firebase.js";
     import { startPresenceHeartbeat, watchPresence } from "/shared/presence.js";
+    import { mountStudentNotesSheet } from "/shared/student-notes-sheet.js?v=2026-10-06b";
+    import { mountTeacherClassSheet } from "/shared/teacher-class-sheet.js?v=2026-10-06b";
     import { fetchClassList, sortClassList, primeClassList } from "/shared/class-registry.js";
     import {
       DEPARTMENTS,
@@ -905,6 +918,10 @@
       db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true, useFetchStreams: false });
     }
     const auth=getAuth(app);
+    // Teacher profile → الفصول → a class: its students and that teacher's
+    // notes on them (read-only), like فصولي on Teachers/user.html.
+    const studentNotes=mountStudentNotesSheet({ db, auth });
+    const classSheet=mountTeacherClassSheet({ db, studentNotes });
     // Start the settings/classes read the moment auth resolves, instead
     // of waiting for the role check to come back first. The two reads are
     // independent, and running them one after the other cost this page a
@@ -1700,6 +1717,20 @@
         return;
       }
       list.forEach(c=>{
+        // A teacher's own classes (not an admin account's) open that class's
+        // students and the teacher's notes on them.
+        if(container===classesView){
+          const btn=document.createElement('button');
+          btn.type='button';
+          btn.className='class-open';
+          btn.innerHTML=`<span class="class-open-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></span><span class="class-open-text"><span class="class-open-name">${escapeHtml(toArabicDigits(c))}</span><span class="class-open-sub">عرض الطلاب والملاحظات</span></span><svg class="class-open-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>`;
+          btn.addEventListener('click',()=>{
+            if(teacherEditMode || !currentTeacher?.uid) return;
+            classSheet.open(c,{ teacherUid:currentTeacher.uid, teacherName:currentTeacher.data?.name||'' });
+          });
+          container.appendChild(btn);
+          return;
+        }
         const chip=document.createElement('span');
         chip.className='class-chip';
         chip.textContent=toArabicDigits(c);
@@ -2238,6 +2269,7 @@
       }catch(e){adErr.textContent=e?.message||'تعذّر إنشاء الحساب.';adErr.style.display='block';}
     });
     function closeTeacherView(){
+      classSheet.close();
       if(unsubscribeTeacherPresence){ unsubscribeTeacherPresence(); unsubscribeTeacherPresence=null; }
       if(teacherOpenedFromTelegram){
         teacherOpenedFromTelegram=false;
