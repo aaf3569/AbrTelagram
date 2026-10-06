@@ -20,7 +20,6 @@
 <link rel="preconnect" href="https://www.gstatic.com" crossorigin><title>الفصول - ثانوية أحمد البشر الرومي</title>
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet"/>
 <script src="/shared/arabic-text-fix.js" defer></script>
-<script defer src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <link rel="stylesheet" href="/shared/base.css" />
 <link rel="stylesheet" href="/shared/attendance-tiles.css" />
 <link rel="stylesheet" href="/shared/warning-system.css" />
@@ -125,34 +124,29 @@ main{ flex:1; padding:32px 20px 40px; display:flex }
   transform:translateY(-2px); box-shadow:0 16px 32px rgba(3,60,84,.18); border-color:rgba(3,60,84,.35); background:#fbfdff
 }
 .subject:active{ transform:translateY(0) scale(.997) }
-.classes-floating-back{
-  position:fixed;
-  right:22px;
-  top:106px;
-  z-index:24;
-  text-decoration:none;
+/* Back to لوحة الإدارة — sits in the header's start corner, shown only
+   on the classes home (same spot #studentTopBack uses inside a profile). */
+.classes-header-back{
+  position:absolute;
+  inset-inline-start:20px;
+  top:50%;
+  transform:translateY(-50%);
   display:none;
   align-items:center;
   justify-content:center;
-  height:48px;
-  min-width:112px;
-  padding:0 18px;
-  border-radius:14px;
-  font-family:"Tajawal", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  font-weight:900;
-  font-size:1rem;
+  width:42px;
+  height:42px;
+  border-radius:12px;
   color:#033C54;
   background:#fff;
   border:1px solid rgba(3,60,84,.2);
-  box-shadow:0 14px 36px rgba(3,60,84,.22);
+  box-shadow:0 4px 12px rgba(3,60,84,.08);
   transition:var(--transition);
 }
-.classes-floating-back.show{ display:inline-flex; }
-.classes-floating-back:hover{
-  transform:translateY(-2px);
-  border-color:rgba(3,60,84,.45);
-  background:#f5fbff;
-}
+.classes-header-back svg{ width:22px; height:22px; }
+.classes-header-back.show{ display:inline-flex; }
+.classes-header-back:hover{ background:var(--primary-light); border-color:rgba(3,60,84,.4); }
+.classes-header-back:focus-visible{ outline:3px solid var(--focus); outline-offset:2px; }
 .grade-hero{
   background:linear-gradient(120deg, #033C54 0%, #0a5f81 100%);
   color:#fff;
@@ -389,111 +383,108 @@ main{ flex:1; padding:32px 20px 40px; display:flex }
     radial-gradient(120% 180% at 100% -20%, rgba(3,60,84,.08), transparent 54%),
     linear-gradient(180deg, #ffffff 0%, #f7fbff 100%);
   box-shadow:var(--shadow-1);
-  padding:18px;
+  padding:16px 18px;
   margin-bottom:18px;
   overflow:hidden;
+  --seg10:#0a5f81;
+  --seg11:#1f8eb5;
+  --seg12:#7bc4db;
 }
 .school-overview-head{
   display:flex;
-  align-items:flex-start;
+  align-items:baseline;
   justify-content:space-between;
-  gap:12px;
+  flex-wrap:wrap;
+  gap:2px 10px;
   min-width:0;
-  margin-bottom:14px;
 }
 .school-overview-title{
   margin:0;
-  font-family:"Tajawal", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  font-weight:900;
-  font-size:1.05rem;
-  color:#0f2743;
+  font-weight:800;
+  font-size:.9rem;
+  color:#527091;
 }
 .school-overview-sub{
-  margin:4px 0 0;
-  color:#5f7698;
-  font-size:.84rem;
+  margin:0;
+  color:#8094b0;
+  font-size:.74rem;
   font-weight:700;
 }
-.school-chip{
-  padding:7px 12px;
-  border-radius:999px;
-  border:1px solid rgba(3,60,84,.16);
-  background:#fff;
-  color:#164264;
-  font-size:.78rem;
+.school-total{
+  display:flex;
+  align-items:baseline;
+  gap:8px;
+  margin:2px 0 12px;
+}
+.school-total-value{
+  font-size:2.1rem;
   font-weight:900;
-  white-space:nowrap;
+  line-height:1.15;
+  color:#033C54;
 }
-.school-overview-body{
+.school-total-unit{
+  font-size:.9rem;
+  font-weight:800;
+  color:#527091;
+}
+/* One bar split by grade — the share each grade takes of the school. */
+.school-dist-bar{
+  display:flex;
+  gap:2px;
+  height:10px;
+  border-radius:999px;
+  overflow:hidden;
+  background:#e9f0f7;
+  margin-bottom:12px;
+}
+.school-dist-bar span{ flex:0 1 0; transition:flex-grow .4s ease; }
+.school-dist-bar span[hidden]{ display:none; }
+.school-grades{
   display:grid;
-  grid-template-columns:minmax(260px, 1fr) minmax(260px, 1fr);
-  gap:14px;
-  min-width:0;
+  grid-template-columns:repeat(3, minmax(0, 1fr));
+  gap:8px;
 }
-.school-kpis{
-  display:grid;
-  grid-template-columns:repeat(2, minmax(0, 1fr));
-  gap:10px;
-  min-width:0;
-}
-.school-kpi{
+.school-grade{
   background:#fff;
   border:1px solid var(--border);
-  border-radius:14px;
-  padding:12px 14px;
-  box-shadow:0 8px 20px rgba(3,60,84,.08);
-  min-height:82px;
+  border-radius:12px;
+  padding:8px 10px;
   min-width:0;
+}
+.school-grade-label{
   display:flex;
-  flex-direction:column;
-  justify-content:center;
-}
-.school-kpi-total{
-  grid-column:1 / -1;
-  background:linear-gradient(135deg, #053f58 0%, #0a5f81 100%);
-  border-color:transparent;
-}
-.school-kpi-total .school-kpi-label,
-.school-kpi-total .school-kpi-value{
-  color:#fff;
-}
-.school-kpi-label{
-  font-size:.84rem;
-  color:#527091;
+  align-items:center;
+  gap:6px;
+  font-size:.78rem;
   font-weight:800;
-  overflow-wrap:break-word;
+  color:#527091;
+  line-height:1.3;
 }
-.school-kpi-value{
-  margin-top:4px;
-  font-family:"Tajawal", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  font-size:1.36rem;
+.school-grade-label::before{
+  content:"";
+  flex:none;
+  width:8px;
+  height:8px;
+  border-radius:50%;
+  background:var(--seg);
+}
+.school-grade-nums{
+  display:flex;
+  align-items:baseline;
+  flex-wrap:wrap;
+  gap:0 6px;
+  margin-top:2px;
+}
+.school-grade-value{
+  font-size:1.2rem;
   font-weight:900;
   color:#0f2743;
-  overflow-wrap:break-word;
+  line-height:1.3;
 }
-.school-chart-card{
-  position:relative;
-  border:1px solid var(--border);
-  border-radius:14px;
-  background:#fff;
-  box-shadow:0 8px 20px rgba(3,60,84,.08);
-  padding:12px;
-  min-height:242px;
-  min-width:0;
-}
-.school-chart-wrap{
-  position:relative;
-  height:220px;
-}
-.school-chart-empty{
-  position:absolute;
-  inset:0;
-  display:none;
-  align-items:center;
-  justify-content:center;
-  text-align:center;
-  color:#6b7f9f;
+.school-grade-pct{
+  font-size:.74rem;
   font-weight:700;
+  color:#8094b0;
 }
 
 /* === Sections & Inputs === */
@@ -1133,8 +1124,7 @@ html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%;
 @media (max-width: 768px) {
   .site-header { padding: 16px; } main { padding: 20px 12px 30px; } .column { gap: 18px; }
   .panel { padding: 18px 16px; border-radius: 14px; } .section { padding: 16px; }
-  .school-overview-body { grid-template-columns: 1fr; }
-  .school-overview-head { flex-direction: column; align-items: flex-start; }
+  .school-overview { padding: 14px; margin-bottom: 14px; border-radius: 16px; }
   .request-grid { grid-template-columns: 1fr; }
   .request-students-list { max-height: 210px; }
   .stats-grid { grid-template-columns: 1fr; gap: 10px; } .row { flex-direction: column; gap: 12px; }
@@ -1145,15 +1135,16 @@ html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%;
   .reorder-modal-overlay.active .reorder-modal, .modal-overlay.active .modal { transform: translateY(0); }
   .reorder-item { padding: 14px 16px; }
   #studentTopBack{ inset-inline-start:12px; height:38px; padding:0 12px; font-size:.85rem; }
-  .classes-floating-back{ right:12px; top:88px; min-width:94px; height:42px; font-size:.9rem; padding:0 12px; }
+  .classes-header-back{ inset-inline-start:12px; width:38px; height:38px; }
   /* Phones: the student cards sit straight under قائمة الطلاب, not inside
      another card. */
   .students-section{ background:transparent; border:0; box-shadow:none; padding:0; border-radius:0; }
 }
 @media (max-width: 480px) {
   .btn { height: 50px; font-size: 0.95rem; } .subject { padding: 14px 16px; } .item { padding: 14px 16px; }
-  .school-kpis { grid-template-columns: 1fr; }
-  .school-kpi-total { grid-column: auto; }
+  .school-total-value { font-size: 1.8rem; }
+  .school-grade { padding: 7px 8px; }
+  .school-grade-value { font-size: 1.08rem; }
   .stat-card { padding: 14px; min-height: 80px; } .tab { height: 40px; padding: 0 12px; font-size: 0.9rem; }
   .reorder-item-number { min-width: 28px; height: 28px; font-size: 0.8rem; }
   .modal-body { padding: 16px; }
@@ -1266,9 +1257,6 @@ html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%;
     align-self:start;
     min-width:0;
   }
-  #schoolStatsPanel .school-overview-body{
-    grid-template-columns:1fr;
-  }
   /* The wrapper's own flow already separates the groups — the
      .spacer divs were a manual-margin hack for the old block-flow
      layout and would just add extra, uneven space on top of that. */
@@ -1358,9 +1346,11 @@ html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%;
 <body>
 <header class="site-header">
   <button id="studentTopBack" class="back-btn" type="button">رجوع</button>
+  <a id="classesHeaderBack" class="classes-header-back" href="adminpage.html" aria-label="رجوع" title="رجوع">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+  </a>
   <h1 id="siteTitle" class="site-title">ثانوية أحمد البشر الرومي</h1>
 </header>
-<a id="classesFloatingBack" class="classes-floating-back" href="adminpage.html" aria-label="رجوع">رجوع</a>
 <main>
   <div class="column">
     <!-- Loading / gate -->
@@ -1383,36 +1373,30 @@ html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%;
     <section id="stateClasses" class="state panel" aria-label="اختر الصف">
       <div id="schoolStatsPanel" class="school-overview" aria-label="إحصائيات المدرسة">
         <div class="school-overview-head">
-          <div>
-            <h3 class="school-overview-title">إحصائيات المدرسة</h3>
-            <p id="schoolStatsUpdated" class="school-overview-sub">جاري تحميل الإحصائيات…</p>
-          </div>
-          <span class="school-chip">الصفوف 10 - 12</span>
+          <h3 class="school-overview-title">إحصائيات المدرسة</h3>
+          <p id="schoolStatsUpdated" class="school-overview-sub">جاري تحميل الإحصائيات…</p>
         </div>
-        <div class="school-overview-body">
-          <div class="school-kpis">
-            <div class="school-kpi school-kpi-total">
-              <div class="school-kpi-label">إجمالي عدد الطلاب</div>
-              <div id="schoolTotalStudents" class="school-kpi-value">—</div>
-            </div>
-            <div class="school-kpi">
-              <div class="school-kpi-label">طلاب الصف العاشر</div>
-              <div id="schoolGrade10Count" class="school-kpi-value">—</div>
-            </div>
-            <div class="school-kpi">
-              <div class="school-kpi-label">طلاب الصف الحادي عشر</div>
-              <div id="schoolGrade11Count" class="school-kpi-value">—</div>
-            </div>
-            <div class="school-kpi">
-              <div class="school-kpi-label">طلاب الصف الثاني عشر</div>
-              <div id="schoolGrade12Count" class="school-kpi-value">—</div>
-            </div>
+        <div class="school-total">
+          <span id="schoolTotalStudents" class="school-total-value">—</span>
+          <span class="school-total-unit">طالب في المدرسة</span>
+        </div>
+        <div class="school-dist-bar" role="img" aria-label="توزيع الطلاب على الصفوف">
+          <span id="schoolSeg10" style="background:var(--seg10)" hidden></span>
+          <span id="schoolSeg11" style="background:var(--seg11)" hidden></span>
+          <span id="schoolSeg12" style="background:var(--seg12)" hidden></span>
+        </div>
+        <div class="school-grades">
+          <div class="school-grade" style="--seg:var(--seg10)">
+            <div class="school-grade-label">العاشر</div>
+            <div class="school-grade-nums"><span id="schoolGrade10Count" class="school-grade-value">—</span><span id="schoolGrade10Pct" class="school-grade-pct"></span></div>
           </div>
-          <div class="school-chart-card">
-            <div class="school-chart-wrap">
-              <canvas id="gradesPieChart" aria-label="توزيع الطلاب على الصفوف" role="img"></canvas>
-              <div id="gradesPieEmpty" class="school-chart-empty">لا توجد بيانات للعرض حالياً.</div>
-            </div>
+          <div class="school-grade" style="--seg:var(--seg11)">
+            <div class="school-grade-label">الحادي عشر</div>
+            <div class="school-grade-nums"><span id="schoolGrade11Count" class="school-grade-value">—</span><span id="schoolGrade11Pct" class="school-grade-pct"></span></div>
+          </div>
+          <div class="school-grade" style="--seg:var(--seg12)">
+            <div class="school-grade-label">الثاني عشر</div>
+            <div class="school-grade-nums"><span id="schoolGrade12Count" class="school-grade-value">—</span><span id="schoolGrade12Pct" class="school-grade-pct"></span></div>
           </div>
         </div>
       </div>
@@ -2361,7 +2345,7 @@ const sLoading = document.getElementById('stateLoading');
 const sNotLog = document.getElementById('stateNotLogged');
 const sDenied = document.getElementById('stateDenied');
 const sClasses = document.getElementById('stateClasses');
-const classesFloatingBack = document.getElementById('classesFloatingBack');
+const classesHeaderBack = document.getElementById('classesHeaderBack');
 const list10 = document.getElementById('list10');
 const list11 = document.getElementById('list11');
 const list12 = document.getElementById('list12');
@@ -2370,8 +2354,16 @@ const schoolTotalStudents = document.getElementById('schoolTotalStudents');
 const schoolGrade10Count = document.getElementById('schoolGrade10Count');
 const schoolGrade11Count = document.getElementById('schoolGrade11Count');
 const schoolGrade12Count = document.getElementById('schoolGrade12Count');
-const gradesPieChart = document.getElementById('gradesPieChart');
-const gradesPieEmpty = document.getElementById('gradesPieEmpty');
+const schoolGradeSegs = {
+  '10': document.getElementById('schoolSeg10'),
+  '11': document.getElementById('schoolSeg11'),
+  '12': document.getElementById('schoolSeg12')
+};
+const schoolGradePcts = {
+  '10': document.getElementById('schoolGrade10Pct'),
+  '11': document.getElementById('schoolGrade11Pct'),
+  '12': document.getElementById('schoolGrade12Pct')
+};
 const globalStudentSearchInput = document.getElementById('globalStudentSearchInput');
 const globalStudentSearchResults = document.getElementById('globalStudentSearchResults');
 const studentRequestSheet = document.getElementById('studentRequestSheet');
@@ -2652,11 +2644,10 @@ const closeStudentRequestConfirmModal = document.getElementById('closeStudentReq
 const cancelStudentRequestConfirm = document.getElementById('cancelStudentRequestConfirm');
 const confirmStudentRequestSend = document.getElementById('confirmStudentRequestSend');
 const requestConfirmSummary = document.getElementById('requestConfirmSummary');
-let schoolPieChart = null;
 
 /* ========= Helpers ========= */
 function setClassesBackVisible(visible){
-  classesFloatingBack?.classList.toggle('show', !!visible);
+  classesHeaderBack?.classList.toggle('show', !!visible);
 }
 
 function syncClassesBackVisibility(){
@@ -2708,62 +2699,17 @@ function getGradeBucket(className){
   return null;
 }
 
-function renderSchoolPieChart(gradeCounts){
-  const data = [gradeCounts['10'], gradeCounts['11'], gradeCounts['12']];
-  const totalForChart = data.reduce((sum, val)=> sum + val, 0);
-
-  if(totalForChart <= 0){
-    gradesPieChart.style.display = 'none';
-    gradesPieEmpty.style.display = 'flex';
-    if(schoolPieChart){
-      schoolPieChart.destroy();
-      schoolPieChart = null;
-    }
-    return;
-  }
-
-  gradesPieChart.style.display = 'block';
-  gradesPieEmpty.style.display = 'none';
-
-  if(schoolPieChart) schoolPieChart.destroy();
-  schoolPieChart = new Chart(gradesPieChart.getContext('2d'), {
-    type: 'pie',
-    data: {
-      labels: ['الصف العاشر', 'الصف الحادي عشر', 'الصف الثاني عشر'],
-      datasets: [{
-        data,
-        backgroundColor: ['#0a5f81', '#1f8eb5', '#7bc4db'],
-        borderColor: '#ffffff',
-        borderWidth: 3,
-        hoverOffset: 8
-      }]
-    },
-    options: {
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          position: 'bottom',
-          labels: {
-            usePointStyle: true,
-            padding: 14,
-            font: {
-              family: '"Tajawal", sans-serif',
-              size: 12,
-              weight: '700'
-            }
-          }
-        },
-        tooltip: {
-          callbacks: {
-            label: (ctx)=>{
-              const value = ctx.parsed || 0;
-              const ratio = totalForChart ? Math.round((value / totalForChart) * 100) : 0;
-              return `${ctx.label}: ${toArabicDigits(value)} (${toArabicDigits(ratio)}%)`;
-            }
-          }
-        }
-      }
-    }
+// Sizes each grade's slice of the distribution bar and fills in its share.
+// gradeCounts = null clears the bar (load failed).
+function renderSchoolDistribution(gradeCounts){
+  const total = gradeCounts ? gradeCounts['10'] + gradeCounts['11'] + gradeCounts['12'] : 0;
+  ['10', '11', '12'].forEach((g)=>{
+    const count = gradeCounts ? gradeCounts[g] : 0;
+    schoolGradeSegs[g].hidden = !(total > 0 && count > 0);
+    schoolGradeSegs[g].style.flexGrow = String(count);
+    schoolGradePcts[g].textContent = total > 0
+      ? `${toArabicDigits(Math.round((count / total) * 100))}٪`
+      : '';
   });
 }
 
@@ -2793,7 +2739,7 @@ async function refreshSchoolStats(){
     schoolGrade11Count.textContent = toArabicDigits(gradeCounts['11']);
     schoolGrade12Count.textContent = toArabicDigits(gradeCounts['12']);
     schoolStatsUpdated.textContent = `آخر تحديث: ${fmtDT(new Date())}`;
-    renderSchoolPieChart(gradeCounts);
+    renderSchoolDistribution(gradeCounts);
   }catch(e){
     console.error('[refreshSchoolStats]', e);
     schoolTotalStudents.textContent = '—';
@@ -2801,8 +2747,7 @@ async function refreshSchoolStats(){
     schoolGrade11Count.textContent = '—';
     schoolGrade12Count.textContent = '—';
     schoolStatsUpdated.textContent = 'تعذّر تحميل الإحصائيات.';
-    gradesPieChart.style.display = 'none';
-    gradesPieEmpty.style.display = 'flex';
+    renderSchoolDistribution(null);
   }
 }
 
