@@ -630,7 +630,6 @@
               <div class="field"><label class="label" for="edTName">الاسم الكامل</label><div class="plain-value view-only"><span id="vEdTName" class="view-value">—</span></div><div class="input-wrap edit-only"><input id="edTName" class="input" type="text"></div></div>
               <div class="field"><label class="label" for="edTEmail">رقم البطاقة</label><div class="plain-value view-only"><span id="vEdTEmail" class="view-value">—</span></div><div class="input-wrap edit-only"><input id="edTEmail" class="input" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="مثال: 298040100633"></div></div>
               <div class="field"><label class="label" for="edTPhone">رقم الهاتف</label><div class="plain-value view-only"><span id="vEdTPhone" class="view-value">—</span></div><div class="input-wrap edit-only"><input id="edTPhone" class="input" type="tel"></div></div>
-              <div class="field"><label class="label" for="edTTeams">رابط Teams</label><div class="plain-value view-only"><span id="vEdTTeams" class="view-value">—</span></div><div class="input-wrap edit-only"><input id="edTTeams" class="input" type="url"></div></div>
               <div class="field"><label class="label" for="edTDisplayedPassword">كلمة المرور الظاهرة</label><div class="plain-value view-only"><span id="vEdTDisplayedPassword" class="view-value">—</span></div><div class="input-wrap edit-only password-field"><input id="edTDisplayedPassword" class="input" type="password" autocomplete="off" dir="ltr"><button id="toggleDisplayedPasswordBtn" class="eye-toggle" type="button" aria-label="إظهار كلمة المرور الظاهرة" title="إظهار كلمة المرور الظاهرة"><span aria-hidden="true">👁</span></button></div></div>
               <div class="field"><label class="label" for="edTRole">الدور</label><div class="plain-value view-only"><span id="vEdTRole" class="view-value">—</span></div><div class="input-wrap edit-only"><select id="edTRole" class="input"><option value="user">مدرس</option><option value="head">رئيس القسم</option></select></div></div>
               <div class="field" id="edTSpecializationField" hidden><label class="label" for="edTSpecialization">التخصص داخل القسم</label><div class="plain-value view-only"><span id="vEdTSpecialization" class="view-value">—</span></div><div class="input-wrap edit-only"><select id="edTSpecialization" class="input"></select></div></div>
@@ -1014,7 +1013,6 @@
     const vEdTName=document.getElementById('vEdTName');
     const vEdTEmail=document.getElementById('vEdTEmail');
     const vEdTPhone=document.getElementById('vEdTPhone');
-    const vEdTTeams=document.getElementById('vEdTTeams');
     const vEdTDisplayedPassword=document.getElementById('vEdTDisplayedPassword');
     const vEdTRole=document.getElementById('vEdTRole');
     const vEdTSpecialization=document.getElementById('vEdTSpecialization');
@@ -1024,7 +1022,6 @@
     const edTName=document.getElementById('edTName');
     const edTEmail=document.getElementById('edTEmail');
     const edTPhone=document.getElementById('edTPhone');
-    const edTTeams=document.getElementById('edTTeams');
     const edTDisplayedPassword=document.getElementById('edTDisplayedPassword');
     const toggleDisplayedPasswordBtn=document.getElementById('toggleDisplayedPasswordBtn');
     const edTRole=document.getElementById('edTRole');
@@ -1474,6 +1471,7 @@
       openAdminsTop.classList.remove('subject-selected');
       statTelegramBtn.classList.add('subject-selected');
       [subjectSheet,teacherSheet,adminsSheet,adminSheet].forEach(s=>closeSheet(s));
+      leaveTeacherProfile();
       openSheet(telegramSheet);
       // Show what's already loaded straight away, then refresh — a teacher
       // may have connected since this page was opened.
@@ -1936,7 +1934,6 @@
         name:edTName.value.trim(),
         civilId:edTEmail.value.trim(),
         phone:edTPhone.value.trim(),
-        teams:edTTeams.value.trim(),
         displayedPassword:edTDisplayedPassword.value,
         role:edTRole.value,
         specialization:edTSpecializationField.hidden?'':edTSpecialization.value,
@@ -1957,7 +1954,6 @@
       const name=edTName.value.trim() || currentTeacher?.data?.name || currentTeacher?.uid || '—';
       const civilId=(edTEmail.value||'').replace(/\D+/g,'') || getTeacherCivilId(currentTeacher?.data) || '—';
       const phone=edTPhone.value.trim() || '—';
-      const teams=edTTeams.value.trim() || '—';
       const displayedPassword=edTDisplayedPassword.value;
       const role=(edTRole.value||'user').toLowerCase();
       const isSupervisor=!!edTIsSupervisor.checked;
@@ -1976,7 +1972,6 @@
       setViewValue(vEdTName,name);
       setViewValue(vEdTEmail,civilId);
       setViewValue(vEdTPhone,phone);
-      setViewValue(vEdTTeams,teams);
       setDisplayedPasswordPreview(displayedPassword);
       setViewValue(vEdTRole,role==='head'?'رئيس القسم':'مدرس');
       setViewValue(vEdTSpecialization, edTSpecializationField.hidden ? '—' : (edTSpecialization.value||'—'));
@@ -1990,7 +1985,7 @@
       teacherEditMode=!!isEdit;
       teacherProfileShell.classList.toggle('teacher-readonly', !teacherEditMode);
       teacherProfileShell.classList.toggle('teacher-editing', teacherEditMode);
-      [edTName,edTEmail,edTPhone,edTTeams,edTDisplayedPassword,edTRole,edTSpecialization,edTSpecialization2,edTIsSupervisor,edTAllowEditSchedule,edTAllowMorningLate,edTAllowSupervisorStudents,edTAllowManageAttendance].forEach(el=>el.disabled=!teacherEditMode);
+      [edTName,edTEmail,edTPhone,edTDisplayedPassword,edTRole,edTSpecialization,edTSpecialization2,edTIsSupervisor,edTAllowEditSchedule,edTAllowMorningLate,edTAllowSupervisorStudents,edTAllowManageAttendance].forEach(el=>el.disabled=!teacherEditMode);
       toggleDisplayedPasswordBtn.disabled=!teacherEditMode;
       if(!teacherEditMode) setDisplayedPasswordVisibility(false);
       classesEditorWrap.hidden=!teacherEditMode;
@@ -2017,6 +2012,7 @@
       // sheets rendered at once — the new one didn't visibly appear until
       // some later interaction happened to close the stale one.
       [teacherSheet,adminsSheet,adminSheet].forEach(s=>closeSheet(s));
+      leaveTeacherProfile();
       closeTelegramPanel();
       teacherOpenedFromTelegram=false;
       openSheet(subjectSheet);
@@ -2038,6 +2034,7 @@
       // Same reasoning as openSubject() above — must not leave another
       // sheet's .open class in place on the desktop shell.
       [subjectSheet,teacherSheet,adminSheet].forEach(s=>closeSheet(s));
+      leaveTeacherProfile();
       closeTelegramPanel();
       teacherOpenedFromTelegram=false;
       openSheet(adminsSheet);
@@ -2272,6 +2269,17 @@
         loadAllTeachersCache();
       }catch(e){adErr.textContent=e?.message||'تعذّر إنشاء الحساب.';adErr.style.display='block';}
     });
+    // Leaving a teacher's profile for another sidebar panel (a department,
+    // الإدارة, Telegram) without going through its رجوع button. Closing the
+    // sheet alone left #/teacher/<uid> in the URL, so teacher-route-active
+    // stayed on and its #subjectSheet{display:none !important} hid the
+    // department that was just opened — a blank content pane.
+    function leaveTeacherProfile(){
+      classSheet.close();
+      if(unsubscribeTeacherPresence){ unsubscribeTeacherPresence(); unsubscribeTeacherPresence=null; }
+      if(getRouteTeacherId()) clearTeacherRoute();
+      syncTeacherRouteMode();
+    }
     function closeTeacherView(){
       classSheet.close();
       if(unsubscribeTeacherPresence){ unsubscribeTeacherPresence(); unsubscribeTeacherPresence=null; }
@@ -2305,7 +2313,6 @@
       edTName.value=d.name||'';
       edTEmail.value=getTeacherCivilId(d);
       edTPhone.value=d.phone||'';
-      edTTeams.value=d.teams||'';
       edTDisplayedPassword.value=getStoredDisplayedPassword(d);
       setDisplayedPasswordVisibility(false);
       edTRole.value=d.role||'user';
@@ -2349,7 +2356,7 @@
       }
     });
     edAddClass.addEventListener('click',()=>{edClasses.appendChild(makeClassRow(""));updateProfileSummary();});
-    [edTName,edTEmail,edTPhone,edTTeams,edTDisplayedPassword,edTRole,edTSpecialization,edTSpecialization2,edTAllowEditSchedule,edTAllowMorningLate,edTAllowSupervisorStudents,edTAllowManageAttendance].forEach(el=>{
+    [edTName,edTEmail,edTPhone,edTDisplayedPassword,edTRole,edTSpecialization,edTSpecialization2,edTAllowEditSchedule,edTAllowMorningLate,edTAllowSupervisorStudents,edTAllowManageAttendance].forEach(el=>{
       const ev=el.tagName==='SELECT'||el.type==='checkbox'?'change':'input';
       el.addEventListener(ev, updateProfileSummary);
     });
@@ -2500,7 +2507,6 @@
         edTName.value=d.name||'';
         edTEmail.value=getTeacherCivilId(d);
         edTPhone.value=d.phone||'';
-        edTTeams.value=d.teams||'';
         edTDisplayedPassword.value=storedDisplayedPassword;
         setDisplayedPasswordVisibility(false);
         edTRole.value=d.role||'user';
@@ -2530,7 +2536,7 @@
       edOk.style.display='none';edErr.style.display='none';
       try{
         const {uid}=currentTeacher;if(!uid) throw new Error('لم يتم اختيار معلّم.');
-        const name=edTName.value.trim(), civilId=edTEmail.value.trim().replace(/\D+/g,''), phone=edTPhone.value.trim(), teams=edTTeams.value.trim();
+        const name=edTName.value.trim(), civilId=edTEmail.value.trim().replace(/\D+/g,''), phone=edTPhone.value.trim();
         const email=buildTeacherEmailFromCivilId(civilId);
         const displayedPassword=edTDisplayedPassword.value;
         const role=edTRole.value, isSupervisor=edTIsSupervisor.checked, classes=getClassesFrom(edClasses);
@@ -2557,10 +2563,10 @@
         if(role==='head') await ensureSingleHeadForDepartment(teacherDepartment,{ excludeUid: uid });
         await syncAuthEmailIfChanged(uid, currentTeacher?.data?.email, email);
         await Promise.all([
-          updateDoc(doc(db,'teachers',uid),{name,email,civilId,phone,teams,role,subject:subjectToSave,subject2:subject2ToSave,isSupervisor,supervisorGrade:isSupervisor?supervisorGrade:null,classes,permissions,displayedPassword:deleteField(),viewedPassword:deleteField()}),
+          updateDoc(doc(db,'teachers',uid),{name,email,civilId,phone,role,subject:subjectToSave,subject2:subject2ToSave,isSupervisor,supervisorGrade:isSupervisor?supervisorGrade:null,classes,permissions,displayedPassword:deleteField(),viewedPassword:deleteField()}),
           setDoc(doc(db,'teachers',uid,'private','credentials'),{displayedPassword},{merge:true})
         ]);
-        currentTeacher.data={...(currentTeacher.data||{}),name,email,civilId,phone,teams,role,subject:subjectToSave,subject2:subject2ToSave,isSupervisor,supervisorGrade:isSupervisor?supervisorGrade:null,classes,permissions};
+        currentTeacher.data={...(currentTeacher.data||{}),name,email,civilId,phone,role,subject:subjectToSave,subject2:subject2ToSave,isSupervisor,supervisorGrade:isSupervisor?supervisorGrade:null,classes,permissions};
         currentTeacher.displayedPassword=displayedPassword;
         setTeacherEditMode(false);
         edOk.textContent='تم حفظ التعديلات.';edOk.style.display='block';setTimeout(()=>{edOk.style.display='none';closeTeacherView();},900);
@@ -2779,7 +2785,7 @@
         if(deleteTeacherModal.classList.contains('active')) closeModal(deleteTeacherModal,{fallbackFocus:deleteTeacherBtn});
         if(deleteAdminModal.classList.contains('active')) closeModal(deleteAdminModal,{fallbackFocus:deleteAdminBtn});
         if(successModal.classList.contains('show')) closeSuccessModalFn();
-        syncTeacherRouteMode();
+        leaveTeacherProfile();
       }
     });
   </script>
