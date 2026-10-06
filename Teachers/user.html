@@ -1008,11 +1008,39 @@
           <button id="mcAttendBtn" class="mc-btn-attend" type="button">تسجيل الغياب</button>
         </div>
       </div>
+      <!-- How many notes (إيجابية/سلبية/ملاحظة) this teacher has written
+           for students of this class; opens mcNotesSheet below. -->
+      <button id="mcNotesBtn" class="mc-notes-card" type="button">
+        <span id="mcNotesCount" class="mc-notes-count">…</span>
+        <span class="mc-notes-text">
+          <b>ملاحظات مسجّلة</b>
+          <small id="mcNotesSub">جاري التحميل…</small>
+        </span>
+        <i class="fas fa-chevron-left mc-notes-chev" aria-hidden="true"></i>
+      </button>
       <div class="mc-input-wrap">
         <i class="fas fa-magnifying-glass mc-input-icon"></i>
         <input id="mcStudentSearch" class="mc-input" type="text" placeholder="ابحث بالاسم…">
       </div>
       <div id="mcStudentsList" class="mc-student-grid"></div>
+    </div>
+  </section>
+
+  <!-- فصولي → ملاحظات مسجّلة: the students of the open class this teacher
+       has written notes for; a name opens the shared student profile
+       (studentNotes) with the notes themselves. After #mcSheet in the DOM
+       so it stacks on top of it. -->
+  <section id="mcNotesSheet" class="sheet" aria-hidden="true">
+    <div class="sheet-header">
+      <button id="mcNotesClose" class="back-btn" type="button">
+        <i class="fas fa-arrow-right"></i>
+        <span>رجوع</span>
+      </button>
+      <h3 id="mcNotesSheetTitle" class="sheet-title">الملاحظات</h3>
+    </div>
+    <div class="sheet-body mc-sheet-body">
+      <div id="mcNotesTotals" class="mc-notes-totals"></div>
+      <div id="mcNotesList" class="mc-notes-list"></div>
     </div>
   </section>
 
@@ -1132,7 +1160,7 @@
     // a deploy the page could otherwise run against the previous module —
     // bump it whenever this page starts relying on something new in there.
     import { mountAttendanceSheet, LESSON_END_GRACE_MINUTES } from "/shared/attendance.js?v=2026-10-06c";
-    import { mountStudentNotesSheet } from "/shared/student-notes-sheet.js";
+    import { mountStudentNotesSheet } from "/shared/student-notes-sheet.js?v=2026-10-06";
     import { parseTimeToMinutes } from "/shared/kuwait-time.js";
     import { isTruthyFlag, canManageAttendance } from "/shared/auth-guard.js";
     import { startPresenceHeartbeat, stopPresenceHeartbeat } from "/shared/presence.js";
@@ -1185,8 +1213,12 @@
     });
 
     // فصولي's "فتح صفحة الطالب" — same shared student-profile sheet
-    // Teachers/user.html itself uses.
-    const studentNotes = mountStudentNotesSheet({ db, auth });
+    // Teachers/user.html itself uses. A note added/deleted there updates
+    // فصولي's ملاحظات مسجّلة count (see mcRefreshStudentNotes).
+    const studentNotes = mountStudentNotesSheet({
+      db, auth,
+      onChange: (studentId) => mcRefreshStudentNotes(studentId),
+    });
 
     /* ========= Constants ========= */
     const DAYS_AR = ["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس"]; // Sun→Thu
@@ -6116,6 +6148,7 @@
       mcSheetTitle.textContent = `طلاب ${toArabicDigits(cls)}`;
       mcStudentsList.innerHTML = '';
       mcStudentSearch.value = '';
+      mcResetNotesCard();
       mcRefreshAttendButtonState(cls); // not awaited — never delays opening the sheet
       mcPrefetchLive(cls);             // likewise — warms up تسجيل الغياب
       mcOpenSheet();
@@ -6177,6 +6210,7 @@
       students = mcSortStudentsByNumber(students);
       mcCachedStudents = students;
       mcRenderStudentsGrid(students);
+      mcLoadNotesCounts(students); // not awaited — the list shows straight away
     }
 
     function mcRenderStudentsGrid(list){
@@ -6232,6 +6266,174 @@
       const nq = mcNormalizeArabic(q);
       mcRenderStudentsGrid(mcCachedStudents.filter(s => mcNormalizeArabic(s.name || '').includes(nq)));
     });
+
+    /* ========= فصولي → ملاحظات مسجّلة =========
+       Counts the notes this teacher has written (students/{uid}/
+       notes_by_teacher/{teacherUid}/{positive,negative,general}Notes — the
+       same docs the studentNotes sheet reads and writes) for each student
+       of the open class. The card shows the total; mcNotesSheet lists the
+       students that have any, and a name opens their profile. */
+    const mcNotesBtn = document.getElementById('mcNotesBtn');
+    const mcNotesCount = document.getElementById('mcNotesCount');
+    const mcNotesSub = document.getElementById('mcNotesSub');
+    const mcNotesSheetEl = document.getElementById('mcNotesSheet');
+    const mcNotesClose = document.getElementById('mcNotesClose');
+    const mcNotesSheetTitle = document.getElementById('mcNotesSheetTitle');
+    const mcNotesTotals = document.getElementById('mcNotesTotals');
+    const mcNotesList = document.getElementById('mcNotesList');
+
+    const MC_NOTE_TYPES = [
+      { key: 'positive', path: 'positiveNotes', label: 'إيجابية' },
+      { key: 'negative', path: 'negativeNotes', label: 'سلبية' },
+      { key: 'general',  path: 'generalNotes',  label: 'ملاحظة' },
+    ];
+    let mcNotesByStudent = new Map(); // student uid -> { positive, negative, general }
+    let mcNotesState = 'idle';         // 'loading' | 'ready' | 'error'
+    let mcNotesToken = 0;
+
+    async function mcFetchStudentNoteCounts(teacherUid, studentUid){
+      const snaps = await Promise.all(MC_NOTE_TYPES.map(t =>
+        getDocs(collection(db, 'students', studentUid, 'notes_by_teacher', teacherUid, t.path))
+      ));
+      const counts = {};
+      MC_NOTE_TYPES.forEach((t, i) => { counts[t.key] = snaps[i].size; });
+      return counts;
+    }
+    const mcNoteTotal = (c) => (c ? c.positive + c.negative + c.general : 0);
+
+    function mcResetNotesCard(){
+      mcNotesToken++;
+      mcNotesByStudent = new Map();
+      mcNotesState = 'loading';
+      mcRenderNotesCard();
+    }
+
+    async function mcLoadNotesCounts(students){
+      const token = ++mcNotesToken;
+      const teacherUid = currentUser?.uid;
+      mcNotesByStudent = new Map();
+      mcNotesState = 'loading';
+      mcRenderNotesCard();
+      if (!teacherUid) return;
+      try {
+        const withUid = students.filter(s => s.uid);
+        const results = await Promise.all(withUid.map(s => mcFetchStudentNoteCounts(teacherUid, s.uid)));
+        if (token !== mcNotesToken) return;
+        withUid.forEach((s, i) => mcNotesByStudent.set(s.uid, results[i]));
+        mcNotesState = 'ready';
+      } catch (e) {
+        console.error('[mcNotes] load counts:', e);
+        if (token !== mcNotesToken) return;
+        mcNotesState = 'error';
+      }
+      mcRenderNotesCard();
+      if (mcNotesSheetEl.classList.contains('open')) mcRenderNotesList();
+    }
+
+    // A note was added/deleted from the student profile — recount just that
+    // student if they're in the open class.
+    async function mcRefreshStudentNotes(studentUid){
+      const teacherUid = currentUser?.uid;
+      if (!teacherUid || mcNotesState !== 'ready' || !mcNotesByStudent.has(studentUid)) return;
+      const token = mcNotesToken;
+      try {
+        const counts = await mcFetchStudentNoteCounts(teacherUid, studentUid);
+        if (token !== mcNotesToken) return;
+        mcNotesByStudent.set(studentUid, counts);
+        mcRenderNotesCard();
+        if (mcNotesSheetEl.classList.contains('open')) mcRenderNotesList();
+      } catch (e) {
+        console.error('[mcNotes] refresh student:', e);
+      }
+    }
+
+    function mcStudentsWithNotes(){
+      return mcCachedStudents.filter(s => s.uid && mcNoteTotal(mcNotesByStudent.get(s.uid)) > 0);
+    }
+
+    function mcRenderNotesCard(){
+      mcNotesBtn.classList.remove('is-empty');
+      if (mcNotesState === 'loading' || mcNotesState === 'idle'){
+        mcNotesCount.textContent = '…';
+        mcNotesSub.textContent = 'جاري التحميل…';
+        mcNotesBtn.disabled = true;
+        return;
+      }
+      if (mcNotesState === 'error'){
+        mcNotesCount.textContent = '!';
+        mcNotesSub.textContent = 'تعذّر تحميل الملاحظات — اضغط للمحاولة مرة أخرى';
+        mcNotesBtn.disabled = false;
+        return;
+      }
+      let total = 0;
+      mcNotesByStudent.forEach(c => { total += mcNoteTotal(c); });
+      const studentsCount = mcStudentsWithNotes().length;
+      mcNotesCount.textContent = toArabicDigits(total);
+      mcNotesBtn.disabled = false;
+      if (total === 0){
+        mcNotesBtn.classList.add('is-empty');
+        mcNotesSub.textContent = 'لم تسجّل أي ملاحظات لطلاب هذا الفصل بعد';
+      } else {
+        mcNotesSub.textContent = `لدى ${toArabicDigits(studentsCount)} ${studentsCount === 1 ? 'طالب' : 'طلاب'} — اضغط لعرض الطلاب الذين لديهم ملاحظات`;
+      }
+    }
+
+    function mcRenderNotesList(){
+      const list = mcStudentsWithNotes();
+      const sums = { positive: 0, negative: 0, general: 0 };
+      list.forEach(s => {
+        const c = mcNotesByStudent.get(s.uid);
+        MC_NOTE_TYPES.forEach(t => { sums[t.key] += c[t.key]; });
+      });
+      mcNotesTotals.innerHTML = MC_NOTE_TYPES.map(t => `
+        <div class="mc-notes-total mc-note-${t.key}">
+          <b>${toArabicDigits(sums[t.key])}</b><span>${t.label}</span>
+        </div>`).join('');
+
+      mcNotesList.innerHTML = '';
+      if (list.length === 0){
+        const empty = document.createElement('div');
+        empty.className = 'mc-notes-empty';
+        empty.textContent = 'لا يوجد طلاب لديهم ملاحظات في هذا الفصل.';
+        mcNotesList.appendChild(empty);
+        return;
+      }
+      list.forEach(s => {
+        const c = mcNotesByStudent.get(s.uid);
+        const row = document.createElement('button');
+        row.type = 'button';
+        row.className = 'mc-notes-row';
+        const num = mcGetStudentNumber(s);
+        const pills = MC_NOTE_TYPES.filter(t => c[t.key] > 0).map(t =>
+          `<span class="mc-note-pill mc-note-${t.key}">${t.label} <b>${toArabicDigits(c[t.key])}</b></span>`
+        ).join('');
+        row.innerHTML = `
+          <span class="mc-notes-row-top">
+            <span class="mc-notes-row-name">${escapeHtml(s.name || '—')}</span>
+            <span class="mc-student-number-badge">${num === Infinity ? '—' : toArabicDigits(num)}</span>
+          </span>
+          <span class="mc-notes-row-pills">${pills}</span>`;
+        const stuClass = mcCurrentClass || s.class || '';
+        row.addEventListener('click', () => studentNotes.open(s.uid, { name: s.name || '', className: stuClass }));
+        mcNotesList.appendChild(row);
+      });
+    }
+
+    function mcOpenNotesSheet(){
+      mcNotesSheetTitle.textContent = `ملاحظات ${toArabicDigits(mcCurrentClass || '')}`;
+      mcRenderNotesList();
+      mcNotesSheetEl.classList.add('open');
+      mcNotesSheetEl.setAttribute('aria-hidden', 'false');
+    }
+    function mcCloseNotesSheet(){
+      mcNotesSheetEl.classList.remove('open');
+      mcNotesSheetEl.setAttribute('aria-hidden', 'true');
+    }
+    mcNotesBtn.addEventListener('click', () => {
+      if (mcNotesState === 'error') { mcLoadNotesCounts(mcCachedStudents); return; }
+      if (mcNotesState === 'ready') mcOpenNotesSheet();
+    });
+    mcNotesClose.addEventListener('click', mcCloseNotesSheet);
 
     /* ========= Download class list (PDF) ========= */
     // The whole class always goes on ONE A4 page: row height and font size
@@ -6667,6 +6869,7 @@
       document.body.style.overflow = '';
       mcAttendButtonToken++; // invalidate any in-flight refresh
       mcAttendEditSessionId = null;
+      mcCloseNotesSheet();
     }
     mcClose.addEventListener('click', mcCloseSheet);
 

@@ -4,7 +4,8 @@
 // the student's id/name/class in the query string. Every host page now opens
 // it as an in-page overlay instead: call mountStudentNotesSheet({db, auth})
 // once, then studentNotes.open(studentId, { name, className }) wherever a
-// student row is clicked.
+// student row is clicked. Optional onChange(studentId) runs after a note is
+// added or deleted, so a host showing note counts can refresh them.
 //
 // All CSS classes and DOM are scoped under a single injected wrapper with an
 // "snp-" prefix (Student Notes Panel) so nothing here can collide with a host
@@ -376,7 +377,7 @@ function initialOf(name) {
   return trimmed ? trimmed[0].toUpperCase() : "؟";
 }
 
-export function mountStudentNotesSheet({ db, auth }) {
+export function mountStudentNotesSheet({ db, auth, onChange }) {
   injectStylesOnce();
 
   const root = document.createElement("div");
@@ -451,6 +452,11 @@ export function mountStudentNotesSheet({ db, auth }) {
     if (modal.classList.contains("snp-open")) closeModal();
     else if (root.classList.contains("snp-open")) closeSheet();
   });
+
+  function notifyChange() {
+    if (typeof onChange !== "function" || !studentId) return;
+    try { onChange(studentId); } catch (e) { console.error("[student-notes-sheet] onChange threw", e); }
+  }
 
   async function loadSpecialCaseReason() {
     try {
@@ -528,6 +534,7 @@ export function mountStudentNotesSheet({ db, auth }) {
         if (!confirm("تأكيد حذف الملاحظة؟ لا يمكن التراجع.")) return;
         try {
           await deleteDoc(doc(db, path));
+          notifyChange();
           await loadAll();
         } catch (e) {
           console.error(e);
@@ -581,6 +588,7 @@ export function mountStudentNotesSheet({ db, auth }) {
         createdAt: serverTimestamp(), updatedAt: serverTimestamp(), createdBy: user.uid, updatedBy: user.uid,
       });
       closeModal();
+      notifyChange();
       await loadAll();
     } catch (e) {
       console.error(e);
