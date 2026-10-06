@@ -341,6 +341,23 @@ service cloud.firestore {
       allow get, list: if isTeacherSupervisorOrAdmin();
     }
 
+    /* ---------- teacher notes (collection groups) ---------- */
+    /* Read-only, same audience as the nested students/{sid}/notes_by_teacher */
+    /* read rules below. Lets admins/students.html's ملاحظات على هذا الفصل   */
+    /* find every teacher's notes on a student with one collection-group     */
+    /* query over that student's path (the notes_by_teacher/{teacherId} docs */
+    /* don't exist, so the teachers can't be listed). Writes stay governed   */
+    /* exclusively by the nested rules.                                      */
+    match /{path=**}/positiveNotes/{noteId} {
+      allow read: if isTeacherSupervisorOrAdmin();
+    }
+    match /{path=**}/negativeNotes/{noteId} {
+      allow read: if isTeacherSupervisorOrAdmin();
+    }
+    match /{path=**}/generalNotes/{noteId} {
+      allow read: if isTeacherSupervisorOrAdmin();
+    }
+
     /* ---------- presence ---------- */
     /* One doc per signed-in user (shared/presence.js), holding only when
        they were last seen. A user may only ever write their own doc, and

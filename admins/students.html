@@ -525,6 +525,9 @@ mark.search-hit{ background:rgba(255,196,0,.45); color:inherit; border-radius:4p
 .item:hover{ transform:translateY(-2px); box-shadow:0 16px 32px rgba(3,60,84,.18); border-color:rgba(3,60,84,.35); background:#fbfdff }
 .item:active{ transform:translateY(0) scale(.997) }
 .sub{ font-size:.92rem; color:#6b7f9f; font-weight:600; margin-top: 4px; }
+/* Number first, so it sits on the right of the name (RTL). */
+.item-title{ display:flex; align-items:center; gap:8px; }
+.item-title .item-number, .item-title .special-case-icon{ margin:0; flex-shrink:0; }
 .item-number{
   display: inline-flex;
   align-items: center;
@@ -553,6 +556,42 @@ mark.search-hit{ background:rgba(255,196,0,.45); color:inherit; border-radius:4p
 }
 .back-btn:hover { background: var(--primary-light); }
 .sheet-title{ margin:0; font-size:1.1rem; font-weight:900; color:#033C54 }
+/* Class page: the class name centered in the header, back button on the
+   right, an empty column on the left balancing it. */
+#classSheet .sheet-header{ display:grid; grid-template-columns:1fr auto 1fr; }
+#classSheet .sheet-header .back-btn{ justify-self:start; }
+#classSheet .sheet-title{ grid-column:2; text-align:center; font-size:1.25rem; }
+.class-actions-card{ gap:14px; }
+.class-actions{ display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:10px; }
+.class-action{
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px;
+  min-height:84px; padding:12px 6px; border-radius:16px; cursor:pointer;
+  background:#fff; color:#033C54; border:1px solid rgba(3,60,84,.22); box-shadow:var(--shadow-1);
+  font-family:inherit; font-size:.95rem; font-weight:800; line-height:1.25; text-align:center;
+  transition:var(--transition);
+}
+.class-action svg{ width:24px; height:24px; fill:none; stroke:currentColor; stroke-width:2.1; stroke-linecap:round; stroke-linejoin:round; }
+.class-action:hover{ transform:translateY(-2px); border-color:rgba(3,60,84,.45); box-shadow:0 14px 30px rgba(3,60,84,.16); }
+.class-action:active{ transform:scale(.98); }
+.class-action:focus-visible{ outline:3px solid var(--focus); outline-offset:2px; }
+.class-action.is-primary{ background:linear-gradient(180deg,#065372,#033C54); color:#fff; border-color:transparent; box-shadow:0 12px 28px rgba(3,60,84,.26); }
+@media (max-width:380px){ .class-action{ font-size:.84rem; min-height:78px; } }
+.class-notes-card{
+  display:flex; align-items:center; gap:14px; width:100%; padding:14px 16px; margin-bottom:20px;
+  border-radius:16px; background:#fff; border:1.5px solid rgba(3,60,84,.2); box-shadow:var(--shadow-1);
+  font-family:inherit; text-align:start; cursor:pointer; transition:var(--transition);
+}
+.class-notes-card:hover{ transform:translateY(-2px); border-color:#033C54; box-shadow:0 14px 30px rgba(3,60,84,.16); }
+.class-notes-count{
+  flex-shrink:0; min-width:58px; height:58px; padding:0 10px; border-radius:16px; display:grid; place-items:center;
+  background:linear-gradient(180deg,#065372,#033C54); color:#fff; font-size:1.55rem; font-weight:900; line-height:1;
+  box-shadow:0 10px 22px rgba(3,60,84,.24);
+}
+.class-notes-card.is-empty .class-notes-count{ background:var(--primary-light); color:#6b7f9f; box-shadow:none; }
+.class-notes-text{ display:grid; gap:3px; flex:1; min-width:0; }
+.class-notes-text b{ color:#033C54; font-size:1.05rem; font-weight:900; }
+.class-notes-text small{ color:#6b7f9f; font-size:.86rem; font-weight:700; line-height:1.5; }
+.class-notes-chev{ width:18px; height:18px; flex-shrink:0; fill:none; stroke:#033C54; stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round; }
 .sheet-body{ flex:1 1 auto; overflow:auto; padding:24px; width:min(880px,94vw); margin:0 auto; display:flex; flex-direction:column; gap:16px }
 .sheet.small .sheet-body{ width:min(640px,94vw) }
 body.student-route-active main,
@@ -1107,6 +1146,9 @@ html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%;
   .reorder-item { padding: 14px 16px; }
   #studentTopBack{ inset-inline-start:12px; height:38px; padding:0 12px; font-size:.85rem; }
   .classes-floating-back{ right:12px; top:88px; min-width:94px; height:42px; font-size:.9rem; padding:0 12px; }
+  /* Phones: the student cards sit straight under قائمة الطلاب, not inside
+     another card. */
+  .students-section{ background:transparent; border:0; box-shadow:none; padding:0; border-radius:0; }
 }
 @media (max-width: 480px) {
   .btn { height: 50px; font-size: 0.95rem; } .subject { padding: 14px 16px; } .item { padding: 14px 16px; }
@@ -1776,21 +1818,38 @@ html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%;
     <h3 id="classTitle" class="sheet-title">—</h3>
   </div>
   <div class="sheet-body">
-    <div class="section">
-      <div class="row" style="justify-content:space-between;">
-        <div class="label" style="margin:0;">إدارة الطلاب لفصل <span id="classNameStrong" style="font-weight:900;"></span></div>
-        <div style="display:flex; gap:12px; flex-wrap:wrap;">
-          <button id="refreshStudents" class="btn ghost" type="button" style="height:48px; padding:0 16px;">تحديث</button>
-          <button id="openAddStudent" class="btn primary" type="button" style="height:48px; padding:0 16px;">إضافة طالب</button>
-          <!-- NEW: Reorder students button -->
-          <button id="openReorderModal" class="btn secondary" type="button" style="height:48px; padding:0 16px;">ترتيب الطلاب</button>
-          <button id="openClassTeachers" class="btn ghost" type="button" style="height:48px; padding:0 16px;">👨‍🏫 المعلمون</button>
-        </div>
+    <!-- Class actions: three equal tiles (icon over label). -->
+    <div class="section class-actions-card">
+      <div class="label" style="margin:0;">إدارة الطلاب لفصل <span id="classNameStrong" style="font-weight:900;"></span></div>
+      <div class="class-actions">
+        <button id="openAddStudent" class="class-action is-primary" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="4"/><path d="M2 21v-1a6 6 0 0 1 6-6h2a6 6 0 0 1 6 6v1"/><path d="M19 8v6M16 11h6"/></svg>
+          <span>إضافة طالب</span>
+        </button>
+        <button id="openReorderModal" class="class-action" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v16M3 8l4-4 4 4"/><path d="M17 20V4M13 16l4 4 4-4"/></svg>
+          <span>ترتيب الطلاب</span>
+        </button>
+        <button id="openClassTeachers" class="class-action" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/><path d="M7 9h6M7 12h4"/></svg>
+          <span>المعلمون</span>
+        </button>
       </div>
     </div>
 
-    <!-- Students list -->
-    <div class="section">
+    <!-- ملاحظات على هذا الفصل: every teacher's notes on this class's
+         students (shared/teacher-class-sheet.js' mountClassNotesOverview). -->
+    <button id="classNotesCard" class="class-notes-card" type="button">
+      <span id="classNotesCount" class="class-notes-count">…</span>
+      <span class="class-notes-text">
+        <b>ملاحظات على هذا الفصل</b>
+        <small id="classNotesSub">جاري التحميل…</small>
+      </span>
+      <svg class="class-notes-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+    </button>
+
+    <!-- Students list (no card around it on phones, see .students-section) -->
+    <div class="section students-section">
       <div class="row" style="justify-content:space-between; align-items:center; margin-bottom:6px;">
         <div class="label" style="margin:0;">قائمة الطلاب</div>
         <div style="display:flex; gap:12px; flex-wrap:wrap;">
@@ -2238,6 +2297,8 @@ import { initializeApp, getApp, getApps } from "/shared/firebase.js";
 import { getAuth, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from "/shared/firebase.js";
 import { initializeFirestore, persistentSingleTabManager, collection, collectionGroup, getDocs, query, where, orderBy, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp, writeBatch, arrayUnion, arrayRemove } from "/shared/firebase.js";
 import { mountAttendanceSheet } from "/shared/attendance.js";
+import { mountStudentNotesSheet } from "/shared/student-notes-sheet.js?v=2026-10-06b";
+import { mountClassNotesOverview } from "/shared/teacher-class-sheet.js?v=2026-10-06c";
 import { fetchStudentAttendanceData, makeAttTile, makeMorningLateTile, makeAbsenceDayTile, makeLateAbsenceTile, LATES_PER_ABSENCE_DAY } from "/shared/attendance-tiles.js?v=2026-10-04";
 import { renderWarningState, renderExcusedWarningState } from "/shared/warning-system.js";
 import { DEFAULT_CLASS_LIST, fetchClassList, groupByGrade, availableNumbersToAdd, buildClassKey, primeClassList, parseClassKey } from "/shared/class-registry.js";
@@ -2253,6 +2314,10 @@ try {
   db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true, useFetchStreams: false });
 }
 const auth = getAuth(app);
+// ملاحظات على هذا الفصل → teacher → student → that teacher's notes
+// (read-only), see openClass().
+const studentNotes = mountStudentNotesSheet({ db, auth });
+const classNotes = mountClassNotesOverview({ db, studentNotes });
 // Start the settings/classes read the moment auth resolves, instead
 // of waiting for the role check to come back first. The two reads are
 // independent, and running them one after the other cost this page a
@@ -2315,7 +2380,6 @@ const classSheet = document.getElementById('classSheet');
 const closeClass = document.getElementById('closeClass');
 const classTitle = document.getElementById('classTitle');
 const classNameStrong = document.getElementById('classNameStrong');
-const refreshStudents = document.getElementById('refreshStudents');
 const openClassTeachersBtn = document.getElementById('openClassTeachers');
 const classTeachersSheet = document.getElementById('classTeachersSheet');
 const closeClassTeachers = document.getElementById('closeClassTeachers');
@@ -4269,9 +4333,40 @@ function openClass(className){
   filterSpecialCases.classList.remove('filter-active');
   openSheet(classSheet);
   loadStudents(className);
+  loadClassNotesCard(className);
 }
 
-closeClass.addEventListener('click', ()=> closeSheet(classSheet));
+closeClass.addEventListener('click', ()=> { classNotes.close(); closeSheet(classSheet); });
+
+const classNotesCard = document.getElementById('classNotesCard');
+const classNotesCount = document.getElementById('classNotesCount');
+const classNotesSub = document.getElementById('classNotesSub');
+function loadClassNotesCard(className){
+  classNotesCard.classList.remove('is-empty');
+  classNotesCount.textContent = '…';
+  classNotesSub.textContent = 'جاري التحميل…';
+  classNotes.load(className, { force: true }).then((data)=>{
+    if (selectedClass !== className) return;
+    classNotesCount.textContent = toArabicDigits(data.total);
+    if (!data.total){
+      classNotesCard.classList.add('is-empty');
+      classNotesSub.textContent = 'لا توجد ملاحظات على طلاب هذا الفصل';
+    } else {
+      const n = data.teachers.length;
+      classNotesSub.textContent = `من ${toArabicDigits(n)} ${n === 1 ? 'معلّم' : 'معلّمين'} — اضغط للعرض`;
+    }
+  }).catch((e)=>{
+    console.error('[classNotes]', e);
+    if (selectedClass !== className) return;
+    classNotesCount.textContent = '!';
+    classNotesSub.textContent = 'تعذّر تحميل الملاحظات — اضغط للمحاولة مرة أخرى';
+  });
+}
+classNotesCard.addEventListener('click', ()=>{
+  if (!selectedClass) return;
+  if (classNotesCount.textContent === '!') { loadClassNotesCard(selectedClass); return; }
+  classNotes.open(selectedClass);
+});
 
 // ---- Class teachers sheet: every teacher whose `classes` array includes
 // this class, opened from the class sheet's "المعلمون" button. Clicking a
@@ -4476,7 +4571,6 @@ openAddStudent.addEventListener('click', ()=>{
 closeAddStudentModalBtn.addEventListener('click', ()=>{ closeModal(addStudentModal); resetAddStudentForm(); });
 cancelAddStudentBtn.addEventListener('click', ()=>{ closeModal(addStudentModal); resetAddStudentForm(); });
 
-refreshStudents.addEventListener('click', ()=>{ if(selectedClass) loadStudents(selectedClass); });
 
 // UPDATED: loadStudents function with studentNumber-based ordering
 async function loadStudents(className){
@@ -4601,7 +4695,7 @@ function renderStudentsList(filteredArr){
 
     el.innerHTML = `
       <div>
-        <div>${specialCaseIcon} ${highlightMatch(st.name || '—', studentSearchQuery)} <span class="item-number">${toArabicDigits(studentNumber)}</span></div>
+        <div class="item-title"><span class="item-number">${toArabicDigits(studentNumber)}</span>${specialCaseIcon}<span>${highlightMatch(st.name || '—', studentSearchQuery)}</span></div>
         <div class="sub">${st.civilid ? ('رقم المستخدم: '+ toArabicDigits(st.civilid)) : ''}</div>
       </div>
       <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>

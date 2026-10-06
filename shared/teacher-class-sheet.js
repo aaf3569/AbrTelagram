@@ -12,8 +12,17 @@
    Uses the host page's .sheet/.sheet-header/.back-btn/.sheet-title/
    .sheet-body chrome; everything else is "tcs-" scoped, with inline SVG
    icons (not every host loads Font Awesome). Appended to the end of <body>
-   so both sheets stack above the teacher profile sheet. */
-import { collection, doc, getDoc, getDocs, query, where } from "/shared/firebase.js";
+   so both sheets stack above the teacher profile sheet.
+
+   Also exports mountClassNotesOverview (admins/students.html → a class →
+   ملاحظات على هذا الفصل): every teacher with notes on the class's students
+   → that teacher's students with notes → the student's notes from them. */
+import { collection, collectionGroup, doc, getDoc, getDocs, orderBy, query, where } from "/shared/firebase.js";
+// Not re-exported by /shared/firebase.js; imported from the same SDK build it
+// uses (so they work with its db), straight from the CDN rather than adding
+// exports there — a browser holding a cached older firebase.js would
+// otherwise fail to load this module for a few minutes after a deploy.
+import { documentId, endAt, startAt } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 
 const STYLE_ID = "tcs-styles";
 
@@ -87,6 +96,10 @@ const CSS_TEXT = `
 .tcs-total span{ font-size:.85rem; font-weight:800; }
 .tcs-msg{ grid-column:1 / -1; text-align:center; padding:22px 14px; color:var(--muted,#64748b); font-weight:800; border:1px dashed var(--border,#e2e8f0); border-radius:var(--radius-sm,12px); background:var(--card-bg,#fff); }
 .tcs-sheet .sheet-title{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
+.tcs-teacher{ display:flex; align-items:center; gap:12px; }
+.tcs-avatar{ width:42px; height:42px; flex-shrink:0; border-radius:50%; display:grid; place-items:center; background:linear-gradient(145deg,var(--primary-2,#065372),var(--primary,#033c54)); color:#fff; font-weight:900; font-size:.95rem; }
+.tcs-teacher-text{ display:grid; gap:2px; flex:1; min-width:0; }
+.tcs-teacher-sub{ font-size:.8rem; font-weight:700; color:var(--muted,#64748b); }
 `;
 
 const ar = (v) => String(v ?? "").replace(/\d/g, (d) => "٠١٢٣٤٥٦٧٨٩"[d]);
@@ -114,6 +127,46 @@ function studentNumber(s) {
     if (Number.isFinite(n)) return n;
   }
   return Infinity;
+}
+
+async function queryStudents(db, classKey) {
+  try {
+    const snap = await getDocs(query(collection(db, "students"), where("class", "==", classKey)));
+    if (!snap.empty) {
+      return snap.docs.map((d) => {
+        const s = d.data() || {};
+        return { ...s, uid: d.id, name: cleanName(s.name || s.fullName || d.id) };
+      });
+    }
+  } catch (e) {
+    console.warn("[tcs] students query:", e?.message || e);
+  }
+  // Legacy layout: one students/uids doc holding every student.
+  try {
+    const m = await getDoc(doc(db, "students", "uids"));
+    if (m.exists()) {
+      return Object.values(m.data() || {})
+        .filter((s) => s && (s.class || s.className) === classKey)
+        .map((s) => ({ ...s, uid: s.uid || "", name: cleanName(s.name || s.fullName || "") }));
+    }
+  } catch (e) {
+    console.warn("[tcs] students/uids:", e?.message || e);
+  }
+  return [];
+}
+
+function pillsHtml(c) {
+  if (!c) return "";
+  return NOTE_TYPES.filter((t) => c[t.key] > 0)
+    .map((t) => `<span class="tcs-pill tcs-${t.key}">${t.label} <b>${ar(c[t.key])}</b></span>`).join("");
+}
+
+function sortStudents(list) {
+  return [...list].sort((a, b) => {
+    const na = studentNumber(a), nb = studentNumber(b);
+    if (na !== nb) return na === Infinity ? 1 : nb === Infinity ? -1 : na - nb;
+    return (a.name || "").localeCompare(b.name || "", "ar");
+  });
 }
 
 function injectStylesOnce() {
@@ -190,44 +243,12 @@ export function mountTeacherClassSheet({ db, studentNotes }) {
   cls.back.addEventListener("click", close);
   notes.back.addEventListener("click", () => hide(notes));
 
-  async function queryStudents(classKey) {
-    try {
-      const snap = await getDocs(query(collection(db, "students"), where("class", "==", classKey)));
-      if (!snap.empty) {
-        return snap.docs.map((d) => {
-          const s = d.data() || {};
-          return { ...s, uid: d.id, name: cleanName(s.name || s.fullName || d.id) };
-        });
-      }
-    } catch (e) {
-      console.warn("[tcs] students query:", e?.message || e);
-    }
-    // Legacy layout: one students/uids doc holding every student.
-    try {
-      const m = await getDoc(doc(db, "students", "uids"));
-      if (m.exists()) {
-        return Object.values(m.data() || {})
-          .filter((s) => s && (s.class || s.className) === classKey)
-          .map((s) => ({ ...s, uid: s.uid || "", name: cleanName(s.name || s.fullName || "") }));
-      }
-    } catch (e) {
-      console.warn("[tcs] students/uids:", e?.message || e);
-    }
-    return [];
-  }
-
   async function countNotes(teacherUid, studentUid) {
     const snaps = await Promise.all(NOTE_TYPES.map((t) =>
       getDocs(collection(db, "students", studentUid, "notes_by_teacher", teacherUid, t.path))));
     const c = {};
     NOTE_TYPES.forEach((t, i) => { c[t.key] = snaps[i].size; });
     return c;
-  }
-
-  function pillsHtml(c) {
-    if (!c) return "";
-    return NOTE_TYPES.filter((t) => c[t.key] > 0)
-      .map((t) => `<span class="tcs-pill tcs-${t.key}">${t.label} <b>${ar(c[t.key])}</b></span>`).join("");
   }
 
   function studentButton(s) {
@@ -353,13 +374,9 @@ export function mountTeacherClassSheet({ db, studentNotes }) {
     renderGrid();
     show(cls);
 
-    const list = await queryStudents(classKey);
+    const list = await queryStudents(db, classKey);
     if (myToken !== token) return;
-    students = [...list].sort((a, b) => {
-      const na = studentNumber(a), nb = studentNumber(b);
-      if (na !== nb) return na === Infinity ? 1 : nb === Infinity ? -1 : na - nb;
-      return (a.name || "").localeCompare(b.name || "", "ar");
-    });
+    students = sortStudents(list);
     heroSub.textContent = `${teacherName ? `المعلّم: ${teacherName} · ` : ""}${ar(students.length)} طالب`;
     state = "loading";
     renderGrid();
@@ -367,4 +384,175 @@ export function mountTeacherClassSheet({ db, studentNotes }) {
   }
 
   return { open, close };
+}
+
+/* ========= ملاحظات على هذا الفصل =========
+   All notes on a class's students, from every teacher. Notes live at
+   students/{sid}/notes_by_teacher/{teacherUid}/{type}/{noteId} and the
+   notes_by_teacher/{teacherUid} docs themselves don't exist, so the
+   teachers can't be listed — instead, per student and type, a collection
+   group query over that student's path prefix (needs the
+   {path=**}/positiveNotes|negativeNotes|generalNotes read rules in
+   firestore.rules). */
+async function loadClassNotes(db, classKey) {
+  const students = sortStudents(await queryStudents(db, classKey)).filter((s) => s.uid);
+  const byTeacher = new Map(); // teacherUid -> Map(studentUid -> counts)
+  await Promise.all(students.flatMap((s) => NOTE_TYPES.map(async (t) => {
+    const prefix = `students/${s.uid}`;
+    const snap = await getDocs(query(
+      collectionGroup(db, t.path), orderBy(documentId()), startAt(prefix), endAt(`${prefix}`),
+    ));
+    snap.forEach((d) => {
+      const seg = d.ref.path.split("/"); // students/{sid}/notes_by_teacher/{tid}/{type}/{id}
+      if (seg[1] !== s.uid || seg[2] !== "notes_by_teacher") return; // a uid sharing this prefix
+      const tid = seg[3];
+      if (!byTeacher.has(tid)) byTeacher.set(tid, new Map());
+      const m = byTeacher.get(tid);
+      if (!m.has(s.uid)) m.set(s.uid, { positive: 0, negative: 0, general: 0 });
+      m.get(s.uid)[t.key]++;
+    });
+  })));
+  const teachers = await Promise.all([...byTeacher.keys()].map(async (uid) => {
+    let name = "", subject = "";
+    try {
+      const snap = await getDoc(doc(db, "teachers", uid));
+      const d = snap.exists() ? snap.data() || {} : {};
+      name = (d.name || "").toString();
+      subject = (d.subject || d.department || "").toString();
+    } catch (e) {
+      console.warn("[tcs] teacher name:", e?.message || e);
+    }
+    const counts = byTeacher.get(uid);
+    const sums = { positive: 0, negative: 0, general: 0 };
+    counts.forEach((c) => NOTE_TYPES.forEach((t) => { sums[t.key] += c[t.key]; }));
+    return { uid, name: name || "معلّم غير معروف", subject, counts, sums };
+  }));
+  teachers.sort((a, b) => total(b.sums) - total(a.sums) || a.name.localeCompare(b.name, "ar"));
+  const sums = { positive: 0, negative: 0, general: 0 };
+  teachers.forEach((tr) => NOTE_TYPES.forEach((t) => { sums[t.key] += tr.sums[t.key]; }));
+  return { classKey, students, teachers, sums, total: total(sums) };
+}
+
+function initials(name) {
+  const w = String(name || "").trim().split(/\s+/).filter(Boolean);
+  return w.length >= 2 ? w[0][0] + w[1][0] : (w[0] || "؟").slice(0, 2);
+}
+
+function totalsHtml(sums) {
+  return NOTE_TYPES.map((t) =>
+    `<div class="tcs-total tcs-${t.key}"><b>${ar(sums[t.key])}</b><span>${t.label}</span></div>`).join("");
+}
+
+export function mountClassNotesOverview({ db, studentNotes }) {
+  injectStylesOnce();
+
+  const teachersSheet = makeSheet("ملاحظات الفصل");
+  teachersSheet.body.innerHTML = `<div class="tcs-totals"></div><div class="tcs-grid"></div>`;
+  const tTotals = teachersSheet.body.querySelector(".tcs-totals");
+  const tGrid = teachersSheet.body.querySelector(".tcs-grid");
+
+  const studentsSheet = makeSheet("الطلاب");
+  studentsSheet.body.innerHTML = `
+    <section class="tcs-hero">
+      <span class="tcs-hero-icon">${ICON_USERS}</span>
+      <div class="tcs-hero-text">
+        <h2 class="tcs-hero-class">—</h2>
+        <span class="tcs-hero-sub">—</span>
+      </div>
+    </section>
+    <div class="tcs-totals"></div>
+    <div class="tcs-grid"></div>`;
+  const sHeroName = studentsSheet.body.querySelector(".tcs-hero-class");
+  const sHeroSub = studentsSheet.body.querySelector(".tcs-hero-sub");
+  const sTotals = studentsSheet.body.querySelector(".tcs-totals");
+  const sGrid = studentsSheet.body.querySelector(".tcs-grid");
+
+  let cache = null;     // { classKey, promise }
+  let openToken = 0;
+
+  const show = (sh) => { sh.el.classList.add("open"); sh.el.setAttribute("aria-hidden", "false"); };
+  const hide = (sh) => { sh.el.classList.remove("open"); sh.el.setAttribute("aria-hidden", "true"); };
+  function close() { openToken++; hide(studentsSheet); hide(teachersSheet); }
+  teachersSheet.back.addEventListener("click", close);
+  studentsSheet.back.addEventListener("click", () => hide(studentsSheet));
+
+  // Starts (or reuses) loading a class's notes; open() uses the same result.
+  function load(classKey, { force = false } = {}) {
+    if (force || !cache || cache.classKey !== classKey) {
+      const promise = loadClassNotes(db, classKey);
+      cache = { classKey, promise };
+      promise.catch(() => { if (cache?.promise === promise) cache = null; });
+    }
+    return cache.promise;
+  }
+
+  function openTeacher(data, tr) {
+    studentsSheet.title.textContent = tr.name;
+    sHeroName.textContent = tr.name;
+    sHeroSub.textContent = `${tr.subject ? `${tr.subject} · ` : ""}فصل ${ar(data.classKey)}`;
+    sTotals.innerHTML = totalsHtml(tr.sums);
+    sGrid.innerHTML = "";
+    data.students.filter((s) => total(tr.counts.get(s.uid)) > 0).forEach((s) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "tcs-student" + (s.specialCase === true ? " is-special" : "");
+      const n = studentNumber(s);
+      btn.innerHTML = `
+        <span class="tcs-student-top">
+          <span class="tcs-num">${n === Infinity ? "—" : ar(n)}</span>
+          <span class="tcs-student-name">${esc(s.name || "—")}</span>
+        </span>
+        <span class="tcs-pills">${pillsHtml(tr.counts.get(s.uid))}</span>`;
+      btn.addEventListener("click", () => studentNotes.open(s.uid, {
+        name: s.name || "", className: ar(data.classKey), teacherUid: tr.uid, teacherName: tr.name,
+      }));
+      sGrid.appendChild(btn);
+    });
+    show(studentsSheet);
+  }
+
+  async function open(classKey) {
+    if (!classKey) return;
+    const myToken = ++openToken;
+    teachersSheet.title.textContent = `ملاحظات ${ar(classKey)}`;
+    tTotals.innerHTML = "";
+    tGrid.innerHTML = `<div class="tcs-msg">جاري تحميل الملاحظات…</div>`;
+    hide(studentsSheet);
+    show(teachersSheet);
+    let data;
+    try {
+      data = await load(classKey);
+    } catch (e) {
+      console.error("[tcs] class notes:", e);
+      if (myToken === openToken) tGrid.innerHTML = `<div class="tcs-msg">تعذّر تحميل الملاحظات.</div>`;
+      return;
+    }
+    if (myToken !== openToken) return;
+    tTotals.innerHTML = totalsHtml(data.sums);
+    tGrid.innerHTML = "";
+    if (!data.teachers.length) {
+      tGrid.innerHTML = `<div class="tcs-msg">لا توجد ملاحظات على طلاب هذا الفصل.</div>`;
+      return;
+    }
+    data.teachers.forEach((tr) => {
+      const withNotes = [...tr.counts.values()].filter((c) => total(c) > 0).length;
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "tcs-student";
+      btn.innerHTML = `
+        <span class="tcs-teacher">
+          <span class="tcs-avatar">${esc(initials(tr.name))}</span>
+          <span class="tcs-teacher-text">
+            <span class="tcs-student-name">${esc(tr.name)}</span>
+            <span class="tcs-teacher-sub">${tr.subject ? `${esc(tr.subject)} · ` : ""}${ar(withNotes)} ${withNotes === 1 ? "طالب" : "طلاب"}</span>
+          </span>
+          <span class="tcs-chev">${ICON_CHEV}</span>
+        </span>
+        <span class="tcs-pills">${pillsHtml(tr.sums)}</span>`;
+      btn.addEventListener("click", () => openTeacher(data, tr));
+      tGrid.appendChild(btn);
+    });
+  }
+
+  return { load, open, close };
 }
