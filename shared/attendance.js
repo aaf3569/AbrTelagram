@@ -176,11 +176,11 @@ const STYLES = `
   #attendanceSheet.att-editing .submit-row{flex:1 1 200px;flex-direction:column;align-items:stretch;gap:4px}
   #attendanceSheet.att-editing .btn.submit{width:100%;min-height:54px;background:#e7edf3;color:#6b7f9f;box-shadow:none;transition:background .25s ease,color .25s ease,box-shadow .25s ease,transform .15s ease}
   #attendanceSheet .att-dirty-hint{display:none;text-align:center;font-size:.8rem;font-weight:800;color:#b45309}
-  #attendanceSheet.att-editing.att-dirty .stats{background:#f3fbf5;border-color:rgba(22,163,74,.45);box-shadow:0 -10px 34px rgba(22,163,74,.28)}
-  #attendanceSheet.att-editing.att-dirty .btn.submit{background:linear-gradient(145deg,#22c55e,#15803d);color:#fff;animation:attSaveGlow 1.6s ease-in-out infinite}
+  #attendanceSheet.att-editing.att-dirty .stats{background:var(--primary-extra-light,#eef5fb);border-color:rgba(3,60,84,.40);box-shadow:0 -10px 34px rgba(3,60,84,.26)}
+  #attendanceSheet.att-editing.att-dirty .btn.submit{background:linear-gradient(145deg,var(--primary-light,#065372),var(--primary,#033c54));color:#fff;animation:attSaveGlow 1.6s ease-in-out infinite}
   #attendanceSheet.att-editing.att-dirty .att-dirty-hint{display:block}
-  @keyframes attSaveGlow{0%,100%{box-shadow:0 10px 26px rgba(22,163,74,.40),0 0 0 0 rgba(34,197,94,.55)}50%{box-shadow:0 12px 32px rgba(22,163,74,.55),0 0 0 8px rgba(34,197,94,0)}}
-  @media (prefers-reduced-motion:reduce){#attendanceSheet.att-editing.att-dirty .btn.submit{animation:none;box-shadow:0 0 0 3px rgba(34,197,94,.45)}}
+  @keyframes attSaveGlow{0%,100%{box-shadow:0 10px 26px rgba(3,60,84,.38),0 0 0 0 rgba(6,83,114,.50)}50%{box-shadow:0 12px 32px rgba(3,60,84,.52),0 0 0 8px rgba(6,83,114,0)}}
+  @media (prefers-reduced-motion:reduce){#attendanceSheet.att-editing.att-dirty .btn.submit{animation:none;box-shadow:0 0 0 3px rgba(6,83,114,.40)}}
   /* Module-owned success celebration — looping green checkmark draw on a
      white/blurred backdrop, dismissed only via the labeled button below the
      text (no small icon-only close button — easy to miss and, since this
