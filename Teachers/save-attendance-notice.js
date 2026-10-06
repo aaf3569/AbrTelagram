@@ -1,18 +1,39 @@
 /* "مهم" reminder on the teacher page: after editing attendance, it has to
-   be saved. Shown once per day per device (dismissal is remembered in
-   localStorage); resolves when closed so callers can chain the next popup
-   (e.g. the swap-removed tour) instead of stacking on top of it. */
+   be saved. Shown once per teacher account (feature_tours_seen/
+   {uid}.tours.saveAttendanceNoticeV1 in Firestore, mirrored to
+   localStorage — same record as Teachers/swap-removed-tour.js), then never
+   again on any device. Resolves when closed (or skipped) so callers can
+   chain the next popup instead of stacking on top of it. */
+import { doc, getDoc, setDoc, serverTimestamp } from '/shared/firebase.js';
 
-const STYLE_ID = 'abr-save-att-style';
-const HOST_ID  = 'abr-save-att-host';
-const LS_KEY   = 'abr_save_att_notice_day';
+const NOTICE_ID  = 'saveAttendanceNoticeV1';
+const COLLECTION = 'feature_tours_seen';
+const LS_KEY     = (uid) => `tour:${NOTICE_ID}:${uid}`;
+const STYLE_ID   = 'abr-save-att-style';
+const HOST_ID    = 'abr-save-att-host';
 
-function today() {
-  const d = new Date();
-  return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
-}
 function lsGet(k) { try { return localStorage.getItem(k); } catch { return null; } }
 function lsSet(k, v) { try { localStorage.setItem(k, v); } catch {} }
+
+async function hasSeen(db, uid) {
+  if (lsGet(LS_KEY(uid))) return true;
+  try {
+    const snap = await getDoc(doc(db, COLLECTION, uid));
+    const seen = snap.exists() ? snap.data()?.tours?.[NOTICE_ID] : null;
+    if (seen) { lsSet(LS_KEY(uid), seen); return true; }
+    return false;
+  } catch (e) {
+    // Can't confirm it wasn't shown already — skip rather than risk a repeat.
+    console.warn('[notice] seen check failed:', e?.message || e);
+    return true;
+  }
+}
+
+function markSeen(db, uid) {
+  lsSet(LS_KEY(uid), 'seen');
+  setDoc(doc(db, COLLECTION, uid), { tours: { [NOTICE_ID]: 'seen' }, updatedAt: serverTimestamp() }, { merge: true })
+    .catch((e) => console.warn('[notice] mark seen failed:', e?.message || e));
+}
 
 function ensureStyles() {
   if (document.getElementById(STYLE_ID)) return;
@@ -112,8 +133,9 @@ function ensureStyles() {
   document.head.appendChild(style);
 }
 
-export function maybeShowSaveAttendanceNotice() {
-  if (lsGet(LS_KEY) === today()) return Promise.resolve();
+export async function maybeShowSaveAttendanceNotice({ db, uid }) {
+  if (!db || !uid) return;
+  if (await hasSeen(db, uid)) return;
   ensureStyles();
   document.getElementById(HOST_ID)?.remove();
 
@@ -142,7 +164,7 @@ export function maybeShowSaveAttendanceNotice() {
     const close = () => {
       if (closed) return;
       closed = true;
-      lsSet(LS_KEY, today());
+      markSeen(db, uid);
       host.classList.remove('sa-open');
       host.setAttribute('aria-hidden', 'true');
       document.body.style.overflow = prevOverflow;

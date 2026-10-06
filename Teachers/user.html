@@ -7119,7 +7119,7 @@
       // "مهم: save attendance after editing" first, then the tour — never
       // both on screen at once.
       import('/teachers/save-attendance-notice.js')
-        .then(({ maybeShowSaveAttendanceNotice }) => maybeShowSaveAttendanceNotice())
+        .then(({ maybeShowSaveAttendanceNotice }) => maybeShowSaveAttendanceNotice({ db, uid: user.uid }))
         .catch((e) => console.warn('[notice] save-attendance notice failed:', e?.message || e))
         .finally(() => maybeShowSwapRemovedTour(user.uid));
     });
