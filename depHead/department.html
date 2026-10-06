@@ -172,7 +172,6 @@
 
     /* ===== Teacher management (ported from admins/teachers.html, remapped
        onto this page's own design tokens) ===== */
-    .section-row{ display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
     .label{ font-size:.92rem; font-weight:800; color:var(--text); }
     .stack{ width:100%; display:flex; flex-direction:column; gap:10px; }
 
@@ -281,22 +280,10 @@
     .close-modal{ background:none; border:none; font-size:1.5rem; cursor:pointer; color:var(--muted); width:32px; height:32px; display:flex; align-items:center; justify-content:center; border-radius:50%; }
     .modal-body{ padding:20px; }
     .modal-footer{ padding:16px 20px; border-top:1px solid var(--border); display:flex; justify-content:flex-end; gap:10px; }
-    #addTeacherModal .modal{ width:min(92vw,560px); }
     .add-teacher-body{ display:flex; flex-direction:column; gap:12px; }
     .add-teacher-body .field{ margin:0; }
 
     /* Success animation */
-    .success-modal{ position:fixed; inset:0; z-index:105; display:none; place-items:center; background:rgba(255,255,255,.55); backdrop-filter:blur(8px); padding:16px; }
-    .success-modal.show{ display:grid; }
-    .success-card{ width:min(340px,92vw); background:var(--card-bg); border:1px solid var(--border); border-radius:18px; box-shadow:0 20px 60px rgba(0,0,0,.25); padding:18px; display:grid; justify-items:center; gap:12px; position:relative; }
-    .success-close{ position:absolute; top:8px; left:8px; width:32px; height:32px; border-radius:999px; border:1px solid var(--border); background:var(--card-bg); color:var(--muted); font-weight:900; cursor:pointer; }
-    .success-check{ width:96px; height:96px; display:grid; place-items:center; }
-    .success-check svg{ width:96px; height:96px; overflow:visible; }
-    .success-check circle{ fill:none; stroke:#16a34a; stroke-width:6; stroke-dasharray:220; stroke-dashoffset:220; animation:ringDraw 1.2s ease-in-out infinite; }
-    .success-check path{ fill:none; stroke:#16a34a; stroke-width:7; stroke-linecap:round; stroke-linejoin:round; stroke-dasharray:70; stroke-dashoffset:70; animation:checkDraw 1.2s ease-in-out infinite; }
-    .success-text{ font-weight:900; color:#166534; font-size:15px; }
-    @keyframes ringDraw{ 0%{stroke-dashoffset:220;opacity:.5} 30%{stroke-dashoffset:0;opacity:1} 70%{stroke-dashoffset:0;opacity:1} 100%{stroke-dashoffset:220;opacity:.5} }
-    @keyframes checkDraw{ 0%{stroke-dashoffset:70;opacity:0} 25%{stroke-dashoffset:70;opacity:0} 45%{stroke-dashoffset:0;opacity:1} 70%{stroke-dashoffset:0;opacity:1} 100%{stroke-dashoffset:70;opacity:0} }
   </style>
 
   <!-- iOS home screen icon -->
@@ -341,15 +328,7 @@
 
   <main>
     <div class="wrap">
-      <section class="card">
-        <div class="section-row">
-          <div class="label">معلّمو القسم</div>
-          <div style="display:flex; gap:10px; flex-wrap:wrap;">
-            <button id="openAddUser" class="btn solid" type="button"><i class="fas fa-plus"></i><span>إضافة معلم</span></button>
-          </div>
-        </div>
-        <div id="teachersList" class="stack" style="margin-top:12px;"></div>
-      </section>
+      <div id="teachersList" class="stack"></div>
     </div>
   </main>
 
@@ -379,7 +358,6 @@
               <div class="field"><label class="label" for="edTName">الاسم الكامل</label><div class="plain-value view-only"><span id="vEdTName" class="view-value">—</span></div><div class="input-wrap edit-only"><input id="edTName" class="input" type="text"></div></div>
               <div class="field"><label class="label">رقم البطاقة</label><div class="plain-value"><span id="vEdTEmail" class="view-value">—</span></div></div>
               <div class="field"><label class="label" for="edTPhone">رقم الهاتف</label><div class="plain-value view-only"><span id="vEdTPhone" class="view-value">—</span></div><div class="input-wrap edit-only"><input id="edTPhone" class="input" type="tel"></div></div>
-              <div class="field"><label class="label" for="edTTeams">رابط Teams</label><div class="plain-value view-only"><span id="vEdTTeams" class="view-value">—</span></div><div class="input-wrap edit-only"><input id="edTTeams" class="input" type="url"></div></div>
               <div class="field"><label class="label" for="edTDisplayedPassword">كلمة المرور الظاهرة</label><div class="plain-value view-only"><span id="vEdTDisplayedPassword" class="view-value">—</span></div><div class="input-wrap edit-only password-field"><input id="edTDisplayedPassword" class="input" type="password" autocomplete="off" dir="ltr"><button id="toggleDisplayedPasswordBtn" class="eye-toggle" type="button" aria-label="إظهار كلمة المرور الظاهرة" title="إظهار كلمة المرور الظاهرة"><span aria-hidden="true">👁</span></button></div></div>
             </div>
           </section>
@@ -409,23 +387,6 @@
       </div>
     </div>
   </section>
-
-  <!-- ADD TEACHER MODAL -->
-  <div id="addTeacherModal" class="modal-overlay" aria-hidden="true">
-    <div class="modal">
-      <div class="modal-header"><h3 class="modal-title">إضافة معلم جديد</h3><button class="close-modal" aria-label="إغلاق">×</button></div>
-      <div class="modal-body add-teacher-body">
-        <div class="field"><label class="label" for="teacherName">الاسم الكامل</label><div class="input-wrap"><input id="teacherName" class="input" type="text"></div></div>
-        <div class="field"><label class="label" for="teacherEmail">رقم المستخدم</label><div class="input-wrap"><input id="teacherEmail" class="input" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="مثال: 298040100633"></div></div>
-        <div class="field"><label class="label" for="teacherPassword">كلمة المرور</label><div class="input-wrap"><input id="teacherPassword" class="input" type="password"></div></div>
-        <div class="field"><label class="label" for="teacherDisplayedPassword">الكلمة الظاهرة</label><div class="input-wrap"><input id="teacherDisplayedPassword" class="input" type="text" dir="ltr" readonly></div></div>
-        <div class="field"><label class="label" for="teacherPhone">رقم الهاتف</label><div class="input-wrap"><input id="teacherPhone" class="input" type="tel"></div></div>
-        <div id="teacherSpecializationField" class="field" hidden><label class="label" for="teacherSpecialization">التخصص داخل القسم</label><div class="input-wrap"><select id="teacherSpecialization" class="input"></select></div></div>
-        <div class="field"><label class="label">الفصول</label><div id="auClasses" class="classes-list"></div><div class="inline-add"><button id="auAddClass" class="add" type="button">+ إضافة</button></div></div>
-      </div>
-      <div class="modal-footer"><button id="cancelAddTeacher" class="btn ghost" type="button">إلغاء</button><button id="createTeacherBtn" class="btn solid" type="button">إنشاء الحساب</button></div>
-    </div>
-  </div>
 
   <!-- DELETE TEACHER MODAL -->
   <div id="deleteTeacherModal" class="modal-overlay" aria-hidden="true">
@@ -457,36 +418,22 @@
     </div>
   </div>
 
-  <!-- SUCCESS MODAL -->
-  <div id="successModal" class="success-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-label="تمت إضافة المعلّم بنجاح">
-    <div class="success-card">
-      <button id="closeSuccessModal" type="button" class="success-close">×</button>
-      <div class="success-check">
-        <svg viewBox="0 0 100 100" aria-hidden="true">
-          <circle cx="50" cy="50" r="35"></circle>
-          <path d="M32 52 L45 65 L70 40"></path>
-        </svg>
-      </div>
-      <div class="success-text">تمت إضافة المعلّم بنجاح</div>
-    </div>
-  </div>
-
   <script type="module">
     import { firebaseConfig } from "/shared/firebase.js";
     /* ========= Firebase ========= */
     import { initializeApp, getApp, getApps } from "/shared/firebase.js";
     import {
       getAuth, onAuthStateChanged, setPersistence, browserLocalPersistence,
-      createUserWithEmailAndPassword, signOut, EmailAuthProvider, reauthenticateWithCredential
+      EmailAuthProvider, reauthenticateWithCredential
     } from "/shared/firebase.js";
     import {
       initializeFirestore, persistentSingleTabManager,
       collection, query, where, getDocs,
-      doc, getDoc, setDoc, updateDoc, deleteField, serverTimestamp, writeBatch
+      doc, getDoc, setDoc, updateDoc, deleteField, writeBatch
     } from "/shared/firebase.js";
     import { watchPresence, startPresenceHeartbeat } from "/shared/presence.js";
     import { fetchClassList, sortClassList, primeClassList } from "/shared/class-registry.js";
-    import { resolveDepartmentName, getMergedSubjectsForDepartment, getDepartmentSubjectFilters } from "/shared/departments.js";
+    import { resolveDepartmentName, getDepartmentSubjectFilters } from "/shared/departments.js";
 
 
 
@@ -504,12 +451,6 @@
     // whole extra Firestore round trip on every load. fetchClassList()
     // below picks up the result.
     primeClassList(db, auth);
-    // Secondary app instance so creating a new teacher's Auth account doesn't
-    // sign the head out of their own session — same pattern admins/teachers.html
-    // uses (there named "AdminHelper"; named differently here only to avoid
-    // any accidental assumption the two are interchangeable).
-    const helperApp = getApps().some(a=>a.name==="DeptHeadHelper") ? getApp("DeptHeadHelper") : initializeApp(firebaseConfig,"DeptHeadHelper");
-    const helperAuth = getAuth(helperApp);
 
     // Same backend used by admins/teachers.html for the one thing that can't
     // be done client-side: changing a teacher's real login password (the
@@ -530,8 +471,8 @@
     const deptLabel = document.getElementById('deptLabel');
     const btnBack = document.getElementById('btnBack');
 
-    // Department taxonomy and resolveDepartmentName/getMergedSubjectsForDepartment/
-    // getDepartmentSubjectFilters now come from shared/departments.js — this
+    // Department taxonomy and resolveDepartmentName/getDepartmentSubjectFilters
+    // now come from shared/departments.js — this
     // file's own copy had two departments' names in the wrong word order
     // and was missing الدستور from the philosophy/psychology department.
 
@@ -558,7 +499,6 @@
 
     /* ========= Elements: teacher management ========= */
     const teachersList = document.getElementById('teachersList');
-    const openAddUser = document.getElementById('openAddUser');
 
     const teacherSheet = document.getElementById('teacherSheet');
     const closeTeacher = document.getElementById('closeTeacher');
@@ -571,13 +511,11 @@
     const vEdTName = document.getElementById('vEdTName');
     const vEdTEmail = document.getElementById('vEdTEmail');
     const vEdTPhone = document.getElementById('vEdTPhone');
-    const vEdTTeams = document.getElementById('vEdTTeams');
     const vEdTDisplayedPassword = document.getElementById('vEdTDisplayedPassword');
     const classesView = document.getElementById('classesView');
     const classesEditorWrap = document.getElementById('classesEditorWrap');
     const edTName = document.getElementById('edTName');
     const edTPhone = document.getElementById('edTPhone');
-    const edTTeams = document.getElementById('edTTeams');
     const edTDisplayedPassword = document.getElementById('edTDisplayedPassword');
     const toggleDisplayedPasswordBtn = document.getElementById('toggleDisplayedPasswordBtn');
     const editTeacherBtn = document.getElementById('editTeacher');
@@ -590,29 +528,12 @@
     const edClasses = document.getElementById('edClasses');
     const edAddClass = document.getElementById('edAddClass');
 
-    const addTeacherModal = document.getElementById('addTeacherModal');
-    const closeAddTeacherModal = document.querySelector('#addTeacherModal .close-modal');
-    const cancelAddTeacher = document.getElementById('cancelAddTeacher');
-    const teacherName = document.getElementById('teacherName');
-    const teacherEmail = document.getElementById('teacherEmail');
-    const teacherPassword = document.getElementById('teacherPassword');
-    const teacherDisplayedPassword = document.getElementById('teacherDisplayedPassword');
-    const teacherPhone = document.getElementById('teacherPhone');
-    const teacherSpecializationField = document.getElementById('teacherSpecializationField');
-    const teacherSpecialization = document.getElementById('teacherSpecialization');
-    const auClasses = document.getElementById('auClasses');
-    const auAddClass = document.getElementById('auAddClass');
-    const createTeacherBtn = document.getElementById('createTeacherBtn');
-
     const deleteTeacherModal = document.getElementById('deleteTeacherModal');
     const closeDeleteTeacherModal = document.querySelector('#deleteTeacherModal .close-modal');
     const cancelDeleteTeacher = document.getElementById('cancelDeleteTeacher');
     const confirmDeleteTeacher = document.getElementById('confirmDeleteTeacher');
     const dtName = document.getElementById('dtName');
     const dtErr = document.getElementById('dtErr');
-
-    const successModal = document.getElementById('successModal');
-    const closeSuccessModal = document.getElementById('closeSuccessModal');
 
     const changePasswordModal = document.getElementById('changePasswordModal');
     const closeChangePasswordModal = document.querySelector('#changePasswordModal .close-modal');
@@ -626,7 +547,6 @@
     const cpTeacherName = document.getElementById('cpTeacherName');
 
     /* ========= Helpers: teacher management ========= */
-    const emailRx = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const toArabicDigits = (str)=>(str||'').toString().replace(/\d/g,d=>'٠١٢٣٤٥٦٧٨٩'[d]);
     const MASKED_PASSWORD = '••••••••';
 
@@ -638,13 +558,9 @@
 
     // Fetched from settings/classes inside onAuthStateChanged below, before
     // loadTeachers() — makeClassRow() (the only consumer) is only ever
-    // invoked later from a user-opened add/edit teacher form.
+    // invoked later from a user-opened edit teacher form.
     let classOptions = [];
 
-    function buildTeacherEmailFromCivilId(civilId){
-      const digits=(civilId||'').toString().replace(/\D+/g,'');
-      return digits ? `t${digits}@gmail.com` : '';
-    }
     function extractCivilIdFromTeacherEmail(email){
       const normalized=(email||'').toString().trim();
       if(!normalized) return '';
@@ -738,21 +654,6 @@
     }
     const getClassesFrom=(c)=>[...new Set(Array.from(c.querySelectorAll('.class-row')).map(r=>r.getValue&&r.getValue()).filter(Boolean))];
 
-    function syncTeacherSpecializationField(){
-      const mergedSubjects=getMergedSubjectsForDepartment(headDept);
-      const showSpecialization=mergedSubjects.length>0;
-      teacherSpecializationField.hidden=!showSpecialization;
-      teacherSpecialization.required=showSpecialization;
-      teacherSpecialization.innerHTML='';
-      if(!showSpecialization) return;
-      mergedSubjects.forEach(value=>{
-        const option=document.createElement('option');
-        option.value=value;
-        option.textContent=value;
-        teacherSpecialization.appendChild(option);
-      });
-    }
-
     /* ---- sheet / modal chrome ---- */
     // .sheet is position:fixed covering the whole viewport, but that alone
     // doesn't stop the page behind it from also scrolling on iOS Safari —
@@ -772,7 +673,7 @@
       }
     }
     function syncBodyScrollLock(){
-      const anyOverlayOpen=teacherSheet.classList.contains('open') || addTeacherModal.classList.contains('active') || deleteTeacherModal.classList.contains('active') || changePasswordModal.classList.contains('active') || successModal.classList.contains('show');
+      const anyOverlayOpen=teacherSheet.classList.contains('open') || deleteTeacherModal.classList.contains('active') || changePasswordModal.classList.contains('active');
       document.body.style.overflow=anyOverlayOpen?'hidden':'';
     }
     const openModal=(m)=>{
@@ -781,7 +682,7 @@
       setTimeout(()=>m.querySelector('.modal').classList.add('active'),10);
       syncBodyScrollLock();
     };
-    const closeModal=(m,{ fallbackFocus=openAddUser }={})=>{
+    const closeModal=(m,{ fallbackFocus=null }={})=>{
       moveFocusOutside(m, fallbackFocus);
       m.querySelector('.modal').classList.remove('active');
       setTimeout(()=>{
@@ -790,25 +691,6 @@
         syncBodyScrollLock();
       },300);
     };
-    let lastFocusedBeforeSuccessModal=null;
-    const openSuccessModal=()=>{
-      lastFocusedBeforeSuccessModal=(document.activeElement instanceof HTMLElement)?document.activeElement:null;
-      successModal.setAttribute('aria-hidden','false');
-      successModal.classList.add('show');
-      syncBodyScrollLock();
-      requestAnimationFrame(()=>focusIfPossible(closeSuccessModal));
-    };
-    const closeSuccessModalFn=()=>{
-      const restoreFocusTo=(lastFocusedBeforeSuccessModal && lastFocusedBeforeSuccessModal.isConnected && !successModal.contains(lastFocusedBeforeSuccessModal))
-        ? lastFocusedBeforeSuccessModal
-        : openAddUser;
-      moveFocusOutside(successModal, restoreFocusTo);
-      successModal.classList.remove('show');
-      successModal.setAttribute('aria-hidden','true');
-      lastFocusedBeforeSuccessModal=null;
-      syncBodyScrollLock();
-    };
-
     // Re-entering the head's own password before revealing another
     // teacher's plaintext mirror — same client-side reauth admins/teachers.html
     // uses before its own password reveal.
@@ -877,7 +759,6 @@
       return JSON.stringify({
         name:edTName.value.trim(),
         phone:edTPhone.value.trim(),
-        teams:edTTeams.value.trim(),
         displayedPassword:edTDisplayedPassword.value,
         classes:getClassesFrom(edClasses),
       });
@@ -889,7 +770,6 @@
       const name=edTName.value.trim() || currentTeacher?.data?.name || currentTeacher?.uid || '—';
       const civilId=getTeacherCivilId(currentTeacher?.data) || '—';
       const phone=edTPhone.value.trim() || '—';
-      const teams=edTTeams.value.trim() || '—';
       const displayedPassword=edTDisplayedPassword.value;
       profileName.textContent=name;
       profileEmail.textContent=civilId;
@@ -897,7 +777,6 @@
       setViewValue(vEdTName,name);
       setViewValue(vEdTEmail,civilId);
       setViewValue(vEdTPhone,phone);
-      setViewValue(vEdTTeams,teams);
       setDisplayedPasswordPreview(displayedPassword);
       renderClassesPreview(getClassesFrom(edClasses));
       if(teacherEditMode) saveTeacherBtn.hidden=!isEditFormDirty();
@@ -906,7 +785,7 @@
       teacherEditMode=!!isEdit;
       teacherProfileShell.classList.toggle('teacher-readonly', !teacherEditMode);
       teacherProfileShell.classList.toggle('teacher-editing', teacherEditMode);
-      [edTName,edTPhone,edTTeams,edTDisplayedPassword].forEach(el=>el.disabled=!teacherEditMode);
+      [edTName,edTPhone,edTDisplayedPassword].forEach(el=>el.disabled=!teacherEditMode);
       toggleDisplayedPasswordBtn.disabled=!teacherEditMode;
       if(!teacherEditMode) setDisplayedPasswordVisibility(false);
       classesEditorWrap.hidden=!teacherEditMode;
@@ -933,7 +812,6 @@
         currentTeacher = { uid, data:d, displayedPassword: storedDisplayedPassword };
         edTName.value = d.name || '';
         edTPhone.value = d.phone || '';
-        edTTeams.value = d.teams || '';
         edTDisplayedPassword.value = storedDisplayedPassword;
         setDisplayedPasswordVisibility(false);
         edClasses.innerHTML='';
@@ -963,7 +841,6 @@
       const d=currentTeacher.data||{};
       edTName.value=d.name||'';
       edTPhone.value=d.phone||'';
-      edTTeams.value=d.teams||'';
       edTDisplayedPassword.value=currentTeacher.displayedPassword||'';
       setDisplayedPasswordVisibility(false);
       edClasses.innerHTML='';
@@ -973,7 +850,7 @@
       setTeacherEditMode(false);
     });
     edAddClass.addEventListener('click', ()=>{ edClasses.appendChild(makeClassRow("")); updateProfileSummary(); });
-    [edTName,edTPhone,edTTeams,edTDisplayedPassword].forEach(el=>{
+    [edTName,edTPhone,edTDisplayedPassword].forEach(el=>{
       el.addEventListener('input', updateProfileSummary);
     });
     toggleDisplayedPasswordBtn.addEventListener('click', async ()=>{
@@ -1005,16 +882,16 @@
       try{
         const { uid } = currentTeacher;
         if(!uid) throw new Error('لم يتم اختيار معلّم.');
-        const name=edTName.value.trim(), phone=edTPhone.value.trim(), teams=edTTeams.value.trim();
+        const name=edTName.value.trim(), phone=edTPhone.value.trim();
         const classes=getClassesFrom(edClasses);
         const displayedPassword=edTDisplayedPassword.value;
         if(!name) throw new Error('أدخل الاسم.');
         // Parent doc already exists — no create-time race, Promise.all is safe.
         await Promise.all([
-          updateDoc(doc(db,'teachers',uid), { name, phone, teams, classes, displayedPassword: deleteField(), viewedPassword: deleteField() }),
+          updateDoc(doc(db,'teachers',uid), { name, phone, classes, displayedPassword: deleteField(), viewedPassword: deleteField() }),
           setDoc(doc(db,'teachers',uid,'private','credentials'), { displayedPassword }, { merge:true })
         ]);
-        currentTeacher.data = { ...(currentTeacher.data||{}), name, phone, teams, classes };
+        currentTeacher.data = { ...(currentTeacher.data||{}), name, phone, classes };
         currentTeacher.displayedPassword = displayedPassword;
         setTeacherEditMode(false);
         edOk.textContent='تم حفظ التعديلات.'; edOk.style.display='block';
@@ -1151,82 +1028,6 @@
         submitChangePassword.disabled=false;
         cancelChangePassword.disabled=false;
         submitChangePassword.textContent=originalLabel;
-      }
-    });
-
-    /* ========= Add teacher ========= */
-    function resetTeacherForm(){
-      teacherName.value='';
-      teacherEmail.value='';
-      teacherPassword.value='';
-      teacherDisplayedPassword.value='';
-      teacherPhone.value='';
-      auClasses.innerHTML='';
-      auClasses.appendChild(makeClassRow(""));
-      syncTeacherSpecializationField();
-    }
-    openAddUser.addEventListener('click', ()=>{
-      resetTeacherForm();
-      openModal(addTeacherModal);
-      focusIfPossible(teacherName);
-    });
-    closeAddTeacherModal.addEventListener('click', ()=> closeModal(addTeacherModal,{fallbackFocus:openAddUser}));
-    cancelAddTeacher.addEventListener('click', ()=> closeModal(addTeacherModal,{fallbackFocus:openAddUser}));
-    addTeacherModal.addEventListener('click', (e)=>{ if(e.target===addTeacherModal) closeModal(addTeacherModal,{fallbackFocus:openAddUser}); });
-    auAddClass.addEventListener('click', ()=> auClasses.appendChild(makeClassRow("")));
-    teacherEmail.addEventListener('input', ()=>{ const digits=teacherEmail.value.replace(/\D+/g,''); if(teacherEmail.value!==digits) teacherEmail.value=digits; });
-    teacherPassword.addEventListener('input', ()=>{ teacherDisplayedPassword.value=teacherPassword.value; });
-    closeSuccessModal.addEventListener('click', closeSuccessModalFn);
-    successModal.addEventListener('click', (e)=>{ if(e.target===successModal) closeSuccessModalFn(); });
-
-    createTeacherBtn.addEventListener('click', async ()=>{
-      const name=teacherName.value.trim();
-      const civilId=teacherEmail.value.trim().replace(/\D+/g,'');
-      const email=buildTeacherEmailFromCivilId(civilId);
-      const password=teacherPassword.value;
-      const phone=teacherPhone.value.trim();
-      const displayedPassword=teacherDisplayedPassword.value||password;
-      const classes=getClassesFrom(auClasses);
-      const mergedSubjects=getMergedSubjectsForDepartment(headDept);
-      const subjectToSave = mergedSubjects.length ? (teacherSpecialization.value||'').trim() : headDept;
-      try{
-        if(!name) throw new Error('أدخل الاسم الكامل.');
-        if(!civilId) throw new Error('أدخل رقم المستخدم بالأرقام فقط.');
-        if(!emailRx.test(email)) throw new Error('تعذّر توليد البريد الإلكتروني من رقم المستخدم.');
-        if(!password||password.length<6) throw new Error('كلمة المرور ٦ أحرف على الأقل.');
-        if(mergedSubjects.length && !mergedSubjects.includes(subjectToSave)) throw new Error('اختر التخصص.');
-      }catch(e){
-        alert(e?.message||'تعذّر إنشاء الحساب.');
-        return;
-      }
-
-      createTeacherBtn.disabled=true;
-      const originalLabel=createTeacherBtn.textContent;
-      createTeacherBtn.textContent='جارٍ الإنشاء...';
-      try{
-        const cred = await createUserWithEmailAndPassword(helperAuth, email, password);
-        const newUid = cred.user.uid;
-        // Atomic: creating the teacher doc and its private/credentials doc
-        // in one writeBatch means firestore.rules can gate the private write
-        // on the teacher doc "existing after this request" (getAfter()) —
-        // two separate concurrent writes would race against that check.
-        const batch = writeBatch(db);
-        batch.set(doc(db,'teachers',newUid), {
-          uid:newUid, role:'user', name, email, civilId, phone,
-          subject:subjectToSave, department:headDept, classes,
-          createdAt: serverTimestamp()
-        });
-        batch.set(doc(db,'teachers',newUid,'private','credentials'), { displayedPassword });
-        await batch.commit();
-        try{ await signOut(helperAuth); }catch{}
-        closeModal(addTeacherModal);
-        openSuccessModal();
-        await loadTeachers();
-      }catch(e){
-        alert('تعذّر إنشاء الحساب: ' + (e?.message||''));
-      }finally{
-        createTeacherBtn.disabled=false;
-        createTeacherBtn.textContent=originalLabel;
       }
     });
 
