@@ -166,21 +166,27 @@ const STYLES = `
   #attendanceSheet .sk-badge{height:22px;width:38px;border-radius:10px;flex-shrink:0}
   #attendanceSheet .sk-seg{height:48px;width:100%;border-radius:14px}
   @keyframes attSkShimmer{to{transform:translateX(100%)}}
-  /* Edit mode (تعديل الغياب): the counts + save button are pinned to the
-     bottom of the screen, and light up once any status differs from what
-     was saved — so an edit can't be left unsaved by accident. */
-  #attendanceSheet.att-editing .sheet-body{padding-bottom:0}
-  #attendanceSheet.att-editing .stats{position:sticky;bottom:0;z-index:5;flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));margin-top:auto;border-radius:18px 18px 0 0;border-bottom:0;box-shadow:0 -10px 30px rgba(3,60,84,.14);transition:border-color .25s ease,box-shadow .25s ease,background-color .25s ease}
-  #attendanceSheet.att-editing .chips{gap:6px}
-  #attendanceSheet.att-editing .pill{padding:6px 11px;font-size:.86rem}
-  #attendanceSheet.att-editing .submit-row{flex:1 1 200px;flex-direction:column;align-items:stretch;gap:4px}
-  #attendanceSheet.att-editing .btn.submit{width:100%;min-height:54px;background:#e7edf3;color:#6b7f9f;box-shadow:none;transition:background .25s ease,color .25s ease,box-shadow .25s ease,transform .15s ease}
-  #attendanceSheet .att-dirty-hint{display:none;text-align:center;font-size:.8rem;font-weight:800;color:#b45309}
-  #attendanceSheet.att-editing.att-dirty .stats{background:var(--primary-extra-light,#eef5fb);border-color:rgba(3,60,84,.40);box-shadow:0 -10px 34px rgba(3,60,84,.26)}
+  /* Edit mode (تعديل الغياب): the counts + save button become a footer
+     bar spanning the bottom of the screen edge to edge (setEditMode moves
+     .stats out of the scrolling .sheet-body), and light up once any status
+     differs from what was saved — so an edit can't be left unsaved. */
+  #attendanceSheet.att-editing{display:flex;flex-direction:column}
+  #attendanceSheet.att-editing > .stats{flex-shrink:0;width:100%;margin:0;flex-direction:column;align-items:stretch;gap:12px;padding:14px 16px calc(14px + env(safe-area-inset-bottom,0px));border:0;border-top:1px solid var(--border,#e6edf7);border-radius:0;background:#fff;box-shadow:0 -10px 30px rgba(3,60,84,.14);transition:border-color .25s ease,box-shadow .25s ease,background-color .25s ease}
+  #attendanceSheet.att-editing .chips{justify-content:center;gap:8px}
+  #attendanceSheet.att-editing .submit-row{display:block}
+  #attendanceSheet.att-editing .btn.submit{display:flex;align-items:center;justify-content:center;width:100%;min-height:66px;border-radius:18px;font-size:1.25rem;font-weight:900;background:#e7edf3;color:#6b7f9f;box-shadow:none;transition:background .25s ease,color .25s ease,box-shadow .25s ease,transform .15s ease}
+  #attendanceSheet .att-dirty-hint{display:none;align-items:center;justify-content:center;gap:10px;padding:12px 16px;border-radius:14px;background:#fef3c7;border:2px solid #f59e0b;color:#92400e;font-size:1.05rem;font-weight:900;line-height:1.4;text-align:center}
+  #attendanceSheet .att-dirty-hint svg{width:22px;height:22px;flex-shrink:0;color:#d97706}
+  #attendanceSheet.att-editing.att-dirty > .stats{background:var(--primary-extra-light,#eef5fb);border-top-color:rgba(3,60,84,.40);box-shadow:0 -12px 34px rgba(3,60,84,.26)}
   #attendanceSheet.att-editing.att-dirty .btn.submit{background:linear-gradient(145deg,var(--primary-light,#065372),var(--primary,#033c54));color:#fff;animation:attSaveGlow 1.6s ease-in-out infinite}
-  #attendanceSheet.att-editing.att-dirty .att-dirty-hint{display:block}
+  #attendanceSheet.att-editing.att-dirty .att-dirty-hint{display:flex;animation:attHintIn .35s cubic-bezier(.2,1.4,.4,1),attHintPulse 1.6s ease-in-out .35s infinite}
   @keyframes attSaveGlow{0%,100%{box-shadow:0 10px 26px rgba(3,60,84,.38),0 0 0 0 rgba(6,83,114,.50)}50%{box-shadow:0 12px 32px rgba(3,60,84,.52),0 0 0 8px rgba(6,83,114,0)}}
-  @media (prefers-reduced-motion:reduce){#attendanceSheet.att-editing.att-dirty .btn.submit{animation:none;box-shadow:0 0 0 3px rgba(6,83,114,.40)}}
+  @keyframes attHintIn{from{transform:translateY(8px) scale(.94);opacity:0}to{transform:none;opacity:1}}
+  @keyframes attHintPulse{0%,100%{box-shadow:0 0 0 0 rgba(245,158,11,.45)}50%{box-shadow:0 0 0 6px rgba(245,158,11,0)}}
+  @media (prefers-reduced-motion:reduce){
+    #attendanceSheet.att-editing.att-dirty .btn.submit{animation:none;box-shadow:0 0 0 3px rgba(6,83,114,.40)}
+    #attendanceSheet.att-editing.att-dirty .att-dirty-hint{animation:none}
+  }
   /* Module-owned success celebration — looping green checkmark draw on a
      white/blurred backdrop, dismissed only via the labeled button below the
      text (no small icon-only close button — easy to miss and, since this
@@ -253,7 +259,11 @@ const SHEET_HTML = `
         </div>
       </div>
       <div id="attendanceList" class="att-list"></div>
-      <div class="stats">
+      <div id="attStats" class="stats">
+        <div class="att-dirty-hint" role="status">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+          <span>لديك تغييرات غير محفوظة</span>
+        </div>
         <div class="chips">
           <span id="attCountPresent" class="pill g">حضور: 0</span>
           <span id="attCountLate" class="pill y">تأخير: 0</span>
@@ -261,7 +271,6 @@ const SHEET_HTML = `
         </div>
         <div class="submit-row">
           <button id="attSubmitBtn" class="btn submit" type="button">حفظ التقرير</button>
-          <span class="att-dirty-hint" role="status">لديك تغييرات غير محفوظة</span>
         </div>
       </div>
     </div>
@@ -495,6 +504,7 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
     countLate: document.getElementById("attCountLate"),
     countAbsent: document.getElementById("attCountAbsent"),
     submitBtn: document.getElementById("attSubmitBtn"),
+    stats: document.getElementById("attStats"),
     confirmModal: document.getElementById("attConfirmModal"),
     confirmTitle: document.getElementById("attConfirmTitle"),
     confirmPresentCount: document.getElementById("attConfirmPresentCount"),
@@ -577,6 +587,11 @@ export function mountAttendanceSheet({ db, auth, onSaved, onLateSubmit, isPrivil
   function setEditMode(on) {
     editBaseline = on ? { ...attStatuses } : null;
     els.sheet.classList.toggle("att-editing", on);
+    // A footer outside the scrolling body, so it spans the whole bottom
+    // edge; back to the end of the body (its normal place) otherwise.
+    const body = els.sheet.querySelector(".sheet-body");
+    const home = on ? els.sheet : body;
+    if (home && els.stats.parentElement !== home) home.appendChild(els.stats);
     els.submitBtn.textContent = on ? "حفظ التغييرات" : "حفظ التقرير";
     updateDirty();
   }
