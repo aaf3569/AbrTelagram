@@ -220,8 +220,21 @@
     .class-row .remove{ height:40px; padding:0 12px; border-radius:10px; border:1px solid rgba(239,68,68,.35); color:var(--danger); background:var(--card-bg); font-weight:800; cursor:pointer; }
     .inline-add{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
     .inline-add .add{ height:44px; padding:0 16px; border-radius:12px; border:1px solid rgba(2,43,66,.3); background:var(--card-bg); color:var(--primary); font-weight:900; cursor:pointer; box-shadow:var(--shadow-1); }
-    .class-chips{ display:flex; flex-wrap:wrap; gap:8px; }
-    .class-chip{ height:32px; display:inline-flex; align-items:center; padding:0 10px; border-radius:999px; background:var(--primary-light); border:1px solid var(--border); color:var(--text); font-size:.82rem; font-weight:800; }
+    /* View mode: one big tappable row per class (opens its students and
+       this teacher's notes). The edit mode has its own editor instead. */
+    .class-chips{ display:grid; gap:10px; }
+    .teacher-editing .class-chips{ display:none; }
+    .class-chip{
+      display:flex; align-items:center; gap:14px; width:100%; min-height:68px; padding:12px 14px;
+      border:1px solid var(--border); border-radius:14px; background:var(--card-bg); box-shadow:var(--shadow-1);
+      color:var(--text); font-family:inherit; text-align:start; cursor:pointer; transition:var(--transition);
+    }
+    .class-chip:hover{ transform:translateY(-2px); border-color:rgba(2,43,66,.35); box-shadow:var(--shadow-2); }
+    .class-chip-icon{ width:44px; height:44px; flex-shrink:0; border-radius:12px; display:grid; place-items:center; background:linear-gradient(145deg,var(--primary-2),var(--primary)); color:#fff; font-size:1.05rem; box-shadow:0 8px 18px rgba(2,43,66,.22); }
+    .class-chip-text{ display:grid; gap:2px; flex:1; min-width:0; }
+    .class-chip-name{ font-size:1.25rem; font-weight:900; color:var(--primary); line-height:1.2; }
+    .class-chip-sub{ font-size:.82rem; font-weight:700; color:var(--muted); }
+    .class-chip-chev{ color:var(--primary); flex-shrink:0; }
     .class-empty{ color:var(--muted); font-size:.88rem; }
     .ok, .err{ padding:12px; border-radius:14px; margin-top:6px; font-size:.9rem; box-shadow:var(--shadow-1); display:none; }
     .ok{ color:#126a2e; background:#e6f6ea; border:1px solid #c7ebd0; }
@@ -432,6 +445,8 @@
       doc, getDoc, setDoc, updateDoc, deleteField, writeBatch
     } from "/shared/firebase.js";
     import { watchPresence, startPresenceHeartbeat } from "/shared/presence.js";
+    import { mountStudentNotesSheet } from "/shared/student-notes-sheet.js?v=2026-10-06b";
+    import { mountTeacherClassSheet } from "/dephead/teacher-class-sheet.js?v=2026-10-06";
     import { fetchClassList, sortClassList, primeClassList } from "/shared/class-registry.js";
     import { resolveDepartmentName, getDepartmentSubjectFilters } from "/shared/departments.js";
 
@@ -445,6 +460,10 @@
       db = initializeFirestore(app, {});
     }
     const auth = getAuth(app);
+    // Teacher profile → الفصول → a class: its students and that teacher's
+    // notes on them (read-only), like فصولي on Teachers/user.html.
+    const studentNotes = mountStudentNotesSheet({ db, auth });
+    const classSheet = mountTeacherClassSheet({ db, studentNotes });
     // Start the settings/classes read the moment auth resolves, instead
     // of waiting for the role check to come back first. The two reads are
     // independent, and running them one after the other cost this page a
@@ -626,9 +645,14 @@
         return;
       }
       list.forEach(c=>{
-        const chip=document.createElement('span');
+        const chip=document.createElement('button');
+        chip.type='button';
         chip.className='class-chip';
-        chip.textContent=toArabicDigits(c);
+        chip.innerHTML=`<span class="class-chip-icon"><i class="fas fa-users" aria-hidden="true"></i></span><span class="class-chip-text"><span class="class-chip-name">${escapeHtml(toArabicDigits(c))}</span><span class="class-chip-sub">عرض الطلاب والملاحظات</span></span><i class="fas fa-chevron-left class-chip-chev" aria-hidden="true"></i>`;
+        chip.addEventListener('click',()=>{
+          if(teacherEditMode || !currentTeacher?.uid) return;
+          classSheet.open(c,{ teacherUid:currentTeacher.uid, teacherName:currentTeacher.data?.name||'' });
+        });
         container.appendChild(chip);
       });
     }
@@ -832,6 +856,7 @@
       }
     }
     function closeTeacherView(){
+      classSheet.close();
       if(unsubscribeTeacherPresence){ unsubscribeTeacherPresence(); unsubscribeTeacherPresence=null; }
       closeSheetEl(teacherSheet);
     }

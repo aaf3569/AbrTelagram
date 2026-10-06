@@ -6,6 +6,9 @@
 // once, then studentNotes.open(studentId, { name, className }) wherever a
 // student row is clicked. Optional onChange(studentId) runs after a note is
 // added or deleted, so a host showing note counts can refresh them.
+// open(..., { teacherUid, teacherName }) shows that teacher's notes instead
+// of the signed-in user's — read-only (no add/delete) when it's someone else
+// (e.g. a department head looking at one of their teachers).
 //
 // All CSS classes and DOM are scoped under a single injected wrapper with an
 // "snp-" prefix (Student Notes Panel) so nothing here can collide with a host
@@ -84,6 +87,16 @@ const CSS_TEXT = `
   display:inline-flex; align-self:flex-start; align-items:center; padding:3px 12px; border-radius:999px;
   background:var(--snp-primary-soft); color:var(--snp-primary); font-weight:800; font-size:.82rem;
 }
+.snp-owner{
+  display:none; align-items:center; gap:8px; padding:10px 14px; border-radius:var(--snp-radius);
+  background:var(--snp-primary-soft); border:1px solid rgba(11,74,99,.18); color:var(--snp-primary);
+  font-size:.9rem; font-weight:800;
+}
+.snp-owner b{ font-weight:900; }
+.snp-owner small{ margin-inline-start:auto; padding:2px 10px; border-radius:999px; background:#fff; color:var(--snp-muted); font-size:.76rem; font-weight:800; }
+.snp-overlay.snp-readonly .snp-owner{ display:flex; }
+.snp-overlay.snp-readonly .snp-actions-card,
+.snp-overlay.snp-readonly .snp-note-actions{ display:none; }
 .snp-special-banner{
   display:none; gap:8px; background:var(--snp-warn-soft);
   border:1px solid rgba(160,106,18,.22); border-inline-start:4px solid var(--snp-warn);
@@ -275,6 +288,10 @@ const TEMPLATE_HTML = `
           <span class="snp-stu-class">—</span>
         </div>
       </section>
+      <div class="snp-owner">
+        <span>ملاحظات المعلّم: <b class="snp-owner-name">—</b></span>
+        <small>للعرض فقط</small>
+      </div>
       <div class="snp-special-banner" aria-live="polite">
         <div class="snp-special-top">
           <span class="snp-special-badge">حالة خاصة</span>
@@ -392,6 +409,7 @@ export function mountStudentNotesSheet({ db, auth, onChange }) {
   const stuNameEl = root.querySelector(".snp-stu-name");
   const stuClassEl = root.querySelector(".snp-stu-class");
   const specialBanner = root.querySelector(".snp-special-banner");
+  const ownerNameEl = root.querySelector(".snp-owner-name");
   const specialReasonText = root.querySelector(".snp-special-reason .snp-v");
   const filtersEl = root.querySelector(".snp-filters");
   const notesListEl = root.querySelector(".snp-list");
@@ -416,6 +434,8 @@ export function mountStudentNotesSheet({ db, auth, onChange }) {
   let studentClass = "—";
   let filter = "all";
   let pendingType = "general";
+  // Whose notes are shown (null = the signed-in user's own).
+  let viewTeacherUid = null;
 
   function openSheet() {
     root.classList.add("snp-open");
@@ -545,7 +565,7 @@ export function mountStudentNotesSheet({ db, auth, onChange }) {
   }
 
   async function loadAll() {
-    const teacherId = auth.currentUser?.uid;
+    const teacherId = viewTeacherUid || auth.currentUser?.uid;
     if (!teacherId || !studentId) return;
     const [positive, negative, general] = await Promise.all([
       loadType(teacherId, "positive"), loadType(teacherId, "negative"), loadType(teacherId, "general"),
@@ -607,6 +627,11 @@ export function mountStudentNotesSheet({ db, auth, onChange }) {
     // "ملف الطالب") so it's still clear who this is once the hero card
     // scrolls out of view.
     pageTitleEl.textContent = studentName;
+    const me = auth.currentUser?.uid || null;
+    viewTeacherUid = meta.teacherUid || null;
+    const readOnly = !!viewTeacherUid && viewTeacherUid !== me;
+    root.classList.toggle("snp-readonly", readOnly);
+    ownerNameEl.textContent = meta.teacherName || "—";
     filter = "all";
     filtersEl.querySelectorAll(".snp-chip").forEach((c) => c.classList.toggle("snp-active", c.dataset.filter === "all"));
     openSheet();
