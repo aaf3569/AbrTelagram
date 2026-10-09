@@ -235,8 +235,9 @@
     #detailedAbsenceHost{ flex:1 1 auto; min-height:0; }
     /* And الغياب المختصر (/admins/overallabsence.js, #overallAbsenceHost). */
     #overallAbsenceHost{ flex:1 1 auto; min-height:0; }
-    /* And جداول الأقسام / جداول المعلمين (/admins/schedules.js). */
-    #deptSchedulesHost, #teacherSchedulesHost{ flex:1 1 auto; min-height:0; }
+    /* And the الجداول sheets (/admins/schedules.js). */
+    #deptSchedulesHost, #teacherSchedulesHost,
+    #schoolScheduleHost, #classSchedulesHost{ flex:1 1 auto; min-height:0; }
 
     /* Scroll locks toggled on the real <body> by the غياب اليوم and
        الغياب المختصر sheets' own popups (modal-open) and by the shared
@@ -452,8 +453,9 @@
       height: 18px;
     }
 
-    /* Absence options popup */
+    /* Absence options popup (and the الجداول one, which reuses its look) */
     #absenceModal .modal { width: min(92vw, 400px); border-radius: 22px; overflow: hidden; }
+    #scheduleModal .modal { width: min(92vw, 400px); border-radius: 22px; overflow-y: auto; }
     .absence-modal-head { padding: 22px 20px 6px; text-align: center; }
     .absence-modal-head .modal-title { text-align: center; font-size: 1.25rem; font-weight: 900; }
     .absence-modal-body { padding: 14px 16px 6px; display: flex; flex-direction: column; gap: 10px; }
@@ -991,23 +993,17 @@
       </div>
 
       <div class="sidebar-group">
-        <div class="sidebar-section-label">الإجراءات السريعة</div>
-        <button id="sidebarTeachers" class="sidebar-link" type="button">
-          <i class="fas fa-chalkboard-user" aria-hidden="true"></i>
-          <span>المعلمون</span>
-        </button>
-        <button id="sidebarStudents" class="sidebar-link" type="button">
-          <i class="fas fa-school" aria-hidden="true"></i>
-          <span>الطلاب</span>
-        </button>
-        <button id="sidebarNotifications" class="sidebar-link" type="button">
-          <i class="fas fa-bell" aria-hidden="true"></i>
-          <span>الإشعارات</span>
-        </button>
-      </div>
-
-      <div class="sidebar-group">
         <div class="sidebar-section-label">الجداول</div>
+        <!-- جدولي / جدولي الأسبوعي only show for an admin who also teaches
+             (has classes) — they open Teachers/user.html's own sections. -->
+        <button id="sidebarMySchedule" class="sidebar-link" type="button" hidden>
+          <i class="fas fa-calendar-day" aria-hidden="true"></i>
+          <span>جدولي</span>
+        </button>
+        <button id="sidebarMyWeek" class="sidebar-link" type="button" hidden>
+          <i class="fas fa-calendar-week" aria-hidden="true"></i>
+          <span>جدولي الأسبوعي</span>
+        </button>
         <button id="sidebarDeptSchedules" class="sidebar-link" type="button">
           <i class="fas fa-users-rectangle" aria-hidden="true"></i>
           <span>جداول الأقسام</span>
@@ -1020,9 +1016,29 @@
           <i class="fas fa-table-cells" aria-hidden="true"></i>
           <span>جدول المدرسة</span>
         </button>
+        <button id="sidebarClassSchedules" class="sidebar-link" type="button">
+          <i class="fas fa-chalkboard" aria-hidden="true"></i>
+          <span>جداول الصفوف</span>
+        </button>
         <button id="sidebarSchedules" class="sidebar-link" type="button">
           <i class="fas fa-calendar-days" aria-hidden="true"></i>
           <span>تعديل الجداول</span>
+        </button>
+      </div>
+
+      <div class="sidebar-group">
+        <div class="sidebar-section-label">الإجراءات السريعة</div>
+        <button id="sidebarTeachers" class="sidebar-link" type="button">
+          <i class="fas fa-chalkboard-user" aria-hidden="true"></i>
+          <span>المعلمون</span>
+        </button>
+        <button id="sidebarStudents" class="sidebar-link" type="button">
+          <i class="fas fa-school" aria-hidden="true"></i>
+          <span>الطلاب</span>
+        </button>
+        <button id="sidebarNotifications" class="sidebar-link" type="button">
+          <i class="fas fa-bell" aria-hidden="true"></i>
+          <span>الإشعارات</span>
         </button>
       </div>
 
@@ -1199,17 +1215,17 @@
               <span class="dash-sub">فصول المدرسة</span>
             </span>
           </button>
-          <button id="openSchedules" class="dash-tile" type="button" aria-label="الجداول">
+          <button id="openSchedules" class="dash-tile" type="button" aria-label="جدول المدرسة">
             <i class="fas fa-calendar-days dash-icon" aria-hidden="true"></i>
             <span class="dash-text">
-              <span class="dash-title">الجداول</span>
+              <span class="dash-title">جدول المدرسة</span>
               <span class="dash-sub">الجدول الأسبوعي</span>
             </span>
           </button>
-          <button id="openSchoolSchedule" class="dash-tile" type="button" aria-label="جدول المدرسة">
+          <button id="openSchoolSchedule" class="dash-tile" type="button" aria-label="الجداول">
             <i class="fas fa-table-cells dash-icon" aria-hidden="true"></i>
             <span class="dash-text">
-              <span class="dash-title">جدول المدرسة</span>
+              <span class="dash-title">الجداول</span>
               <span class="dash-sub">كل المعلمين والحصص</span>
             </span>
           </button>
@@ -1266,6 +1282,41 @@
       </div>
       <div class="absence-modal-foot">
         <button id="closeAbsenceModal" class="absence-close" type="button">إغلاق</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Schedule Options Modal (الجداول tile): every schedule view, the
+       admin's own sheets plus the ones that live on Teachers/user.html. -->
+  <div id="scheduleModal" class="modal-overlay">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="scheduleModalTitle">
+      <div class="absence-modal-head">
+        <h3 id="scheduleModalTitle" class="modal-title">خيارات الجداول</h3>
+      </div>
+      <div class="absence-modal-body">
+        <button id="schedOptDept" class="absence-opt primary" type="button">
+          <span class="opt-icon"><i class="fas fa-users-rectangle" aria-hidden="true"></i></span>
+          <span class="opt-label">جداول الأقسام</span>
+          <i class="fas fa-chevron-left opt-chevron" aria-hidden="true"></i>
+        </button>
+        <button id="schedOptTeachers" class="absence-opt" type="button">
+          <span class="opt-icon"><i class="fas fa-chalkboard-user" aria-hidden="true"></i></span>
+          <span class="opt-label">جداول المعلمين</span>
+          <i class="fas fa-chevron-left opt-chevron" aria-hidden="true"></i>
+        </button>
+        <button id="schedOptSchool" class="absence-opt" type="button">
+          <span class="opt-icon"><i class="fas fa-table-cells" aria-hidden="true"></i></span>
+          <span class="opt-label">جدول المدرسة</span>
+          <i class="fas fa-chevron-left opt-chevron" aria-hidden="true"></i>
+        </button>
+        <button id="schedOptClasses" class="absence-opt" type="button">
+          <span class="opt-icon"><i class="fas fa-chalkboard" aria-hidden="true"></i></span>
+          <span class="opt-label">جداول الصفوف</span>
+          <i class="fas fa-chevron-left opt-chevron" aria-hidden="true"></i>
+        </button>
+      </div>
+      <div class="absence-modal-foot">
+        <button id="closeScheduleModal" class="absence-close" type="button">إغلاق</button>
       </div>
     </div>
   </div>
@@ -1610,13 +1661,20 @@
     <div id="overallAbsenceHost"></div>
   </section>
 
-  <!-- جداول الأقسام / جداول المعلمين — /admins/schedules.js renders each
-       into its host the first time it's opened (sidebar → الجداول). -->
+  <!-- جداول الأقسام / جداول المعلمين / جدول المدرسة / جداول الصفوف —
+       /admins/schedules.js renders each into its host the first time it's
+       opened (sidebar → الجداول, or the الجداول tile's popup). -->
   <section id="deptSchedulesSheet" class="sheet" aria-hidden="true">
     <div id="deptSchedulesHost"></div>
   </section>
   <section id="teacherSchedulesSheet" class="sheet" aria-hidden="true">
     <div id="teacherSchedulesHost"></div>
+  </section>
+  <section id="schoolScheduleSheet" class="sheet" aria-hidden="true">
+    <div id="schoolScheduleHost"></div>
+  </section>
+  <section id="classSchedulesSheet" class="sheet" aria-hidden="true">
+    <div id="classSchedulesHost"></div>
   </section>
 
   <script type="module">
@@ -1735,6 +1793,8 @@
     // NEW: Absence modal refs
     const absenceModal = document.getElementById('absenceModal');
     const closeAbsenceModal = document.getElementById('closeAbsenceModal');
+    const scheduleModal = document.getElementById('scheduleModal');
+    const closeScheduleModal = document.getElementById('closeScheduleModal');
     const todayAbsenceBtn = document.getElementById('todayAbsenceBtn');
     const overallAbsenceBtn = document.getElementById('overallAbsenceBtn');
     const detailedAbsenceBtn = document.getElementById('detailedAbsenceBtn');
@@ -2672,6 +2732,10 @@
         sidebarId: 'sidebarDeptSchedules', exportName: 'mountDeptSchedulesSheet', title: 'جداول الأقسام' }),
       makeScheduleSheet({ key: 'teacher-schedules', hash: '#teacher-schedules', sheetId: 'teacherSchedulesSheet', hostId: 'teacherSchedulesHost',
         sidebarId: 'sidebarTeacherSchedules', exportName: 'mountTeacherSchedulesSheet', title: 'جداول المعلمين' }),
+      makeScheduleSheet({ key: 'school-schedule', hash: '#school-schedule', sheetId: 'schoolScheduleSheet', hostId: 'schoolScheduleHost',
+        sidebarId: 'sidebarSchoolSchedule', exportName: 'mountSchoolScheduleSheet', title: 'جدول المدرسة' }),
+      makeScheduleSheet({ key: 'class-schedules', hash: '#class-schedules', sheetId: 'classSchedulesSheet', hostId: 'classSchedulesHost',
+        sidebarId: 'sidebarClassSchedules', exportName: 'mountClassSchedulesSheet', title: 'جداول الصفوف' }),
     ];
 
     // Sidebar: "غياب اليوم" / "الغياب المختصر" / "تدقيق في الغائب" open
@@ -2839,6 +2903,9 @@
     function renderMyClasses(classes){
       const list = Array.isArray(classes) ? classes.filter(Boolean) : [];
       myClassesButtons.innerHTML = '';
+      // جدولي / جدولي الأسبوعي only mean something for an admin who teaches.
+      ['sidebarMySchedule', 'sidebarMyWeek']
+        .forEach((id) => { document.getElementById(id).hidden = !list.length; });
       if(!list.length){ myClassesSection.hidden = true; return; }
       list.forEach(classKey => {
         const btn = document.createElement('button');
@@ -2945,8 +3012,30 @@
 
     // NEW: schedules button action
     openSchedules.addEventListener('click', ()=>{ window.location.href = '/admins/adminschedule.html'; });
-    openSchoolSchedule.addEventListener('click', ()=>{
-      window.location.href = '/no-longer-in-use/Teachers/schoolschedule.html';
+
+    // الجداول tile → خيارات الجداول popup; each option opens its sheet on
+    // this page. The sidebar's جدولي / جدولي الأسبوعي are
+    // Teachers/user.html's sections, opened through its #hash, same as
+    // adminschedule.html's teacher sidebar does.
+    const goMySchedule = () => { window.location.href = '/Teachers/user.html'; };
+    const goMyWeek = () => { window.location.href = '/Teachers/user.html#week'; };
+    const [deptSchedulesEntry, teacherSchedulesEntry, schoolScheduleEntry, classSchedulesEntry] = scheduleSheets;
+    const scheduleOptions = {
+      schedOptDept: () => deptSchedulesEntry.open(),
+      schedOptTeachers: () => teacherSchedulesEntry.open(),
+      schedOptSchool: () => schoolScheduleEntry.open(),
+      schedOptClasses: () => classSchedulesEntry.open(),
+    };
+    for (const [id, action] of Object.entries(scheduleOptions)) {
+      document.getElementById(id).addEventListener('click', () => {
+        closeModal(scheduleModal);
+        action();
+      });
+    }
+    openSchoolSchedule.addEventListener('click', ()=> openModal(scheduleModal));
+    closeScheduleModal.addEventListener('click', ()=> closeModal(scheduleModal));
+    scheduleModal.addEventListener('click', (e) => {
+      if (e.target === scheduleModal) closeModal(scheduleModal);
     });
     openNotifications.addEventListener('click', ()=> openNotificationsPanel(true));
     closeNotifications.addEventListener('click', ()=> closeNotificationsPanel(true));
@@ -2960,7 +3049,8 @@
       sidebarTeachers: () => openTeachers.click(),
       sidebarStudents: () => openClasses.click(),
       sidebarSchedules: () => openSchedules.click(),
-      sidebarSchoolSchedule: () => openSchoolSchedule.click(),
+      sidebarMySchedule: goMySchedule,
+      sidebarMyWeek: goMyWeek,
       sidebarNotifications: () => {
         closeOtherAbsenceSheets(null);
         openNotificationsPanel(true);
@@ -3389,7 +3479,8 @@
         [teachersSheet,subjectSheet,teacherSheet,adminsSheet,adminSheet,notificationsSheet].forEach(closeSheet);
         if(window.location.hash === NOTIFICATIONS_HASH) clearHash();
         closeModal(absenceModal);
-      } 
+        closeModal(scheduleModal);
+      }
     });
 
     const logoutBtnHandler = async ()=>{

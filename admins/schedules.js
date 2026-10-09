@@ -1,15 +1,20 @@
-// جداول الأقسام / جداول المعلمين — two sheets adminpage.html opens from its
-// sidebar's الجداول group. Built like the absence sheets (newabsence.js …):
-// each renders into a shadow root on the host element it's given, so its
-// ids/classes can't collide with the page's own, and it reuses the page's
-// Firestore instance and its single shared attendance sheet.
+// جداول الأقسام / جدول المدرسة / جداول المعلمين / جداول الصفوف — the sheets
+// adminpage.html opens from its sidebar's الجداول group and its الجداول
+// popup. Built like the absence sheets (newabsence.js …): each renders into
+// a shadow root on the host element it's given, so its ids/classes can't
+// collide with the page's own, and it reuses the page's Firestore instance
+// and its single shared attendance sheet.
 //
 //   mountDeptSchedulesSheet(host, hooks)    — a department's schedule for a
 //     day or a whole week, coloured by whether attendance was taken, each
 //     lesson opening its details (and تسجيل/تعديل الغياب); PDF download of
 //     the day or the week.
+//   mountSchoolScheduleSheet(host, hooks)   — the same grid for every
+//     teacher in the school at once, grouped by department (no download).
 //   mountTeacherSchedulesSheet(host, hooks) — any teacher's week (department
 //     → teacher), with covers and special-day schedules applied.
+//   mountClassSchedulesSheet(host, hooks)   — any class's week (subject and
+//     teacher per lesson), with covers and special-day schedules applied.
 //
 // hooks: close(), openSidebar(), attendance, onAttendanceSaved(fn),
 //        getSession() → { user, data, classList }
@@ -20,6 +25,7 @@ import { kuwaitTodayISO } from "/shared/kuwait-time.js";
 import { DEPARTMENT_LIST, resolveDepartmentName } from "/shared/departments.js";
 import { teacherScheduleUids } from "/shared/schedule-teacher-identity.js";
 import { classKeyFromRow, normalizeClassKey, getOverriddenClassKeys } from "/shared/schedule-priority.js";
+import { sortClassList } from "/shared/class-registry.js";
 
 const CSS_URL = new URL("./schedules.css", import.meta.url).href;
 const DAYS_AR = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس"];
@@ -162,14 +168,24 @@ async function mountShell(host, title, hooks) {
 }
 
 /* =====================================================================
-   جداول الأقسام
+   جداول الأقسام / جدول المدرسة
    ===================================================================== */
-export async function mountDeptSchedulesSheet(host, hooks = {}) {
+export function mountDeptSchedulesSheet(host, hooks = {}) {
+  return mountTimetableSheet(host, hooks, { school: false });
+}
+export function mountSchoolScheduleSheet(host, hooks = {}) {
+  return mountTimetableSheet(host, hooks, { school: true });
+}
+
+// school: every teacher at once, grouped under a row per department,
+// instead of one department picked from the list.
+async function mountTimetableSheet(host, hooks, { school }) {
   const db = dbFor();
-  const { root, body, modal } = await mountShell(host, "جداول الأقسام", hooks);
+  const { root, body, modal } = await mountShell(host, school ? "جدول المدرسة" : "جداول الأقسام", hooks);
+  const what = school ? "جدول المدرسة" : "جدول القسم";
   body.innerHTML = `
     <div class="sch-toolbar">
-      <div class="sch-select-wrap"><select class="sch-select" id="deptSel" aria-label="القسم"><option value="">اختر القسم...</option></select></div>
+      ${school ? "" : '<div class="sch-select-wrap"><select class="sch-select" id="deptSel" aria-label="القسم"><option value="">اختر القسم...</option></select></div>'}
       <div class="sch-seg" role="tablist" aria-label="العرض">
         <button type="button" data-view="day" class="active">اليوم</button>
         <button type="button" data-view="week">الأسبوع</button>
@@ -179,15 +195,12 @@ export async function mountDeptSchedulesSheet(host, hooks = {}) {
         <input type="date" id="dateInput" aria-label="اختيار التاريخ">
       </label>
       <div class="sch-range" id="weekRange" hidden><b id="weekRangeText">—</b><small id="weekRangeSub"></small></div>
-      <button class="sch-btn icon" type="button" id="dlBtn" aria-label="تنزيل جدول القسم" title="تنزيل جدول القسم">${ICON.download}</button>
+      <button class="sch-btn icon" type="button" id="dlBtn" aria-label="تنزيل ${what}" title="تنزيل ${what}">${ICON.download}</button>
     </div>
-    <div class="sch-legend" id="legend" hidden>
-      <span><i class="taken"></i>تم تسليم الغياب</span><span><i class="missing"></i>لم يُسلَّم</span><span><i class="future"></i>لم تبدأ</span>
-    </div>
-    <div class="sch-state active" id="stPick"><div class="sch-center"><div class="sch-empty-hint">${ICON.pick}<span>اختر القسم لعرض جدوله</span></div></div></div>
-    <div class="sch-state" id="stLoading"><div class="sch-center"><div class="sch-spinner"></div></div></div>
-    <div class="sch-state" id="stError"><div class="sch-center"><div class="sch-error">تعذّر تحميل جدول القسم. تحقّق من الاتصال وحاول مرة أخرى.</div></div></div>
-    <div class="sch-state" id="stOk"><div class="sch-table-shell"><div class="sch-table-scroll" id="scroll"><table class="sch-table" id="table"><thead id="thead"></thead><tbody id="tbody"></tbody></table></div></div></div>`;
+    <div class="sch-state${school ? "" : " active"}" id="stPick"><div class="sch-center"><div class="sch-empty-hint">${ICON.pick}<span>اختر القسم لعرض جدوله</span></div></div></div>
+    <div class="sch-state${school ? " active" : ""}" id="stLoading"><div class="sch-center"><div class="sch-spinner"></div></div></div>
+    <div class="sch-state" id="stError"><div class="sch-center"><div class="sch-error">تعذّر تحميل ${what}. تحقّق من الاتصال وحاول مرة أخرى.</div></div></div>
+    <div class="sch-state" id="stOk"><div class="sch-table-shell"><div class="sch-tt-caption" id="caption"></div><div class="sch-table-scroll" id="scroll"><table class="sch-table" id="table"><thead id="thead"></thead><tbody id="tbody"></tbody></table></div></div></div>`;
 
   const $ = (id) => root.getElementById(id);
   const deptSel = $("deptSel"), dateInput = $("dateInput"), dateLabel = $("dateLabel");
@@ -196,8 +209,10 @@ export async function mountDeptSchedulesSheet(host, hooks = {}) {
 
   const today = kuwaitTodayISO();
   const saved = recall();
+  const viewKey = school ? "schoolView" : "deptView";
+  const noTeachers = school ? "لا يوجد معلمون" : "لا يوجد معلمون في هذا القسم";
   let dept = "";
-  let view = saved.deptView === "week" ? "week" : "day";
+  let view = saved[viewKey] === "week" ? "week" : "day";
   let dateISO = today;
   let teachers = [];
   let data = null;          // { dates, cells: [dateIdx][uid][lesson] }
@@ -208,7 +223,11 @@ export async function mountDeptSchedulesSheet(host, hooks = {}) {
       loadTeachers(db), loadSchedules(db),
       getDocs(query(collection(db, "attendanceSessions"), where("date", "in", dates))),
     ]);
-    teachers = all.filter((t) => t.dept === dept);
+    // School: department by department (the app's own order), each already
+    // sorted by name.
+    teachers = school
+      ? departmentsWithCounts(all).flatMap(({ dept: d }) => all.filter((t) => t.dept === d))
+      : all.filter((t) => t.dept === dept);
     const uids = new Set(teachers.map((t) => t.uid));
     // newest row per (weekday, teacher, lesson)
     const byKey = new Map();
@@ -251,28 +270,58 @@ export async function mountDeptSchedulesSheet(host, hooks = {}) {
     if (cell.taken) return "taken";
     return iso > today ? "future" : "missing";
   }
+  // Laid out like the school's printed department timetable: class in bold
+  // (written its way — 10/1, 12ع3), subject under it; whether attendance
+  // was taken is the corner dot.
+  const STATE_TEXT = { taken: "تم تسليم الغياب", missing: "لم يُسلَّم الغياب", future: "لم تبدأ" };
   function cellButton(iso, teacher, lesson, cell) {
     if (!cell) return Object.assign(document.createElement("div"), { className: "sch-cell none" });
     const b = document.createElement("button");
+    const state = stateOf(iso, cell);
+    const label = timetableClass(cell.classKey);
     b.type = "button";
-    b.className = `sch-cell ${stateOf(iso, cell)}`;
-    b.textContent = toArabicDigits(cell.classKey);
+    b.className = `sch-cell ${state}`;
+    b.title = `${label}${cell.subject ? ` — ${cell.subject}` : ""} • ${STATE_TEXT[state]}`;
+    b.innerHTML = `<b>${escapeHtml(label)}</b>${cell.subject ? `<small>${escapeHtml(cell.subject)}</small>` : ""}`;
     b.addEventListener("click", () => openLesson(iso, teacher, lesson, cell));
     return b;
+  }
+
+  // School view: a full-width row naming the department before its first
+  // teacher (the label sticks to the right edge while scrolling sideways).
+  function deptRow(t, i, colspan) {
+    if (!school || (i > 0 && teachers[i - 1].dept === t.dept)) return null;
+    const tr = document.createElement("tr");
+    tr.className = "sch-dept-row";
+    tr.innerHTML = `<td colspan="${colspan}"><span class="sch-dept-sep">${escapeHtml(t.dept)}</span></td>`;
+    return tr;
+  }
+
+  const nameCell = (t) => `<td class="sticky"><div class="sch-teacher-name">${escapeHtml(t.name)}${t.role === "head" ? "<small>رئيس القسم</small>" : ""}</div></td>`;
+
+  // The dark bar over the table: the department (or the school). The date
+  // is already in the toolbar above.
+  function renderCaption() {
+    $("caption").innerHTML = `<b>${escapeHtml(school ? "جدول المدرسة" : dept)}</b>`;
   }
 
   function renderDay() {
     const table = $("table"), thead = $("thead"), tbody = $("tbody");
     table.className = "sch-table day";
-    thead.innerHTML = `<tr><th class="sticky">المعلمين</th>${ORDINALS.map((o) => `<th>الحصة ${o}</th>`).join("")}</tr>`;
+    renderCaption();
+    thead.innerHTML = `<tr><th class="sticky corner">المعلم</th>${ORDINALS.map((o, i) =>
+      `<th class="num-th"><b>${i + 1}</b><small>${o}</small></th>`).join("")}</tr>`;
     tbody.innerHTML = "";
     const cells = data.cells[0];
-    if (!teachers.length) { tbody.innerHTML = '<tr><td colspan="8" style="padding:24px;color:var(--muted);font-weight:800">لا يوجد معلمون في هذا القسم</td></tr>'; return; }
-    teachers.forEach((t) => {
+    if (!teachers.length) { tbody.innerHTML = `<tr><td colspan="8" class="sch-empty-row">${noTeachers}</td></tr>`; return; }
+    teachers.forEach((t, i) => {
+      const sep = deptRow(t, i, 8);
+      if (sep) tbody.appendChild(sep);
       const tr = document.createElement("tr");
-      tr.innerHTML = `<td class="sticky"><div class="sch-teacher-name">${escapeHtml(t.name)}${t.role === "head" ? "<small>رئيس القسم</small>" : ""}</div></td>`;
+      tr.innerHTML = nameCell(t);
       for (let l = 1; l <= LESSONS; l++) {
         const td = document.createElement("td");
+        if (l % 2 === 0) td.classList.add("alt");
         td.appendChild(cellButton(data.dates[0], t, l, cells[t.uid][l]));
         tr.appendChild(td);
       }
@@ -283,20 +332,24 @@ export async function mountDeptSchedulesSheet(host, hooks = {}) {
   function renderWeek() {
     const table = $("table"), thead = $("thead"), tbody = $("tbody");
     table.className = "sch-table week";
-    const dayRow = `<tr><th class="sticky" rowspan="2">المعلمين</th>${data.dates.map((iso, i) =>
-      `<th colspan="7" class="day-th${iso === today ? " today" : ""}"><span class="sch-day-label"><b>${DAYS_AR[i]}</b><small>${fmtShort(iso)}</small></span></th>`).join("")}</tr>`;
-    const lessonRow = `<tr>${data.dates.map((iso) => ORDINALS.map((o, i) =>
-      `<th class="lesson-th${i === 0 ? " day-start" : ""}">${o}</th>`).join("")).join("")}</tr>`;
+    renderCaption();
+    const dayRow = `<tr><th class="sticky corner" rowspan="2">المعلم</th>${data.dates.map((iso, i) =>
+      `<th colspan="7" class="day-th${i ? " day-start" : ""}${iso === today ? " today" : ""}"><span class="sch-day-label"><b>${DAYS_AR[i]}</b></span></th>`).join("")}</tr>`;
+    const lessonRow = `<tr>${data.dates.map((iso, d) => ORDINALS.map((o, i) =>
+      `<th class="lesson-th${i === 0 && d ? " day-start" : ""}" title="الحصة ${o}">${i + 1}</th>`).join("")).join("")}</tr>`;
     thead.innerHTML = dayRow + lessonRow;
     tbody.innerHTML = "";
-    if (!teachers.length) { tbody.innerHTML = '<tr><td colspan="36" style="padding:24px;color:var(--muted);font-weight:800">لا يوجد معلمون في هذا القسم</td></tr>'; return; }
-    teachers.forEach((t) => {
+    if (!teachers.length) { tbody.innerHTML = `<tr><td colspan="36" class="sch-empty-row">${noTeachers}</td></tr>`; return; }
+    teachers.forEach((t, i) => {
+      const sep = deptRow(t, i, 36);
+      if (sep) tbody.appendChild(sep);
       const tr = document.createElement("tr");
-      tr.innerHTML = `<td class="sticky"><div class="sch-teacher-name">${escapeHtml(t.name)}${t.role === "head" ? "<small>رئيس القسم</small>" : ""}</div></td>`;
+      tr.innerHTML = nameCell(t);
       data.dates.forEach((iso, d) => {
         for (let l = 1; l <= LESSONS; l++) {
           const td = document.createElement("td");
-          if (l === 1) td.classList.add("day-start");
+          if (l === 1 && d) td.classList.add("day-start");
+          if (d % 2) td.classList.add("alt");
           if (iso === today) td.classList.add("today");
           td.appendChild(cellButton(iso, t, l, data.cells[d][t.uid][l]));
           tr.appendChild(td);
@@ -342,7 +395,7 @@ export async function mountDeptSchedulesSheet(host, hooks = {}) {
 
   async function load({ force = false } = {}) {
     syncToolbar();
-    if (!dept) { show("stPick"); $("legend").hidden = true; return; }
+    if (!school && !dept) { show("stPick"); return; }
     const id = ++requestId;
     show("stLoading");
     try {
@@ -352,11 +405,10 @@ export async function mountDeptSchedulesSheet(host, hooks = {}) {
       if (id !== requestId) return;
       data = next;
       view === "week" ? renderWeek() : renderDay();
-      $("legend").hidden = false;
       show("stOk");
     } catch (e) {
       if (id !== requestId) return;
-      console.error("[dept-schedules] load failed", e);
+      console.error(`[${school ? "school-schedule" : "dept-schedules"}] load failed`, e);
       show("stError");
     }
   }
@@ -381,9 +433,9 @@ export async function mountDeptSchedulesSheet(host, hooks = {}) {
 
   /* ---- download ---- */
   function openDownload() {
-    if (!dept) return;
+    if (!school && !dept) return;
     modal.open(`
-      <div class="sch-modal-head"><b>تنزيل جدول القسم</b><button class="sch-x" type="button" aria-label="إغلاق">×</button></div>
+      <div class="sch-modal-head"><div><b>تنزيل ${what}</b>${school ? "<small>ملف PDF بصفحة واحدة بحجم A3 لكل المعلمين</small>" : ""}</div><button class="sch-x" type="button" aria-label="إغلاق">×</button></div>
       <div class="sch-modal-body">
         <button class="sch-option" type="button" data-kind="day"><span class="ic">${ICON.day}</span><span><b>جدول اليوم</b><small>${fmtLong(dateISO)}</small></span></button>
         <button class="sch-option" type="button" data-kind="week"><span class="ic">${ICON.week}</span><span><b>جدول الأسبوع</b><small>${rangeText(weekStartFor(dateISO))}</small></span></button>
@@ -403,24 +455,35 @@ export async function mountDeptSchedulesSheet(host, hooks = {}) {
       await ensurePdfLibs();
       const dates = kind === "week" ? weekDatesFor(weekStartFor(dateISO)) : [dateISO];
       const d = await fetchCells(dates);
-      const hostEl = kind === "week" ? buildWeekPdf(d, dept, teachers) : buildDayPdf(d, dept, teachers);
+      const hostEl = school
+        ? buildSchoolPdf(d, teachers, kind)
+        : (kind === "week" ? buildWeekPdf(d, dept, teachers) : buildDayPdf(d, dept, teachers));
       document.body.appendChild(hostEl);
       try {
         if (document.fonts?.ready) await document.fonts.ready;
         await waitImg(hostEl.querySelector("img"));
-        const canvas = await window.html2canvas(hostEl.firstElementChild.nextElementSibling, { backgroundColor: "#ffffff", scale: kind === "week" ? 1.6 : 1.35, useCORS: true, logging: false });
+        const target = hostEl.firstElementChild.nextElementSibling;
+        // The whole school is one tall A3 page: render as sharp as the
+        // browser's canvas size limit (~16M pixels on phones) allows.
+        const scale = school
+          ? Math.min(2.4, Math.sqrt(16e6 / (target.offsetWidth * target.offsetHeight)))
+          : (kind === "week" ? 1.6 : 1.35);
+        const canvas = await window.html2canvas(target, { backgroundColor: "#ffffff", scale, useCORS: true, logging: false });
         const { jsPDF } = window.jspdf;
-        const pdf = new jsPDF({ orientation: kind === "week" ? "landscape" : "portrait", unit: "pt", format: "a4", compress: true });
-        addCanvasToPage(pdf, canvas, 14);
+        const pdf = school
+          ? new jsPDF({ orientation: "portrait", unit: "pt", format: "a3", compress: true })
+          : new jsPDF({ orientation: kind === "week" ? "landscape" : "portrait", unit: "pt", format: "a4", compress: true });
+        addCanvasToPage(pdf, canvas, school ? 18 : 14);
+        const subject = school ? "المدرسة" : `القسم-${dept}`;
         const name = kind === "week"
-          ? `جدول-القسم-الأسبوعي-${dept}-${dates[0]}`
-          : `جدول-القسم-${dept}-${dates[0]}`;
+          ? `جدول-${subject}-الأسبوعي-${dates[0]}`
+          : `جدول-${subject}-${dates[0]}`;
         pdf.save(name.replace(/[\\/:*?"<>|]+/g, "-").replace(/\s+/g, "-") + ".pdf");
       } finally { hostEl.remove(); }
       dlBusy = false;
       modal.close();
     } catch (e) {
-      console.error("[dept-schedules] PDF failed", e);
+      console.error(`[${school ? "school-schedule" : "dept-schedules"}] PDF failed`, e);
       setStatus("تعذّر إنشاء ملف PDF. حاول مرة أخرى.", true);
     } finally {
       dlBusy = false;
@@ -429,18 +492,23 @@ export async function mountDeptSchedulesSheet(host, hooks = {}) {
   }
 
   /* ---- wiring ---- */
-  deptSel.addEventListener("change", () => { dept = deptSel.value; remember({ dept }); load(); });
   root.querySelectorAll(".sch-seg button").forEach((b) => b.addEventListener("click", () => {
     if (view === b.dataset.view) return;
     view = b.dataset.view;
-    remember({ deptView: view });
+    remember({ [viewKey]: view });
     load();
   }));
   dateInput.addEventListener("change", () => { if (dateInput.value) { dateISO = dateInput.value; load(); } });
+  hooks.onAttendanceSaved?.(() => { if ((school || dept) && host.getClientRects().length) load(); });
   $("dlBtn").addEventListener("click", openDownload);
-  hooks.onAttendanceSaved?.(() => { if (dept && host.getClientRects().length) load(); });
 
   syncToolbar();
+  if (school) {
+    load();
+    return { refresh() { load(); } };
+  }
+
+  deptSel.addEventListener("change", () => { dept = deptSel.value; remember({ dept }); load(); });
   try {
     const { teachers: all } = await loadTeachers(db);
     departmentsWithCounts(all).forEach(({ dept: d, count }) => deptSel.appendChild(new Option(`${d} (${toArabicDigits(count)})`, d)));
@@ -619,6 +687,176 @@ export async function mountTeacherSchedulesSheet(host, hooks = {}) {
   return { refresh() { if (teacherSel.value) showTeacher(teacherSel.value); } };
 }
 
+/* =====================================================================
+   جداول الصفوف
+   ===================================================================== */
+export async function mountClassSchedulesSheet(host, hooks = {}) {
+  const db = dbFor();
+  const { root, body, modal } = await mountShell(host, "جداول الصفوف", hooks);
+  body.innerHTML = `
+    <div class="sch-toolbar">
+      <div class="sch-select-wrap"><select class="sch-select" id="classSel" aria-label="الفصل"><option value="">اختر الفصل...</option></select></div>
+    </div>
+    <div class="sch-state active" id="stPick"><div class="sch-center"><div class="sch-empty-hint">${ICON.pick}<span>اختر الفصل لعرض جدوله الأسبوعي</span></div></div></div>
+    <div class="sch-state" id="stLoading"><div class="sch-center"><div class="sch-spinner"></div></div></div>
+    <div class="sch-state" id="stError"><div class="sch-center"><div class="sch-error">تعذّر تحميل جدول الفصل. تحقّق من الاتصال وحاول مرة أخرى.</div></div></div>
+    <div class="sch-state" id="stOk" style="overflow:auto">
+      <div class="sch-teacher-card">
+        <div class="sch-teacher-head"><div><b id="cName">—</b></div><span id="cMeta"></span></div>
+        <div class="sch-week-grid" id="grid"></div>
+      </div>
+    </div>`;
+  const $ = (id) => root.getElementById(id);
+  const classSel = $("classSel");
+  const states = ["stPick", "stLoading", "stError", "stOk"].map($);
+  const show = (id) => states.forEach((s) => s.classList.toggle("active", s.id === id));
+  let requestId = 0;
+  let week = null;
+
+  // The class's week: standing schedule (newest row per slot, lessons with
+  // no teacher or a deleted teacher dropped), a special-day schedule
+  // replacing the whole day when the class runs one, and covers swapping in
+  // the substitute teacher for their own date only.
+  async function weekFor(classKey) {
+    const today = kuwaitTodayISO();
+    const start = weekStartFor(today);
+    const dates = weekDatesFor(start);
+    const ck = normalizeClassKey(classKey);
+    const [rows, customSnap, ovSnap, times, { profiles }] = await Promise.all([
+      loadSchedules(db),
+      getDocs(query(collection(db, "customDaySchedules"), where("dayIndex", "in", [0, 1, 2, 3, 4, "0", "1", "2", "3", "4"]))).catch(() => null),
+      getDocs(query(collection(db, "scheduleOverrides"), where("classKey", "==", classKey), where("active", "==", true), where("date", "in", dates))).catch(() => null),
+      loadLessonTimes(db),
+      loadTeachers(db),
+    ]);
+    const names = new Map(profiles.map((p) => [p.id, (p.name || "").toString()]));
+    const nameOf = (uid, fallback) => names.get(uid) || (fallback || "").toString() || "—";
+    const customByDay = [[], [], [], [], []];
+    customSnap?.forEach((d) => {
+      const x = d.data() || {};
+      const day = Number(x.dayIndex);
+      if (x.enabled === true && !x.deletedAt && day >= 0 && day <= 4 && normalizeClassKey(classKeyFromRow(x)) === ck) customByDay[day].push(x);
+    });
+    const grid = dates.map(() => new Map()); // lesson -> { subject, teacherUid, teacherName, ms, cover }
+    rows.forEach((r) => {
+      const day = Number(r.dayIndex), lesson = Number(r.lesson);
+      const uid = (r.teacherUid || "").toString();
+      if (!uid || !names.has(uid) || !(day >= 0 && day <= 4) || !(lesson >= 1 && lesson <= LESSONS)) return;
+      if (customByDay[day].length || normalizeClassKey(classKeyFromRow(r)) !== ck) return;
+      const prev = grid[day].get(lesson);
+      if (!prev || rowMs(r) >= prev.ms) grid[day].set(lesson, { subject: r.subject || "", teacherUid: uid, teacherName: nameOf(uid, r.teacherName), ms: rowMs(r) });
+    });
+    customByDay.forEach((dayRows, day) => dayRows.forEach((row) => {
+      const lessons = Array.isArray(row.lessons) ? row.lessons : [];
+      const max = Math.min(LESSONS, Number(row.lessonCount) || lessons.length || LESSONS);
+      for (let i = 0; i < max; i++) {
+        const x = lessons[i] || {};
+        const uid = (x.teacherUid || "").toString();
+        if (uid && names.has(uid)) grid[day].set(i + 1, { subject: x.subject || "", teacherUid: uid, teacherName: nameOf(uid, x.teacherName) });
+      }
+    }));
+    const covers = [];
+    ovSnap?.forEach((d) => covers.push(d.data() || {}));
+    covers.sort((a, b) => rowMs(a) - rowMs(b)).forEach((o) => {
+      const day = dates.indexOf(o.date), lesson = Number(o.lesson);
+      const cur = day >= 0 ? grid[day].get(lesson) : null;
+      const uid = (o.newTeacherUid || "").toString();
+      if (!cur || !uid || !names.has(uid)) return;
+      grid[day].set(lesson, { ...cur, teacherUid: uid, teacherName: nameOf(uid), cover: true, originalName: cur.teacherName });
+    });
+    return { start, dates, grid, times, special: customByDay.map((r) => r.length > 0) };
+  }
+
+  function timeOf(i) {
+    const t = week?.times[i];
+    return t?.start && t?.end ? `${t.start} - ${t.end}` : "";
+  }
+
+  function render(classKey, w) {
+    const today = kuwaitTodayISO();
+    let lessons = 0;
+    const head = [`<div class="sch-wg-th">اليوم</div>`, ...ORDINALS.map((o, i) =>
+      `<div class="sch-wg-th">الحصة ${o}${timeOf(i) ? `<small>${escapeHtml(timeOf(i))}</small>` : ""}</div>`)].join("");
+    const rows = w.dates.map((iso, d) => {
+      const cells = [];
+      for (let l = 1; l <= LESSONS; l++) {
+        const c = w.grid[d].get(l);
+        if (!c) { cells.push('<div class="sch-wg-cell">—</div>'); continue; }
+        lessons++;
+        cells.push(`<button type="button" class="sch-wg-cell on" data-day="${d}" data-lesson="${l}">${escapeHtml(c.subject || "—")}<small>${escapeHtml(c.teacherName)}</small>${c.cover ? '<span class="sch-tag covering">بديل</span>' : ""}</button>`);
+      }
+      const special = w.special[d] ? '<span class="sch-tag">جدول خاص</span>' : "";
+      return `<div class="sch-wg-day"${iso === today ? ' style="color:#15803d"' : ""}>${DAYS_AR[d]}<small>${fmtShort(iso)}</small>${special}</div>${cells.join("")}`;
+    }).join("");
+    $("grid").innerHTML = head + rows;
+    $("cName").textContent = `الفصل ${toArabicDigits(classKey)}`;
+    const thisWeek = weekdayOf(today) >= 5 ? "الأسبوع القادم" : "هذا الأسبوع";
+    $("cMeta").textContent = `${toArabicDigits(lessons)} حصة • ${thisWeek}: ${rangeText(w.start)}`;
+  }
+
+  $("grid").addEventListener("click", (e) => {
+    const btn = e.target.closest("button[data-lesson]");
+    if (!btn || !week) return;
+    const d = Number(btn.dataset.day), l = Number(btn.dataset.lesson);
+    const c = week.grid[d]?.get(l);
+    if (!c) return;
+    const time = timeOf(l - 1);
+    modal.open(`
+      <div class="sch-modal-head"><div><b>${escapeHtml(c.subject || "—")}</b><small>الحصة ${ORDINALS[l - 1]} • ${fmtLong(week.dates[d])}</small></div><button class="sch-x" type="button" aria-label="إغلاق">×</button></div>
+      <div class="sch-modal-body">
+        <div class="sch-chips">
+          <span class="sch-chip">الصف: ${escapeHtml(toArabicDigits(classSel.value))}</span>
+          <span class="sch-chip">المعلم: ${escapeHtml(c.teacherName)}</span>
+          ${time ? `<span class="sch-chip">${escapeHtml(toArabicDigits(time))}</span>` : ""}
+        </div>
+        ${c.cover ? `<div class="sch-status future">حصة بديلة — بدلاً من ${escapeHtml(c.originalName)}</div>` : ""}
+      </div>`);
+  });
+
+  async function showClass(classKey) {
+    const id = ++requestId;
+    show("stLoading");
+    try {
+      const w = await weekFor(classKey);
+      if (id !== requestId) return;
+      week = w;
+      render(classKey, w);
+      show("stOk");
+    } catch (e) {
+      if (id !== requestId) return;
+      console.error("[class-schedules] load failed", e);
+      show("stError");
+    }
+  }
+
+  classSel.addEventListener("change", () => {
+    remember({ cls: classSel.value });
+    if (classSel.value) showClass(classSel.value); else show("stPick");
+  });
+
+  // The page's class list (settings/classes); without one, every class the
+  // standing schedule mentions.
+  try {
+    let classes = hooks.getSession?.()?.classList || [];
+    if (!classes.length) {
+      const rows = await loadSchedules(db);
+      const byNorm = new Map();
+      rows.forEach((r) => { const k = classKeyFromRow(r); if (k) byNorm.set(normalizeClassKey(k), k); });
+      classes = [...byNorm.values()];
+    }
+    sortClassList(classes).forEach((c) => classSel.appendChild(new Option(toArabicDigits(c), c)));
+    const last = recall().cls;
+    if (last && classes.includes(last)) {
+      classSel.value = last;
+      showClass(last);
+    }
+  } catch (e) {
+    console.error("[class-schedules] classes failed", e);
+    show("stError");
+  }
+  return { refresh() { if (classSel.value) showClass(classSel.value); } };
+}
+
 /* ---------------- PDF ---------------- */
 function loadScript(src) {
   return new Promise((resolve, reject) => {
@@ -642,6 +880,13 @@ function addCanvasToPage(pdf, canvas, margin) {
   pdf.addImage(canvas.toDataURL("image/jpeg", 0.9), "JPEG", (W - w) / 2, margin, w, h, undefined, "FAST");
 }
 const compactClass = (c) => String(c || "").replace(/\s*\/\s*/g, "/").replace(/\s+/g, " ").trim();
+// How the printed timetable writes a class: 10/1, or 12ع3 when it has a
+// track ("12 / 3 ع").
+function timetableClass(c) {
+  const m = String(c || "").trim().match(/^(\d+)\s*\/\s*(\d+)\s*(\S*)$/);
+  if (!m) return compactClass(c);
+  return m[3] ? `${m[1]}${m[3]}${m[2]}` : `${m[1]}/${m[2]}`;
+}
 
 // Day: one portrait page, teachers × the seven periods.
 function buildDayPdf(d, dept, teachers) {
@@ -669,6 +914,78 @@ function buildDayPdf(d, dept, teachers) {
     <div class="p">
       <div class="h"><img src="/images/schoollogo.png" alt=""><div class="s">ثانوية أحمد البشر الرومي</div><div class="t">جدول القسم — ${escapeHtml(dept)}</div><div class="d">${fmtLong(d.dates[0])}</div></div>
       <table><thead><tr><th class="c">المعلمين</th>${ORDINALS.map((o) => `<th>الحصة ${o}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table>
+    </div>`;
+  return host;
+}
+
+// جدول المدرسة: every teacher, grouped by department, on one portrait A3
+// page — the day's seven periods or the whole week's thirty-five, in the
+// printed department timetable's design. Laid out at the page's own aspect
+// ratio, with the row height (and type size) shrinking to fit however many
+// teachers there are, so it always lands on that single page.
+function buildSchoolPdf(d, teachers, kind) {
+  const week = kind === "week";
+  const W = 1640, H = Math.round(W * 1191 / 842); // A3 portrait
+  const depts = new Set(teachers.map((t) => t.dept)).size;
+  const avail = H - 60 - 96 - (week ? 52 : 40) - 30 - depts * 20;
+  const rowH = Math.max(14, Math.min(44, Math.floor(avail / Math.max(teachers.length, 1))));
+  const fs = Math.max(8, Math.min(14, Math.round(rowH * 0.52)));
+  const days = d.dates.map((iso, i) => ({ iso, i }));
+  const lessons = [1, 2, 3, 4, 5, 6, 7];
+  const cols = 1 + days.length * 7;
+
+  const head = week
+    ? `<tr><th class="corner" rowspan="2">المعلم</th>${days.map(({ i }) => `<th colspan="7" class="dy ${i ? "sep" : ""}">${DAYS_AR[i]}</th>`).join("")}</tr>
+       <tr>${days.map(({ i }) => lessons.map((l) => `<th class="nm ${l === 1 && i ? "sep" : ""}">${l}</th>`).join("")).join("")}</tr>`
+    : `<tr><th class="corner">المعلم</th>${lessons.map((l) => `<th class="nm big">${l}<small>${ORDINALS[l - 1]}</small></th>`).join("")}</tr>`;
+
+  let rows = "";
+  teachers.forEach((t, n) => {
+    if (n === 0 || teachers[n - 1].dept !== t.dept) rows += `<tr class="dp"><th colspan="${cols}">${escapeHtml(t.dept)}</th></tr>`;
+    rows += `<tr style="height:${rowH}px"><th class="name">${escapeHtml(t.name)}</th>${days.map(({ i }) => lessons.map((l) => {
+      const c = d.cells[i][t.uid][l];
+      const cls = `${l === 1 && i ? "sep" : ""} ${week ? (i % 2 ? "alt" : "") : (l % 2 === 0 ? "alt" : "")}`;
+      return c ? `<td class="${cls} on">${escapeHtml(timetableClass(c.classKey))}</td>` : `<td class="${cls}"></td>`;
+    }).join("")).join("")}</tr>`;
+  });
+  if (!teachers.length) rows = `<tr><td colspan="${cols}">لا يوجد معلمون</td></tr>`;
+
+  const when = week ? `الأسبوع: ${rangeText(d.dates[0])}` : fmtLong(d.dates[0]);
+  const host = document.createElement("div");
+  host.style.cssText = `position:fixed;top:0;left:-${W + 2000}px;width:${W}px;background:#fff;z-index:-1`;
+  host.innerHTML = `
+    <style>
+      .sp { width:${W}px; min-height:${H}px; box-sizing:border-box; padding:30px 34px; direction:rtl; background:#fff; color:#1e293b; font-family:"Tajawal",system-ui,sans-serif; }
+      .sp .top { display:flex; align-items:center; justify-content:space-between; height:84px; margin-bottom:12px; }
+      .sp .lines { text-align:right; line-height:1.5; }
+      .sp .lines div { font-size:15px; font-weight:700; color:#475569; }
+      .sp .lines .school { font-size:21px; font-weight:900; color:#1e293b; }
+      .sp img { height:72px; object-fit:contain; }
+      .sp table { width:100%; border-collapse:collapse; table-layout:fixed; border:2px solid #334155; }
+      .sp .title th { background:#334155; color:#fff; font-size:22px; font-weight:900; padding:6px; height:30px; }
+      .sp .title small { font-size:14px; font-weight:700; opacity:.8; margin-inline-start:12px; }
+      .sp th.corner { background:#334155; color:#fff; font-size:15px; font-weight:900; }
+      .sp th.dy { background:#475569; color:#fff; font-size:15px; font-weight:900; height:30px; }
+      .sp th.nm { background:#64748b; color:#fff; font-size:12px; font-weight:800; height:22px; border-left:1px solid rgba(255,255,255,.25); }
+      .sp th.nm.big { font-size:16px; height:40px; line-height:1.1; }
+      .sp th.nm small { display:block; font-size:10px; font-weight:700; opacity:.85; }
+      .sp tr.dp th { background:#e2e8f0; color:#1e293b; text-align:right; font-size:14px; font-weight:900; height:20px; padding:0 12px; border-top:1.5px solid #334155; }
+      .sp th.name { background:#f1f5f9; font-size:${fs}px; font-weight:900; color:#1e293b; padding:0 8px; text-align:right; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; border-top:1px solid #cbd5e1; border-left:2px solid #334155; }
+      .sp td { border-top:1px solid #cbd5e1; border-left:1px solid #e2e8f0; text-align:center; vertical-align:middle; font-size:${fs}px; font-weight:900; color:#0f172a; padding:0 1px; white-space:nowrap; overflow:hidden; }
+      .sp td.alt { background:#f8fafc; }
+      .sp td.on { background:#e8f0f8; }
+      .sp .sep { border-right:2px solid #334155 !important; }
+    </style>
+    <div class="sp">
+      <div class="top">
+        <div class="lines"><div>وزارة التربية والتعليم</div><div>منطقة العاصمة التعليمية</div><div class="school">ثانوية أحمد البشر الرومي</div></div>
+        <img src="/images/schoollogo.png" alt="">
+      </div>
+      <table>
+        <colgroup><col style="width:${week ? 170 : 240}px">${"<col>".repeat(cols - 1)}</colgroup>
+        <thead><tr class="title"><th colspan="${cols}">جدول المدرسة<small>${escapeHtml(when)}</small></th></tr>${head}</thead>
+        <tbody>${rows}</tbody>
+      </table>
     </div>`;
   return host;
 }

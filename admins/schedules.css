@@ -1,6 +1,6 @@
-/* جداول الأقسام / جداول المعلمين — styles for the two sheets mounted by
-   /admins/schedules.js into shadow roots on adminpage.html (so nothing here
-   can collide with the page's own classes, and nothing outside reaches in). */
+/* الجداول — styles for the schedule sheets mounted by /admins/schedules.js
+   into shadow roots on adminpage.html (so nothing here can collide with the
+   page's own classes, and nothing outside reaches in). */
 :host {
   --primary: #033C54;
   --primary-2: #065372;
@@ -11,6 +11,15 @@
   --success: #059669;
   --danger: #dc2626;
   --shadow-1: 0 8px 22px rgba(3, 60, 84, .10);
+  /* Timetable: the slate palette of the printed department timetable. */
+  --tt-ink: #1e293b;
+  --tt-dark: #334155;
+  --tt-day: #475569;
+  --tt-num: #64748b;
+  --tt-line: #cbd5e1;
+  --tt-line-soft: #e2e8f0;
+  --tt-name: #f1f5f9;
+  --tt-alt: #f8fafc;
   display: flex; flex-direction: column; height: 100%;
   overflow: hidden; background: var(--page); color: var(--text);
   font-family: "Tajawal", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
@@ -93,61 +102,91 @@ button, input, select, textarea { font-family: inherit; }
 .sch-empty-hint { display: flex; flex-direction: column; align-items: center; gap: 10px; }
 .sch-empty-hint svg { width: 46px; height: 46px; stroke: rgba(3, 60, 84, .35); fill: none; stroke-width: 1.6; }
 
-/* ---- Grid table (department day / week) ---- */
-.sch-table-shell { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; background: #fff; border-top: 1px solid var(--border); }
+/* ---- Timetable (جداول الأقسام / جدول المدرسة, day and week) ----
+   Styled after the school's printed department timetable: a dark title
+   bar, slate day / lesson-number headers, a grey teacher column, thick
+   rules between days, the class in bold with its subject under it.
+   Whether attendance was taken is the dot in each lesson's corner. */
+/* Edge to edge: the table fills the sheet under the toolbar, no card. */
+.sch-table-shell { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; background: #fff; }
+.sch-tt-caption {
+  flex-shrink: 0; display: flex; align-items: baseline; justify-content: center; flex-wrap: wrap; gap: 2px 12px;
+  padding: 10px 16px; background: var(--tt-dark); color: #fff; text-align: center;
+}
+.sch-tt-caption b { font-size: 1.08rem; font-weight: 900; }
+.sch-tt-caption small { font-size: .8rem; font-weight: 700; color: rgba(255, 255, 255, .75); }
 .sch-table-scroll { flex: 1 1 auto; min-height: 0; overflow: auto; -webkit-overflow-scrolling: touch; }
 table.sch-table { border-collapse: separate; border-spacing: 0; direction: rtl; table-layout: fixed; }
 table.sch-table.day { width: 100%; min-width: 760px; }
 table.sch-table.week { width: max-content; }
-.sch-table thead { position: sticky; top: 0; z-index: 20; background: #fff; }
+.sch-table thead { position: sticky; top: 0; z-index: 20; }
 .sch-table thead th {
-  padding: 10px 4px; font-size: .86rem; font-weight: 900; color: var(--primary); text-align: center;
-  background: #fff; border-bottom: 2px solid var(--primary); white-space: nowrap;
+  padding: 6px 4px; font-size: .8rem; font-weight: 900; color: #fff; text-align: center; white-space: nowrap;
+  background: var(--tt-num); border-left: 1px solid rgba(255, 255, 255, .16);
 }
-.sch-table th.sticky, .sch-table td.sticky {
-  position: sticky; right: 0; z-index: 10; background: #fff; width: 150px; min-width: 150px;
-  border-left: 1px solid var(--border); box-shadow: -4px 0 12px rgba(2, 43, 66, .05);
-}
+.sch-table th.sticky, .sch-table td.sticky { position: sticky; right: 0; z-index: 10; width: 150px; min-width: 150px; border-left: 2px solid var(--tt-dark); }
 .sch-table thead th.sticky { z-index: 25; }
-.sch-table tbody td { border-bottom: 1px solid var(--border); padding: 8px 5px; text-align: center; vertical-align: middle; background: #fff; }
-.sch-teacher-name { font-weight: 900; font-size: .9rem; color: var(--text); line-height: 1.35; overflow-wrap: anywhere; }
-.sch-teacher-name small { display: block; font-size: .72rem; color: var(--muted); font-weight: 800; }
+.sch-table thead th.corner { background: var(--tt-dark); font-size: .92rem; }
+.sch-table .day-start { border-right: 2px solid var(--tt-dark); }
 
-.sch-cell {
-  width: 100%; min-height: 42px; border-radius: 12px; display: flex; align-items: center; justify-content: center;
-  font-weight: 900; font-size: .84rem; padding: 4px 2px; border: 1px solid transparent; transition: transform .12s ease;
-}
-button.sch-cell { cursor: pointer; }
-button.sch-cell:hover { transform: translateY(-1px); }
-.sch-cell.none { background: #f8fafc; border-color: rgba(2, 43, 66, .08); }
-.sch-cell.taken { background: rgba(16, 185, 129, .10); border-color: rgba(16, 185, 129, .3); color: var(--success); }
-.sch-cell.missing { background: rgba(239, 68, 68, .09); border-color: rgba(239, 68, 68, .28); color: var(--danger); }
-.sch-cell.future { background: #f1f6fb; border-color: rgba(4, 69, 99, .16); color: var(--primary); }
+/* Day: one header row — the lesson's number over its name. */
+.sch-table th.num-th { padding: 7px 4px; line-height: 1.2; background: var(--tt-day); }
+.sch-table th.num-th b { display: block; font-size: 1rem; }
+.sch-table th.num-th small { display: block; font-size: .7rem; font-weight: 700; color: rgba(255, 255, 255, .78); }
 
 /* Week: the day's name over its seven periods, kept centred over the part
-   of the group that's on screen while scrolling sideways (JS sets left). */
-.sch-table th.day-th {
-  position: relative; height: 46px; padding: 0; overflow: hidden; border-bottom: 1px solid var(--border);
-  background: linear-gradient(180deg, #eef5fb, #e3eef8); border-inline-start: 2px solid rgba(4, 69, 99, .18);
-}
-.sch-table th.day-th.today { background: linear-gradient(180deg, #e3f3ea, #d6ecdf); }
+   of the group that's on screen while scrolling sideways (JS sets left),
+   then a row of lesson numbers. */
+.sch-table th.day-th { position: relative; height: 40px; padding: 0; overflow: hidden; background: var(--tt-day); }
+.sch-table th.day-th.today { background: #166534; }
 .sch-day-label {
   position: absolute; top: 50%; left: 0; transform: translate(-50%, -50%);
   display: inline-flex; align-items: baseline; gap: 8px; white-space: nowrap; pointer-events: none;
 }
-.sch-day-label b { font-size: 1rem; font-weight: 900; color: var(--primary); }
-.sch-day-label small { font-size: .78rem; font-weight: 800; color: var(--muted); }
-.sch-table th.lesson-th { width: 78px; min-width: 78px; font-size: .78rem; }
-.sch-table .day-start { border-inline-start: 2px solid rgba(4, 69, 99, .18); }
-.sch-table td.today { background: #f6fbf8; }
-.sch-table.week .sch-cell { min-height: 38px; font-size: .76rem; border-radius: 10px; }
+.sch-day-label b { font-size: .98rem; font-weight: 900; color: #fff; }
+.sch-day-label small { font-size: .72rem; font-weight: 700; color: rgba(255, 255, 255, .75); }
+.sch-table th.lesson-th { width: 76px; min-width: 76px; padding: 4px 0; font-size: .74rem; font-weight: 800; }
 
-.sch-legend { flex-shrink: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 16px; padding: 0 16px 10px; font-size: .78rem; font-weight: 800; color: var(--muted); }
-.sch-legend span { display: inline-flex; align-items: center; gap: 6px; }
-.sch-legend i { width: 12px; height: 12px; border-radius: 4px; display: inline-block; }
-.sch-legend .taken { background: rgba(16, 185, 129, .25); border: 1px solid rgba(16, 185, 129, .55); }
-.sch-legend .missing { background: rgba(239, 68, 68, .2); border: 1px solid rgba(239, 68, 68, .5); }
-.sch-legend .future { background: #e8eef4; border: 1px solid rgba(4, 69, 99, .25); }
+.sch-table tbody td {
+  height: 62px; padding: 3px; text-align: center; vertical-align: middle; background: #fff;
+  border-bottom: 1px solid var(--tt-line); border-left: 1px solid var(--tt-line-soft);
+}
+.sch-table tbody td.alt { background: var(--tt-alt); }
+.sch-table tbody td.today { background: #f2faf5; }
+.sch-table tbody td.sticky { padding: 6px 8px; background: var(--tt-name); }
+.sch-table tbody td.sch-empty-row { height: auto; padding: 24px; color: var(--muted); font-weight: 800; }
+.sch-teacher-name { font-weight: 900; font-size: .86rem; color: var(--tt-ink); line-height: 1.35; text-align: center; overflow-wrap: anywhere; }
+.sch-teacher-name small { display: block; margin-top: 2px; font-size: .68rem; color: var(--tt-num); font-weight: 800; }
+
+.sch-cell {
+  position: relative; width: 100%; min-height: 54px; border-radius: 10px; padding: 5px 4px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  border: 1px solid transparent; background: transparent; color: var(--tt-ink); line-height: 1.15;
+  transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+}
+.sch-cell b { font-size: .86rem; font-weight: 900; unicode-bidi: isolate; }
+.sch-cell small {
+  max-width: 100%; font-size: .66rem; font-weight: 700; color: var(--tt-num); overflow: hidden;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
+.sch-cell.none { min-height: 0; }
+button.sch-cell { cursor: pointer; background: #fff; border-color: var(--tt-line-soft); box-shadow: 0 1px 2px rgba(15, 23, 42, .06); }
+button.sch-cell:hover { transform: translateY(-1px); border-color: var(--tt-day); box-shadow: 0 6px 14px rgba(15, 23, 42, .12); }
+button.sch-cell:focus-visible { outline: 3px solid #79b3c8; outline-offset: 1px; }
+button.sch-cell::after { content: ""; position: absolute; top: 5px; left: 5px; width: 7px; height: 7px; border-radius: 50%; }
+.sch-cell.taken::after { background: var(--success); }
+.sch-cell.missing { background: #fef6f6; border-color: rgba(220, 38, 38, .22); }
+.sch-cell.missing::after { background: var(--danger); }
+.sch-cell.future::after { background: #94a3b8; }
+.sch-table.week .sch-cell { min-height: 50px; padding: 4px 3px; }
+.sch-table.week .sch-cell b { font-size: .78rem; }
+
+/* جدول المدرسة: a full-width row naming each department; its label sticks
+   to the right edge while the table scrolls sideways. */
+.sch-table tbody tr.sch-dept-row td { height: auto; padding: 0; text-align: right; background: var(--tt-line-soft); border-left: 0; }
+.sch-dept-sep { position: sticky; right: 0; display: inline-flex; align-items: center; gap: 8px; padding: 7px 16px; font-weight: 900; font-size: .88rem; color: var(--tt-ink); }
+.sch-dept-sep::before { content: ""; width: 4px; height: 16px; border-radius: 2px; background: var(--tt-dark); }
+
 
 /* ---- Teacher week grid (جداول المعلمين) ---- */
 .sch-teacher-card { margin: 0 16px 20px; background: #fff; border: 1px solid var(--border); border-radius: 18px; box-shadow: var(--shadow-1); padding: 16px; overflow: auto; }
@@ -162,6 +201,12 @@ button.sch-cell:hover { transform: translateY(-1px); }
 .sch-wg-cell { border-top: 1px solid var(--border); border-right: 1px solid var(--border); padding: 8px 4px; min-height: 58px; display: grid; place-items: center; align-content: center; gap: 3px; text-align: center; font-weight: 800; color: rgba(100, 116, 139, .5); }
 .sch-wg-cell.on { background: #e3edf5; color: var(--primary); font-weight: 900; }
 .sch-wg-cell.covered { background: repeating-linear-gradient(135deg, rgba(4, 69, 99, .05) 0 6px, transparent 6px 12px), #eef3f7; opacity: .7; }
+/* جداول الصفوف: each lesson is a button (subject, then the teacher). */
+button.sch-wg-cell { border: 0; border-top: 1px solid var(--border); border-right: 1px solid var(--border); font: inherit; font-weight: 900; cursor: pointer; }
+button.sch-wg-cell:hover { background: #d6e5f1; }
+button.sch-wg-cell:focus-visible { outline: 3px solid #79b3c8; outline-offset: -3px; }
+.sch-wg-cell small { display: block; font-size: .72rem; font-weight: 800; color: var(--muted); }
+.sch-wg-day .sch-tag { margin: 4px auto 0; width: max-content; }
 .sch-tag { display: block; padding: 1px 8px; border-radius: 999px; font-size: .66rem; font-weight: 800; white-space: nowrap; background: #fff4e5; color: #9a5b00; border: 1px solid rgba(214, 138, 0, .28); }
 .sch-tag.covering { background: #e8f5ee; color: #166534; border-color: rgba(22, 101, 52, .25); }
 
@@ -213,5 +258,8 @@ button.sch-cell:hover { transform: translateY(-1px); }
   .sch-table th.sticky, .sch-table td.sticky { width: 112px; min-width: 112px; }
   table.sch-table.day { min-width: 700px; }
   .sch-table th.lesson-th { width: 64px; min-width: 64px; font-size: .72rem; }
+  .sch-tt-caption { padding: 8px 12px; }
+  .sch-tt-caption b { font-size: 1rem; }
+  .sch-teacher-name { font-size: .8rem; }
   .sch-teacher-card { margin: 0 10px 16px; padding: 12px; }
 }
