@@ -1339,7 +1339,24 @@
     .sidebar-link[hidden]{ display:none; }
     .sidebar-link.is-current{ background:rgba(3,60,84,.08); border-color:rgba(3,60,84,.18); color:var(--primary); box-shadow:inset -4px 0 0 var(--primary); }
     .sidebar-link.is-current i{ background:linear-gradient(145deg, var(--primary-light), var(--primary)); color:#fff; }
-    #sidebarLogout{ justify-content:center; text-align:center; }
+    .sidebar-logout{ justify-content:center; text-align:center; }
+    .sidebar-nav[hidden]{ display:none; }
+    .sidebar-user-role:empty{ display:none; }
+
+    /* Teacher version — Teachers/user.html's (teachers/user.css) slightly
+       darker palette. The rules above read these same variables. */
+    .sidebar.is-teacher{ --primary:#022b42; --primary-light:#044563; --muted:#64748b; --border:#e2e8f0; }
+    .sidebar.is-teacher .sidebar-user-avatar{ font-size:1rem; }
+    .sidebar-classes{ display:flex; flex-direction:column; gap:6px; padding:2px 2px 4px; }
+    .sidebar-class-btn{
+      display:flex; align-items:center; justify-content:center; gap:8px;
+      width:100%; min-height:46px; padding:10px 14px;
+      border-radius:12px; border:none; cursor:pointer;
+      background:linear-gradient(145deg, var(--primary-light), var(--primary));
+      color:#fff; font-weight:900; font-size:.92rem;
+      box-shadow:0 10px 22px rgba(2,43,66,.24); transition:var(--transition);
+    }
+    .sidebar-class-btn:hover{ transform:translateY(-2px); box-shadow:0 14px 28px rgba(2,43,66,.3); }
     /* The page-wide `* { font-family: Tajawal !important }` would otherwise
        swap Font Awesome's glyph font out and show empty boxes. */
     .sidebar .fas, .sidebar .fa-solid{ font-family:"Font Awesome 6 Free" !important; font-weight:900; }
@@ -1532,15 +1549,16 @@
       </div>
     </div>
 
-    <nav class="sidebar-nav">
+    <!-- Admins: admins/adminpage.html's sidebar. -->
+    <nav id="sidebarNavAdmin" class="sidebar-nav" hidden>
       <div class="sidebar-group">
-        <button class="sidebar-link" type="button" data-href="/admins/adminpage.html" id="sidebarHome">
+        <button class="sidebar-link" type="button" data-href="/admins/adminpage.html">
           <i class="fas fa-house" aria-hidden="true"></i>
           <span>الرئيسية</span>
         </button>
       </div>
 
-      <div class="sidebar-group" data-admin-only>
+      <div class="sidebar-group">
         <div class="sidebar-section-label">الغياب</div>
         <button class="sidebar-link" type="button" data-href="/admins/adminpage.html#today-absence">
           <i class="fas fa-calendar-day" aria-hidden="true"></i>
@@ -1560,7 +1578,7 @@
         </button>
       </div>
 
-      <div class="sidebar-group" data-admin-only>
+      <div class="sidebar-group">
         <div class="sidebar-section-label">الإجراءات السريعة</div>
         <button class="sidebar-link" type="button" data-href="/admins/teachers.html">
           <i class="fas fa-chalkboard-user" aria-hidden="true"></i>
@@ -1578,15 +1596,15 @@
 
       <div class="sidebar-group">
         <div class="sidebar-section-label">الجداول</div>
-        <button class="sidebar-link" type="button" data-href="/admins/adminpage.html#dept-schedules" data-admin-only>
+        <button class="sidebar-link" type="button" data-href="/admins/adminpage.html#dept-schedules">
           <i class="fas fa-users-rectangle" aria-hidden="true"></i>
           <span>جداول الأقسام</span>
         </button>
-        <button class="sidebar-link" type="button" data-href="/admins/adminpage.html#teacher-schedules" data-admin-only>
+        <button class="sidebar-link" type="button" data-href="/admins/adminpage.html#teacher-schedules">
           <i class="fas fa-chalkboard-user" aria-hidden="true"></i>
           <span>جداول المعلمين</span>
         </button>
-        <button class="sidebar-link" type="button" data-href="/no-longer-in-use/Teachers/schoolschedule.html" data-admin-only>
+        <button class="sidebar-link" type="button" data-href="/no-longer-in-use/Teachers/schoolschedule.html">
           <i class="fas fa-table-cells" aria-hidden="true"></i>
           <span>جدول المدرسة</span>
         </button>
@@ -1597,7 +1615,111 @@
       </div>
 
       <div class="sidebar-group sidebar-group-bottom">
-        <button id="sidebarLogout" class="sidebar-link" type="button">
+        <button class="sidebar-link sidebar-logout" type="button">
+          <i class="fas fa-right-from-bracket" aria-hidden="true"></i>
+          <span>تسجيل الخروج</span>
+        </button>
+      </div>
+    </nav>
+
+    <!-- Teachers granted تعديل جدول الإدارة: Teachers/user.html's own
+         sidebar, so it's the same one they see everywhere else. Its links
+         open that page at the matching section (#week, #schoolschedule, …),
+         which it opens on load — see openSectionFromHash() there. Groups and
+         links marked data-show appear only for teachers who have that
+         permission, the same rules Teachers/user.html uses. -->
+    <nav id="sidebarNavTeacher" class="sidebar-nav" hidden>
+      <div class="sidebar-group" data-show="classes" hidden>
+        <div class="sidebar-section-label">فصولي</div>
+        <div id="sidebarTeacherClasses" class="sidebar-classes"></div>
+      </div>
+
+      <div class="sidebar-group" data-show="head" hidden>
+        <div class="sidebar-section-label">القسم</div>
+        <button class="sidebar-link" type="button" data-href="/Teachers/user.html#dept-notifications" data-show="deptNotifs" hidden>
+          <i class="fas fa-bell" aria-hidden="true"></i>
+          <span>إشعارات القسم</span>
+        </button>
+        <button class="sidebar-link" type="button" data-href="/dephead/department.html">
+          <i class="fas fa-users-gear" aria-hidden="true"></i>
+          <span>قسمي</span>
+        </button>
+      </div>
+
+      <div class="sidebar-group">
+        <div class="sidebar-section-label">الصفوف</div>
+        <button class="sidebar-link" type="button" data-href="/Teachers/user.html#other-classes">
+          <i class="fas fa-users-rectangle" aria-hidden="true"></i>
+          <span>صفوف أخرى</span>
+        </button>
+      </div>
+
+      <div class="sidebar-group">
+        <div class="sidebar-section-label">الجداول</div>
+        <button class="sidebar-link" type="button" data-href="/Teachers/user.html">
+          <i class="fas fa-calendar-day" aria-hidden="true"></i>
+          <span>جدولي</span>
+        </button>
+        <button class="sidebar-link" type="button" data-href="/Teachers/user.html#week">
+          <i class="fas fa-calendar-week" aria-hidden="true"></i>
+          <span>جدولي الأسبوعي</span>
+        </button>
+        <button class="sidebar-link" type="button" data-href="/Teachers/user.html#dptschedual" data-show="department" hidden>
+          <i class="fas fa-users-rectangle" aria-hidden="true"></i>
+          <span>جدول القسم</span>
+        </button>
+        <button class="sidebar-link" type="button" data-href="/Teachers/user.html#schoolschedule">
+          <i class="fas fa-table-cells" aria-hidden="true"></i>
+          <span>جدول المدرسة</span>
+        </button>
+        <button class="sidebar-link" type="button" data-href="/Teachers/user.html#class-schedules">
+          <i class="fas fa-chalkboard" aria-hidden="true"></i>
+          <span>جداول الصفوف</span>
+        </button>
+        <button class="sidebar-link" type="button" data-href="/Teachers/user.html#teacherschedules">
+          <i class="fas fa-chalkboard-user" aria-hidden="true"></i>
+          <span>جداول المعلمين</span>
+        </button>
+      </div>
+
+      <div class="sidebar-group">
+        <div class="sidebar-section-label">صلاحيات إضافية</div>
+        <button class="sidebar-link" type="button" data-href="/Teachers/user.html#supervisorstudents" data-show="supervisorStudents" hidden>
+          <i class="fas fa-user-graduate" aria-hidden="true"></i>
+          <span>الطلاب</span>
+        </button>
+        <button class="sidebar-link" type="button" data-href="/teachers/morning.html" data-show="morningLate" hidden>
+          <i class="fas fa-clock" aria-hidden="true"></i>
+          <span>تسجيل تأخير الصباح</span>
+        </button>
+        <button class="sidebar-link is-current" type="button" aria-current="page">
+          <i class="fas fa-table-cells" aria-hidden="true"></i>
+          <span>تعديل جدول الإدارة</span>
+        </button>
+      </div>
+
+      <div class="sidebar-group" data-show="manageAttendance" hidden>
+        <div class="sidebar-section-label">الغياب</div>
+        <button class="sidebar-link" type="button" data-href="/Teachers/user.html#today-absence">
+          <i class="fas fa-calendar-day" aria-hidden="true"></i>
+          <span>غياب اليوم</span>
+        </button>
+        <button class="sidebar-link" type="button" data-href="/Teachers/user.html#overall-absence">
+          <i class="fas fa-list-check" aria-hidden="true"></i>
+          <span>الغياب المختصر</span>
+        </button>
+        <button class="sidebar-link" type="button" data-href="/Teachers/user.html#detailed-absence">
+          <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
+          <span>تدقيق في الغائب</span>
+        </button>
+        <button class="sidebar-link" type="button" data-href="/teachers/morning.html">
+          <i class="fas fa-clock" aria-hidden="true"></i>
+          <span>تسجيل التأخير الصباحي</span>
+        </button>
+      </div>
+
+      <div class="sidebar-group sidebar-group-bottom">
+        <button class="sidebar-link sidebar-logout" type="button">
           <i class="fas fa-right-from-bracket" aria-hidden="true"></i>
           <span>تسجيل الخروج</span>
         </button>
@@ -1969,7 +2091,8 @@
     import { getAuth, onAuthStateChanged, setPersistence, browserLocalPersistence, signOut } from "/shared/firebase.js";
     import { showActionPopup } from "/shared/action-popup.js";
     import { fetchClassList, groupByGrade, primeClassList } from "/shared/class-registry.js";
-    import { SUBJECT_LIST, getDisplaySubjectForClass, getDisplaySubjectForTeacherClass } from "/shared/departments.js";
+    import { SUBJECT_LIST, getDisplaySubjectForClass, getDisplaySubjectForTeacherClass, resolveDepartmentName } from "/shared/departments.js";
+    import { isTruthyFlag, canManageAttendance } from "/shared/auth-guard.js";
     import {
       initializeFirestore,
       persistentSingleTabManager,
@@ -2281,8 +2404,8 @@
         leavePageTo(link.dataset.href);
       });
     });
-    sidebar.querySelector('.sidebar-link.is-current').addEventListener('click', closeSidebar);
-    document.getElementById('sidebarLogout').addEventListener('click', async () => {
+    sidebar.querySelectorAll('.sidebar-link.is-current').forEach(el => el.addEventListener('click', closeSidebar));
+    sidebar.querySelectorAll('.sidebar-logout').forEach(el => el.addEventListener('click', async () => {
       closeSidebar();
       const isConfirmed = await showActionPopup({
         title: 'تسجيل الخروج',
@@ -2297,30 +2420,73 @@
       dirty = false; // already confirmed — skip the browser's own leave prompt
       await signOut(auth);
       location.href = '/index.html';
-    });
+    }));
 
-    // Name + photo as on the admin page (its photo lives in this origin's
-    // localStorage under the same key). A teacher who was only granted
-    // schedule editing gets the schedule links and their own home page,
-    // not the admin-only ones they can't open.
+    // Admins get admins/adminpage.html's sidebar; a teacher who was granted
+    // تعديل جدول الإدارة gets their own Teachers/user.html sidebar instead,
+    // with the same per-teacher sections that page shows them.
     function initSidebarUser(user, profileData, isAdminRole){
-      document.getElementById('sidebarUserName').textContent =
-        profileData.name || (user.email ? user.email.split('@')[0] : 'مشرف');
-      document.getElementById('sidebarUserRole').textContent = isAdminRole ? 'مشرف للنظام' : 'معلّم — صلاحية تعديل الجداول';
-      try{
-        const photo = localStorage.getItem(`localAvatarByUid:${user.uid}`);
-        if(photo){
-          const img = document.createElement('img');
-          img.src = photo;
-          img.alt = 'الصورة الشخصية';
-          document.getElementById('sidebarAvatar').replaceChildren(img);
-        }
-      }catch(_){}
-      document.getElementById('sidebarUser').hidden = false;
-      if(!isAdminRole){
-        sidebar.querySelectorAll('[data-admin-only]').forEach(el => { el.hidden = true; });
-        document.getElementById('sidebarHome').dataset.href = '/Teachers/user.html';
+      const nameEl = document.getElementById('sidebarUserName');
+      const roleEl = document.getElementById('sidebarUserRole');
+      const avatarEl = document.getElementById('sidebarAvatar');
+
+      if(isAdminRole){
+        // Name + photo as on the admin page (its photo lives in this
+        // origin's localStorage under the same key).
+        nameEl.textContent = profileData.name || (user.email ? user.email.split('@')[0] : 'مشرف');
+        roleEl.textContent = 'مشرف للنظام';
+        try{
+          const photo = localStorage.getItem(`localAvatarByUid:${user.uid}`);
+          if(photo){
+            const img = document.createElement('img');
+            img.src = photo;
+            img.alt = 'الصورة الشخصية';
+            avatarEl.replaceChildren(img);
+          }
+        }catch(_){}
+        document.getElementById('sidebarNavAdmin').hidden = false;
+      } else {
+        // Mirrors Teachers/user.html's updateSidebarUser() and the
+        // permission checks in its onAuthStateChanged.
+        const name = (profileData.name || profileData.teacherName || profileData.fullName || user.displayName || user.email || '').toString().trim();
+        const department = resolveDepartmentName(profileData.department || profileData.dept || profileData.subject || '');
+        nameEl.textContent = name;
+        roleEl.textContent = resolveDepartmentName(profileData.department || profileData.subject || '');
+        avatarEl.textContent = name ? name[0] : '';
+        sidebar.classList.add('is-teacher');
+
+        const perms = (profileData.permissions && typeof profileData.permissions === 'object') ? profileData.permissions : {};
+        const allowManageAttendance = canManageAttendance(profileData);
+        const classes = Array.isArray(profileData.classes) ? [...new Set(profileData.classes.filter(Boolean))] : [];
+        const isHead = (profileData.role || '').toString().toLowerCase() === 'head';
+        const show = {
+          classes: classes.length > 0,
+          head: isHead,
+          deptNotifs: isHead && !!department,
+          department: !!department,
+          supervisorStudents: isTruthyFlag(profileData.isSupervisor) || isTruthyFlag(perms.allowSupervisorStudents),
+          // The الغياب group has its own تسجيل التأخير الصباحي.
+          morningLate: isTruthyFlag(perms.allowMorningLate) && !allowManageAttendance,
+          manageAttendance: allowManageAttendance,
+        };
+        const nav = document.getElementById('sidebarNavTeacher');
+        nav.querySelectorAll('[data-show]').forEach(el => { el.hidden = !show[el.dataset.show]; });
+
+        const classHost = document.getElementById('sidebarTeacherClasses');
+        classes.sort((a, b) => a.localeCompare(b, 'ar-KW', { sensitivity: 'base', numeric: true })).forEach(cls => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'sidebar-class-btn';
+          btn.textContent = cls.replace(/\d/g, d => '٠١٢٣٤٥٦٧٨٩'[d]); // as Teachers/user.html shows them
+          btn.addEventListener('click', () => {
+            closeSidebar();
+            leavePageTo(`/Teachers/user.html#class=${encodeURIComponent(cls)}`);
+          });
+          classHost.appendChild(btn);
+        });
+        nav.hidden = false;
       }
+      document.getElementById('sidebarUser').hidden = !nameEl.textContent;
     }
 
     /* ===== Warn on browser back / close ===== */

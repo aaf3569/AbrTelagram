@@ -6885,6 +6885,39 @@
       await loadTodayForTeacher(currentUser.uid);
     }
 
+    // Opens one of this page's sections when it's reached through a link
+    // that names it — e.g. /Teachers/user.html#schoolschedule from the
+    // sidebar on admins/adminschedule.html, which a teacher with
+    // تعديل جدول الإدارة also uses. Runs once the profile is loaded, so the
+    // same per-teacher gates as the sidebar's own buttons apply (a section
+    // this teacher doesn't have just isn't opened). The hash is dropped
+    // first: each sheet pushes its own history entry, so the back button
+    // then closes the sheet instead of leaving the page.
+    function openSectionFromHash(){
+      const hash = location.hash;
+      if (!hash || hash === '#') return;
+      try { history.replaceState(null, '', location.pathname + location.search); } catch {}
+      if (hash.startsWith('#class=')) {
+        const cls = decodeURIComponent(hash.slice('#class='.length));
+        if (cls && (currentTeacherProfile?.classes || []).includes(cls)) mcOpenClassView(cls, { showNotes: true });
+        return;
+      }
+      const sections = {
+        '#week': () => btnWeek.click(),
+        '#other-classes': openOtherClasses,
+        '#dept-notifications': () => { if (!sidebarDeptNotifs.hidden) openDeptNotifs(); },
+        '#dptschedual': openDeptSchedSheet,
+        '#schoolschedule': openSchoolSchedSheet,
+        '#class-schedules': openMore,
+        '#teacherschedules': openTeacherSchedulesSheet,
+        '#supervisorstudents': openSupervisorStudentsSheet,
+        '#today-absence': () => openManageAttendanceSheet('today'),
+        '#overall-absence': () => openManageAttendanceSheet('overall'),
+        '#detailed-absence': () => openManageAttendanceSheet('detailed'),
+      };
+      sections[hash]?.();
+    }
+
     /* ========= صفوف أخرى (any class, by grade) ========= */
     const ocSheet = document.getElementById('ocSheet');
     const ocClose = document.getElementById('ocClose');
@@ -7323,6 +7356,8 @@
         profilePromise,
         loadTodayForTeacher(user.uid)
       ]);
+
+      openSectionFromHash();
 
       // "مهم: save attendance after editing" first, then the tour — never
       // both on screen at once.
