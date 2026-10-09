@@ -23,11 +23,11 @@
 <link rel="modulepreload" href="/shared/telegram-settings.js">
 <!-- The غياب اليوم sheet is import()ed on first open; this fetches and parses
      it during page load (without running it) so that first open is quick. -->
-<link rel="modulepreload" href="/admins/newabsence.js">
+<link rel="modulepreload" href="/admins/js/newabsence.js">
 <!-- Same for the تدقيق في الغائب and الغياب المختصر sheets. -->
-<link rel="modulepreload" href="/admins/absence.js">
-<link rel="modulepreload" href="/admins/overallabsence.js">
-<link rel="modulepreload" href="/admins/schedules.js">
+<link rel="modulepreload" href="/admins/js/absence.js">
+<link rel="modulepreload" href="/admins/js/overallabsence.js">
+<link rel="modulepreload" href="/admins/js/schedules.js">
   <title>لوحة الإدارة - ثانوية أحمد البشر الرومي</title>
 
   <!-- Tajawal -->
@@ -226,16 +226,16 @@
     .sheet{ position:fixed; inset:0; z-index:50; background:var(--page); display:flex; flex-direction:column; transform: translateX(100%); transition: transform .28s cubic-bezier(.22,.7,.25,1); }
     .sheet.open{ transform: translateX(0) }
 
-    /* غياب اليوم sheet (/admins/newabsence.js renders into a shadow root on
+    /* غياب اليوم sheet (/admins/js/newabsence.js renders into a shadow root on
        #todayAbsenceHost). No `display` here on purpose: a host's own :host
        rule loses to any outside rule for the same property, and the sheet
        needs its :host{display:flex} to lay its header and table out. */
     #todayAbsenceHost{ flex:1 1 auto; min-height:0; }
-    /* Same for تدقيق في الغائب (/admins/absence.js, #detailedAbsenceHost). */
+    /* Same for تدقيق في الغائب (/admins/js/absence.js, #detailedAbsenceHost). */
     #detailedAbsenceHost{ flex:1 1 auto; min-height:0; }
-    /* And الغياب المختصر (/admins/overallabsence.js, #overallAbsenceHost). */
+    /* And الغياب المختصر (/admins/js/overallabsence.js, #overallAbsenceHost). */
     #overallAbsenceHost{ flex:1 1 auto; min-height:0; }
-    /* And the الجداول sheets (/admins/schedules.js). */
+    /* And the الجداول sheets (/admins/js/schedules.js). */
     #deptSchedulesHost, #teacherSchedulesHost,
     #schoolScheduleHost, #classSchedulesHost{ flex:1 1 auto; min-height:0; }
 
@@ -1128,7 +1128,7 @@
 
       <section id="stateAdmin" class="state" aria-label="لوحة الإدارة">
         <!-- Today at a glance. The numbers come from the غياب اليوم sheet
-             (/admins/newabsence.js), which is preloaded in the background
+             (/admins/js/newabsence.js), which is preloaded in the background
              anyway, so this costs no reads of its own. Tapping anywhere on
              it opens that sheet. -->
         <button id="todayCard" class="today-card is-loading" type="button" aria-label="غياب اليوم — عرض التفاصيل">
@@ -1639,14 +1639,14 @@
   </section>
 
   <!-- غياب اليوم — what used to be admins/newabsence.html, now a sheet on
-       this page. /admins/newabsence.js renders it (header, date picker,
+       this page. /admins/js/newabsence.js renders it (header, date picker,
        table and all) into #todayAbsenceHost the first time it's opened. -->
   <section id="todayAbsenceSheet" class="sheet" aria-hidden="true">
     <div id="todayAbsenceHost"></div>
   </section>
 
   <!-- تدقيق في الغائب — what used to be admins/absence.html, now a sheet on
-       this page. /admins/absence.js renders it (header, stats, class lists,
+       this page. /admins/js/absence.js renders it (header, stats, class lists,
        records and PDF export) into #detailedAbsenceHost the first time it's
        opened. -->
   <section id="detailedAbsenceSheet" class="sheet" aria-hidden="true">
@@ -1654,7 +1654,7 @@
   </section>
 
   <!-- الغياب المختصر — what used to be admins/overallabsence.html, now a
-       sheet on this page. /admins/overallabsence.js renders it (header, date
+       sheet on this page. /admins/js/overallabsence.js renders it (header, date
        picker, class-by-lesson table and all) into #overallAbsenceHost the
        first time it's opened. -->
   <section id="overallAbsenceSheet" class="sheet" aria-hidden="true">
@@ -1662,7 +1662,7 @@
   </section>
 
   <!-- جداول الأقسام / جداول المعلمين / جدول المدرسة / جداول الصفوف —
-       /admins/schedules.js renders each into its host the first time it's
+       /admins/js/schedules.js renders each into its host the first time it's
        opened (sidebar → الجداول, or the الجداول tile's popup). -->
   <section id="deptSchedulesSheet" class="sheet" aria-hidden="true">
     <div id="deptSchedulesHost"></div>
@@ -2486,7 +2486,7 @@
     // slide it back in.
     function mountTodayAbsence(){
       if(!todayAbsenceMount){
-        todayAbsenceMount = import('/admins/newabsence.js')
+        todayAbsenceMount = import('/admins/js/newabsence.js')
           .then(({ mountTodayAbsenceSheet }) => mountTodayAbsenceSheet(todayAbsenceHost, {
             close: () => closeTodayAbsenceSheet(),
             onTodayStats: renderTodayStats,
@@ -2567,7 +2567,7 @@
     // grade/class/filters were picked), and later opens just slide it back in.
     function mountDetailedAbsence(){
       if(!detailedAbsenceMount){
-        detailedAbsenceMount = import('/admins/absence.js')
+        detailedAbsenceMount = import('/admins/js/absence.js')
           .then(({ mountDetailedAbsenceSheet }) => mountDetailedAbsenceSheet(detailedAbsenceHost, {
             close: () => closeDetailedAbsenceSheet(),
             openSidebar: () => window.adminSidebar?.open(),
@@ -2626,7 +2626,7 @@
     // back in.
     function mountOverallAbsence(){
       if(!overallAbsenceMount){
-        overallAbsenceMount = import('/admins/overallabsence.js')
+        overallAbsenceMount = import('/admins/js/overallabsence.js')
           .then(({ mountOverallAbsenceSheet }) => mountOverallAbsenceSheet(overallAbsenceHost, {
             close: () => closeOverallAbsenceSheet(),
             openSidebar: () => window.adminSidebar?.open(),
@@ -2682,12 +2682,12 @@
 
     /* ========= جداول الأقسام / جداول المعلمين sheets ========= */
     // Sidebar → الجداول. Same #hash / mount-once pattern as the absence
-    // sheets above; /admins/schedules.js builds both.
+    // sheets above; /admins/js/schedules.js builds both.
     function makeScheduleSheet({ key, hash, sheetId, hostId, sidebarId, exportName, title }){
       const entry = { key, hash, sheet: document.getElementById(sheetId), host: document.getElementById(hostId), mount: null, api: null };
       entry.mountOnce = () => {
         if(!entry.mount){
-          entry.mount = import('/admins/schedules.js')
+          entry.mount = import('/admins/js/schedules.js')
             .then((m) => m[exportName](entry.host, {
               close: () => entry.close(),
               openSidebar: () => window.adminSidebar?.open(),

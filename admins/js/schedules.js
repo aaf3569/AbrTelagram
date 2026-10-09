@@ -27,7 +27,7 @@ import { teacherScheduleUids } from "/shared/schedule-teacher-identity.js";
 import { classKeyFromRow, normalizeClassKey, getOverriddenClassKeys } from "/shared/schedule-priority.js";
 import { sortClassList } from "/shared/class-registry.js";
 
-const CSS_URL = new URL("./schedules.css", import.meta.url).href;
+const CSS_URL = new URL("../css/schedules.css", import.meta.url).href;
 const DAYS_AR = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس"];
 const ORDINALS = ["الأولى", "الثانية", "الثالثة", "الرابعة", "الخامسة", "السادسة", "السابعة"];
 const LESSONS = 7;

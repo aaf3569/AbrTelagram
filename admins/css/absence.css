@@ -1,4 +1,4 @@
-/* تدقيق في الغائب — styles for the sheet mounted by /admins/absence.js.
+/* تدقيق في الغائب — styles for the sheet mounted by /admins/js/absence.js.
 
    This used to be the <style> block of admins/absence.html. It now lives
    inside that sheet's shadow root (same setup as newabsence.css), which

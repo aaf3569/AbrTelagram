@@ -1,9 +1,9 @@
 // تدقيق في الغائب — the sheet adminpage.html opens from "تدقيق في الغائب" (in
 // the الغياب popup) and from the sidebar's "تدقيق في الغائب". This used to be
 // the standalone page admins/absence.html; its markup, styles
-// (/admins/absence.css) and logic are unchanged apart from what living
+// (/admins/css/absence.css) and logic are unchanged apart from what living
 // inside another page requires, each noted where it happens. Built the same
-// way as the غياب اليوم sheet (/admins/newabsence.js).
+// way as the غياب اليوم sheet (/admins/js/newabsence.js).
 //
 // It renders into a shadow root on the host element it's given, so its ids
 // and classes can't collide with adminpage.html's own. That's also why its
@@ -18,7 +18,7 @@ import { kuwaitTodayISO } from "/shared/kuwait-time.js";
 import { fetchClassList, groupByGrade, sortClassList } from "/shared/class-registry.js";
 import { canManageAttendance } from "/shared/auth-guard.js";
 
-const CSS_URL = new URL("./absence.css", import.meta.url).href;
+const CSS_URL = new URL("../css/absence.css", import.meta.url).href;
 
 const MARKUP = `
   <header class="site-header">

@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 // The تدقيق في الغائب sheet — was admins/absence.html's module script.
-const script = fs.readFileSync(require('node:path').join(__dirname, '../admins/absence.js'), 'utf8');
+const script = fs.readFileSync(require('node:path').join(__dirname, '../admins/js/absence.js'), 'utf8');
 function section(start, end) { return script.slice(script.indexOf(start), script.indexOf(end, script.indexOf(start))); }
 
 test('absence sheet module parses', () => { new vm.SourceTextModule(script); });

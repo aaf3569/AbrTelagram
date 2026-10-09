@@ -197,7 +197,7 @@
     </div>
   </main>
 
-  <!-- الغياب sheets (إدارة الغياب). /admins/newabsence.js, overallabsence.js
+  <!-- الغياب sheets (إدارة الغياب). /admins/js/newabsence.js, overallabsence.js
        and absence.js render into these hosts (each in its own shadow root)
        the first time they're opened — the very same sheets adminpage.html
        uses. -->
@@ -5812,17 +5812,17 @@
       today: {
         el: document.getElementById('maTodaySheet'), host: document.getElementById('maTodayHost'),
         link: document.getElementById('sidebarMaToday'), hash: '#today-absence', title: 'غياب اليوم',
-        load: () => import('/admins/newabsence.js').then((m) => m.mountTodayAbsenceSheet),
+        load: () => import('/admins/js/newabsence.js').then((m) => m.mountTodayAbsenceSheet),
       },
       overall: {
         el: document.getElementById('maOverallSheet'), host: document.getElementById('maOverallHost'),
         link: document.getElementById('sidebarMaOverall'), hash: '#overall-absence', title: 'الغياب المختصر',
-        load: () => import('/admins/overallabsence.js').then((m) => m.mountOverallAbsenceSheet),
+        load: () => import('/admins/js/overallabsence.js').then((m) => m.mountOverallAbsenceSheet),
       },
       detailed: {
         el: document.getElementById('maDetailedSheet'), host: document.getElementById('maDetailedHost'),
         link: document.getElementById('sidebarMaDetailed'), hash: '#detailed-absence', title: 'تدقيق الغياب',
-        load: () => import('/admins/absence.js').then((m) => m.mountDetailedAbsenceSheet),
+        load: () => import('/admins/js/absence.js').then((m) => m.mountDetailedAbsenceSheet),
       },
     };
 

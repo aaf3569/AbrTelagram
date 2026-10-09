@@ -1,9 +1,9 @@
 // الغياب المختصر — the sheet adminpage.html opens from "الغياب المختصر" (in
 // the الغياب popup and in the sidebar). This used to be the standalone page
-// admins/overallabsence.html; its markup, styles (/admins/overallabsence.css)
+// admins/overallabsence.html; its markup, styles (/admins/css/overallabsence.css)
 // and logic are unchanged apart from what living inside another page
 // requires, each noted where it happens. Built the same way as the
-// غياب اليوم sheet (/admins/newabsence.js), which started life as a copy of
+// غياب اليوم sheet (/admins/js/newabsence.js), which started life as a copy of
 // this page and still shares most of its code.
 //
 // It renders into a shadow root on the host element it's given, so its ids
@@ -19,7 +19,7 @@ import { kuwaitTodayISO, getCurrentKuwaitMinutes } from "/shared/kuwait-time.js"
 import { fetchClassList, sortClassList } from "/shared/class-registry.js";
 import { canManageAttendance } from "/shared/auth-guard.js";
 
-const CSS_URL = new URL("./overallabsence.css", import.meta.url).href;
+const CSS_URL = new URL("../css/overallabsence.css", import.meta.url).href;
 const FONT_AWESOME_URL = "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css";
 
 const MARKUP = `

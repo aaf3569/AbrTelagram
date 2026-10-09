@@ -1,4 +1,4 @@
-/* الجداول — styles for the schedule sheets mounted by /admins/schedules.js
+/* الجداول — styles for the schedule sheets mounted by /admins/js/schedules.js
    into shadow roots on adminpage.html (so nothing here can collide with the
    page's own classes, and nothing outside reaches in). */
 :host {
