@@ -1440,9 +1440,9 @@
     </div>
   </div>
 
-  <!-- استيراد الجدول من CSV — matches each row's (الصف، المادة) against
-       this school's own teachers/{uid}.classes + .subject to find who
-       teaches it, rather than requiring the CSV to name a teacher at all.
+  <!-- استيراد الجدول من CSV — matches each row to its teacher by the
+       row's "User ID" column, or, for rows without one, by (الصف، المادة)
+       against this school's own teachers/{uid}.classes + .subject.
        Never writes anything until the admin has seen the full preview and
        pressed "تأكيد الاستيراد" — see openCsvImportModal() below. -->
   <div id="csvImportModal" class="modal" aria-hidden="true">
@@ -3820,13 +3820,15 @@
     settingsModalXBtn.addEventListener('click', closeSettingsModal);
 
     /* ======= استيراد الجدول من CSV =======
-       Matches each row by (الصف، المادة) against this school's own
+       A row carrying a "User ID" column resolves straight to the teacher
+       with that UID (teachers/{uid} document ID). Rows without one fall
+       back to matching (الصف، المادة) against this school's own
        teachers/{uid}.classes + .subject — never by name or civil ID, since
-       the CSV's source system (the scheduling Google Sheet) and this site
-       agree on subjects and classes but not on identity fields. A row
-       resolves only when exactly one teacher in our own records has that
-       exact subject and teaches that exact class; 0 or 2+ matches go into
-       the preview for a human to see rather than being guessed at.
+       the scheduling sheet and this site don't agree on those. That
+       fallback resolves only when exactly one teacher has that exact
+       subject and teaches that exact class; 0 or 2+ matches (or a UID
+       that isn't one of our teachers) go into the preview for a human to
+       see rather than being guessed at.
 
        Nothing is written until the admin presses "تأكيد الاستيراد" after
        reviewing the full preview, and only rows explicitly present in the
@@ -3962,6 +3964,11 @@
     }
 
     // ---------- Row matching ----------
+    // The teacher's UID column, under whichever header the file uses.
+    function csvRowUid(raw){
+      return (raw['User ID'] || raw['UID'] || raw['uid'] || raw['teacherUid'] || '').toString().trim();
+    }
+
     async function matchCsvRow(raw){
       const kindRaw = (raw['النوع'] || '').toString().trim();
       if(kindRaw && kindRaw !== 'LESSON'){
@@ -3995,6 +4002,35 @@
       );
 
       const base = { ...raw, siteClassKey, dayIndex, lesson, subject };
+
+      // A row that carries the teacher's User ID (the scheduling sheet's
+      // newer export format) names its teacher outright, so that wins over
+      // the class/subject guess below — even when the teacher's profile
+      // doesn't list this class or subject yet. An ID that isn't one of
+      // this school's teachers is never guessed past: the row asks the
+      // admin to pick, offering the class/subject matches (or, failing
+      // those, everyone with the subject).
+      const csvUid = csvRowUid(raw);
+      if(csvUid){
+        const byUid = teachers.find(t => t.uid === csvUid);
+        if(byUid){
+          return { ...base, status: 'resolved', byUid: true, teacherUid: byUid.uid, teacherName: byUid.name };
+        }
+        const fallback = candidates.length ? candidates
+          : teachers.filter(t => t.subject === subject || t.subject2 === subject)
+              .sort((a, b) => a.name.localeCompare(b.name, 'ar'));
+        if(!fallback.length){
+          return { ...base, status: 'unmatched', reason: `المعرّف "${csvUid}" لا يطابق أيّ معلّم، ولا يوجد معلّم بمادّة "${subject}"` };
+        }
+        return {
+          ...base,
+          status: 'ambiguous',
+          uidMissing: true,
+          reason: `المعرّف "${csvUid}" لا يطابق أيّ معلّم — اختر المعلّم`,
+          candidates: fallback.map(t => ({ uid: t.uid, name: t.name })),
+        };
+      }
+
       if(candidates.length === 1){
         return { ...base, status: 'resolved', teacherUid: candidates[0].uid, teacherName: candidates[0].name };
       }
@@ -4004,10 +4040,11 @@
       return { ...base, status: 'ambiguous', candidates };
     }
 
-    // The CSV names no teacher — each row is matched through the teachers'
-    // own class lists — so a teacher whose profile lists two classes that
-    // have this subject in the same period gets both lessons, which no
-    // teacher can actually teach. Those rows become a choice instead: the
+    // A row without a User ID is matched through the teachers' own class
+    // lists, so a teacher whose profile lists two classes that have this
+    // subject in the same period gets both lessons, which no teacher can
+    // actually teach (a UID row can clash too, when the sheet itself
+    // double-books someone). Those rows become a choice instead: the
     // admin picks the real teacher for each, from everyone with that subject.
     function csvSlotKey(uid, row){ return `${uid}|${row.dayIndex}|${row.lesson}`; }
     function flagCsvTeacherClashes(rows){
@@ -4065,17 +4102,21 @@
 
       let statusCell, teacherCell;
       if(row.status === 'resolved'){
-        statusCell = '<span class="csv-chip ok">✅ تلقائي</span>';
+        statusCell = row.byUid
+          ? '<span class="csv-chip ok">✅ بالمعرّف</span>'
+          : '<span class="csv-chip ok">✅ تلقائي</span>';
         teacherCell = row.teacherName;
       } else if(row.status === 'ambiguous'){
         tr.classList.add('csv-row-ambiguous');
         statusCell = row.conflict
           ? '<span class="csv-chip err">⛔ تعارض</span>'
-          : '<span class="csv-chip warn">⚠️ أكثر من معلّم</span>';
+          : row.uidMissing
+            ? '<span class="csv-chip warn">⚠️ معرّف غير معروف</span>'
+            : '<span class="csv-chip warn">⚠️ أكثر من معلّم</span>';
         teacherCell = `<select class="csv-ambiguous-pick" data-index="${index}">
           <option value="">— اختر —</option>
           ${row.candidates.map(c => `<option value="${c.uid}">${c.name}</option>`).join('')}
-        </select>${row.conflict ? `<div class="csv-conflict-note">${row.reason}</div>` : ''}`;
+        </select>${(row.conflict || row.uidMissing) ? `<div class="csv-conflict-note">${row.reason}</div>` : ''}`;
       } else if(row.status === 'unmatched'){
         tr.classList.add('csv-row-error');
         statusCell = '<span class="csv-chip err">❌ غير متطابق</span>';
@@ -4161,7 +4202,13 @@
         if(r.status !== 'ambiguous') return;
         // A clash is about one period only, so its pick stays on its row.
         if(r.conflict || sourceRow.conflict) return;
-        if(r.siteClassKey !== sourceRow.siteClassKey || r.subject !== sourceRow.subject) return;
+        // An unknown User ID is one person across all their rows, whatever
+        // the class — so that pick follows the ID, not the (صف، مادة) pair.
+        if(!!r.uidMissing !== !!sourceRow.uidMissing) return;
+        if(sourceRow.uidMissing){
+          if(csvRowUid(r) !== csvRowUid(sourceRow)) return;
+          if(picked && !r.candidates.some(c => c.uid === picked.uid)) return;
+        } else if(r.siteClassKey !== sourceRow.siteClassKey || r.subject !== sourceRow.subject) return;
         r._picked = picked;
         const sel = csvPreviewBody.querySelector(`.csv-ambiguous-pick[data-index="${idx}"]`);
         if(sel) sel.value = picked ? picked.uid : '';
