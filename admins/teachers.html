@@ -360,6 +360,11 @@
         overflow-y:auto;
       }
       #stateTeachers.active{display:flex}
+      /* A fixed-height scrolling flex column shrinks its children to fit
+         once the department list is taller than the window — which
+         squashed الإدارة (a direct child) below the 46px every department
+         button keeps. Let the column scroll instead. */
+      #stateTeachers > *{flex-shrink:0}
 
       .sidebar-heading{font-size:.76rem;letter-spacing:.03em;color:#9aabc2}
 
