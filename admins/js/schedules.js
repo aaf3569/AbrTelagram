@@ -74,7 +74,23 @@ const ICON = {
   day: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18M9 15h6"/></svg>',
   week: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18M7 14h2M11 14h2M15 14h2M7 18h2M11 18h2"/></svg>',
   pick: '<svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+  close: '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>',
 };
+// "13:10" → "1:10", as the teachers' pages write lesson times.
+function to12(hhmm) {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(String(hhmm || ""));
+  if (!m) return hhmm || "";
+  return `${(Number(m[1]) % 12) || 12}:${m[2]}`;
+}
+// جدول المدرسة's popups, laid out like the teachers' lesson popover: the
+// title centred between an empty slot and a round close button.
+const ssPopHead = (title, sub) => `
+  <div class="ss-pop-head"><span></span>
+    <div class="ss-pop-title"><b>${escapeHtml(title)}</b>${sub ? `<span>${escapeHtml(sub)}</span>` : ""}</div>
+    <button class="ss-pop-close" type="button" aria-label="إغلاق">${ICON.close}</button>
+  </div>`;
+const ssInfo = (label, value) =>
+  `<div class="ss-info-cell"><div class="ss-info-cell-label">${escapeHtml(label)}</div><div class="ss-info-cell-value">${escapeHtml(value)}</div></div>`;
 
 /* ---------------- shared data (one copy per page) ---------------- */
 function dbFor() {
@@ -155,7 +171,7 @@ async function mountShell(host, title, hooks) {
   const backdrop = root.querySelector(".sch-backdrop");
   const modal = root.querySelector(".sch-modal");
   const modalApi = {
-    open(html) { modal.innerHTML = html; backdrop.classList.add("open"); modal.classList.add("open"); modal.querySelector(".sch-x")?.addEventListener("click", modalApi.close); },
+    open(html) { modal.innerHTML = html; backdrop.classList.add("open"); modal.classList.add("open"); modal.querySelector(".sch-x, .ss-pop-close")?.addEventListener("click", modalApi.close); },
     close() { backdrop.classList.remove("open"); modal.classList.remove("open"); modal.innerHTML = ""; },
     isOpen: () => modal.classList.contains("open"),
     el: modal,
@@ -164,7 +180,7 @@ async function mountShell(host, title, hooks) {
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && modalApi.isOpen() && host.getClientRects().length) modalApi.close();
   });
-  return { root, body, modal: modalApi };
+  return { root, body, backdrop, modal: modalApi };
 }
 
 /* =====================================================================
@@ -181,11 +197,29 @@ export function mountSchoolScheduleSheet(host, hooks = {}) {
 // instead of one department picked from the list.
 async function mountTimetableSheet(host, hooks, { school }) {
   const db = dbFor();
-  const { root, body, modal } = await mountShell(host, school ? "جدول المدرسة" : "جداول الأقسام", hooks);
+  const { root, body, backdrop, modal } = await mountShell(host, school ? "جدول المدرسة" : "جداول الأقسام", hooks);
   const what = school ? "جدول المدرسة" : "جدول القسم";
-  body.innerHTML = `
+  // جدول المدرسة is drawn like the teachers' own (Teachers/user.html
+  // #schoolschedule, styles in Teachers/user.css): a pill date button, a
+  // white header with each lesson's name and time, a coloured bar per
+  // department pinned under it, each lesson a pill with its class, and the
+  // same lesson popup. Its ss-* classes are that page's; the admin extras
+  // (week view, download, the attendance dot, تسجيل الغياب) sit on top.
+  const toolbar = school ? `
+    <div class="ss-toolbar">
+      <div class="ss-seg" role="tablist" aria-label="العرض">
+        <button type="button" data-view="day" class="active">اليوم</button>
+        <button type="button" data-view="week">الأسبوع</button>
+      </div>
+      <label class="ss-date-btn" id="dateBtn" title="اختيار التاريخ">
+        ${ICON.calendar}<span id="dateLabel">—</span>
+        <input type="date" id="dateInput" aria-label="اختيار التاريخ">
+      </label>
+      <div class="ss-date-btn ss-range" id="weekRange" hidden>${ICON.week}<span id="weekRangeText">—</span><small id="weekRangeSub"></small></div>
+      <button class="ss-round-btn" type="button" id="dlBtn" aria-label="تنزيل ${what}" title="تنزيل ${what}">${ICON.download}</button>
+    </div>` : `
     <div class="sch-toolbar">
-      ${school ? "" : '<div class="sch-select-wrap"><select class="sch-select" id="deptSel" aria-label="القسم"><option value="">اختر القسم...</option></select></div>'}
+      <div class="sch-select-wrap"><select class="sch-select" id="deptSel" aria-label="القسم"><option value="">اختر القسم...</option></select></div>
       <div class="sch-seg" role="tablist" aria-label="العرض">
         <button type="button" data-view="day" class="active">اليوم</button>
         <button type="button" data-view="week">الأسبوع</button>
@@ -196,11 +230,21 @@ async function mountTimetableSheet(host, hooks, { school }) {
       </label>
       <div class="sch-range" id="weekRange" hidden><b id="weekRangeText">—</b><small id="weekRangeSub"></small></div>
       <button class="sch-btn icon" type="button" id="dlBtn" aria-label="تنزيل ${what}" title="تنزيل ${what}">${ICON.download}</button>
-    </div>
+    </div>`;
+  const tableShell = school
+    ? '<div class="ss-table-shell"><div class="ss-table-scroll" id="scroll"><table class="ss-table" id="table" aria-label="جدول المدرسة"><thead id="thead"></thead><tbody id="tbody"></tbody></table></div></div>'
+    : '<div class="sch-table-shell"><div class="sch-tt-caption" id="caption"></div><div class="sch-table-scroll" id="scroll"><table class="sch-table" id="table"><thead id="thead"></thead><tbody id="tbody"></tbody></table></div></div>';
+  body.innerHTML = `
+    ${toolbar}
     <div class="sch-state${school ? "" : " active"}" id="stPick"><div class="sch-center"><div class="sch-empty-hint">${ICON.pick}<span>اختر القسم لعرض جدوله</span></div></div></div>
-    <div class="sch-state${school ? " active" : ""}" id="stLoading"><div class="sch-center"><div class="sch-spinner"></div></div></div>
+    <div class="sch-state${school ? " active" : ""}" id="stLoading"><div class="sch-center"><div class="${school ? "ss-spinner" : "sch-spinner"}"></div></div></div>
     <div class="sch-state" id="stError"><div class="sch-center"><div class="sch-error">تعذّر تحميل ${what}. تحقّق من الاتصال وحاول مرة أخرى.</div></div></div>
-    <div class="sch-state" id="stOk"><div class="sch-table-shell"><div class="sch-tt-caption" id="caption"></div><div class="sch-table-scroll" id="scroll"><table class="sch-table" id="table"><thead id="thead"></thead><tbody id="tbody"></tbody></table></div></div></div>`;
+    <div class="sch-state" id="stOk">${tableShell}</div>`;
+  if (school) {
+    body.classList.add("ss-body");
+    modal.el.classList.add("ss-popover");
+    backdrop.classList.add("ss-popover-backdrop");
+  }
 
   const $ = (id) => root.getElementById(id);
   const deptSel = $("deptSel"), dateInput = $("dateInput"), dateLabel = $("dateLabel");
@@ -216,13 +260,16 @@ async function mountTimetableSheet(host, hooks, { school }) {
   let dateISO = today;
   let teachers = [];
   let data = null;          // { dates, cells: [dateIdx][uid][lesson] }
+  let lessonTimes = [];     // settings/lessonTimes, for the school header
   let requestId = 0;
 
   async function fetchCells(dates) {
-    const [{ teachers: all }, rows, sessSnap] = await Promise.all([
+    const [{ teachers: all }, rows, sessSnap, times] = await Promise.all([
       loadTeachers(db), loadSchedules(db),
       getDocs(query(collection(db, "attendanceSessions"), where("date", "in", dates))),
+      school ? loadLessonTimes(db) : [],
     ]);
+    lessonTimes = times;
     // School: department by department (the app's own order), each already
     // sorted by name.
     teachers = school
@@ -305,7 +352,84 @@ async function mountTimetableSheet(host, hooks, { school }) {
     $("caption").innerHTML = `<b>${escapeHtml(school ? "جدول المدرسة" : dept)}</b>`;
   }
 
+  /* ---- جدول المدرسة (teacher-page look) ---- */
+  // End time first, as the teachers' header writes it (shown left-to-right).
+  const ssTime = (i) => { const t = lessonTimes[i]; return t?.start && t?.end ? `${to12(t.end)} - ${to12(t.start)}` : ""; };
+  // The whole school is a lot of cells (every teacher × 35 in the week), so
+  // the table is built as one HTML string and a single listener on <tbody>
+  // opens a lesson — no element or listener per cell.
+  // The class on a pill; the corner dot is still whether attendance was taken.
+  function ssCellHtml(d, t, l) {
+    const cell = data.cells[d][t.uid][l];
+    if (!cell) return '<div class="ss-cell-empty"></div>';
+    const state = stateOf(data.dates[d], cell);
+    const title = `${t.name} — الحصة ${ORDINALS[l - 1]} — ${cell.classKey} • ${STATE_TEXT[state]}`;
+    return `<button type="button" class="ss-cell-btn ${state}" data-d="${d}" data-l="${l}" data-u="${escapeHtml(t.uid)}" title="${escapeHtml(title)}">${escapeHtml(toArabicDigits(cell.classKey))}</button>`;
+  }
+  // A department bar before each department's first teacher, then a row
+  // per teacher; cellsFor(t) gives that row's lesson <td>s as HTML.
+  function ssRows(colspan, cellsFor) {
+    if (!teachers.length) { $("tbody").innerHTML = `<tr><td colspan="${colspan}" class="ss-empty-row">${noTeachers}</td></tr>`; return; }
+    let html = "";
+    teachers.forEach((t, i) => {
+      if (i === 0 || teachers[i - 1].dept !== t.dept) {
+        html += `<tr class="ss-dept-row"><td colspan="${colspan}"><div class="ss-dept-sep"><span class="ss-dept-sep-name">${escapeHtml(t.dept)}</span></div></td></tr>`;
+      }
+      html += `<tr><td class="ss-sticky-col"><div class="ss-teacher-name">${escapeHtml(t.name)}</div></td>${cellsFor(t)}</tr>`;
+    });
+    $("tbody").innerHTML = html;
+  }
+  if (school) $("tbody").addEventListener("click", (e) => {
+    const b = e.target.closest("button.ss-cell-btn");
+    if (!b || !data) return;
+    const d = Number(b.dataset.d), l = Number(b.dataset.l), uid = b.dataset.u;
+    const teacher = teachers.find((t) => t.uid === uid);
+    const cell = data.cells[d]?.[uid]?.[l];
+    if (teacher && cell) openLesson(data.dates[d], teacher, l, cell);
+  });
+  const LESSON_NUMS = [1, 2, 3, 4, 5, 6, 7];
+
+  function renderSchoolDay() {
+    $("table").className = "ss-table day";
+    $("thead").innerHTML = `<tr><th class="ss-sticky-col">المعلمين</th>${ORDINALS.map((o, i) => {
+      const time = ssTime(i);
+      return `<th aria-label="الحصة ${o}${time ? `، ${time}` : ""}"><span class="ss-lesson-th"><span class="ss-th-ordinal">${o}</span>${time ? `<span class="ss-th-time">${time}</span>` : ""}</span></th>`;
+    }).join("")}</tr>`;
+    ssRows(8, (t) => LESSON_NUMS.map((l) => `<td>${ssCellHtml(0, t, l)}</td>`).join(""));
+    requestAnimationFrame(ssLayout);
+  }
+
+  function renderSchoolWeek() {
+    $("table").className = "ss-table week";
+    const dayRow = `<tr><th class="ss-sticky-col" rowspan="2">المعلمين</th>${data.dates.map((iso, i) =>
+      `<th colspan="7" class="day-th${i ? " day-start" : ""}${iso === today ? " today" : ""}" title="${fmtLong(iso)}"><span class="sch-day-label"><b>${DAYS_AR[i]}</b></span></th>`).join("")}</tr>`;
+    const lessonRow = `<tr>${data.dates.map((iso, d) => ORDINALS.map((o, i) => {
+      const time = ssTime(i);
+      return `<th class="lesson-th${i === 0 && d ? " day-start" : ""}" title="الحصة ${o}${time ? ` • ${time}` : ""}">${toArabicDigits(i + 1)}</th>`;
+    }).join("")).join("")}</tr>`;
+    $("thead").innerHTML = dayRow + lessonRow;
+    // Each day's lesson cells, with that day's column classes.
+    const dayCls = data.dates.map((iso, d) => LESSON_NUMS.map((l) => {
+      const cls = `${l === 1 && d ? "day-start" : ""}${iso === today ? " today" : ""}`.trim();
+      return cls ? ` class="${cls}"` : "";
+    }));
+    ssRows(36, (t) => data.dates.map((iso, d) => LESSON_NUMS.map((l, i) => `<td${dayCls[d][i]}>${ssCellHtml(d, t, l)}</td>`).join("")).join(""));
+    requestAnimationFrame(() => { ssLayout(); centerDayLabels(); });
+  }
+
+  // The department bars stick just under the header (its real height,
+  // measured — the two-line lesson/time labels move it), and their name is
+  // as wide as the visible table so CSS keeps it centred. Only re-measured
+  // after a render or a resize — never while scrolling, since a variable on
+  // the scroll box restyles every cell in the table.
+  function ssLayout() {
+    if (!school || !host.getClientRects().length) return;
+    scroll.style.setProperty("--ss-theadH", `${$("thead").offsetHeight || 54}px`);
+    scroll.style.setProperty("--ss-viewW", `${scroll.clientWidth}px`);
+  }
+
   function renderDay() {
+    if (school) return renderSchoolDay();
     const table = $("table"), thead = $("thead"), tbody = $("tbody");
     table.className = "sch-table day";
     renderCaption();
@@ -330,6 +454,7 @@ async function mountTimetableSheet(host, hooks, { school }) {
   }
 
   function renderWeek() {
+    if (school) return renderSchoolWeek();
     const table = $("table"), thead = $("thead"), tbody = $("tbody");
     table.className = "sch-table week";
     renderCaption();
@@ -365,24 +490,29 @@ async function mountTimetableSheet(host, hooks, { school }) {
   function centerDayLabels() {
     if (view !== "week" || !host.getClientRects().length) return;
     const v = scroll.getBoundingClientRect();
-    const sticky = $("thead").querySelector("th.sticky");
+    const sticky = $("thead").querySelector("th.sticky, th.ss-sticky-col");
     const right = sticky ? Math.min(v.right, sticky.getBoundingClientRect().left) : v.right;
-    $("thead").querySelectorAll("th.day-th").forEach((th) => {
+    // Measure every label first, then move them — interleaving the two
+    // forces a fresh layout per day.
+    const moves = [...$("thead").querySelectorAll("th.day-th")].map((th) => {
       const label = th.firstElementChild;
       const r = th.getBoundingClientRect();
       const a = Math.max(r.left, v.left), b = Math.min(r.right, right), w = label.offsetWidth;
       let c = (a + b) / 2;
       if (b - a < w) c = b <= a ? (r.left + r.right) / 2 : Math.min(Math.max(c, r.left + w / 2), r.right - w / 2);
-      label.style.left = `${c - r.left}px`;
+      return [label, `${c - r.left}px`];
     });
+    moves.forEach(([label, left]) => { label.style.left = left; });
   }
   let raf = 0;
-  const scheduleCenter = () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; centerDayLabels(); }); };
+  const scheduleCenter = () => { if (view === "week" && !raf) raf = requestAnimationFrame(() => { raf = 0; centerDayLabels(); }); };
   scroll.addEventListener("scroll", scheduleCenter, { passive: true });
   window.addEventListener("resize", scheduleCenter);
+  // Also catches the sheet being opened after it rendered while hidden.
+  if (school) new ResizeObserver(() => { ssLayout(); scheduleCenter(); }).observe(scroll);
 
   function syncToolbar() {
-    root.querySelectorAll(".sch-seg button").forEach((b) => b.classList.toggle("active", b.dataset.view === view));
+    root.querySelectorAll("button[data-view]").forEach((b) => b.classList.toggle("active", b.dataset.view === view));
     $("dateBtn").hidden = view !== "day";
     $("weekRange").hidden = view !== "week";
     dateLabel.textContent = fmtLong(dateISO);
@@ -417,12 +547,27 @@ async function mountTimetableSheet(host, hooks, { school }) {
     const state = stateOf(iso, cell);
     const statusText = { taken: `تم تسليم الغياب${cell.time ? ` — ${tsTime(cell.time)}` : ""}`, missing: "لم يتم تسليم الغياب", future: "لم تبدأ بعد" }[state];
     const canAct = !!hooks.attendance && iso <= today;
-    modal.open(`
+    const actionText = cell.sessionId ? "تعديل الغياب" : "تسجيل الغياب";
+    // School: the teachers' lesson popup (الحصة / الوقت / الصف / المادة),
+    // then whether attendance was taken and the button to take or edit it.
+    if (school) modal.open(`
+      ${ssPopHead(teacher.name, fmtLong(iso))}
+      <div class="ss-pop-body">
+        <div class="ss-info-grid">
+          ${ssInfo("الحصة", `الحصة ${ORDINALS[lesson - 1]}`)}
+          ${ssInfo("الوقت", ssTime(lesson - 1) || "—")}
+          ${ssInfo("الصف", toArabicDigits(cell.classKey))}
+          ${ssInfo("المادة", cell.subject || "—")}
+        </div>
+        <div class="sch-status ${state}">${escapeHtml(statusText)}</div>
+        ${canAct ? `<div class="ss-pop-actions"><button class="ss-pop-btn solid" type="button" id="lessonAction">${actionText}</button></div>` : ""}
+      </div>`);
+    else modal.open(`
       <div class="sch-modal-head"><div><b>${escapeHtml(teacher.name)}</b><small>الحصة ${ORDINALS[lesson - 1]} • ${fmtLong(iso)}</small></div><button class="sch-x" type="button" aria-label="إغلاق">×</button></div>
       <div class="sch-modal-body">
         <div class="sch-chips"><span class="sch-chip">الصف: ${escapeHtml(toArabicDigits(cell.classKey))}</span>${cell.subject ? `<span class="sch-chip">${escapeHtml(cell.subject)}</span>` : ""}</div>
         <div class="sch-status ${state}">${escapeHtml(statusText)}</div>
-        ${canAct ? `<button class="sch-primary" type="button" id="lessonAction">${cell.sessionId ? "تعديل الغياب" : "تسجيل الغياب"}</button>` : ""}
+        ${canAct ? `<button class="sch-primary" type="button" id="lessonAction">${actionText}</button>` : ""}
       </div>`);
     modal.el.querySelector("#lessonAction")?.addEventListener("click", () => {
       modal.close();
@@ -435,8 +580,10 @@ async function mountTimetableSheet(host, hooks, { school }) {
   function openDownload() {
     if (!school && !dept) return;
     modal.open(`
-      <div class="sch-modal-head"><div><b>تنزيل ${what}</b>${school ? "<small>ملف PDF بصفحة واحدة بحجم A3 لكل المعلمين</small>" : ""}</div><button class="sch-x" type="button" aria-label="إغلاق">×</button></div>
-      <div class="sch-modal-body">
+      ${school
+        ? ssPopHead(`تنزيل ${what}`, "ملف PDF بصفحة واحدة بحجم A3 لكل المعلمين")
+        : `<div class="sch-modal-head"><div><b>تنزيل ${what}</b></div><button class="sch-x" type="button" aria-label="إغلاق">×</button></div>`}
+      <div class="${school ? "ss-pop-body" : "sch-modal-body"}">
         <button class="sch-option" type="button" data-kind="day"><span class="ic">${ICON.day}</span><span><b>جدول اليوم</b><small>${fmtLong(dateISO)}</small></span></button>
         <button class="sch-option" type="button" data-kind="week"><span class="ic">${ICON.week}</span><span><b>جدول الأسبوع</b><small>${rangeText(weekStartFor(dateISO))}</small></span></button>
         <div class="sch-dl-status" id="dlStatus" hidden></div>
@@ -492,7 +639,7 @@ async function mountTimetableSheet(host, hooks, { school }) {
   }
 
   /* ---- wiring ---- */
-  root.querySelectorAll(".sch-seg button").forEach((b) => b.addEventListener("click", () => {
+  root.querySelectorAll("button[data-view]").forEach((b) => b.addEventListener("click", () => {
     if (view === b.dataset.view) return;
     view = b.dataset.view;
     remember({ [viewKey]: view });

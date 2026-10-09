@@ -20,6 +20,16 @@
   --tt-line-soft: #e2e8f0;
   --tt-name: #f1f5f9;
   --tt-alt: #f8fafc;
+  /* جدول المدرسة: Teachers/user.css's palette, so it matches that page. */
+  --ss-primary: #022b42;
+  --ss-primary-2: #044563;
+  --ss-primary-light: rgba(2, 43, 66, .08);
+  --ss-page: #f8fafc;
+  --ss-muted: #64748b;
+  --ss-border: #e2e8f0;
+  --ss-shadow-1: 0 4px 12px rgba(2, 43, 66, .08);
+  --ss-shadow-2: 0 10px 25px rgba(2, 43, 66, .12);
+  --ss-transition: transform .12s ease, box-shadow .12s ease, background-color .12s ease, border-color .12s ease, color .12s ease, opacity .12s ease;
   display: flex; flex-direction: column; height: 100%;
   overflow: hidden; background: var(--page); color: var(--text);
   font-family: "Tajawal", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
@@ -186,6 +196,189 @@ button.sch-cell::after { content: ""; position: absolute; top: 5px; left: 5px; w
 .sch-table tbody tr.sch-dept-row td { height: auto; padding: 0; text-align: right; background: var(--tt-line-soft); border-left: 0; }
 .sch-dept-sep { position: sticky; right: 0; display: inline-flex; align-items: center; gap: 8px; padding: 7px 16px; font-weight: 900; font-size: .88rem; color: var(--tt-ink); }
 .sch-dept-sep::before { content: ""; width: 4px; height: 16px; border-radius: 2px; background: var(--tt-dark); }
+
+/* ---- جدول المدرسة ----
+   A copy of the teachers' جدول المدرسة sheet (Teachers/user.html
+   #schoolschedule, the ss-* rules in Teachers/user.css) — keep the two
+   looking the same. Added on top: the اليوم/الأسبوع switch, the download
+   button, the week view, and each lesson's attendance dot. */
+.sch-body.ss-body { background: var(--ss-page); }
+.ss-toolbar {
+  flex-shrink: 0; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px;
+  padding: 14px 16px;
+}
+.ss-date-btn {
+  border: 1px solid var(--ss-border); cursor: pointer; font-weight: 900; font-size: .95rem;
+  color: var(--ss-primary); display: inline-flex; align-items: center; gap: 10px;
+  padding: 10px 14px; border-radius: 999px; background: #fff;
+  box-shadow: var(--ss-shadow-1); transition: var(--ss-transition); max-width: 100%; position: relative;
+}
+.ss-date-btn:hover { transform: translateY(-1px); box-shadow: var(--ss-shadow-2); }
+.ss-date-btn svg { width: 18px; height: 18px; flex-shrink: 0; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.ss-date-btn small { color: var(--ss-muted); font-weight: 900; font-size: .82rem; }
+.ss-date-btn input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; border: 0; cursor: pointer; font-size: 16px; }
+.ss-date-btn.ss-range { cursor: default; }
+.ss-date-btn.ss-range:hover { transform: none; box-shadow: var(--ss-shadow-1); }
+.ss-seg { display: inline-flex; padding: 4px; gap: 4px; border-radius: 999px; background: #fff; border: 1px solid var(--ss-border); box-shadow: var(--ss-shadow-1); }
+.ss-seg button {
+  min-height: 36px; padding: 0 16px; border-radius: 999px; border: 0; background: transparent; cursor: pointer;
+  color: var(--ss-muted); font-weight: 900; font-size: .9rem; transition: var(--ss-transition);
+}
+.ss-seg button.active { background: linear-gradient(145deg, var(--ss-primary-2), var(--ss-primary)); color: #fff; }
+.ss-round-btn {
+  width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--ss-border); background: #fff; cursor: pointer;
+  color: var(--ss-primary); display: grid; place-items: center; box-shadow: var(--ss-shadow-1); transition: var(--ss-transition);
+}
+.ss-round-btn:hover { transform: translateY(-1px); box-shadow: var(--ss-shadow-2); }
+.ss-round-btn svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.ss-seg button:focus-visible, .ss-round-btn:focus-visible, .ss-date-btn:focus-within, .ss-cell-btn:focus-visible { outline: 3px solid #79b3c8; outline-offset: 2px; }
+.ss-spinner { width: 40px; height: 40px; border-radius: 50%; border: 4px solid var(--ss-primary-light); border-top-color: var(--ss-primary); animation: sch-spin 1s linear infinite; }
+
+.ss-table-shell { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; width: 100%; background: #fff; border-top: 1px solid var(--ss-border); }
+.ss-table-scroll {
+  flex: 1 1 auto; min-height: 0; width: 100%; overflow: auto;
+  -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+  padding-bottom: max(12px, env(safe-area-inset-bottom, 0px));
+  position: relative;
+}
+table.ss-table { border-collapse: separate; border-spacing: 0; direction: rtl; table-layout: fixed; }
+table.ss-table.day { width: 100%; min-width: 940px; }
+table.ss-table.week { width: max-content; }
+.ss-table thead { position: sticky; top: 0; z-index: 20; background: #fff; }
+.ss-table thead th {
+  position: relative; background: #fff; border-bottom: 2px solid var(--ss-primary); padding: 16px 10px;
+  text-align: center; font-weight: 900; color: var(--ss-primary); white-space: nowrap; overflow: visible;
+  box-shadow: 0 4px 12px rgba(2, 43, 66, .08);
+}
+.ss-lesson-th { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; line-height: 1.35; }
+.ss-th-ordinal { font-size: 1rem; font-weight: 900; color: var(--ss-primary); }
+.ss-th-time { font-size: .74rem; font-weight: 700; color: var(--ss-muted); direction: ltr; unicode-bidi: isolate; }
+
+.ss-table th.ss-sticky-col, .ss-table td.ss-sticky-col {
+  position: sticky; right: 0; background: #fff; border-left: 2px solid var(--ss-border);
+  text-align: center; min-width: 150px; padding: 12px 10px; z-index: 15;
+}
+.ss-table thead th.ss-sticky-col { z-index: 25; box-shadow: 4px 0 12px rgba(2, 43, 66, .08); }
+.ss-table tbody td { border-bottom: 1px solid var(--ss-border); padding: 10px; text-align: center; vertical-align: middle; background: #fff; }
+.ss-table tbody tr:hover td { background: #fbfdff; }
+.ss-table tbody td.ss-empty-row { padding: 20px; color: var(--ss-muted); font-weight: 800; }
+.ss-teacher-name {
+  font-weight: 900; color: var(--text); font-size: .95rem; line-height: 1.2;
+  display: flex; align-items: center; justify-content: center; min-height: 38px; padding: 0 4px;
+  word-break: keep-all; overflow-wrap: break-word;
+}
+
+/* Department bar — pinned under the header (its height is measured in JS)
+   while you scroll through that department's teachers. The name is kept
+   centred on screen by CSS alone: it's as wide as the visible table
+   (--ss-viewW, set only on resize) and sticks to its right edge. The
+   teachers' page moves it from JS on every scroll frame instead, which
+   restyles the whole table each frame — far too slow for the week view. */
+.ss-table tr.ss-dept-row td {
+  position: sticky; top: var(--ss-theadH, 54px); z-index: 19;
+  padding: 0; border-bottom: none;
+}
+.ss-dept-sep {
+  height: 44px;
+  background: linear-gradient(145deg, var(--ss-primary-2), var(--ss-primary));
+  color: #fff; box-shadow: 0 4px 14px rgba(2, 43, 66, .22);
+}
+.ss-dept-sep-name {
+  position: sticky; right: 0; display: block;
+  width: var(--ss-viewW, 100%); max-width: 100%;
+  line-height: 44px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  font-weight: 900; font-size: .95rem;
+}
+
+.ss-cell-btn {
+  position: relative; width: 100%; min-width: 56px; height: 38px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 12px; border: 1px solid rgba(2, 43, 66, .16);
+  background: rgba(2, 43, 66, .06); color: var(--ss-primary);
+  font-weight: 900; cursor: pointer; transition: var(--ss-transition);
+  padding: 0 4px; font-size: .86rem;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.ss-cell-btn:hover { transform: translateY(-1px); box-shadow: 0 10px 20px rgba(2, 43, 66, .14); border-color: rgba(2, 43, 66, .32); background: rgba(2, 43, 66, .10); }
+.ss-cell-empty { display: inline-flex; width: 100%; min-width: 56px; height: 38px; border-radius: 12px; border: 1px solid rgba(2, 43, 66, .10); background: #f8fafc; user-select: none; }
+/* Whether attendance was taken (admin only). */
+.ss-cell-btn::after { content: ""; position: absolute; top: 4px; left: 4px; width: 6px; height: 6px; border-radius: 50%; }
+.ss-cell-btn.taken::after { background: var(--success); }
+.ss-cell-btn.missing::after { background: var(--danger); }
+.ss-cell-btn.future::after { background: #94a3b8; }
+
+/* Week: the day's name over its seven lessons, kept centred over
+   the part that's on screen (JS sets left), then the lesson numbers. */
+.ss-table.week thead th.day-th { height: 44px; padding: 0; overflow: hidden; border-bottom: 1px solid var(--ss-border); box-shadow: none; }
+.ss-table.week thead th.day-th.today { color: #15803d; }
+.ss-table.week .sch-day-label {
+  position: absolute; top: 50%; left: 0; transform: translate(-50%, -50%);
+  display: inline-flex; align-items: baseline; gap: 8px; white-space: nowrap; pointer-events: none;
+}
+/* inherit: the department sheet's .sch-day-label b is white (for its dark header). */
+.ss-table.week .sch-day-label b { font-size: 1rem; font-weight: 900; color: inherit; }
+.ss-table.week th.ss-sticky-col { width: 150px; }
+.ss-table.week thead th.lesson-th { width: 70px; min-width: 70px; padding: 8px 2px; font-size: .9rem; }
+.ss-table.week .day-start { border-right: 2px solid var(--ss-border); }
+.ss-table.week tbody td { padding: 8px 4px; }
+.ss-table.week tbody td.today { background: #f2faf5; }
+.ss-table.week .ss-cell-btn, .ss-table.week .ss-cell-empty { min-width: 0; height: 36px; font-size: .8rem; border-radius: 10px; }
+
+/* Lesson and download popups. */
+.sch-backdrop.ss-popover-backdrop { background: rgba(15, 23, 42, .30); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+.sch-modal.ss-popover {
+  width: min(380px, 92vw); max-height: min(520px, 80vh); overflow: hidden;
+  border-color: var(--ss-border); box-shadow: 0 24px 60px rgba(2, 6, 23, .22); flex-direction: column;
+}
+.sch-modal.ss-popover.open { display: flex; }
+.ss-pop-head {
+  flex-shrink: 0; width: 100%; background: #fff;
+  border-bottom: 1px solid var(--ss-border); padding: 14px 16px;
+  display: grid; grid-template-columns: 36px 1fr 36px; align-items: center; gap: 8px;
+}
+.ss-pop-title { width: 100%; min-width: 0; text-align: center; }
+.ss-pop-title b { color: var(--ss-primary); font-size: 1.05rem; font-weight: 900; display: block; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ss-pop-title span { color: var(--ss-muted); font-weight: 900; font-size: .82rem; display: block; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 1px; }
+.ss-pop-close {
+  width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--ss-border);
+  background: var(--ss-primary-light); color: var(--ss-primary); cursor: pointer;
+  display: grid; place-items: center; transition: var(--ss-transition);
+}
+.ss-pop-close svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.ss-pop-close:hover { background: rgba(2, 43, 66, .12); transform: scale(1.06); }
+.ss-pop-body { padding: 18px; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; }
+.ss-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.ss-info-cell { border: 1px solid var(--ss-border); border-radius: 14px; padding: 12px 13px; background: #fbfdff; }
+.ss-info-cell-label { color: var(--ss-muted); font-weight: 800; font-size: .74rem; margin-bottom: 4px; }
+.ss-info-cell-value { color: var(--text); font-weight: 900; font-size: .92rem; line-height: 1.3; }
+.ss-pop-body .sch-status { border-radius: 14px; }
+.ss-pop-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 2px; }
+.ss-pop-btn {
+  width: 100%; min-height: 50px; border-radius: 14px; cursor: pointer;
+  font-weight: 900; font-size: .95rem; display: flex; align-items: center; justify-content: center;
+  gap: 8px; transition: var(--ss-transition); border: none;
+}
+.ss-pop-btn.solid { background: linear-gradient(145deg, var(--ss-primary-2), var(--ss-primary)); color: #fff; box-shadow: 0 14px 30px rgba(2, 43, 66, .26); }
+.ss-pop-btn.solid:hover { transform: translateY(-1px); }
+
+@media (max-width: 860px) {
+  .ss-th-time { font-size: .68rem; }
+  table.ss-table.day { min-width: 760px; }
+  .ss-table th.ss-sticky-col, .ss-table td.ss-sticky-col { min-width: 120px; }
+  .ss-table.week th.ss-sticky-col { width: 120px; }
+  .ss-table thead th { padding: 10px 4px; }
+  .ss-teacher-name { font-size: .85rem; padding: 0 2px; }
+  .ss-toolbar { padding: 10px 12px; gap: 8px; }
+  .ss-date-btn { padding: 8px 14px; min-height: 40px; }
+  .ss-date-btn small { display: none; }
+  .ss-info-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 480px) {
+  .sch-modal.ss-popover { width: calc(100vw - 28px); max-height: 88vh; }
+  .ss-pop-head { padding: 14px; gap: 6px; }
+  .ss-pop-title b { font-size: 1rem; }
+  .ss-pop-title span { white-space: normal; }
+}
 
 
 /* ---- Teacher week grid (جداول المعلمين) ---- */
