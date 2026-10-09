@@ -977,6 +977,38 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    /* ---------- scheduleLogs ---------- */
+    /* سجل التعديلات in admins/adminschedule.html: one readable entry per   */
+    /* schedule action (CSV import, حذف جميع الحصص, lesson edits, ...).     */
+    /* Append-only and pinned to the writer's own uid and the server time, */
+    /* so an entry can't be forged, back-dated, edited or deleted from a   */
+    /* client — it's an audit trail.                                       */
+    match /scheduleLogs/{logId} {
+      allow read: if hasScheduleEditPermission();
+      allow create: if hasScheduleEditPermission()
+        && request.resource.data.keys().hasOnly(['type','summary','details','actorUid','actorName','at'])
+        && request.resource.data.type is string
+        && request.resource.data.type.size() > 0
+        && request.resource.data.type.size() <= 40
+        && request.resource.data.summary is string
+        && request.resource.data.summary.size() <= 400
+        && request.resource.data.actorUid == request.auth.uid
+        && request.resource.data.actorName is string
+        && request.resource.data.actorName.size() <= 120
+        && request.resource.data.at == request.time
+        && (
+          !('details' in request.resource.data)
+          || (
+            request.resource.data.details is map
+            && (
+              !('changes' in request.resource.data.details)
+              || (request.resource.data.details.changes is list && request.resource.data.details.changes.size() <= 150)
+            )
+          )
+        );
+      allow update, delete: if false;
+    }
+
     /* ---------- settings ---------- */
     match /settings/lessonTimes {
       allow read: if isTeacherSupervisorOrAdmin();

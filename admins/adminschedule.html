@@ -104,19 +104,130 @@
       align-items:center;
       gap:10px;
     }
-    .site-title .dot{
-      width:10px; height:10px; border-radius:999px;
-      background: linear-gradient(180deg, var(--primary-2), var(--primary));
-      box-shadow: 0 8px 18px rgba(3,60,84,.22);
-      flex:0 0 auto;
-    }
-
-    .top-info{
+    .title-group{
       display:flex;
-      gap:10px;
       align-items:center;
-      flex-wrap:wrap;
-      justify-content:flex-start;
+      gap:12px;
+      min-width:0;
+    }
+    .title-text{ min-width:0; }
+    .site-subtitle{
+      margin-top:2px;
+      font-size:12.5px;
+      font-weight:800;
+      color:var(--muted);
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .site-subtitle b{ color:var(--primary-2); font-weight:900; }
+
+    /* Shared stroke-icon sizing — every glyph on the page is an inline SVG
+       (see ICONS in the script), never an emoji, so they inherit color. */
+    .ico{
+      width:18px; height:18px; flex:0 0 auto;
+      fill:none; stroke:currentColor; stroke-width:2;
+      stroke-linecap:round; stroke-linejoin:round;
+      vertical-align:middle;
+    }
+    .ico.sm{ width:14px; height:14px; }
+    .ico.xs{ width:12px; height:12px; }
+
+    .toolbar{
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+    .toolbar-sep{
+      width:1px; height:26px; background:var(--border); margin:0 4px;
+    }
+    .icon-btn{
+      width:42px; height:42px;
+      display:inline-flex; align-items:center; justify-content:center;
+      border-radius:12px;
+      border:1px solid var(--border);
+      background:#fff;
+      color:var(--primary);
+      cursor:pointer;
+      position:relative;
+      transition: background .12s ease, border-color .12s ease, box-shadow .12s ease, transform .08s ease;
+    }
+    .icon-btn .ico{ width:20px; height:20px; }
+    .icon-btn:hover{ background:#f1f7fb; border-color:rgba(11,79,108,.28); }
+    .icon-btn:active{ transform:scale(.97); }
+    .icon-btn[aria-expanded="true"]{ background:#eaf3f8; border-color:rgba(11,79,108,.35); }
+    .back-btn{ width:40px; height:40px; border-radius:50%; }
+
+    .primary-btn{
+      height:42px;
+      padding:0 16px 0 18px;
+      display:inline-flex; align-items:center; gap:8px;
+      border-radius:12px;
+      border:1px solid rgba(3,60,84,.25);
+      background: linear-gradient(180deg, var(--primary-2), var(--primary));
+      color:#fff;
+      font-weight:900;
+      font-size:14px;
+      cursor:pointer;
+      box-shadow: 0 6px 14px rgba(11,79,108,.18);
+      transition: box-shadow .12s ease, transform .08s ease;
+      white-space:nowrap;
+    }
+    .primary-btn:hover{ box-shadow: 0 10px 22px rgba(11,79,108,.24); }
+    .primary-btn:active{ transform:scale(.98); }
+
+    /* Overflow menu for the bulk, school-wide actions — kept out of the bar
+       itself so the everyday buttons aren't crowded by rarely-used ones. */
+    .menu-wrap{ position:relative; }
+    .menu{
+      position:absolute;
+      top:calc(100% + 8px);
+      inset-inline-end:0;
+      width:290px;
+      background:#fff;
+      border:1px solid var(--border);
+      border-radius:14px;
+      box-shadow: var(--shadow-strong);
+      padding:6px;
+      z-index:50;
+      animation: pop .14s ease-out;
+    }
+    .menu[hidden]{ display:none; }
+    .menu-item{
+      width:100%;
+      display:flex; align-items:flex-start; gap:12px;
+      padding:10px 12px;
+      border:0; border-radius:10px;
+      background:transparent;
+      color:var(--text);
+      text-align:right;
+      cursor:pointer;
+    }
+    .menu-item:hover, .menu-item:focus-visible{ background:var(--page); outline:none; }
+    .menu-item .ico{ margin-top:2px; color:var(--primary-2); }
+    .menu-item span{ display:grid; gap:2px; }
+    .menu-item b{ font-size:14px; font-weight:900; }
+    .menu-item small{ font-size:12px; font-weight:700; color:var(--muted); line-height:1.5; }
+    .menu-item.danger b, .menu-item.danger .ico{ color:var(--danger); }
+    .menu-item.danger:hover{ background:#fdf1f0; }
+    .menu-sep{ height:1px; background:var(--border); margin:6px 8px; }
+    .menu-sep[hidden]{ display:none; }
+
+    :focus-visible{ outline:3px solid rgba(121,179,200,.55); outline-offset:2px; }
+
+    @media (max-width: 640px){
+      .site-header{ padding:10px 12px; }
+      .titlebar{ flex-wrap:nowrap; }
+      .site-title{ font-size:1rem; }
+      .primary-btn .btn-label{ display:none; }
+      .primary-btn{ width:42px; padding:0; justify-content:center; }
+      .toolbar{ gap:6px; }
+      .toolbar-sep{ display:none; }
+      .icon-btn, .primary-btn{ width:38px; height:38px; }
+      .back-btn{ width:36px; height:36px; }
+    }
+    @media (max-width: 400px){
+      .site-subtitle{ display:none; }
     }
 
     .badge{
@@ -145,28 +256,6 @@
     .save:hover{ box-shadow: 0 10px 24px rgba(11,79,108,.22); }
     .save:active{ transform: scale(.99); }
     .save[disabled]{ opacity:.55; cursor:not-allowed; box-shadow:none; transform:none; }
-    .new-schedule-btn{
-      height:44px;
-      padding:0 14px;
-      border-radius:12px;
-      border:1px solid rgba(11,79,108,.20);
-      background:#fff;
-      color:var(--primary);
-      font-weight:950;
-      cursor:pointer;
-      transition: transform .08s ease, box-shadow .12s ease;
-    }
-    .new-schedule-btn:hover{ box-shadow: 0 8px 18px rgba(11,79,108,.12); }
-    .new-schedule-btn:active{ transform:scale(.99); }
-    .new-schedule-btn.danger-btn{ color:var(--danger,#b42318); border-color:rgba(180,35,24,.35); }
-    .new-schedule-btn.icon-btn{
-      width:44px;
-      padding:0;
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-    }
-    .new-schedule-btn.icon-btn svg{ width:20px; height:20px; }
 
     main{ flex:1; padding:20px 16px; }
     .board{
@@ -278,15 +367,15 @@
       padding:0 36px 0 10px;
     }
     .custom-day-wrap::after{
-      content:"▾";
+      content:"";
       position:absolute;
       left:12px;
       top:50%;
+      width:14px;
+      height:14px;
       transform:translateY(-50%);
-      color:var(--primary);
       pointer-events:none;
-      font-size:12px;
-      font-weight:900;
+      background:no-repeat center/14px url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230b4f6c' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
     }
     .custom-controls{
       justify-content:flex-start;
@@ -1144,6 +1233,116 @@
       100%{ background-position: 200% 0%; }
     }
 
+    /* ===== Grid cell content: subject over teacher, instead of one
+       "subject | teacher" line that the cell width kept truncating ===== */
+    .cell-btn{ display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; height:auto; min-height:52px; padding:6px 10px; }
+    .cell-btn .cell-subj{ font-size:13.5px; font-weight:900; color:var(--primary); max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .cell-btn .cell-teacher{ font-size:12px; font-weight:700; color:var(--muted); max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .cell-btn .cell-empty{ display:inline-flex; color:#b4c5d4; transition:color .12s ease; }
+    .cell-btn:hover .cell-empty{ color:var(--primary-3); }
+
+    /* Status lines under the grid */
+    .status > div{
+      display:flex; align-items:flex-start; gap:8px;
+      padding:8px 12px; border-radius:10px; font-size:13px; line-height:1.7;
+    }
+    .status > div::before{
+      content:""; width:6px; height:6px; border-radius:50%; margin-top:9px; flex:0 0 auto; background:currentColor; opacity:.7;
+    }
+    .status .ok{ background:rgba(18,106,46,.06); }
+    .status .warn{ background:rgba(138,90,0,.06); }
+    .status .err{ background:rgba(180,35,24,.06); }
+    .status .muted{ background:transparent; padding-inline:2px; }
+    .status .muted::before{ display:none; }
+
+    /* Chips/badges that used to carry an emoji now carry an .ico */
+    .csv-chip{ display:inline-flex; align-items:center; gap:6px; white-space:nowrap; }
+    .csv-chip b{ font-weight:950; }
+    .custom-override-badge{ display:flex; align-items:center; justify-content:center; gap:5px; }
+    .teacher-combo-option .tc-star{ display:inline-flex; vertical-align:-2px; margin-inline-start:4px; color:#b8860b; }
+    .teacher-combo-option .tc-star .ico{ width:14px; height:14px; }
+    .teacher-combo-option .tc-star.head{ color:#7c4dbe; }
+    .teacher-combo-option .tc-chev{ display:inline-flex; vertical-align:-3px; }
+    .custom-toggle-btn .arrow{ display:inline-flex; }
+    .unsaved-modal-icon{ display:grid; place-items:center; width:64px; height:64px; margin:0 auto 14px; border-radius:50%; background:#fff4e0; color:#b26a00; }
+    .unsaved-modal-icon .ico{ width:32px; height:32px; }
+
+    /* ===== سجل التعديلات drawer ===== */
+    .logs-backdrop{
+      position:fixed; inset:0; z-index:80;
+      background:rgba(6,27,40,.35);
+      backdrop-filter: blur(3px);
+      opacity:0; pointer-events:none;
+      transition: opacity .2s ease;
+    }
+    .logs-backdrop.show{ opacity:1; pointer-events:auto; }
+    .logs-drawer{
+      position:fixed; top:0; bottom:0; left:0; z-index:81;
+      width:min(460px, 100vw);
+      background:var(--page);
+      border-inline-end:1px solid var(--border);
+      box-shadow: 0 0 40px rgba(6,27,40,.18);
+      display:flex; flex-direction:column;
+      transform:translateX(-100%);
+      transition: transform .25s cubic-bezier(.4,0,.2,1);
+      visibility:hidden;
+    }
+    .logs-drawer.show{ transform:none; visibility:visible; }
+    .logs-head{
+      padding:18px 18px 12px;
+      background:#fff;
+      border-bottom:1px solid var(--border);
+    }
+    .logs-head-row{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
+    .logs-head h2{ margin:0; font-size:18px; font-weight:950; color:var(--primary); display:flex; align-items:center; gap:8px; }
+    .logs-head p{ margin:6px 0 0; font-size:12.5px; font-weight:700; color:var(--muted); }
+    .logs-filters{ display:flex; gap:6px; overflow-x:auto; padding:12px 18px; scrollbar-width:none; background:#fff; border-bottom:1px solid var(--border); }
+    .logs-filters::-webkit-scrollbar{ display:none; }
+    .logs-filter{
+      flex:0 0 auto;
+      height:32px; padding:0 12px;
+      border-radius:999px; border:1px solid var(--border);
+      background:#fff; color:var(--muted);
+      font-size:12.5px; font-weight:800; cursor:pointer;
+    }
+    .logs-filter[aria-pressed="true"]{ background:var(--primary); border-color:var(--primary); color:#fff; }
+    .logs-body{ flex:1; overflow-y:auto; padding:6px 18px 24px; }
+    .logs-day{ margin:18px 0 8px; font-size:12px; font-weight:900; color:var(--muted); }
+    .log-entry{
+      display:grid; grid-template-columns:36px 1fr; gap:12px;
+      background:#fff; border:1px solid var(--border); border-radius:14px;
+      padding:12px; margin-bottom:8px;
+    }
+    .log-icon{
+      width:36px; height:36px; border-radius:10px;
+      display:grid; place-items:center;
+      background:#eaf3f8; color:var(--primary-2);
+    }
+    .log-icon.danger{ background:#fdecea; color:var(--danger); }
+    .log-icon.ok{ background:#e8f5ec; color:var(--ok); }
+    .log-icon.warn{ background:#fff4e0; color:#b26a00; }
+    .log-main{ min-width:0; }
+    .log-summary{ font-size:13.5px; font-weight:800; color:var(--text); line-height:1.7; }
+    .log-meta{ display:flex; flex-wrap:wrap; align-items:center; gap:4px 12px; margin-top:4px; font-size:12px; font-weight:700; color:var(--muted); }
+    .log-meta span{ display:inline-flex; align-items:center; gap:4px; }
+    .log-details-btn{
+      margin-top:8px; padding:0; border:0; background:none;
+      color:var(--primary-2); font-size:12.5px; font-weight:900; cursor:pointer;
+      display:inline-flex; align-items:center; gap:4px;
+    }
+    .log-details-btn .ico{ transition: transform .15s ease; }
+    .log-details-btn[aria-expanded="true"] .ico{ transform:rotate(180deg); }
+    .log-details{ margin-top:8px; border-top:1px dashed var(--border); padding-top:8px; display:grid; gap:4px; }
+    .log-details[hidden]{ display:none; }
+    .log-change{ font-size:12.5px; font-weight:700; color:var(--text); line-height:1.7; }
+    .log-change .from{ color:var(--danger); text-decoration:line-through; text-decoration-color:rgba(180,35,24,.4); }
+    .log-change .to{ color:var(--ok); }
+    .log-change .slot{ color:var(--muted); }
+    .logs-empty{ text-align:center; padding:48px 12px; color:var(--muted); font-weight:800; font-size:13.5px; }
+    .logs-empty .ico{ width:40px; height:40px; display:block; margin:0 auto 10px; opacity:.5; }
+    .logs-more{ display:block; margin:12px auto 0; }
+    .skeleton-entry{ height:72px; border-radius:14px; margin-bottom:8px; }
+
     /* Mobile tweaks */
     @media (max-width: 520px){
       :root{ --colW: 130px; }
@@ -1183,20 +1382,53 @@
 <body>
   <header class="site-header">
     <div class="titlebar">
-      <h1 class="site-title"><span class="dot"></span>إدارة الجدول الأسبوعي</h1>
-      <div class="top-info">
-        <button id="backToAdminBtn" class="new-schedule-btn" type="button">← رجوع</button>
-        <button id="newScheduleBtn" class="new-schedule-btn" type="button">+ إضافة جدول</button>
-        <button id="teacherSearchBtn" class="new-schedule-btn" type="button" aria-haspopup="dialog" aria-controls="teacherSearchDialog">بحث عن حصص معلّم</button>
-        <button id="settingsBtn" class="new-schedule-btn icon-btn" type="button" title="الإعدادات" aria-label="الإعدادات">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <div class="title-group">
+        <button id="backToAdminBtn" class="icon-btn back-btn" type="button" title="رجوع للوحة الإدارة" aria-label="رجوع">
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
+        <div class="title-text">
+          <h1 class="site-title">إدارة الجدول الأسبوعي</h1>
+          <div id="headerClassLabel" class="site-subtitle"></div>
+        </div>
+      </div>
+      <div class="toolbar">
+        <button id="teacherSearchBtn" class="icon-btn" type="button" title="بحث عن حصص معلّم" aria-label="بحث عن حصص معلّم" aria-haspopup="dialog" aria-controls="teacherSearchDialog">
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        </button>
+        <button id="logsBtn" class="icon-btn" type="button" title="سجل التعديلات" aria-label="سجل التعديلات" aria-controls="logsDrawer" aria-expanded="false">
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>
+        </button>
+        <button id="settingsBtn" class="icon-btn" type="button" title="الإعدادات" aria-label="الإعدادات">
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
             <circle cx="12" cy="12" r="3"></circle>
             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
           </svg>
         </button>
-        <button id="csvImportBtn" class="new-schedule-btn" type="button" title="استيراد الجدول من CSV">📥 استيراد CSV</button>
-        <button id="forceResaveAllBtn" class="new-schedule-btn" type="button" title="إعادة حفظ كل حصص كل الجداول بختم وقت جديد، ويصحّح تلقائيًّا أي حصة مسندة لحساب معلّم قديم/غير صحيح">🔄 إعادة حفظ الكل</button>
-        <button id="deleteAllSchedulesBtn" class="new-schedule-btn danger-btn" type="button" title="حذف كل حصص كل الجداول — الحضور والغياب والتغطيات السابقة لا تتأثر" hidden>🗑 حذف جميع الحصص</button>
+        <div class="menu-wrap">
+          <button id="toolsMenuBtn" class="icon-btn" type="button" title="أدوات الجدول" aria-label="أدوات الجدول" aria-haspopup="menu" aria-expanded="false" aria-controls="toolsMenu">
+            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+          </button>
+          <div id="toolsMenu" class="menu" role="menu" aria-label="أدوات الجدول" hidden>
+            <button id="csvImportBtn" class="menu-item" type="button" role="menuitem">
+              <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></svg>
+              <span><b>استيراد الجدول من CSV</b><small>يطابق كل حصة بمعلّمها، وتراجع المعاينة قبل الحفظ</small></span>
+            </button>
+            <button id="forceResaveAllBtn" class="menu-item" type="button" role="menuitem">
+              <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+              <span><b>إعادة حفظ كل الحصص</b><small>ختم وقت جديد لكل الجداول، ويصحّح الحصص المسندة لحساب معلّم قديم</small></span>
+            </button>
+            <div id="toolsMenuDangerSep" class="menu-sep" role="separator" hidden></div>
+            <button id="deleteAllSchedulesBtn" class="menu-item danger" type="button" role="menuitem" hidden>
+              <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+              <span><b>حذف جميع الحصص</b><small>كل الفصول — الحضور والغياب والتغطيات لا تتأثر</small></span>
+            </button>
+          </div>
+        </div>
+        <span class="toolbar-sep" aria-hidden="true"></span>
+        <button id="newScheduleBtn" class="primary-btn" type="button" title="إضافة جدول خاص لجميع الفصول">
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+          <span class="btn-label">إضافة جدول</span>
+        </button>
       </div>
     </div>
   </header>
@@ -1465,10 +1697,10 @@
 
         <div id="csvPreviewArea" hidden>
           <div class="csv-summary">
-            <span class="csv-chip ok" id="csvChipResolved">✅ 0</span>
-            <span class="csv-chip warn" id="csvChipAmbiguous">⚠️ 0</span>
-            <span class="csv-chip err" id="csvChipUnmatched">❌ 0</span>
-            <span class="csv-chip skip" id="csvChipSkipped">⏭ 0</span>
+            <span class="csv-chip ok" title="مطابق"><svg class="ico sm" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>مطابق <b id="csvChipResolved">0</b></span>
+            <span class="csv-chip warn" title="يحتاج اختيار معلّم"><svg class="ico sm" viewBox="0 0 24 24" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>يحتاج اختيار <b id="csvChipAmbiguous">0</b></span>
+            <span class="csv-chip err" title="غير متطابق أو خطأ"><svg class="ico sm" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>غير متطابق <b id="csvChipUnmatched">0</b></span>
+            <span class="csv-chip skip" title="متجاوز"><svg class="ico sm" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/></svg>متجاوز <b id="csvChipSkipped">0</b></span>
             <button id="csvChooseAnother" class="btn ghost" type="button" style="margin-inline-start:auto;">اختيار ملف آخر</button>
           </div>
           <div class="csv-table-wrap">
@@ -1526,6 +1758,38 @@
     <div id="teacherSearchResults" aria-live="polite"></div>
   </dialog>
 
+  <!-- سجل التعديلات — who changed the schedule, and when. Entries are
+       written by logScheduleEvent() in the script below to the
+       scheduleLogs collection, which nobody can edit or delete. -->
+  <div id="logsBackdrop" class="logs-backdrop"></div>
+  <aside id="logsDrawer" class="logs-drawer" role="dialog" aria-modal="true" aria-labelledby="logsTitle" aria-hidden="true">
+    <div class="logs-head">
+      <div class="logs-head-row">
+        <h2 id="logsTitle">
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>
+          سجل التعديلات
+        </h2>
+        <div class="toolbar">
+          <button id="logsRefreshBtn" class="icon-btn" type="button" title="تحديث" aria-label="تحديث السجل">
+            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+          </button>
+          <button id="logsCloseBtn" class="icon-btn" type="button" title="إغلاق" aria-label="إغلاق">
+            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          </button>
+        </div>
+      </div>
+      <p>كل تعديل على الجدول، ومن قام به ومتى.</p>
+    </div>
+    <div id="logsFilters" class="logs-filters" role="group" aria-label="تصفية السجل">
+      <button class="logs-filter" type="button" data-filter="" aria-pressed="true">الكل</button>
+      <button class="logs-filter" type="button" data-filter="lessons" aria-pressed="false">تعديل الحصص</button>
+      <button class="logs-filter" type="button" data-filter="bulk" aria-pressed="false">استيراد وحذف</button>
+      <button class="logs-filter" type="button" data-filter="times" aria-pressed="false">الأوقات والإعدادات</button>
+      <button class="logs-filter" type="button" data-filter="custom" aria-pressed="false">الجداول الخاصة</button>
+    </div>
+    <div id="logsBody" class="logs-body" aria-live="polite"></div>
+  </aside>
+
   <script type="module">
     import { firebaseConfig } from "/shared/firebase.js";
     /* ========= Firebase ========= */
@@ -1536,8 +1800,8 @@
     import {
       initializeFirestore,
       persistentSingleTabManager,
-      collection, getDocs, query, where,
-      doc, getDoc, setDoc,
+      collection, getDocs, query, where, orderBy, limit,
+      doc, getDoc, setDoc, addDoc,
       writeBatch,
       serverTimestamp,
       Timestamp
@@ -1583,6 +1847,40 @@
     let FIXED_LESSON_COUNT = 7;
     const MIN_LESSON_COUNT = 1;
     const MAX_LESSON_COUNT = 12;
+
+    // Stroke icons (Lucide shapes) for anything the script renders — the
+    // page uses these instead of emoji, which render differently on every
+    // device and can't follow the surrounding text color.
+    const ICONS = {
+      check: '<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
+      alert: '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
+      xCircle: '<circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/>',
+      minus: '<circle cx="12" cy="12" r="10"/><path d="M8 12h8"/>',
+      ban: '<circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/>',
+      idCard: '<rect width="18" height="14" x="3" y="5" rx="2"/><circle cx="9" cy="12" r="2"/><path d="M14 10h4"/><path d="M14 14h4"/>',
+      repeat: '<path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/>',
+      star: '<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/>',
+      crown: '<path d="m2 4 3 12h14l3-12-6 7-4-7-4 7-6-7z"/><path d="M5 20h14"/>',
+      chevronDown: '<path d="m6 9 6 6 6-6"/>',
+      chevronLeft: '<path d="m15 18-6-6 6-6"/>',
+      chevronRight: '<path d="m9 18 6-6-6-6"/>',
+      plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
+      upload: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/>',
+      trash: '<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M10 11v6"/><path d="M14 11v6"/>',
+      refresh: '<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>',
+      pencil: '<path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>',
+      clock: '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
+      list: '<path d="M10 6h11"/><path d="M10 12h11"/><path d="M10 18h11"/><path d="M4 6h1v4"/><path d="M4 10h2"/><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"/>',
+      coffee: '<path d="M17 8h1a4 4 0 1 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><path d="M6 2v2"/><path d="M10 2v2"/><path d="M14 2v2"/>',
+      calendarPlus: '<rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/><path d="M12 14v4"/><path d="M10 16h4"/>',
+      calendarX: '<rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/><path d="m14 14-4 4"/><path d="m10 14 4 4"/>',
+      calendar: '<rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/>',
+      user: '<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+      history: '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/>',
+    };
+    function icon(name, cls = ''){
+      return `<svg class="ico${cls ? ' ' + cls : ''}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[name] || ''}</svg>`;
+    }
 
     const GRADES = ["10","11","12"];
     // Populated from settings/classes inside onAuthStateChanged below,
@@ -1630,6 +1928,17 @@
     const saveSuccessModal = document.getElementById('saveSuccessModal');
     const successCloseBtn = document.getElementById('successCloseBtn');
     const siteHeader = document.querySelector('.site-header');
+    const headerClassLabel = document.getElementById('headerClassLabel');
+    const toolsMenuBtn = document.getElementById('toolsMenuBtn');
+    const toolsMenu = document.getElementById('toolsMenu');
+    const toolsMenuDangerSep = document.getElementById('toolsMenuDangerSep');
+    const logsBtn = document.getElementById('logsBtn');
+    const logsDrawer = document.getElementById('logsDrawer');
+    const logsBackdrop = document.getElementById('logsBackdrop');
+    const logsBody = document.getElementById('logsBody');
+    const logsFilters = document.getElementById('logsFilters');
+    const logsRefreshBtn = document.getElementById('logsRefreshBtn');
+    const logsCloseBtn = document.getElementById('logsCloseBtn');
 
     // Schedule modal refs
     const modal = document.getElementById('modal');
@@ -1925,6 +2234,7 @@
 
       classSel.innerHTML = (CLASSES_BY_GRADE[selectedGrade]||[]).map(c=>`<option value="${c}">${c}</option>`).join('');
       classSel.value = selectedClassKey;
+      headerClassLabel.innerHTML = `الفصل المعروض: <b>${escapeHtml(selectedClassKey)}</b>`;
     }
 
     function normalizeLessonNumber(value){
@@ -2002,6 +2312,10 @@
         };
         await setDoc(doc(db, 'settings', 'lessonTimes'), payload, { merge: true });
         addStatusLine("ok", "تم حفظ إعدادات الفرص.");
+        const breakLabel = (n)=> n ? `بعد ${lessonLabel(n)}` : 'غير محددة';
+        logScheduleEvent('breaks',
+          `حدّث أوقات الفرصة: الأولى ${breakLabel(payload.opportunityBreaks.firstAfter)}، والثانية ${breakLabel(payload.opportunityBreaks.secondAfter)}`,
+          { ...payload.opportunityBreaks });
       }catch(error){
         console.error('Error saving school breaks:', error);
         addStatusLine("err", "تعذّر حفظ إعدادات الفرص.");
@@ -2166,6 +2480,7 @@
           return false;
         }
 
+        const prevTime = { ...(lessonTimes[index] || {}) };
         // Update local cache
         lessonTimes[index] = { start: startTime, end: endTime };
 
@@ -2180,6 +2495,16 @@
         updateLessonTimeHeader(index);
 
         addStatusLine("ok", `تم تحديث وقت ${LESSONS_AR[index]} بنجاح`);
+        if(prevTime.start !== startTime || prevTime.end !== endTime){
+          logScheduleEvent('lesson_time', `غيّر وقت ${lessonLabel(index + 1)} في الجدول الأساسي`, {
+            lesson: index + 1,
+            changes: [{
+              slot: lessonLabel(index + 1),
+              from: prevTime.start ? `${to12HourLabel(prevTime.start)} – ${to12HourLabel(prevTime.end)}` : '',
+              to: `${to12HourLabel(startTime)} – ${to12HourLabel(endTime)}`,
+            }],
+          });
+        }
 
         // Never let a resync problem look like the time save itself failed —
         // the save above already succeeded and returns true regardless.
@@ -2213,6 +2538,9 @@
           resyncCutoffsMsg.textContent = totalSynced > 0
             ? `تمت مزامنة ${totalSynced} تقرير غياب مسجّل اليوم مع الجدول الحالي.`
             : 'لا توجد تقارير غياب مسجّلة اليوم بحاجة إلى مزامنة.';
+          if(totalSynced > 0){
+            logScheduleEvent('resync_cutoffs', `زامن مهلة تعديل الغياب لـ ${totalSynced} تقرير مسجّل اليوم`, { count: totalSynced });
+          }
         } catch (error) {
           console.error('[resyncCutoffsBtn]', error);
           resyncCutoffsMsg.textContent = 'تعذّرت المزامنة. حاول مرة أخرى.';
@@ -2312,25 +2640,43 @@
       grid.appendChild(dayH);
     }
 
-    function cellText(val){
-      if(!val) return '—';
+    function cellParts(val){
+      if(!val) return { subj:'', tn:'' };
       const rawSubj = (val.subject||'').trim();
       const { grade, track } = parseClassKey(selectedClassKey);
       const subj = (getDisplaySubjectForClass(rawSubj, grade, track) || '').trim();
       const tn = (val.teacherName||'').trim();
-      if(!subj && !tn) return '—';
+      return { subj, tn };
+    }
+
+    // One-line text form, for logs and anywhere a cell is described in words.
+    function cellText(val){
+      const { subj, tn } = cellParts(val);
       if(subj && tn) return `${subj} | ${tn}`;
       return subj || tn || '—';
+    }
+
+    // Subject on top, teacher underneath — the full name used to be cut off
+    // after a few letters when both shared one line. An empty slot shows a
+    // plus, so it reads as "add a lesson here" rather than a stray dash.
+    function fillCellButton(btn, val){
+      const { subj, tn } = cellParts(val);
+      btn.classList.toggle('filled', !!((val?.subject||'').trim() && (val?.teacherUid||'').trim()));
+      if(!subj && !tn){
+        btn.innerHTML = `<span class="cell-empty">${icon('plus')}</span>`;
+        btn.title = 'إضافة حصة';
+        btn.setAttribute('aria-label', 'حصة فارغة — إضافة');
+        return;
+      }
+      btn.innerHTML = `${subj ? `<span class="cell-subj">${escapeHtml(subj)}</span>` : ''}${tn ? `<span class="cell-teacher">${escapeHtml(tn)}</span>` : ''}`;
+      btn.title = `${cellText(val)} — انقر للتعديل`;
+      btn.setAttribute('aria-label', cellText(val));
     }
 
     function patchCellButton(key){
       const btn = btnRefs.get(key);
       if(!btn) return;
-      const val = gridValues[key] || {subject:'', teacherUid:'', teacherName:'', notes:''};
-      const filled = !!((val.subject||'').trim() && (val.teacherUid||'').trim());
-      btn.classList.toggle('filled', filled);
-      btn.textContent = cellText(val);
-      btn.title = 'انقر لتعديل المادة والمعلم والملاحظات';
+      fillCellButton(btn, gridValues[key] || {subject:'', teacherUid:'', teacherName:'', notes:''});
     }
 
     function renderRows(){
@@ -2350,8 +2696,6 @@
           const btn = document.createElement('button');
           btn.type = 'button';
           btn.className='cell-btn';
-          btn.textContent = cellText(val);
-          btn.title = 'انقر لتعديل المادة والمعلم والملاحظات';
           btn.addEventListener('click', ()=> openMainCellEditor(iso, i));
           cell.appendChild(btn);
 
@@ -2413,9 +2757,9 @@
             ? 'background:rgba(180,35,24,.10); color:var(--danger, #b42318); border:1px solid rgba(180,35,24,.3)'
             : 'background:rgba(3,60,84,.08); color:var(--primary); border:1px solid rgba(3,60,84,.18)'
         }`;
-        badge.textContent = conflict
-          ? `⚠️ تعارض جداول مخصصة: ${names.join('، ')}`
-          : `🔁 يُستبدل بجدول: ${names[0]}`;
+        badge.innerHTML = conflict
+          ? `${icon('alert', 'xs')}<span>تعارض جداول مخصصة: ${escapeHtml(names.join('، '))}</span>`
+          : `${icon('repeat', 'xs')}<span>يُستبدل بجدول: ${escapeHtml(names[0])}</span>`;
         cell.appendChild(badge);
       });
     }
@@ -2566,18 +2910,17 @@
         const resolvedSubject = getDisplaySubjectForTeacherClass(t.subject, t.subject2, grade, track) ?? getDisplaySubjectForClass(t.subject, grade, track);
         const subject = (resolvedSubject || '—').toString().trim() || '—';
         const name = t.name || '';
-        // 👑 marks a department head included here regardless of their own
-        // `classes` list — see getTeachersForClass(). Without it, an admin
-        // has no way to tell why someone who doesn't normally teach this
-        // class showed up in the picker.
-        const badge = `${t.isSupervisor ? ' ⭐' : ''}${t.isHead ? ' 👑' : ''}`;
+        // isHead marks a department head included here regardless of their
+        // own `classes` list — see getTeachersForClass(). The list row shows
+        // it as a crown icon; without it, an admin has no way to tell why
+        // someone who doesn't normally teach this class showed up.
         return {
           value: JSON.stringify({ subject, teacherUid: t.uid, teacherName: name }),
           name,
           subject,
           isSupervisor: !!t.isSupervisor,
           isHead: !!t.isHead,
-          text: `${subject} | ${name}${badge}`
+          text: `${subject} | ${name}`
         };
       });
     }
@@ -2611,8 +2954,8 @@
     }
 
     function teacherOptionRowHtml(opt, queryText){
-      const star = opt.isSupervisor ? ' <span class="tc-star">⭐</span>' : '';
-      const crown = opt.isHead ? ' <span class="tc-star">👑</span>' : '';
+      const star = opt.isSupervisor ? `<span class="tc-star" title="مشرف">${icon('star')}</span>` : '';
+      const crown = opt.isHead ? `<span class="tc-star head" title="رئيس قسم">${icon('crown')}</span>` : '';
       return `
         <span class="tc-name">${highlightMatch(opt.name, queryText)}${star}${crown}</span>
         <span class="tc-subject">${highlightMatch(opt.subject, queryText)}</span>
@@ -2670,7 +3013,7 @@
         getTeacherComboSubjects().forEach(({ subject, count }) => {
           const html = `
             <span class="tc-name">${escapeHtml(subject)}</span>
-            <span class="tc-subject">${count} ${count === 1 ? 'معلّم' : 'معلمين'} ‹</span>
+            <span class="tc-subject">${count} ${count === 1 ? 'معلّم' : 'معلمين'} <span class="tc-chev">${icon('chevronLeft', 'sm')}</span></span>
           `;
           addTeacherComboRow(html, () => {
             comboAssignBrowseSubject = subject;
@@ -2680,7 +3023,7 @@
         return;
       }
 
-      addTeacherComboRow('<span class="tc-name">› كل المواد</span>', () => {
+      addTeacherComboRow(`<span class="tc-name"><span class="tc-chev">${icon('chevronRight', 'sm')}</span> كل المواد</span>`, () => {
         comboAssignBrowseSubject = null;
         renderTeacherComboList('');
       }, 'teacher-combo-back');
@@ -2941,7 +3284,19 @@
             addStatusLine("err", "وقت النهاية يجب أن يكون بعد وقت البداية");
           } else {
             const name = timeNameInput.value.trim();
+            const prevSlot = { ...(schedule.times[idx] || {}) };
+            const prevLabel = customSlotLabel(schedule.times, idx);
             schedule.times[idx] = { start: startTime, end: endTime, ...(name ? { label: name } : {}) };
+            if(prevSlot.start !== startTime || prevSlot.end !== endTime || customSlotName(prevSlot) !== name){
+              logScheduleEvent('custom_lessons', `عدّل «${prevLabel}» في الجدول الخاص «${schedule.name || 'جدول إضافي'}»`, {
+                scheduleId: schedule.id,
+                changes: [{
+                  slot: prevLabel,
+                  from: `${customSlotName(prevSlot) ? customSlotName(prevSlot) + ' ' : ''}${to12HourLabel(prevSlot.start)} – ${to12HourLabel(prevSlot.end)}`,
+                  to: `${name ? name + ' ' : ''}${to12HourLabel(startTime)} – ${to12HourLabel(endTime)}`,
+                }],
+              });
+            }
             setDirty(true);
             renderCustomSchedules();
             // The custom schedule's bell times are one shared property of the
@@ -2963,6 +3318,7 @@
       if(!schedule || schedule.lessonCount <= 1) return;
 
       const idx = currentTimeEditCtx.lessonIndex;
+      const removedLabel = customSlotLabel(schedule.times, idx);
       schedule.values.splice(idx, 1);
       schedule.times.splice(idx, 1);
       schedule.lessonCount -= 1;
@@ -2974,7 +3330,9 @@
       // Shift every class's lessons too (not just this one), along with the
       // shared lessonCount/times — see spliceLessonAcrossClasses().
       spliceLessonAcrossClasses(schedule, { removeAt: idx }).then((ok)=>{
-        if(!ok) openErrorModal('تم حذف الحصة هنا، لكن تعذّر تحديث باقي الفصول. أعد المحاولة.');
+        if(!ok) return openErrorModal('تم حذف الحصة هنا، لكن تعذّر تحديث باقي الفصول. أعد المحاولة.');
+        logScheduleEvent('custom_lessons', `حذف «${removedLabel}» من الجدول الخاص «${schedule.name || 'جدول إضافي'}»`,
+          { scheduleId: schedule.id });
       });
     });
 
@@ -3142,6 +3500,8 @@
       }
 
       await batch.commit();
+      logScheduleEvent('custom_create', `أنشأ جدولًا خاصًا «${safeName}» ليوم ${CUSTOM_DAYS_AR[dayIndex]} لجميع الفصول`,
+        { scheduleId, name: safeName, dayIndex });
       await fetchCustomSchedules();
       setStatusHTML(`<div class="ok">تم إنشاء الجدول (${safeName}) ليوم ${CUSTOM_DAYS_AR[dayIndex]} لجميع فصول المدرسة.</div>`);
     }
@@ -3199,6 +3559,7 @@
         }
         ensureCustomLessons(schedule);
         ensureCustomTimes(schedule);
+        schedule._baseline = customBaseline(schedule);
         renderCustomGrid(schedule, gridHost, statusNode);
         renderOverrideBadges();
         if(statusNode) statusNode.innerHTML = '';
@@ -3250,6 +3611,45 @@
       return schedule;
     }
 
+    // What a custom schedule looked like when it was loaded. saveAll()
+    // re-saves every card on the page whether or not it was touched, so
+    // this is how the edit log tells which ones really changed, and how.
+    function customBaseline(schedule){
+      return {
+        classKey: schedule.classKey,
+        name: schedule.name,
+        dayIndex: schedule.dayIndex,
+        enabled: !!schedule.enabled,
+        values: schedule.values.slice(0, schedule.lessonCount).map(v => ({
+          subject: (v?.subject || '').trim(), teacherUid: (v?.teacherUid || '').trim(), teacherName: (v?.teacherName || '').trim(),
+        })),
+        labels: Array.from({ length: schedule.lessonCount }, (_, i) => customSlotLabel(schedule.times, i)),
+      };
+    }
+
+    function customScheduleChanges(schedule){
+      const before = schedule._baseline;
+      const after = customBaseline(schedule);
+      if(!before || before.classKey !== after.classKey) return [];
+      const describe = (v)=> v.subject ? (v.teacherName ? `${v.subject} | ${v.teacherName}` : v.subject) : '';
+      const changes = [];
+      if(before.name !== after.name) changes.push({ slot: 'الاسم', from: before.name, to: after.name });
+      if(before.dayIndex !== after.dayIndex) changes.push({ slot: 'اليوم', from: CUSTOM_DAYS_AR[before.dayIndex] || '', to: CUSTOM_DAYS_AR[after.dayIndex] || '' });
+      if(before.enabled !== after.enabled) changes.push({ slot: 'التفعيل الأسبوعي', from: before.enabled ? 'مفعّل' : 'غير مفعّل', to: after.enabled ? 'مفعّل' : 'غير مفعّل' });
+      // Adding/removing a slot shifts every later lesson and is logged on
+      // its own when it happens, so lessons are only compared one-to-one
+      // while the slot count is unchanged.
+      if(before.values.length === after.values.length){
+        after.values.forEach((v, i) => {
+          const b = before.values[i];
+          if(b.subject !== v.subject || b.teacherUid !== v.teacherUid){
+            changes.push({ slot: after.labels[i], from: describe(b), to: describe(v) });
+          }
+        });
+      }
+      return changes;
+    }
+
     function renderCustomGrid(schedule, host, statusNode){
       host.innerHTML = '';
       const g = document.createElement('div');
@@ -3288,9 +3688,7 @@
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'cell-btn';
-        btn.textContent = cellText(schedule.values[i - 1]);
-        const filled = !!((schedule.values[i - 1]?.subject || '').trim() && (schedule.values[i - 1]?.teacherUid || '').trim());
-        btn.classList.toggle('filled', filled);
+        fillCellButton(btn, schedule.values[i - 1]);
         btn.addEventListener('click', async ()=>{
           const dayNameLocal = Number.isInteger(schedule.dayIndex) ? CUSTOM_DAYS_AR[schedule.dayIndex] : '—';
           await openAssignmentEditor({
@@ -3402,6 +3800,14 @@
           times: payload.times,
         });
 
+        const changes = customScheduleChanges(schedule);
+        if(changes.length){
+          logScheduleEvent('custom_saved',
+            `حفظ تعديلات الجدول الخاص «${payload.name}» للفصل ${schedule.classKey}`,
+            { scheduleId: schedule.id, classKey: schedule.classKey, changes });
+        }
+        schedule._baseline = customBaseline(schedule);
+
         setStatus(`<div class="ok">تم حفظ الجدول الخاص بنجاح (لجميع الفصول).</div>`);
       }catch(e){
         console.error('[saveCustomSchedule]', e);
@@ -3442,6 +3848,10 @@
           await fallbackBatch.commit();
         }
 
+        const dayName = Number.isInteger(schedule.dayIndex) ? CUSTOM_DAYS_AR[schedule.dayIndex] : '';
+        logScheduleEvent('custom_delete',
+          `حذف الجدول الخاص «${schedule.name || 'جدول إضافي'}»${dayName ? ` (${dayName})` : ''} من جميع الفصول`,
+          { scheduleId: schedule.id, name: schedule.name || '' });
         const idx = customSchedules.findIndex(x => x.id === schedule.id);
         if(idx >= 0) customSchedules.splice(idx, 1);
         cardEl.remove();
@@ -3463,7 +3873,7 @@
       item.innerHTML = `
         <button type="button" class="custom-toggle-btn">
           <span class="toggle-title">${schedule.name || 'جدول إضافي'}</span>
-          <span class="arrow">▾</span>
+          <span class="arrow">${icon('chevronDown', 'sm')}</span>
         </button>
         <div class="custom-schedule-body">
             <div class="custom-head">
@@ -3588,12 +3998,15 @@
       addBtn.addEventListener('click', ()=> openAddLessonModal(schedule, gridHost, statusNode));
       remBtn.addEventListener('click', ()=>{
         if(schedule.lessonCount <= 1) return;
+        const removedLabel = customSlotLabel(schedule.times, schedule.lessonCount - 1);
         schedule.lessonCount -= 1;
         ensureCustomLessons(schedule);
         ensureCustomTimes(schedule);
         setDirty(true);
         renderCustomGrid(schedule, gridHost, statusNode);
         propagateSharedScheduleFields(schedule, { times: schedule.times, lessonCount: schedule.lessonCount });
+        logScheduleEvent('custom_lessons', `حذف آخر حصة («${removedLabel}») من الجدول الخاص «${schedule.name || 'جدول إضافي'}»`,
+          { scheduleId: schedule.id });
       });
 
       deleteBtn.addEventListener('click', ()=> deleteCustomSchedule(schedule, item));
@@ -3745,6 +4158,11 @@
 
       const ok = await spliceLessonAcrossClasses(schedule, { insertAt: pos });
       const added = customSlotLabel(schedule.times, pos);
+      if(ok){
+        logScheduleEvent('custom_lessons',
+          `أضاف «${added}» (${to12HourLabel(slot.start)} – ${to12HourLabel(slot.end)}) إلى الجدول الخاص «${schedule.name || 'جدول إضافي'}»`,
+          { scheduleId: schedule.id });
+      }
       if(ctx.statusNode){
         ctx.statusNode.innerHTML = ok
           ? `<div class="ok">تمت إضافة (${escapeHtml(added)}) لهذا الجدول في جميع الفصول.</div>`
@@ -3779,6 +4197,8 @@
             values: Array.isArray(x.lessons) ? x.lessons : [],
             times: Array.isArray(x.times) ? x.times : []
           }));
+          const loaded = customSchedules[customSchedules.length - 1];
+          loaded._baseline = customBaseline(loaded);
         });
       }catch(e){
         console.error('[fetchCustomSchedules]', e);
@@ -3819,6 +4239,247 @@
     settingsCloseBtn.addEventListener('click', closeSettingsModal);
     settingsModalXBtn.addEventListener('click', closeSettingsModal);
 
+    /* ======= Tools menu (the header's ⋮ button) ======= */
+    function setToolsMenuOpen(open){
+      toolsMenu.hidden = !open;
+      toolsMenuBtn.setAttribute('aria-expanded', String(open));
+      if(open) toolsMenu.querySelector('.menu-item:not([hidden])')?.focus();
+    }
+    toolsMenuBtn.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      setToolsMenuOpen(toolsMenu.hidden);
+    });
+    // Each item's own click handler runs first (it's on the item), then the
+    // click bubbles here and closes the menu.
+    toolsMenu.addEventListener('click', (e)=>{
+      if(e.target.closest('.menu-item')) setToolsMenuOpen(false);
+    });
+    document.addEventListener('click', (e)=>{
+      if(!toolsMenu.hidden && !e.target.closest('.menu-wrap')) setToolsMenuOpen(false);
+    });
+    toolsMenu.addEventListener('keydown', (e)=>{
+      const items = [...toolsMenu.querySelectorAll('.menu-item:not([hidden])')];
+      const i = items.indexOf(document.activeElement);
+      if(e.key === 'ArrowDown'){ e.preventDefault(); items[(i + 1) % items.length]?.focus(); }
+      else if(e.key === 'ArrowUp'){ e.preventDefault(); items[(i - 1 + items.length) % items.length]?.focus(); }
+      else if(e.key === 'Escape'){ e.stopPropagation(); setToolsMenuOpen(false); toolsMenuBtn.focus(); }
+    });
+
+    /* ======= سجل التعديلات =======
+       One readable entry per admin action — "who imported the CSV, when",
+       not one per Firestore write (shared/firebase.js already sends the raw
+       writes to siteLogs). Stored in scheduleLogs, which firestore.rules
+       keeps append-only and stamped with the writer's own uid, so nobody
+       can forge, edit or delete an entry from the page.
+
+       Best-effort: logScheduleEvent() is never awaited, and a failed log
+       write never blocks or undoes the change it describes. */
+    let currentActor = { uid: '', name: '' };
+
+    const LOG_TYPES = {
+      lessons_saved:  { icon: 'pencil',       tone: '',       group: 'lessons' },
+      csv_import:     { icon: 'upload',       tone: 'ok',     group: 'bulk' },
+      delete_all:     { icon: 'trash',        tone: 'danger', group: 'bulk' },
+      resave_all:     { icon: 'refresh',      tone: '',       group: 'bulk' },
+      lesson_time:    { icon: 'clock',        tone: '',       group: 'times' },
+      lesson_count:   { icon: 'list',         tone: '',       group: 'times' },
+      breaks:         { icon: 'coffee',       tone: '',       group: 'times' },
+      resync_cutoffs: { icon: 'refresh',      tone: '',       group: 'times' },
+      custom_create:  { icon: 'calendarPlus', tone: 'ok',     group: 'custom' },
+      custom_delete:  { icon: 'calendarX',    tone: 'danger', group: 'custom' },
+      custom_saved:   { icon: 'calendar',     tone: '',       group: 'custom' },
+      custom_lessons: { icon: 'calendar',     tone: '',       group: 'custom' },
+    };
+
+    // details.changes: up to 150 of either { slot, from, to } (a lesson
+    // that changed) or { text } (a free-form line), shown under the entry.
+    function logScheduleEvent(type, summary, details){
+      if(!currentActor.uid) return;
+      const payload = {
+        type,
+        summary: String(summary || '').slice(0, 400),
+        actorUid: currentActor.uid,
+        actorName: currentActor.name.slice(0, 120),
+        at: serverTimestamp(),
+      };
+      if(details){
+        payload.details = { ...details };
+        if(Array.isArray(details.changes)) payload.details.changes = details.changes.slice(0, 150);
+      }
+      addDoc(collection(db, 'scheduleLogs'), payload)
+        .then(() => { if(isLogsOpen()) loadLogs(); })
+        .catch(e => console.warn('[scheduleLogs] could not record', type, e));
+    }
+
+    const LOGS_PAGE = 50;
+    let logsLimit = LOGS_PAGE;
+    let logsFilter = '';
+    let logsEntries = [];
+    let logsHasMore = false;
+    let logsLoading = false;
+
+    const kuwaitISOFmt = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kuwait', year: 'numeric', month: '2-digit', day: '2-digit' });
+    const logTimeFmt = new Intl.DateTimeFormat('ar-KW-u-nu-latn', { timeZone: 'Asia/Kuwait', hour: 'numeric', minute: '2-digit' });
+    const logDayFmt = new Intl.DateTimeFormat('ar-KW-u-nu-latn', { timeZone: 'Asia/Kuwait', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+    function isLogsOpen(){ return logsDrawer.classList.contains('show'); }
+
+    function openLogsDrawer(){
+      logsDrawer.classList.add('show');
+      logsBackdrop.classList.add('show');
+      logsDrawer.setAttribute('aria-hidden', 'false');
+      logsBtn.setAttribute('aria-expanded', 'true');
+      logsCloseBtn.focus();
+      logsLimit = LOGS_PAGE;
+      loadLogs();
+    }
+    function closeLogsDrawer(){
+      logsDrawer.classList.remove('show');
+      logsBackdrop.classList.remove('show');
+      logsDrawer.setAttribute('aria-hidden', 'true');
+      logsBtn.setAttribute('aria-expanded', 'false');
+      logsBtn.focus();
+    }
+
+    function logDayLabel(date){
+      const iso = kuwaitISOFmt.format(date);
+      const today = kuwaitTodayISO();
+      if(iso === today) return 'اليوم';
+      if(iso === addDaysISO(today, -1)) return 'أمس';
+      return logDayFmt.format(date);
+    }
+    function logRelativeTime(date){
+      const mins = Math.floor((Date.now() - date.getTime()) / 60000);
+      if(mins < 1) return 'الآن';
+      if(mins < 60) return `قبل ${mins} دقيقة`;
+      const hours = Math.floor(mins / 60);
+      if(hours < 24) return `قبل ${hours} ساعة`;
+      return '';
+    }
+
+    function renderLogChange(c){
+      if(c && typeof c.text === 'string') return `<div class="log-change">${escapeHtml(c.text)}</div>`;
+      const from = (c?.from || '').trim();
+      const to = (c?.to || '').trim();
+      return `<div class="log-change">
+        <span class="slot">${escapeHtml(c?.slot || '')}:</span>
+        <span class="from">${escapeHtml(from || 'فارغة')}</span>
+        ${icon('chevronLeft', 'xs')}
+        <span class="to">${escapeHtml(to || 'فارغة')}</span>
+      </div>`;
+    }
+
+    function renderLogEntry(entry){
+      const meta = LOG_TYPES[entry.type] || { icon: 'history', tone: '' };
+      const date = entry._date;
+      const rel = logRelativeTime(date);
+      const changes = Array.isArray(entry.details?.changes) ? entry.details.changes : [];
+      const el = document.createElement('div');
+      el.className = 'log-entry';
+      el.innerHTML = `
+        <div class="log-icon ${meta.tone}">${icon(meta.icon)}</div>
+        <div class="log-main">
+          <div class="log-summary">${escapeHtml(entry.summary || '')}</div>
+          <div class="log-meta">
+            <span>${icon('user', 'xs')}${escapeHtml(entry.actorName || 'غير معروف')}</span>
+            <span title="${escapeHtml(logDayFmt.format(date))}">${icon('clock', 'xs')}${escapeHtml(logTimeFmt.format(date))}${rel ? ` · ${rel}` : ''}</span>
+          </div>
+          ${changes.length ? `
+            <button class="log-details-btn" type="button" aria-expanded="false">التفاصيل (${changes.length}) ${icon('chevronDown', 'xs')}</button>
+            <div class="log-details" hidden>${changes.map(renderLogChange).join('')}</div>` : ''}
+        </div>`;
+      const btn = el.querySelector('.log-details-btn');
+      if(btn){
+        const panel = el.querySelector('.log-details');
+        btn.addEventListener('click', () => {
+          const open = panel.hidden;
+          panel.hidden = !open;
+          btn.setAttribute('aria-expanded', String(open));
+        });
+      }
+      return el;
+    }
+
+    function renderLogsEmpty(message){
+      logsBody.innerHTML = `<div class="logs-empty">${icon('history')}${escapeHtml(message)}</div>`;
+    }
+
+    function renderLogs(){
+      const visible = logsFilter
+        ? logsEntries.filter(e => (LOG_TYPES[e.type]?.group || '') === logsFilter)
+        : logsEntries;
+      logsBody.innerHTML = '';
+      if(!visible.length){
+        renderLogsEmpty(logsEntries.length ? 'لا توجد تعديلات من هذا النوع ضمن السجلات المحمّلة.' : 'لا توجد تعديلات مسجّلة بعد.');
+      } else {
+        let lastDay = '';
+        visible.forEach(entry => {
+          const day = logDayLabel(entry._date);
+          if(day !== lastDay){
+            const h = document.createElement('div');
+            h.className = 'logs-day';
+            h.textContent = day;
+            logsBody.appendChild(h);
+            lastDay = day;
+          }
+          logsBody.appendChild(renderLogEntry(entry));
+        });
+      }
+      if(logsHasMore){
+        const more = document.createElement('button');
+        more.type = 'button';
+        more.className = 'btn logs-more';
+        more.textContent = 'عرض سجلات أقدم';
+        more.addEventListener('click', () => {
+          logsLimit += LOGS_PAGE;
+          loadLogs();
+        });
+        logsBody.appendChild(more);
+      }
+    }
+
+    async function loadLogs(){
+      if(logsLoading) return;
+      logsLoading = true;
+      logsRefreshBtn.disabled = true;
+      if(!logsEntries.length){
+        logsBody.innerHTML = '<div class="skeleton skeleton-entry"></div>'.repeat(4);
+      }
+      try{
+        const snap = await getDocs(query(collection(db, 'scheduleLogs'), orderBy('at', 'desc'), limit(logsLimit + 1)));
+        const entries = snap.docs.map(d => {
+          // 'estimate' so an entry this tab just wrote still has a time
+          // while its server timestamp is pending.
+          const x = d.data({ serverTimestamps: 'estimate' }) || {};
+          return { id: d.id, ...x, _date: x.at?.toDate ? x.at.toDate() : new Date() };
+        });
+        logsHasMore = entries.length > logsLimit;
+        logsEntries = entries.slice(0, logsLimit);
+        renderLogs();
+      }catch(e){
+        console.error('[loadLogs]', e);
+        logsEntries = [];
+        renderLogsEmpty(e?.code === 'permission-denied'
+          ? 'لا تملك صلاحية عرض السجل.'
+          : 'تعذّر تحميل السجل. حاول مرة أخرى.');
+      }finally{
+        logsLoading = false;
+        logsRefreshBtn.disabled = false;
+      }
+    }
+
+    logsBtn.addEventListener('click', () => isLogsOpen() ? closeLogsDrawer() : openLogsDrawer());
+    logsCloseBtn.addEventListener('click', closeLogsDrawer);
+    logsBackdrop.addEventListener('click', closeLogsDrawer);
+    logsRefreshBtn.addEventListener('click', loadLogs);
+    logsFilters.addEventListener('click', (e) => {
+      const btn = e.target.closest('.logs-filter');
+      if(!btn) return;
+      logsFilter = btn.dataset.filter || '';
+      logsFilters.querySelectorAll('.logs-filter').forEach(b => b.setAttribute('aria-pressed', String(b === btn)));
+      renderLogs();
+    });
+
     /* ======= استيراد الجدول من CSV =======
        A row carrying a "User ID" column resolves straight to the teacher
        with that UID (teachers/{uid} document ID). Rows without one fall
@@ -3852,6 +4513,7 @@
     const csvChipSkipped = document.getElementById('csvChipSkipped');
 
     let csvRows = []; // parsed + matched rows for the current file
+    let csvFileName = ''; // for the edit log
 
     // ---------- CSV parsing (RFC4180-ish: quoted fields, "" escapes, CRLF/LF) ----------
     function parseCsvText(text){
@@ -4103,30 +4765,30 @@
       let statusCell, teacherCell;
       if(row.status === 'resolved'){
         statusCell = row.byUid
-          ? '<span class="csv-chip ok">✅ بالمعرّف</span>'
-          : '<span class="csv-chip ok">✅ تلقائي</span>';
+          ? `<span class="csv-chip ok">${icon('idCard', 'sm')}بالمعرّف</span>`
+          : `<span class="csv-chip ok">${icon('check', 'sm')}تلقائي</span>`;
         teacherCell = row.teacherName;
       } else if(row.status === 'ambiguous'){
         tr.classList.add('csv-row-ambiguous');
         statusCell = row.conflict
-          ? '<span class="csv-chip err">⛔ تعارض</span>'
+          ? `<span class="csv-chip err">${icon('ban', 'sm')}تعارض</span>`
           : row.uidMissing
-            ? '<span class="csv-chip warn">⚠️ معرّف غير معروف</span>'
-            : '<span class="csv-chip warn">⚠️ أكثر من معلّم</span>';
+            ? `<span class="csv-chip warn">${icon('alert', 'sm')}معرّف غير معروف</span>`
+            : `<span class="csv-chip warn">${icon('alert', 'sm')}أكثر من معلّم</span>`;
         teacherCell = `<select class="csv-ambiguous-pick" data-index="${index}">
           <option value="">— اختر —</option>
           ${row.candidates.map(c => `<option value="${c.uid}">${c.name}</option>`).join('')}
         </select>${(row.conflict || row.uidMissing) ? `<div class="csv-conflict-note">${row.reason}</div>` : ''}`;
       } else if(row.status === 'unmatched'){
         tr.classList.add('csv-row-error');
-        statusCell = '<span class="csv-chip err">❌ غير متطابق</span>';
+        statusCell = `<span class="csv-chip err">${icon('xCircle', 'sm')}غير متطابق</span>`;
         teacherCell = row.reason;
       } else if(row.status === 'error'){
         tr.classList.add('csv-row-error');
-        statusCell = '<span class="csv-chip err">❌ خطأ</span>';
+        statusCell = `<span class="csv-chip err">${icon('xCircle', 'sm')}خطأ</span>`;
         teacherCell = row.reason;
       } else {
-        statusCell = '<span class="csv-chip skip">⏭ متجاوز</span>';
+        statusCell = `<span class="csv-chip skip">${icon('minus', 'sm')}متجاوز</span>`;
         teacherCell = row.reason || '';
       }
 
@@ -4177,10 +4839,10 @@
     function updateCsvSummary(){
       const counts = { resolved: 0, ambiguous: 0, unmatched: 0, error: 0, skipped: 0 };
       csvRows.forEach(r => { counts[r.status] = (counts[r.status] || 0) + 1; });
-      csvChipResolved.textContent = `✅ ${counts.resolved}`;
-      csvChipAmbiguous.textContent = `⚠️ ${counts.ambiguous}`;
-      csvChipUnmatched.textContent = `❌ ${counts.unmatched + counts.error}`;
-      csvChipSkipped.textContent = `⏭ ${counts.skipped}`;
+      csvChipResolved.textContent = counts.resolved;
+      csvChipAmbiguous.textContent = counts.ambiguous;
+      csvChipUnmatched.textContent = counts.unmatched + counts.error;
+      csvChipSkipped.textContent = counts.skipped;
       // Confirm is available once there's at least one row that will
       // actually be written — a resolved row, or an ambiguous row the
       // admin has since picked a teacher for.
@@ -4264,6 +4926,7 @@
     }
 
     async function handleCsvFile(file){
+      csvFileName = file.name || '';
       csvImportMsg.textContent = 'جارٍ القراءة والمطابقة...';
       csvImportConfirmBtn.disabled = true;
       try{
@@ -4312,13 +4975,13 @@
 
       csvImportConfirmBtn.disabled = true;
       csvImportMsg.textContent = 'جارٍ الحفظ...';
+      let written = 0;
       try{
         const base = kuwaitTodayISO();
         const start = startOfWeekSunday(base);
         const importWeekDates = [0,1,2,3,4].map(i => addDaysISO(start, i));
 
         // Firestore batches cap at 500 writes — chunk defensively.
-        let written = 0;
         for(let offset = 0; offset < toWrite.length; offset += 450){
           const chunk = toWrite.slice(offset, offset + 450);
           const batch = writeBatch(db);
@@ -4362,10 +5025,34 @@
         if(leftover.length){
           addStatusLine('warn', `تم تجاهل ${leftover.length} حصّة لعدم التطابق أو عدم اختيار معلّم.`);
         }
+        const byUidCount = toWrite.filter(r => r.status === 'resolved' && r.byUid).length;
+        const pickedCount = toWrite.filter(r => r.status === 'ambiguous').length;
+        const skippedCount = csvRows.filter(r => r.status === 'skipped').length;
+        logScheduleEvent('csv_import',
+          `استورد ${written} حصة من ملف CSV${csvFileName ? ` (${csvFileName})` : ''}`,
+          {
+            fileName: csvFileName,
+            written,
+            ignored: leftover.length,
+            changes: [
+              { text: `عدد صفوف الملف: ${csvRows.length}` },
+              { text: `طوبقت بمعرّف المعلّم (User ID): ${byUidCount}` },
+              { text: `طوبقت تلقائيًا بالصف والمادة: ${written - byUidCount - pickedCount}` },
+              { text: `اختير معلّمها يدويًا: ${pickedCount}` },
+              { text: `لم تُستورد (غير متطابقة أو بلا معلّم): ${leftover.length}` },
+              { text: `متجاوزة (ليست حصصًا): ${skippedCount}` },
+            ],
+          });
         closeCsvImportModal();
       }catch(error){
         console.error('CSV import commit failed:', error);
         csvImportMsg.textContent = 'تعذّر الحفظ. حاول مرّة أخرى.';
+        // Earlier chunks may already be saved — record what really landed.
+        if(written > 0){
+          logScheduleEvent('csv_import',
+            `استيراد CSV توقّف قبل اكتماله: حُفظت ${written} من ${toWrite.length} حصة${csvFileName ? ` (${csvFileName})` : ''}`,
+            { fileName: csvFileName, written, failed: true });
+        }
       }finally{
         csvImportConfirmBtn.disabled = false;
       }
@@ -4447,6 +5134,7 @@
 
       lessonCountSaveBtn.disabled = true;
       lessonCountMsg.textContent = 'جاري الحفظ...';
+      const prevCount = FIXED_LESSON_COUNT;
       try{
         const newTimes = lessonTimes.slice(0, n);
         while(newTimes.length < n){
@@ -4476,6 +5164,7 @@
 
         lessonCountMsg.textContent = 'تم الحفظ بنجاح.';
         addStatusLine("ok", `تم تحديث عدد الحصص إلى ${n}.`);
+        logScheduleEvent('lesson_count', `غيّر عدد الحصص اليومية من ${prevCount} إلى ${n}`, { from: prevCount, to: n });
       }catch(error){
         console.error('[lessonCountSave]', error);
         lessonCountMsg.textContent = 'تعذّر حفظ عدد الحصص.';
@@ -4575,7 +5264,11 @@
     /* ======= Escape key handler ======= */
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
-        if (errorModal.classList.contains('show')) {
+        if (!toolsMenu.hidden) {
+          setToolsMenuOpen(false);
+        } else if (isLogsOpen()) {
+          closeLogsDrawer();
+        } else if (errorModal.classList.contains('show')) {
           closeErrorModal();
         } else if (modal.classList.contains('show')) {
           closeModal();
@@ -4867,6 +5560,10 @@
         const batch = writeBatch(db);
         let writeCount = 0;
         let conflictCount = 0;
+        // Every filled slot is re-written on save, changed or not — this
+        // keeps only the ones that really changed, for the edit log.
+        const logChanges = [];
+        const describeSlot = (v)=> (v && (v.subject || v.teacherName)) ? cellText(v) : '';
 
         for(let r=0;r<5;r++){
           const iso = weekDates[r];
@@ -4879,9 +5576,11 @@
             const tUid = (edited.teacherUid || '').trim();
 
             const isFilled = !!(subj && tUid);
+            const slotLabel = `${DAYS_AR[r]} • ${lessonLabel(i)}`;
 
             if(clearedSet.has(key)){
               if(exists){
+                if(describeSlot(exists)) logChanges.push({ slot: slotLabel, from: describeSlot(exists), to: '' });
                 const ref = doc(db, 'schedules', exists.id);
                 batch.set(ref, {
                   dayIndex: r,
@@ -4936,6 +5635,10 @@
               updatedAt: serverTimestamp()
             };
 
+            if(!exists || (exists.subject || '').trim() !== subj || (exists.teacherUid || '').trim() !== tUid){
+              logChanges.push({ slot: slotLabel, from: describeSlot(exists), to: describeSlot(edited) });
+            }
+
             if(exists){
               const ref = doc(db, 'schedules', exists.id);
               batch.set(ref, payload, { merge: true });
@@ -4954,7 +5657,13 @@
 
         if(writeCount > 0){
           addStatusLine("warn", "جاري حفظ التغييرات...");
+          const savedClassKey = selectedClassKey;
           await batch.commit();
+          if(logChanges.length){
+            logScheduleEvent('lessons_saved',
+              `عدّل ${logChanges.length} ${logChanges.length === 1 ? 'حصة' : 'حصص'} في جدول الفصل ${savedClassKey}`,
+              { classKey: savedClassKey, changes: logChanges });
+          }
           await fetchExisting();
         }
 
@@ -5132,6 +5841,16 @@
         setStatusHTML(parts.join(''));
         if(!failures.length && !conflicts.length) openSaveSuccessModal();
 
+        const resaveNotes = [];
+        if(uidFixed) resaveNotes.push({ text: `صُحّح معلّم ${uidFixed} حصة كانت مسندة لحساب قديم` });
+        if(conflicts.length) resaveNotes.push({ text: `تعارضات تحتاج تصحيحًا يدويًا: ${conflicts.length}` });
+        conflicts.slice(0, 40).forEach(c => resaveNotes.push({
+          text: `${c.teacherName}: ${c.classKeys.join(' ، ')} — ${DAYS_AR[c.dayIndex] || '—'}، الحصة ${c.lesson}`
+        }));
+        if(failures.length) resaveNotes.push({ text: `تعذّر حفظ ${failures.length} حصة` });
+        logScheduleEvent('resave_all', `أعاد حفظ ${written} حصة في كل الجداول`,
+          { written, uidFixed, conflicts: conflicts.length, failures: failures.length, ...(resaveNotes.length ? { changes: resaveNotes } : {}) });
+
         if(selectedClassKey) await fetchExisting();
       }catch(e){
         console.error('[forceResaveAllSchedules]', e);
@@ -5158,19 +5877,26 @@
 
       setLoading(true, "جاري حذف جميع الحصص...");
       setStatusHTML("");
+      let deleted = 0;
       try{
         const snap = await getDocs(collection(db, 'schedules'));
         const ids = snap.docs.map(d => d.id);
         // Firestore batches cap at 500 writes — chunk defensively.
         for(let offset = 0; offset < ids.length; offset += 450){
           const batch = writeBatch(db);
-          ids.slice(offset, offset + 450).forEach(id => batch.delete(doc(db, 'schedules', id)));
+          const chunk = ids.slice(offset, offset + 450);
+          chunk.forEach(id => batch.delete(doc(db, 'schedules', id)));
           await batch.commit();
+          deleted += chunk.length;
         }
+        logScheduleEvent('delete_all', `حذف جميع الحصص من كل الفصول (${deleted} حصة)`, { deleted });
         setStatusHTML(`<div class="ok">تم حذف ${ids.length} حصة. يمكنك الآن استيراد الجدول الجديد من ملف CSV.</div>`);
         if(selectedClassKey) await fetchExisting();
       }catch(e){
         console.error('[deleteAllSchedules]', e);
+        if(deleted > 0){
+          logScheduleEvent('delete_all', `حذف جميع الحصص توقّف قبل اكتماله: حُذفت ${deleted} حصة`, { deleted, failed: true });
+        }
         openErrorModal(`تعذّر حذف الحصص: ${(e && e.message) ? e.message : e}`);
       }finally{
         setLoading(false);
@@ -5220,6 +5946,12 @@
         // Wiping every class's lessons is admin-only, not for teachers who
         // were only granted schedule editing.
         deleteAllSchedulesBtn.hidden = role !== "admin";
+        toolsMenuDangerSep.hidden = role !== "admin";
+
+        currentActor = {
+          uid: user.uid,
+          name: (profileData.name || user.email || user.uid || '').toString().trim(),
+        };
 
         CLASSES_BY_GRADE = groupByGrade(await fetchClassList(db));
         ALL_CLASS_KEYS = GRADES.flatMap(g => CLASSES_BY_GRADE[g] || []);
@@ -5268,7 +6000,7 @@
   <!-- Unsaved changes warning modal -->
   <div id="unsavedModal" class="unsaved-modal" role="dialog" aria-modal="true" aria-hidden="true">
     <div class="unsaved-modal-box">
-      <div class="unsaved-modal-icon">⚠️</div>
+      <div class="unsaved-modal-icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></div>
       <p class="unsaved-modal-msg">لم تقم بحفظ التغييرات على الجدول، وأي تعديلات أجريتها لن يتم حفظها.</p>
       <p class="unsaved-modal-sub">هل تريد المغادرة بدون حفظ؟</p>
       <div class="unsaved-modal-actions">
