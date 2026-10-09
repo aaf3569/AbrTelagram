@@ -1100,6 +1100,7 @@ const MERGED_DEPARTMENTS = [
   { department: "الأحياء والجيولوجيا", subjects: ["الجيولوجيا", "الأحياء", "التربية البيئية", "الجيولوجيا والأحياء"] },
   { department: "العلوم الفلسفية", subjects: ["الفلسفة", "علم النفس", "الدستور", "علم النفس والفلسفة"] },
   { department: "الجغرافيا والتاريخ", subjects: ["التاريخ", "الجغرافيا", "جغرافيا", "الاجتماعيات", "التاريخ والجغرافيا"] },
+  { department: "الرياضيات", subjects: ["الإحصاء"] },
 ];
 function canonicalDepartment(raw) {
   const value = typeof raw === "string" ? raw : "";
@@ -2202,15 +2203,18 @@ app.post("/api/admin/set-teacher-email", sensitiveLimiter, async (req, res) => {
 // account behind forever — invisible anywhere in this app, but still
 // occupying its email, so recreating that same person's account later
 // failed with auth/email-already-exists. This deletes both in one call so
-// the two can't drift out of sync again.
+// the two can't drift out of sync again. A department head may also call
+// this (depHead/department.html → حذف المعلّم), but only for a plain 'user'
+// teacher in their own department — same scoping as set-teacher-password
+// and firestore.rules' headManagesExisting().
 app.post("/api/admin/delete-teacher-account", sensitiveLimiter, async (req, res) => {
   const targetUid = String(req.body?.uid || "").trim();
   if (!targetUid) {
     return res.status(400).json({ ok: false, error: "missing_uid" });
   }
 
-  const adminUser = await requireAdminFromRequest(req, res);
-  if (!adminUser) return;
+  const actor = await requireAdminOrHeadForTeacherFromRequest(req, res, targetUid);
+  if (!actor) return;
 
   try {
     try {
@@ -2224,15 +2228,17 @@ app.post("/api/admin/delete-teacher-account", sensitiveLimiter, async (req, res)
     try {
       await db.collection("accountDeletionLog").add({
         targetUid,
-        performedByUid: adminUser.uid,
-        performedByName: adminUser.name || null,
+        targetName: String(actor.targetData?.name || "").trim() || null,
+        performedByUid: actor.callerUid,
+        performedByName: actor.callerName || null,
+        performedByRole: actor.isAdmin ? "admin" : "head",
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
       });
     } catch (logError) {
       console.error(`[admin] deletion log write failed: ${logError.message}`);
     }
 
-    console.log(`[admin] account deleted targetUid=${targetUid} by=${adminUser.uid}`);
+    console.log(`[admin] account deleted targetUid=${targetUid} by=${actor.callerUid}`);
     return res.json({ ok: true });
   } catch (error) {
     console.error(`[admin] delete-teacher-account failed targetUid=${targetUid}: ${error.message}`);

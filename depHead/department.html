@@ -295,6 +295,8 @@
     .modal-footer{ padding:16px 20px; border-top:1px solid var(--border); display:flex; justify-content:flex-end; gap:10px; }
     .add-teacher-body{ display:flex; flex-direction:column; gap:12px; }
     .add-teacher-body .field{ margin:0; }
+    .field-hint{ font-size:.82rem; color:var(--muted); font-weight:700; line-height:1.7; }
+    select.input{ appearance:auto; cursor:pointer; }
 
     /* Success animation */
   </style>
@@ -335,7 +337,11 @@
 
       <div class="dept-label" id="deptLabel">قسم —</div>
 
-      <div class="header-side end" aria-hidden="true"></div>
+      <div class="header-side end">
+        <button id="openAddTeacher" class="btn solid" type="button" aria-label="إضافة معلّم" hidden>
+          <i class="fas fa-user-plus"></i><span>إضافة معلّم</span>
+        </button>
+      </div>
     </div>
   </header>
 
@@ -393,7 +399,7 @@
               <button id="cancelTeacherEdit" class="btn ghost" type="button" hidden>إلغاء</button>
               <button id="saveTeacher" class="btn solid" type="button" hidden>حفظ</button>
             </div>
-            <button id="deleteTeacher" class="btn danger" type="button" hidden>حذف</button>
+            <button id="deleteTeacher" class="btn danger" type="button"><i class="fas fa-user-minus"></i>حذف المعلّم</button>
           </div>
           <div id="edOk" class="ok"></div><div id="edErr" class="err"></div>
         </section>
@@ -406,10 +412,42 @@
     <div class="modal">
       <div class="modal-header"><h3 class="modal-title">حذف ملف المعلّم</h3><button class="close-modal" aria-label="إغلاق">×</button></div>
       <div class="modal-body">
-        <p class="delete-confirm-text">هل تريد حذف ملف المعلّم <strong id="dtName"></strong> نهائيًا؟ لا يمكن التراجع عن هذا الإجراء.</p>
+        <p class="delete-confirm-text">هل تريد حذف المعلّم <strong id="dtName"></strong> نهائيًا؟ سيُحذف ملفه وحساب دخوله، ولا يمكن التراجع عن هذا الإجراء.</p>
         <div id="dtErr" class="err"></div>
       </div>
       <div class="modal-footer"><button id="cancelDeleteTeacher" class="btn ghost" type="button">إلغاء</button><button id="confirmDeleteTeacher" class="btn danger" type="button">حذف نهائيًا</button></div>
+    </div>
+  </div>
+
+  <!-- ADD TEACHER MODAL — a head can only ever create a plain teacher in
+       their own department: there are no role / supervisor / permission
+       fields here, and firestore.rules' headCreateAllowed() rejects them
+       anyway. -->
+  <div id="addTeacherModal" class="modal-overlay" aria-hidden="true">
+    <div class="modal">
+      <div class="modal-header"><h3 class="modal-title">إضافة معلّم إلى القسم</h3><button class="close-modal" aria-label="إغلاق">×</button></div>
+      <div class="modal-body add-teacher-body">
+        <div class="field"><label class="label" for="atName">الاسم الكامل</label><div class="input-wrap"><input id="atName" class="input" type="text" autocomplete="off"></div></div>
+        <div class="field">
+          <label class="label" for="atCivilId">رقم المستخدم (رقم البطاقة)</label>
+          <div class="input-wrap"><input id="atCivilId" class="input" type="text" inputmode="numeric" autocomplete="off" dir="ltr"></div>
+          <div class="field-hint">يسجّل المعلّم دخوله بهذا الرقم.</div>
+        </div>
+        <div class="field"><label class="label" for="atPassword">كلمة المرور</label><div class="input-wrap"><input id="atPassword" class="input" type="text" autocomplete="new-password" dir="ltr"></div><div class="field-hint">٦ أحرف على الأقل.</div></div>
+        <div class="field"><label class="label" for="atPhone">رقم الهاتف (اختياري)</label><div class="input-wrap"><input id="atPhone" class="input" type="tel" autocomplete="off"></div></div>
+        <div class="field" id="atSpecializationField" hidden>
+          <label class="label" for="atSpecialization">التخصص</label>
+          <div class="input-wrap"><select id="atSpecialization" class="input"></select></div>
+        </div>
+        <div class="field">
+          <label class="label">الفصول</label>
+          <div id="atClasses" class="classes-list"></div>
+          <div class="inline-add"><button id="atAddClass" class="add" type="button">+ إضافة فصل</button></div>
+        </div>
+        <div class="field-hint">يُضاف المعلّم بصلاحيات معلّم عادي فقط. الصلاحيات الإضافية (الإشراف، تعديل الجدول، ...) يمنحها المشرف من صفحة المعلمين.</div>
+        <div id="atErr" class="err"></div>
+      </div>
+      <div class="modal-footer"><button id="cancelAddTeacher" class="btn ghost" type="button">إلغاء</button><button id="submitAddTeacher" class="btn solid" type="button">إضافة</button></div>
     </div>
   </div>
 
@@ -437,18 +475,19 @@
     import { initializeApp, getApp, getApps } from "/shared/firebase.js";
     import {
       getAuth, onAuthStateChanged, setPersistence, browserLocalPersistence,
-      EmailAuthProvider, reauthenticateWithCredential
+      EmailAuthProvider, reauthenticateWithCredential,
+      createUserWithEmailAndPassword, deleteUser, signOut
     } from "/shared/firebase.js";
     import {
       initializeFirestore, persistentSingleTabManager,
       collection, query, where, getDocs,
-      doc, getDoc, setDoc, updateDoc, deleteField, writeBatch
+      doc, getDoc, setDoc, updateDoc, deleteField, writeBatch, serverTimestamp
     } from "/shared/firebase.js";
     import { watchPresence, startPresenceHeartbeat } from "/shared/presence.js";
     import { mountStudentNotesSheet } from "/shared/student-notes-sheet.js?v=2026-10-06b";
     import { mountTeacherClassSheet } from "/shared/teacher-class-sheet.js?v=2026-10-06b";
     import { fetchClassList, sortClassList, primeClassList } from "/shared/class-registry.js";
-    import { resolveDepartmentName, getDepartmentSubjectFilters } from "/shared/departments.js";
+    import { resolveDepartmentName, getDepartmentSubjectFilters, isMergedDepartment, getMergedSubjectsForDepartment } from "/shared/departments.js";
 
 
 
@@ -460,6 +499,12 @@
       db = initializeFirestore(app, {});
     }
     const auth = getAuth(app);
+    // Creating a new teacher's login with the client SDK signs that new
+    // account in on whichever Auth instance created it — doing it on a
+    // separate named app keeps the head signed in on the main one (same
+    // trick admins/teachers.html uses with its "AdminHelper" app).
+    const helperApp = getApps().some(a=>a.name==='HeadHelper') ? getApp('HeadHelper') : initializeApp(firebaseConfig, 'HeadHelper');
+    const helperAuth = getAuth(helperApp);
     // Teacher profile → الفصول → a class: its students and that teacher's
     // notes on them (read-only), like فصولي on Teachers/user.html.
     const studentNotes = mountStudentNotesSheet({ db, auth });
@@ -565,6 +610,21 @@
     const cpErr = document.getElementById('cpErr');
     const cpTeacherName = document.getElementById('cpTeacherName');
 
+    const openAddTeacherBtn = document.getElementById('openAddTeacher');
+    const addTeacherModal = document.getElementById('addTeacherModal');
+    const closeAddTeacherModal = document.querySelector('#addTeacherModal .close-modal');
+    const cancelAddTeacher = document.getElementById('cancelAddTeacher');
+    const submitAddTeacher = document.getElementById('submitAddTeacher');
+    const atName = document.getElementById('atName');
+    const atCivilId = document.getElementById('atCivilId');
+    const atPassword = document.getElementById('atPassword');
+    const atPhone = document.getElementById('atPhone');
+    const atSpecializationField = document.getElementById('atSpecializationField');
+    const atSpecialization = document.getElementById('atSpecialization');
+    const atClasses = document.getElementById('atClasses');
+    const atAddClass = document.getElementById('atAddClass');
+    const atErr = document.getElementById('atErr');
+
     /* ========= Helpers: teacher management ========= */
     const toArabicDigits = (str)=>(str||'').toString().replace(/\d/g,d=>'٠١٢٣٤٥٦٧٨٩'[d]);
     const MASKED_PASSWORD = '••••••••';
@@ -656,15 +716,15 @@
         container.appendChild(chip);
       });
     }
-    function makeClassRow(initialValue=""){
+    function makeClassRow(initialValue="", onChange=()=>updateProfileSummary()){
       const row=document.createElement('div');row.className='class-row';
       const top=document.createElement('div');top.className='top';
       const wrap=document.createElement('div');wrap.className='input-wrap';
       const sel=document.createElement('select');sel.className='input';
       classOptions.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=toArabicDigits(v);sel.appendChild(o);});
       const removeBtn=document.createElement('button');removeBtn.type='button';removeBtn.className='remove';removeBtn.textContent='حذف';
-      sel.addEventListener('change',()=>updateProfileSummary());
-      removeBtn.addEventListener('click',()=>{row.remove();updateProfileSummary();});
+      sel.addEventListener('change',()=>onChange());
+      removeBtn.addEventListener('click',()=>{row.remove();onChange();});
       if(initialValue && !classOptions.includes(initialValue)){
         const customOption=document.createElement('option');
         customOption.value=initialValue;
@@ -697,7 +757,7 @@
       }
     }
     function syncBodyScrollLock(){
-      const anyOverlayOpen=teacherSheet.classList.contains('open') || deleteTeacherModal.classList.contains('active') || changePasswordModal.classList.contains('active');
+      const anyOverlayOpen=teacherSheet.classList.contains('open') || deleteTeacherModal.classList.contains('active') || changePasswordModal.classList.contains('active') || addTeacherModal.classList.contains('active');
       document.body.style.overflow=anyOverlayOpen?'hidden':'';
     }
     const openModal=(m)=>{
@@ -815,7 +875,6 @@
       classesEditorWrap.hidden=!teacherEditMode;
       editTeacherBtn.hidden=teacherEditMode;
       changeTeacherPasswordBtn.hidden=!teacherEditMode;
-      deleteTeacherBtn.hidden=!teacherEditMode;
       cancelTeacherEditBtn.hidden=!teacherEditMode;
       if(teacherEditMode) captureEditSnapshot(); else editSnapshot=null;
       saveTeacherBtn.hidden=true;
@@ -929,6 +988,42 @@
     });
 
     /* ========= Delete ========= */
+    // The backend deletes the teacher's Firebase Auth login together with
+    // their Firestore doc (and its private/credentials subdoc) — deleting
+    // only the doc used to leave the login behind, still holding that civil
+    // ID, so re-adding the same person later failed. It checks the target
+    // is a plain teacher in this head's own department, same as the rules.
+    //
+    // Fallback for a backend that's unreachable or hasn't been redeployed
+    // with head support yet (answers 403 for every head): delete the
+    // Firestore docs directly, which firestore.rules' headManagesExisting()
+    // already allows. The login lingers in that case, but the teacher is
+    // gone from every page and can't reach any data.
+    async function deleteTeacherAccount(uid){
+      let response=null, body={};
+      try{
+        const idToken=await auth.currentUser.getIdToken();
+        response=await fetch(backendApiUrl('/api/admin/delete-teacher-account'),{
+          method:'POST',
+          headers:{'Content-Type':'application/json', Authorization:`Bearer ${idToken}`},
+          body:JSON.stringify({ uid })
+        });
+        body=await response.json().catch(()=>({}));
+      }catch(e){
+        console.warn('[deleteTeacher] backend unreachable, deleting Firestore docs only', e);
+      }
+      if(response?.ok && body?.ok) return;
+      if(response && response.status!==403){
+        throw new Error(body?.error||`delete_failed_${response.status}`);
+      }
+      // Atomic: if only the main doc were deleted, the private doc would be
+      // orphaned forever (its own rule is gated on the now-gone parent).
+      const batch = writeBatch(db);
+      batch.delete(doc(db,'teachers',uid,'private','credentials'));
+      batch.delete(doc(db,'teachers',uid));
+      await batch.commit();
+    }
+
     deleteTeacherBtn.addEventListener('click', ()=>{
       if(!currentTeacher.uid) return;
       dtErr.style.display='none';
@@ -946,20 +1041,20 @@
       const originalLabel=confirmDeleteTeacher.textContent;
       confirmDeleteTeacher.textContent='جارٍ الحذف...';
       try{
-        // Atomic: deletes the main doc and its private/credentials doc
-        // together — if only the main doc were deleted, the private doc
-        // would be orphaned forever (nothing left that could ever reach it
-        // again, since its own rule is gated on the now-gone parent).
-        const batch = writeBatch(db);
-        batch.delete(doc(db,'teachers',uid,'private','credentials'));
-        batch.delete(doc(db,'teachers',uid));
-        await batch.commit();
+        await deleteTeacherAccount(uid);
         closeModal(deleteTeacherModal,{fallbackFocus:deleteTeacherBtn});
         edOk.textContent='تم الحذف.'; edOk.style.display='block';
         setTimeout(()=>{ edOk.style.display='none'; closeTeacherView(); }, 700);
         await loadTeachers();
       }catch(e){
-        dtErr.textContent=e?.message||'تعذّر الحذف.';
+        const raw=String(e?.message||'').trim().replace(/_\d{3}$/,'');
+        const messageMap={
+          forbidden:'هذا المعلّم ليس ضمن قسمك.',
+          teacher_not_found:'الملف غير موجود.',
+          unauthorized:'يرجى تسجيل الدخول من جديد.',
+          'permission-denied':'لا تملك صلاحية حذف هذا المعلّم.',
+        };
+        dtErr.textContent=messageMap[raw]||messageMap[e?.code]||'تعذّر الحذف. حاول مرة أخرى.';
         dtErr.style.display='block';
       }finally{
         confirmDeleteTeacher.disabled=false; cancelDeleteTeacher.disabled=false;
@@ -1056,6 +1151,105 @@
       }
     });
 
+    /* ========= Add teacher ========= */
+    // A head may only create a plain teacher (role 'user') in their own
+    // department — the doc written below carries no isSupervisor /
+    // supervisorGrade / permissions / teams fields at all, and
+    // firestore.rules' headCreateAllowed() rejects any of them (and any
+    // other department or role) even if this page were tampered with.
+    // Extra permissions stay admin-only (admins/teachers.html).
+    function resetAddTeacherForm(){
+      atName.value=''; atCivilId.value=''; atPassword.value=''; atPhone.value='';
+      atErr.style.display='none';
+      const specs=isMergedDepartment(headDept) ? getMergedSubjectsForDepartment(headDept) : [];
+      atSpecialization.innerHTML='';
+      if(specs.length){
+        const placeholder=document.createElement('option');
+        placeholder.value=''; placeholder.textContent='اختر التخصص';
+        atSpecialization.appendChild(placeholder);
+        specs.forEach(s=>{ const o=document.createElement('option'); o.value=s; o.textContent=s; atSpecialization.appendChild(o); });
+      }
+      atSpecializationField.hidden=!specs.length;
+      // No row by default — an empty row's select would silently assign
+      // the first class in the list.
+      atClasses.innerHTML='';
+    }
+    openAddTeacherBtn.addEventListener('click', ()=>{
+      resetAddTeacherForm();
+      openModal(addTeacherModal);
+      setTimeout(()=>focusIfPossible(atName),20);
+    });
+    closeAddTeacherModal.addEventListener('click', ()=> closeModal(addTeacherModal,{fallbackFocus:openAddTeacherBtn}));
+    cancelAddTeacher.addEventListener('click', ()=> closeModal(addTeacherModal,{fallbackFocus:openAddTeacherBtn}));
+    addTeacherModal.addEventListener('click', (e)=>{ if(e.target===addTeacherModal) closeModal(addTeacherModal,{fallbackFocus:openAddTeacherBtn}); });
+    atAddClass.addEventListener('click', ()=> atClasses.appendChild(makeClassRow('', ()=>{})));
+    atCivilId.addEventListener('input', ()=>{
+      const digits=atCivilId.value.replace(/\D+/g,'');
+      if(digits!==atCivilId.value) atCivilId.value=digits;
+    });
+
+    submitAddTeacher.addEventListener('click', async ()=>{
+      atErr.style.display='none';
+      const showErr=(msg)=>{ atErr.textContent=msg; atErr.style.display='block'; };
+      const name=atName.value.trim();
+      const civilId=atCivilId.value.replace(/\D+/g,'');
+      const password=atPassword.value;
+      const phone=atPhone.value.trim();
+      const classes=getClassesFrom(atClasses);
+      const merged=isMergedDepartment(headDept);
+      const subject=merged ? atSpecialization.value.trim() : headDept;
+      if(!headDept || headDept==='—') return showErr('تعذّر تحديد قسمك.');
+      if(!name) return showErr('أدخل الاسم الكامل.');
+      if(!civilId) return showErr('أدخل رقم المستخدم بالأرقام فقط.');
+      if(!password || password.length<6) return showErr('كلمة المرور ٦ أحرف على الأقل.');
+      if(merged && !getMergedSubjectsForDepartment(headDept).includes(subject)) return showErr('اختر التخصص.');
+      const email=`t${civilId}@gmail.com`;
+
+      submitAddTeacher.disabled=true; cancelAddTeacher.disabled=true;
+      const originalLabel=submitAddTeacher.textContent;
+      submitAddTeacher.textContent='جارٍ الإضافة...';
+      let newUser=null;
+      try{
+        const cred=await createUserWithEmailAndPassword(helperAuth, email, password);
+        newUser=cred.user;
+        const newUid=newUser.uid;
+        // One batch so the profile and its password mirror exist together;
+        // the private doc's rule reads the parent with getAfter() for this.
+        const batch=writeBatch(db);
+        batch.set(doc(db,'teachers',newUid), {
+          uid:newUid, name, email, civilId, phone,
+          role:'user', subject, department:headDept, classes,
+          createdAt:serverTimestamp(),
+        });
+        batch.set(doc(db,'teachers',newUid,'private','credentials'), { displayedPassword:password });
+        await batch.commit();
+        newUser=null;
+        try{ await signOut(helperAuth); }catch{}
+        closeModal(addTeacherModal,{fallbackFocus:openAddTeacherBtn});
+        await loadTeachers();
+        openTeacherEditor(newUid);
+      }catch(e){
+        // The login was created but the profile write failed: remove the
+        // login again so the civil ID isn't left taken by an account that
+        // doesn't show up anywhere.
+        if(newUser){ try{ await deleteUser(newUser); }catch(cleanupErr){ console.error('[addTeacher] cleanup failed', cleanupErr); } }
+        try{ await signOut(helperAuth); }catch{}
+        const code=String(e?.code||'');
+        const messageMap={
+          'auth/email-already-in-use':'رقم المستخدم هذا مستخدم بالفعل في حساب آخر.',
+          'auth/weak-password':'كلمة المرور ضعيفة جدًا.',
+          'auth/invalid-email':'رقم المستخدم غير صالح.',
+          'auth/network-request-failed':'تعذّر الاتصال. تحقق من الإنترنت وحاول مرة أخرى.',
+          'permission-denied':'لا تملك صلاحية إضافة هذا المعلّم إلى قسمك.',
+        };
+        console.error('[addTeacher]', e);
+        showErr(messageMap[code] || 'تعذّر إنشاء الحساب. حاول مرة أخرى.');
+      }finally{
+        submitAddTeacher.disabled=false; cancelAddTeacher.disabled=false;
+        submitAddTeacher.textContent=originalLabel;
+      }
+    });
+
     /* ========= Init ========= */
     setPersistence(auth, browserLocalPersistence).catch(()=>{});
 
@@ -1074,6 +1268,7 @@
         await loadHeadProfileAndCheck(user);
         startPresenceHeartbeat(db, user.uid);
         classOptions = sortClassList(await fetchClassList(db));
+        openAddTeacherBtn.hidden = !headDept || headDept==='—';
         await loadTeachers();
       }catch(e){
         console.error(e);
