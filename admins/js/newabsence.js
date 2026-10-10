@@ -1202,8 +1202,9 @@ export async function mountTodayAbsenceSheet(host, hooks) {
         };
 
         const removeLate = async (ev) => {
-          if (!confirm(`حذف تأخير الصبح للطالب ${row.name}؟ لا يمكن التراجع.`)) return;
-          await window.Feedback.busy(ev?.currentTarget || null, async () => {
+          const btn = ev?.currentTarget || null;
+          if (!(await window.Dialog.confirm({ title: 'حذف التأخير؟', text: `حذف تأخير الصبح للطالب ${row.name}؟ لا يمكن التراجع.`, ok: 'حذف', danger: true }))) return;
+          await window.Feedback.busy(btn, async () => {
             await deleteDoc(doc(db, 'morningLates', d.id));
             const entry = morningLatesMap[className];
             if (entry) {

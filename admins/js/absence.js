@@ -963,7 +963,7 @@ export async function mountDetailedAbsenceSheet(host, hooks) {
       setActiveTime('custom');
       refetchAndRender();
     } else {
-      alert('الرجاء اختيار مدى تاريخ صحيح.');
+      window.Dialog.alert({ text: 'الرجاء اختيار مدى تاريخ صحيح.' });
     }
   });
   clearRangeBtn.addEventListener('click', () => {
@@ -1153,7 +1153,7 @@ export async function mountDetailedAbsenceSheet(host, hooks) {
 
     } catch (error) {
       console.error('Error generating PDF:', error);
-      alert('حدث خطأ أثناء إنشاء التقرير');
+      window.Feedback.notify('حدث خطأ أثناء إنشاء التقرير', 'err');
     } finally {
       exportLoading.classList.remove('active');
       generatePDF.disabled = false;

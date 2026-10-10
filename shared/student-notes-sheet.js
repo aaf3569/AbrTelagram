@@ -542,7 +542,7 @@ export function mountStudentNotesSheet({ db, auth, onChange }) {
     notesListEl.querySelectorAll("button[data-del]").forEach((btn) => {
       btn.addEventListener("click", async () => {
         const path = btn.getAttribute("data-del");
-        if (!confirm("تأكيد حذف الملاحظة؟ لا يمكن التراجع.")) return;
+        if (!(await window.Dialog.confirm({ title: "حذف الملاحظة؟", text: "تأكيد حذف الملاحظة؟ لا يمكن التراجع.", ok: "حذف", danger: true }))) return;
         await window.Feedback.busy(btn, async () => {
           await deleteDoc(doc(db, path));
           notifyChange();
@@ -581,13 +581,13 @@ export function mountStudentNotesSheet({ db, auth, onChange }) {
 
   saveBtn.addEventListener("click", async () => {
     if (!fldTitle.value.trim() || !fldDesc.value.trim() || !fldAct.value.trim() || !fldDate.value) {
-      alert("يرجى تعبئة جميع الحقول.");
+      await window.Dialog.alert({ title: "حقول ناقصة", text: "يرجى تعبئة جميع الحقول." });
       return;
     }
     let saved = false;
     await window.Feedback.busy(saveBtn, async () => {
       const user = auth.currentUser;
-      if (!user) { alert("يرجى تسجيل الدخول"); return; }
+      if (!user) { window.Feedback.notify("يرجى تسجيل الدخول", "err"); return; }
       const colRef = collection(db, "students", studentId, "notes_by_teacher", user.uid, paths[pendingType]);
       const [y, m, d] = fldDate.value.split("-").map(Number);
       const date = new Date(Date.UTC(y, m - 1, d, 0, 0, 0));

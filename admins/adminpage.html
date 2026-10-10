@@ -932,6 +932,7 @@
   <link rel="stylesheet" href="/shared/back-button.css" />
   <link rel="stylesheet" href="/shared/actions.css" />
   <script src="/shared/feedback.js" defer></script>
+  <script src="/shared/dialog.js" defer></script>
 </head>
 <body>
   <header class="site-header">
@@ -2237,13 +2238,13 @@
                 if(!editedDataUrl) return;
                 const ok = saveStoredAvatar(avatarUserUid, editedDataUrl);
                 if(!ok){
-                    alert('تعذّر حفظ الصورة محلياً. جرّب صورة بحجم أصغر.');
+                    Feedback.notify('تعذّر حفظ الصورة محلياً. جرّب صورة بحجم أصغر.', 'err');
                     return;
                 }
                 applyAvatarToUI(editedDataUrl);
             }catch(e){
                 console.error('Avatar process error:', e);
-                alert('تعذّر معالجة الصورة. حاول مرة أخرى.');
+                Feedback.notify('تعذّر معالجة الصورة. حاول مرة أخرى.', 'err');
             }
         }
 
@@ -3249,7 +3250,7 @@
         await loadCurrentNotif();
         loadNotifHistory();
       } catch (e) {
-        alert('تعذّر إيقاف الإشعار: ' + (e?.message || ''));
+        Feedback.notify('تعذّر إيقاف الإشعار: ' + (e?.message || ''), 'err');
       } finally {
         deactivateNotifBtn.disabled = false;
       }
@@ -3619,7 +3620,7 @@
         await loadTeachers(selectedSubject);
         
       }catch(e){
-        alert('تعذّر إنشاء الحساب: ' + (e?.message||''));
+        Feedback.notify('تعذّر إنشاء الحساب: ' + (e?.message||''), 'err');
         console.error('[createTeacher]', e);
       }
     });
@@ -3704,7 +3705,7 @@
       try{
         const ref=doc(db,'teachers',uid);
         const s=await getDoc(ref);
-        if(!s.exists()){ alert('الملف غير موجود.'); return; }
+        if(!s.exists()){ Feedback.notify('الملف غير موجود.', 'err'); return; }
         const d=s.data();
         currentTeacher = { uid, data:d };
 
@@ -3727,7 +3728,7 @@
         openSheet(teacherSheet);
       }catch(e){
         console.error('[openTeacherEditor]', e);
-        alert('تعذّر فتح صفحة المعلّم.');
+        Feedback.notify('تعذّر فتح صفحة المعلّم.', 'err');
       }
     }
     closeTeacher.addEventListener('click', ()=> closeSheet(teacherSheet));
@@ -3772,7 +3773,7 @@
       try{
         const { uid } = currentTeacher;
         if(!uid) return;
-        if(!confirm('حذف ملف المعلّم من Firestore؟')) return;
+        if(!(await Dialog.confirm({ title:'حذف ملف المعلّم؟', text:'حذف ملف المعلّم من Firestore؟', ok:'حذف', danger:true }))) return;
         await deleteDoc(doc(db,'teachers',uid));
         edOk.textContent='تم الحذف.'; edOk.style.display='block';
         setTimeout(()=>{ edOk.style.display='none'; closeSheet(teacherSheet); }, 700);
@@ -3791,7 +3792,7 @@
         try{
           const ref=doc(db,'teachers',uid);
           const s=await getDoc(ref);
-          if(!s.exists()){ alert('الملف غير موجود.'); return; }
+          if(!s.exists()){ Feedback.notify('الملف غير موجود.', 'err'); return; }
           const d=s.data();
           currentAdmin = { uid, data:d };
           adminTitle.textContent = `بيانات: ${d.name || d.email || uid}`;
@@ -3800,7 +3801,7 @@
           openSheet(adminSheet);
         }catch(e){
           console.error('[openAdminEditor]', e);
-          alert('تعذّر فتح صفحة المشرف.');
+          Feedback.notify('تعذّر فتح صفحة المشرف.', 'err');
         }
       })();
     }
@@ -3905,7 +3906,7 @@
       try{
         const { uid } = currentAdmin;
         if(!uid) return;
-        if(!confirm('حذف ملف المشرف من Firestore؟')) return;
+        if(!(await Dialog.confirm({ title:'حذف ملف المشرف؟', text:'حذف ملف المشرف من Firestore؟', ok:'حذف', danger:true }))) return;
         await deleteDoc(doc(db,'teachers',uid));
         edAOk.textContent='تم الحذف.'; edAOk.style.display='block';
         setTimeout(()=>{ edAOk.style.display='none'; closeSheet(adminSheet); }, 700);

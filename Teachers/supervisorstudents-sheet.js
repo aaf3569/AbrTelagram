@@ -539,7 +539,7 @@ async function openStudentEditor(id, { syncRoute=true } = {}){
   try{
     const ref = doc(db,'students', id);
     const s = await getDoc(ref);
-    if(!s.exists()){ alert('السجل غير موجود.'); return; }
+    if(!s.exists()){ Feedback.notify('السجل غير موجود.', 'err'); return; }
     const d = s.data();
     currentStudent = { id, data:d };
     
@@ -570,7 +570,7 @@ async function openStudentEditor(id, { syncRoute=true } = {}){
     ]);
   }catch(e){
     console.error('[openStudentEditor]', e);
-    alert('تعذّر فتح صفحة الطالب.');
+    Feedback.notify('تعذّر فتح صفحة الطالب.', 'err');
   }
 }
 
@@ -639,7 +639,7 @@ deleteStudent.addEventListener('click', async ()=>{
   try{
     const { id } = currentStudent;
     if(!id) return;
-    if(!confirm('حذف سجل الطالب؟')) return;
+    if(!(await Dialog.confirm({ title:'حذف سجل الطالب؟', ok:'حذف', danger:true }))) return;
     await deleteDoc(doc(db,'students', id));
     edOk.textContent='تم الحذف.';
     edOk.style.display='block';
@@ -790,7 +790,7 @@ saveStatusBtn.addEventListener('click', async () => {
   if (currentUserIsSupervisor) return;
   if (!currentAttendanceRecord || !currentStudent.id) return;
   const selectedOption = document.querySelector('.status-option.selected');
-  if (!selectedOption) { alert('يرجى اختيار حالة جديدة'); return; }
+  if (!selectedOption) { await Dialog.alert({ text:'يرجى اختيار حالة جديدة' }); return; }
   const newStatus = selectedOption.dataset.status;
   if (newStatus === currentAttendanceRecord.status) { statusEditForm.classList.remove('active'); return; }
   
@@ -1067,7 +1067,7 @@ saveRecordPdf.addEventListener('click', async ()=>{
     if(isDownloadingPaperPdf) return;
     isDownloadingPaperPdf = true;
     if(!window.html2canvas || !window.jspdf?.jsPDF){
-      alert('تعذّر تحميل أدوات إنشاء PDF حالياً.');
+      Feedback.notify('تعذّر تحميل أدوات إنشاء PDF حالياً.', 'err');
       isDownloadingPaperPdf = false;
       return;
     }
@@ -1135,7 +1135,7 @@ saveRecordPdf.addEventListener('click', async ()=>{
     pdf.save(fileName);
   }catch(e){
     console.error('[saveRecordPdf]', e);
-    alert('تعذّر حفظ الملف PDF.');
+    Feedback.notify('تعذّر حفظ الملف PDF.', 'err');
   }finally{
     isDownloadingPaperPdf = false;
   }
@@ -1225,8 +1225,9 @@ function renderCommitCard(sid, c){
     }, { ok:'تم الحفظ', err:'تعذّر الحفظ' });
   });
   del.addEventListener('click', async (ev)=>{
-    if(!confirm('حذف التعهد؟')) return;
-    await Feedback.busy(ev.currentTarget, async ()=>{ await deleteDoc(doc(db,'students', sid, 'commitments', c.id)); wrap.remove(); if(!commitList.children.length){ commitEmpty.style.display='block'; } }, { ok:'تم الحذف', err:'تعذّر الحذف' });
+    const btn = ev.currentTarget;
+    if(!(await Dialog.confirm({ title:'حذف التعهد؟', ok:'حذف', danger:true }))) return;
+    await Feedback.busy(btn, async ()=>{ await deleteDoc(doc(db,'students', sid, 'commitments', c.id)); wrap.remove(); if(!commitList.children.length){ commitEmpty.style.display='block'; } }, { ok:'تم الحذف', err:'تعذّر الحذف' });
   });
   bindCardOpen(wrap, ()=> {
     openRecordDetail('تفاصيل التعهد', [
@@ -1244,7 +1245,7 @@ function renderCommitCard(sid, c){
 commitSave.addEventListener('click', async ()=>{
   if(!currentStudent.id) return;
   const title = (commitTitle.value||'').trim(); const reason = (commitReason.value||'').trim(); const due = (commitDue.value||'').trim(); const audience = commitAudience.value || 'guardian';
-  if(!title){ alert('أدخل العنوان'); return; }
+  if(!title){ await Dialog.alert({ text:'أدخل العنوان' }); return; }
   await Feedback.busy(commitSave, async ()=>{
     const ref = doc(collection(db,'students', currentStudent.id, 'commitments'));
     await setDoc(ref, {
@@ -1288,8 +1289,9 @@ function renderEnrollCard(sid, r){
     </div>
   `;
   wrap.querySelector('[data-act="del"]').addEventListener('click', async (ev)=>{
-    if(!confirm('حذف القيد؟')) return;
-    await Feedback.busy(ev.currentTarget, async ()=>{ await deleteDoc(doc(db,'students', sid, 'enrollments', r.id)); wrap.remove(); if(!enrollList.children.length){ enrollEmpty.style.display='block'; } }, { ok:'تم الحذف', err:'تعذّر الحذف' });
+    const btn = ev.currentTarget;
+    if(!(await Dialog.confirm({ title:'حذف القيد؟', ok:'حذف', danger:true }))) return;
+    await Feedback.busy(btn, async ()=>{ await deleteDoc(doc(db,'students', sid, 'enrollments', r.id)); wrap.remove(); if(!enrollList.children.length){ enrollEmpty.style.display='block'; } }, { ok:'تم الحذف', err:'تعذّر الحذف' });
   });
   bindCardOpen(wrap, ()=> {
     openRecordDetail('تفاصيل القيد', [
@@ -1307,7 +1309,7 @@ function renderEnrollCard(sid, r){
 enrollSave.addEventListener('click', async ()=>{
   if(!currentStudent.id) return;
   const title = (enrollTitle.value||'').trim(); const reason= (enrollReason.value||'').trim(); const lengthText = (enrollLength.value||'').trim(); const from = (enrollFrom.value||'').trim(); const to = (enrollTo.value||'').trim();
-  if(!title){ alert('أدخل العنوان'); return; }
+  if(!title){ await Dialog.alert({ text:'أدخل العنوان' }); return; }
   await Feedback.busy(enrollSave, async ()=>{
     const ref = doc(collection(db,'students', currentStudent.id, 'enrollments'));
     await setDoc(ref, {
@@ -1350,8 +1352,9 @@ function renderReportCard(sid, r){
     </div>
   `;
   wrap.querySelector('[data-act="del"]').addEventListener('click', async (ev)=>{
-    if(!confirm('حذف التقرير؟')) return;
-    await Feedback.busy(ev.currentTarget, async ()=>{ await deleteDoc(doc(db,'students', sid, 'reports', r.id)); wrap.remove(); if(!reportList.children.length){ reportEmpty.style.display='block'; } }, { ok:'تم الحذف', err:'تعذّر الحذف' });
+    const btn = ev.currentTarget;
+    if(!(await Dialog.confirm({ title:'حذف التقرير؟', ok:'حذف', danger:true }))) return;
+    await Feedback.busy(btn, async ()=>{ await deleteDoc(doc(db,'students', sid, 'reports', r.id)); wrap.remove(); if(!reportList.children.length){ reportEmpty.style.display='block'; } }, { ok:'تم الحذف', err:'تعذّر الحذف' });
   });
   bindCardOpen(wrap, ()=> {
     openRecordDetail('تفاصيل التقرير', [
@@ -1368,7 +1371,7 @@ function renderReportCard(sid, r){
 reportSave.addEventListener('click', async ()=>{
   if(!currentStudent.id) return;
   const type = reportType.value || 'behavior'; const title = (reportTitle.value||'').trim(); const reason= (reportReason.value||'').trim(); const date = (reportDate.value||'').trim();
-  if(!title || !date){ alert('أكمل الحقول'); return; }
+  if(!title || !date){ await Dialog.alert({ text:'أكمل الحقول' }); return; }
   await Feedback.busy(reportSave, async ()=>{
     const ref = doc(collection(db,'students', currentStudent.id, 'reports'));
     await setDoc(ref, {
@@ -1422,8 +1425,9 @@ function renderNoteCard(sid, n){
     }, { ok:'تم التحديث', err:'تعذّر التحديث' });
   });
   delBtn.addEventListener('click', async (ev)=>{
-    if(!confirm('حذف الملاحظة؟')) return;
-    await Feedback.busy(ev.currentTarget, async ()=>{ await deleteDoc(doc(db,'students', sid, 'notes', n.id)); wrap.remove(); if(!noteList.children.length){ noteEmpty.style.display='block'; } }, { ok:'تم الحذف', err:'تعذّر الحذف' });
+    const btn = ev.currentTarget;
+    if(!(await Dialog.confirm({ title:'حذف الملاحظة؟', ok:'حذف', danger:true }))) return;
+    await Feedback.busy(btn, async ()=>{ await deleteDoc(doc(db,'students', sid, 'notes', n.id)); wrap.remove(); if(!noteList.children.length){ noteEmpty.style.display='block'; } }, { ok:'تم الحذف', err:'تعذّر الحذف' });
   });
   bindCardOpen(wrap, ()=> {
     openRecordDetail('تفاصيل الملاحظة', [
@@ -1440,7 +1444,7 @@ function renderNoteCard(sid, n){
 noteSave.addEventListener('click', async ()=>{
   if(!currentStudent.id) return;
   const body = (noteBody.value||'').trim(); const type = noteType.value || 'general'; const pinned = !!notePinned.checked;
-  if(!body){ alert('أدخل نص الملاحظة'); return; }
+  if(!body){ await Dialog.alert({ text:'أدخل نص الملاحظة' }); return; }
   await Feedback.busy(noteSave, async ()=>{
     const ref = doc(collection(db,'students', currentStudent.id, 'notes'));
     await setDoc(ref, {

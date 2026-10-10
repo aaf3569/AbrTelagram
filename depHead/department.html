@@ -402,6 +402,7 @@
   <link rel="stylesheet" href="/shared/back-button.css" />
   <link rel="stylesheet" href="/shared/actions.css" />
   <script src="/shared/feedback.js" defer></script>
+  <script src="/shared/dialog.js" defer></script>
 </head>
 
 <body>
@@ -686,7 +687,7 @@
       doc, getDoc, setDoc, updateDoc, deleteField, writeBatch, serverTimestamp
     } from "/shared/firebase.js";
     import { watchPresence, startPresenceHeartbeat } from "/shared/presence.js";
-    import { mountStudentNotesSheet } from "/shared/student-notes-sheet.js?v=2026-10-14";
+    import { mountStudentNotesSheet } from "/shared/student-notes-sheet.js?v=2026-10-15";
     import { mountTeacherClassSheet } from "/shared/teacher-class-sheet.js?v=2026-10-14d";
     import { fetchClassList, sortClassList, primeClassList } from "/shared/class-registry.js";
     import { resolveDepartmentName, getDepartmentSubjectFilters, isMergedDepartment, getMergedSubjectsForDepartment } from "/shared/departments.js";
@@ -988,7 +989,7 @@
       const user=auth.currentUser;
       const email=(user?.email||'').trim();
       if(!user || !email) throw new Error('تعذّر تحديد حسابك الحالي.');
-      const headPassword=prompt('لأمان الحساب، أدخل كلمة مرورك الحالية:');
+      const headPassword=await Dialog.prompt({ title:'تأكيد الهوية', text:'لأمان الحساب، أدخل كلمة مرورك الحالية:', type:'password', ok:'متابعة' });
       if(headPassword===null) throw new Error('تم الإلغاء');
       if(!headPassword) throw new Error('أدخل كلمة المرور.');
       const credential=EmailAuthProvider.credential(email, headPassword);
@@ -1094,7 +1095,7 @@
           getDoc(doc(db,'teachers',uid)),
           getDoc(doc(db,'teachers',uid,'private','credentials'))
         ]);
-        if(!s.exists()){ alert('الملف غير موجود.'); return; }
+        if(!s.exists()){ Feedback.notify('الملف غير موجود.', 'err'); return; }
         const d = s.data();
         const privData = privSnap.exists() ? privSnap.data() : null;
         const storedDisplayedPassword = (privData!=null && privData.displayedPassword!=null) ? String(privData.displayedPassword) : getStoredDisplayedPassword(d);
@@ -1117,7 +1118,7 @@
         });
       }catch(e){
         console.error('[openTeacherEditor]', e);
-        alert('تعذّر فتح صفحة المعلّم.');
+        Feedback.notify('تعذّر فتح صفحة المعلّم.', 'err');
       }
     }
     function closeTeacherView(){

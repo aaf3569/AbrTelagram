@@ -508,6 +508,7 @@
   <link rel="stylesheet" href="/shared/back-button.css" />
   <link rel="stylesheet" href="/shared/actions.css" />
   <script src="/shared/feedback.js" defer></script>
+  <script src="/shared/dialog.js" defer></script>
 </head>
 <body>
   <header class="site-header">
@@ -902,7 +903,7 @@
     import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signOut, EmailAuthProvider, reauthenticateWithCredential } from "/shared/firebase.js";
     import { initializeFirestore, persistentSingleTabManager, collection, getDocs, query, where, doc, getDoc, setDoc, updateDoc, deleteField, serverTimestamp } from "/shared/firebase.js";
     import { startPresenceHeartbeat, watchPresence } from "/shared/presence.js";
-    import { mountStudentNotesSheet } from "/shared/student-notes-sheet.js?v=2026-10-14";
+    import { mountStudentNotesSheet } from "/shared/student-notes-sheet.js?v=2026-10-15";
     import { mountTeacherClassSheet } from "/shared/teacher-class-sheet.js?v=2026-10-14d";
     import { fetchClassList, sortClassList, primeClassList } from "/shared/class-registry.js";
     import {
@@ -1587,7 +1588,7 @@
         setTimeout(()=>URL.revokeObjectURL(url), 4000);
       }catch(e){
         console.error('[teachers-export] failed:', e?.message||e);
-        alert('تعذّر إنشاء ملف المعلمين.');
+        Feedback.notify('تعذّر إنشاء ملف المعلمين.', 'err');
       }finally{
         downloadTeachersBtn.disabled=false;
         downloadTeachersBtn.textContent=original;
@@ -1951,7 +1952,7 @@
       const user=auth.currentUser;
       const email=(user?.email||'').trim();
       if(!user || !email) throw new Error('تعذّر تحديد حساب المشرف الحالي.');
-      const adminPassword=prompt('لأمان الحساب، أدخل كلمة مرور المشرف الحالي:');
+      const adminPassword=await Dialog.prompt({ title:'تأكيد الهوية', text:'لأمان الحساب، أدخل كلمة مرور المشرف الحالي:', type:'password', ok:'متابعة' });
       if(adminPassword===null) throw new Error('تم الإلغاء');
       if(!adminPassword) throw new Error('أدخل كلمة مرور المشرف.');
       const credential=EmailAuthProvider.credential(email, adminPassword);
@@ -2172,7 +2173,7 @@
       edAOk.style.display='none';edAErr.style.display='none';
       try{
         const s=await getDoc(doc(db,'teachers',uid));
-        if(!s.exists()){alert('الملف غير موجود.');return;}
+        if(!s.exists()){Feedback.notify('الملف غير موجود.', 'err');return;}
         const d=s.data();
         currentAdmin={uid,data:d};
         adminTitle.textContent=d.name||getTeacherCivilId(d)||uid;
@@ -2192,7 +2193,7 @@
           adminLastSeenText.textContent=state.label;
         });
       }catch{
-        alert('تعذّر فتح صفحة المشرف.');
+        Feedback.notify('تعذّر فتح صفحة المشرف.', 'err');
       }
     }
     editAdmin.addEventListener('click',()=>setAdminEditMode(true));
@@ -2535,7 +2536,7 @@
           getDoc(doc(db,'teachers',uid)),
           getDoc(doc(db,'teachers',uid,'private','credentials'))
         ]);
-        if(!s.exists()){alert('الملف غير موجود.');return;}
+        if(!s.exists()){Feedback.notify('الملف غير موجود.', 'err');return;}
         const d=s.data();
         const privData=privSnap.exists()?privSnap.data():null;
         // Load displayedPassword from private subcollection; fall back to main doc for legacy records
@@ -2574,7 +2575,7 @@
           profileLastSeenDot.classList.toggle('online', state.online);
           profileLastSeenText.textContent=state.label;
         });
-      }catch{alert('تعذّر فتح صفحة المعلّم.');}
+      }catch{Feedback.notify('تعذّر فتح صفحة المعلّم.', 'err');}
     }
 
     saveTeacher.addEventListener('click', async ()=>{

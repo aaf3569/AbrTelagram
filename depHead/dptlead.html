@@ -658,6 +658,7 @@
   <link rel="stylesheet" href="/shared/back-button.css" />
   <link rel="stylesheet" href="/shared/actions.css" />
   <script src="/shared/feedback.js" defer></script>
+  <script src="/shared/dialog.js" defer></script>
 </head>
 <body>
     <header class="site-header">
@@ -1823,13 +1824,13 @@
                 if(!editedDataUrl) return;
                 const ok = saveStoredAvatar(avatarUserUid, editedDataUrl);
                 if(!ok){
-                    alert('تعذّر حفظ الصورة محلياً. جرّب صورة بحجم أصغر.');
+                    Feedback.notify('تعذّر حفظ الصورة محلياً. جرّب صورة بحجم أصغر.', 'err');
                     return;
                 }
                 applyAvatarToUI(editedDataUrl);
             }catch(e){
                 console.error('Avatar process error:', e);
-                alert('تعذّر معالجة الصورة. حاول مرة أخرى.');
+                Feedback.notify('تعذّر معالجة الصورة. حاول مرة أخرى.', 'err');
             }
         }
 

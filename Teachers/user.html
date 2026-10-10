@@ -54,6 +54,7 @@
   <link rel="stylesheet" href="/shared/back-button.css" />
   <link rel="stylesheet" href="/shared/actions.css" />
   <script src="/shared/feedback.js" defer></script>
+  <script src="/shared/dialog.js" defer></script>
 </head>
 
 <body>
@@ -1157,7 +1158,7 @@
     // a deploy the page could otherwise run against the previous module —
     // bump it whenever this page starts relying on something new in there.
     import { mountAttendanceSheet, LESSON_END_GRACE_MINUTES } from "/shared/attendance.js?v=2026-10-14d";
-    import { mountStudentNotesSheet } from "/shared/student-notes-sheet.js?v=2026-10-14";
+    import { mountStudentNotesSheet } from "/shared/student-notes-sheet.js?v=2026-10-15";
     import { parseTimeToMinutes } from "/shared/kuwait-time.js";
     import { isTruthyFlag, canManageAttendance } from "/shared/auth-guard.js";
     import { startPresenceHeartbeat, stopPresenceHeartbeat } from "/shared/presence.js";

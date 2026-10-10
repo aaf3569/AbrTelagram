@@ -1467,6 +1467,7 @@
   <link rel="stylesheet" href="/shared/back-button.css" />
   <link rel="stylesheet" href="/shared/actions.css" />
   <script src="/shared/feedback.js" defer></script>
+  <script src="/shared/dialog.js" defer></script>
 </head>
 <body>
   <header class="site-header">
@@ -3931,7 +3932,7 @@
 
       const prevClassKey = schedule.classKey;
       if(dirty){
-        const proceed = window.confirm('لديك تغييرات غير محفوظة في هذا الجدول. سيتم تجاهلها عند الانتقال إلى فصل آخر. هل تريد المتابعة؟');
+        const proceed = await Dialog.confirm({ title:'تغييرات غير محفوظة', text:'لديك تغييرات غير محفوظة في هذا الجدول. سيتم تجاهلها عند الانتقال إلى فصل آخر. هل تريد المتابعة؟', ok:'متابعة' });
         if(!proceed){
           const prevGrade = parseClassKey(prevClassKey).grade;
           gradeSelEl.value = prevGrade;
@@ -4222,7 +4223,7 @@
     }
 
     async function deleteCustomSchedule(schedule, cardEl, btn){
-      const confirmed = window.confirm('هل أنت متأكد من حذف هذا الجدول من جميع الفصول؟');
+      const confirmed = await Dialog.confirm({ title:'حذف الجدول؟', text:'هل أنت متأكد من حذف هذا الجدول من جميع الفصول؟', ok:'حذف', danger:true });
       if(!confirmed) return;
 
       setBusy(btn, true);
@@ -5389,9 +5390,11 @@
         (r.status === 'ambiguous' && !r._picked) || r.status === 'unmatched' || r.status === 'error'
       );
       if(leftover.length){
-        const proceed = window.confirm(
-          `سيتم تجاهل ${leftover.length} حصّة لم تُحل بعد (بلا معلّم مُختار أو تعذّر التطابق) ولن تُستورد. هل تريد المتابعة والاستيراد بدون هذه الحصص؟`
-        );
+        const proceed = await Dialog.confirm({
+          title: 'حصص لم تُحل',
+          text: `سيتم تجاهل ${leftover.length} حصّة لم تُحل بعد (بلا معلّم مُختار أو تعذّر التطابق) ولن تُستورد. هل تريد المتابعة والاستيراد بدون هذه الحصص؟`,
+          ok: 'متابعة الاستيراد'
+        });
         if(!proceed) return;
       }
 
@@ -5615,7 +5618,7 @@
       const name = (newScheduleNameInput.value || '').trim() || 'جدول إضافي';
       const v = newScheduleDaySel.value;
       if(v === ''){
-        alert('اختر اليوم قبل إنشاء الجدول.');
+        await Dialog.alert({ text:'اختر اليوم قبل إنشاء الجدول.' });
         newScheduleDaySel.focus();
         return;
       }
@@ -5642,7 +5645,7 @@
 
     gradeSel.addEventListener('change', async (e)=>{
       if (dirty) {
-        const confirmChange = window.confirm("هناك تغييرات غير محفوظة. إذا غيرت الصف ستفقد هذه التغييرات. هل تريد المتابعة؟");
+        const confirmChange = await Dialog.confirm({ title:'تغييرات غير محفوظة', text:"هناك تغييرات غير محفوظة. إذا غيرت الصف ستفقد هذه التغييرات. هل تريد المتابعة؟", ok:'متابعة' });
         if (!confirmChange) {
           gradeSel.value = previousGrade;
           return;
@@ -5666,7 +5669,7 @@
 
     classSel.addEventListener('change', async (e)=>{
       if (dirty) {
-        const confirmChange = window.confirm("هناك تغييرات غير محفوظة. إذا غيرت الفصل ستفقد هذه التغييرات. هل تريد المتابعة؟");
+        const confirmChange = await Dialog.confirm({ title:'تغييرات غير محفوظة', text:"هناك تغييرات غير محفوظة. إذا غيرت الفصل ستفقد هذه التغييرات. هل تريد المتابعة؟", ok:'متابعة' });
         if (!confirmChange) {
           classSel.value = previousClass;
           return;
@@ -6126,7 +6129,7 @@
 
     async function discardAllChanges(){
       if(loading) return;
-      const confirmed = window.confirm('سيتم تجاهل كل التغييرات غير المحفوظة والعودة لآخر نسخة محفوظة. متابعة؟');
+      const confirmed = await Dialog.confirm({ title:'تجاهل التغييرات؟', text:'سيتم تجاهل كل التغييرات غير المحفوظة والعودة لآخر نسخة محفوظة. متابعة؟', ok:'تجاهل التغييرات', danger:true });
       if(!confirmed) return;
       setLoading(true, "جاري التراجع عن التغييرات...");
       try{
@@ -6151,10 +6154,12 @@
     // silently leaving whichever page resolves it next to guess.
     async function forceResaveAllSchedules(){
       if(loading) return;
-      const confirmed = window.confirm(
-        'سيُعاد حفظ كل حصة في كل جداول المدرسة (كل الفصول) بختم وقت جديد، ويُصحَّح تلقائيًّا معلّم أي حصة مسندة لحساب معلّم قديم/غير صحيح. ' +
-        'قد يستغرق هذا بعض الوقت حسب عدد الحصص. متابعة؟'
-      );
+      const confirmed = await Dialog.confirm({
+        title: 'إعادة حفظ كل الجداول',
+        text: 'سيُعاد حفظ كل حصة في كل جداول المدرسة (كل الفصول) بختم وقت جديد، ويُصحَّح تلقائيًّا معلّم أي حصة مسندة لحساب معلّم قديم/غير صحيح. ' +
+          'قد يستغرق هذا بعض الوقت حسب عدد الحصص. متابعة؟',
+        ok: 'متابعة'
+      });
       if(!confirmed) return;
 
       setLoading(true, "جاري إعادة حفظ كل الجداول...");
@@ -6294,11 +6299,14 @@
     // lesson number, so past attendance and covers stay exactly as they are.
     async function deleteAllSchedules(){
       if(loading) return;
-      const typed = window.prompt(
-        'سيتم حذف جميع الحصص في كل جداول المدرسة (كل الفصول).\n' +
-        'سجلات الحضور والغياب والتغطيات والأيام المخصّصة وأوقات الحصص لن تتأثر.\n\n' +
-        'للتأكيد اكتب: حذف'
-      );
+      const typed = await Dialog.prompt({
+        title: 'حذف جميع الحصص؟',
+        text: 'سيتم حذف جميع الحصص في كل جداول المدرسة (كل الفصول).\n' +
+          'سجلات الحضور والغياب والتغطيات والأيام المخصّصة وأوقات الحصص لن تتأثر.\n\n' +
+          'للتأكيد اكتب: حذف',
+        ok: 'حذف',
+        danger: true
+      });
       if(typed == null) return;
       if(typed.trim() !== 'حذف'){ openErrorModal('لم يتم الحذف — يجب كتابة كلمة «حذف» للتأكيد.'); return; }
 
