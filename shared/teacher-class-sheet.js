@@ -37,7 +37,8 @@ const svg = (paths, size = 20) =>
 const ICON_USERS = svg('<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>', 24);
 const ICON_CHEV = svg('<path d="M15 6l-6 6 6 6"/>', 18);
 const ICON_SEARCH = svg('<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>', 18);
-const ICON_BACK = svg('<path d="M9 6l6 6-6 6"/>', 16);
+// The shared back button (/shared/back-button.css): icon only, no label.
+const ICON_BACK = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
 
 const CSS_TEXT = `
 .tcs-hero{
@@ -66,7 +67,6 @@ const CSS_TEXT = `
 .tcs-notes-text b{ color:var(--primary,#022b42); font-size:1.05rem; font-weight:900; }
 .tcs-notes-text small{ color:var(--muted,#64748b); font-size:.86rem; font-weight:700; line-height:1.5; }
 .tcs-chev{ display:grid; color:var(--primary,#022b42); flex-shrink:0; }
-.tcs-sheet .back-btn{ display:inline-flex; align-items:center; gap:6px; }
 .tcs-notes-card.is-empty .tcs-chev{ color:var(--muted,#64748b); }
 .tcs-search{ display:flex; align-items:center; gap:10px; min-height:50px; padding:0 14px; background:var(--card-bg,#fff); border:1px solid var(--border,#e2e8f0); border-radius:var(--radius-sm,12px); box-shadow:var(--shadow-1,0 4px 12px rgba(2,43,66,.08)); }
 .tcs-search-icon{ display:grid; color:var(--muted,#64748b); }
@@ -183,7 +183,7 @@ function makeSheet(titleText) {
   el.setAttribute("aria-hidden", "true");
   el.innerHTML = `
     <div class="sheet-header">
-      <button class="back-btn" type="button" aria-label="رجوع">${ICON_BACK}<span>رجوع</span></button>
+      <button class="back-btn" type="button" aria-label="رجوع" title="رجوع">${ICON_BACK}</button>
       <h3 class="sheet-title">${esc(titleText)}</h3>
     </div>
     <div class="sheet-body"></div>`;

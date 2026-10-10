@@ -352,26 +352,8 @@
       font-size: 1rem;
     }
 
-    .back-button {
-      align-self: flex-start;
-      padding: 10px 14px;
-      border-radius: 10px;
-      border: 1px solid var(--border);
-      background: #fff;
-      color: var(--primary);
-      font-weight: 900;
-      font-size: 0.9rem;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      transition: all 0.12s ease;
-    }
-
-    .back-button:hover {
-      background: #f1f5f9;
-      border-color: rgba(3, 60, 84, 0.3);
-    }
+    /* رجوع in the late-details view: the shared back button (below). */
+    .back-button { align-self: flex-start; }
 
     /* [hidden] must always win over any component class also present on the
        element (author rules otherwise beat the UA [hidden] rule on a tie). */
@@ -524,10 +506,13 @@
       width:min(100%, 1200px);
       margin:0 auto;
       display:grid;
-      grid-template-columns: 44px 1fr 44px;
+      grid-template-columns: 96px 1fr 96px;
       align-items:center;
       gap:10px;
     }
+    /* رجوع on the start side; القائمة and التنزيل share the end side. */
+    .header-inner > .back-btn{ justify-self:start; }
+    .header-end{ display:flex; align-items:center; justify-content:flex-end; gap:8px; }
 
     .header-center{
       display:flex;
@@ -1055,7 +1040,8 @@
 
     /* Mobile tweaks */
     @media (max-width: 480px){
-      .header-inner{ grid-template-columns: 40px 1fr 40px; }
+      .header-inner{ grid-template-columns: auto 1fr auto; gap:8px; }
+      .header-end{ gap:6px; }
       .icon-btn{ width:40px; height:40px; border-radius:12px; }
 
       /* The full "الحصة الأولى" label used to be forced to wrap inside a
@@ -1186,10 +1172,6 @@
       background:#fff; border-bottom:1px solid var(--border); padding:18px 16px; display:flex; align-items:center; gap:12px;
       position:sticky; top:0; z-index:10; box-shadow: 0 2px 10px rgba(0,0,0,.03);
     }
-    .back-btn{
-      height:44px; padding:0 16px; border-radius:12px; border:1px solid rgba(3,60,84,.25); background:#fff; color:var(--primary); font-weight:800; cursor:pointer;
-      box-shadow: var(--shadow-1); transition: transform .14s ease; display:inline-flex; align-items:center; justify-content:center; text-decoration:none;
-    }
     .sheet-title{ margin:0; font-size:1.1rem; font-weight:900; color:var(--primary) }
     .sheet-body{ flex:1 1 auto; overflow:auto; padding:24px; width:min(880px,94vw); margin:0 auto; display:flex; flex-direction:column; gap:16px }
 
@@ -1214,3 +1196,18 @@
     #attConfirmModal h3, #attErrorModal h3, #attLessonDetailModal h3 { margin: 0 0 8px; font-size: 1.15rem; color: var(--primary); font-weight: 900; }
     #attConfirmModal p, #attErrorModal p, #attLessonDetailModal p { margin: 0 0 12px; color: var(--muted); font-weight: 800; }
     #attConfirmModal .row, #attErrorModal .row, #attLessonDetailModal .row { display: flex; gap: 10px; justify-content: flex-start; margin-top: 16px; flex-wrap: wrap; }
+
+    /* The site's back button — the same rules as /shared/back-button.css,
+       which the host page's styles can't reach inside this shadow root. */
+    .back-btn.back-btn{
+      width:40px; height:40px; min-width:40px; min-height:40px; padding:0; flex:none;
+      display:inline-grid; place-items:center; border-radius:12px;
+      border:1px solid rgba(3,60,84,.2); background:#fff; color:#033C54;
+      box-shadow:none; font-size:0; line-height:0; cursor:pointer; transition:background .15s;
+    }
+    .back-btn.back-btn svg{
+      width:22px; height:22px; margin:0; display:block; fill:none; stroke:currentColor;
+      stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round;
+    }
+    .back-btn.back-btn:hover, .back-btn.back-btn:focus-visible{ background:#eef5f9; }
+    .back-btn.back-btn:focus-visible{ outline:2px solid #033C54; outline-offset:2px; }

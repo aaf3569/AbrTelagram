@@ -52,16 +52,8 @@
     body{background:var(--page);color:var(--text);font-family:"Tajawal", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;display:flex;flex-direction:column;min-height:100vh}
     .site-header{position:sticky;top:0;z-index:10;background:rgba(255,255,255,.68);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);color:var(--primary);padding:16px 20px;display:flex;align-items:center;justify-content:center;border-bottom:1px solid rgba(3,60,84,.08);box-shadow:0 2px 10px rgba(3,60,84,.06)}
     .site-title{margin:0;font-weight:900;letter-spacing:.2px;font-size:clamp(1.1rem,2.4vw,1.5rem)}
-    .header-admin-back{
-      display:inline-flex;align-items:center;justify-content:center;
-      position:absolute;top:50%;right:20px;transform:translateY(-50%);
-      width:36px;height:36px;border-radius:10px;
-      border:1px solid rgba(3,60,84,.18);background:#fff;color:var(--primary);
-      box-shadow:var(--shadow-1);text-decoration:none;
-      transition:background .15s ease,border-color .15s ease,transform .15s ease;
-    }
-    .header-admin-back:hover{background:#eef6fb;border-color:rgba(3,60,84,.4);transform:translateY(calc(-50% - 1px))}
-    .header-admin-back svg{width:18px;height:18px;stroke:currentColor;stroke-width:2.6;fill:none;stroke-linecap:round;stroke-linejoin:round}
+    /* Look: /shared/back-button.css; only the position lives here. */
+    .header-admin-back{position:absolute;top:50%;right:20px;margin-top:-20px}
     @media (max-width:700px){.header-admin-back{right:12px}}
     main{flex:1;padding:24px 14px 32px;display:flex}
     .column{width:min(820px,96vw);margin:0 auto;display:flex;flex-direction:column;gap:16px}
@@ -101,7 +93,7 @@
     .sheet{position:fixed;inset:0;z-index:50;background:var(--page);display:flex;flex-direction:column;transform:translateX(100%);transition:transform .28s cubic-bezier(.22,.7,.25,1)}
     .sheet.open{transform:translateX(0)}
     .sheet-header{background:#fff;border-bottom:1px solid var(--border);padding:14px 12px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10}
-    .back-btn{height:40px;padding:0 14px;border-radius:12px;border:1px solid rgba(3,60,84,.25);background:#fff;color:#033C54;font-weight:900;cursor:pointer;box-shadow:var(--shadow-1)}
+    /* .back-btn: /shared/back-button.css */
     .sheet-title{margin:0;font-size:1.05rem;font-weight:900;color:#033C54}
     .sheet-body{flex:1 1 auto;overflow:auto;padding:16px;width:min(820px,94vw);margin:0 auto;display:flex;flex-direction:column;gap:12px}
     .sheet.small .sheet-body{width:min(620px,94vw)}
@@ -165,8 +157,6 @@
     .permissions-editor{display:flex;flex-direction:column;gap:12px}
     .permissions-editor .checkbox-wrap{padding:12px 14px;border:1px dashed #d8e8f8;border-radius:14px;background:#f8fbff}
     /* ===== Phone/tablet polish ===== */
-    .back-btn{display:inline-flex;align-items:center;gap:6px;font-family:inherit}
-    .back-btn-icon{display:inline-block;width:15px;height:15px;stroke:currentColor;stroke-width:2.4;fill:none;stroke-linecap:round;stroke-linejoin:round;transform:scaleX(-1);flex-shrink:0}
     /* The profile opens as its own route on phones (teacher-route-active:
        the sheet sits in the page flow and the page scrolls), so its header
        bar sticks to the top of the viewport and takes over from the site
@@ -512,13 +502,13 @@
       .add-teacher-body > .add-teacher-full{grid-column:1 / -1}
     }
   </style>
+  <!-- After the page's own styles, so the one back button wins. -->
+  <link rel="stylesheet" href="/shared/back-button.css" />
 </head>
 <body>
   <header class="site-header">
+    <a href="/admins/adminpage.html" class="header-admin-back back-btn" aria-label="لوحة الإدارة" title="لوحة الإدارة"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></a>
     <h1 class="site-title">ثانوية أحمد البشر الرومي</h1>
-    <a href="/admins/adminpage.html" class="header-admin-back" aria-label="لوحة الإدارة" title="لوحة الإدارة">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
-    </a>
   </header>
 
   <main>
@@ -580,7 +570,7 @@
 
   <section id="subjectSheet" class="sheet" aria-hidden="true">
     <div class="sheet-header">
-      <button id="closeSubject" class="back-btn" aria-label="رجوع"><svg class="back-btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg><span>رجوع</span></button>
+      <button id="closeSubject" class="back-btn" aria-label="رجوع" title="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
       <h3 id="subjectTitle" class="sheet-title">—</h3>
     </div>
     <div class="sheet-body">
@@ -608,7 +598,7 @@
          which covered the avatar and, once scrolled, whatever field ran
          underneath it). -->
     <div class="sheet-header teacher-sheet-header">
-      <button id="closeTeacher" class="back-btn" aria-label="رجوع"><svg class="back-btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg><span>رجوع</span></button>
+      <button id="closeTeacher" class="back-btn" aria-label="رجوع" title="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
       <h3 class="sheet-title">ملف المعلم</h3>
     </div>
     <div class="sheet-body">
@@ -696,7 +686,7 @@
 
   <section id="telegramSheet" class="sheet" aria-hidden="true">
     <div class="sheet-header">
-      <button id="closeTelegram" class="back-btn" aria-label="رجوع"><svg class="back-btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg><span>رجوع</span></button>
+      <button id="closeTelegram" class="back-btn" aria-label="رجوع" title="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
       <h3 class="sheet-title">المتصلون بتيليجرام</h3>
     </div>
     <div class="sheet-body">
@@ -720,7 +710,7 @@
 
   <section id="adminsSheet" class="sheet" aria-hidden="true">
     <div class="sheet-header">
-      <button id="closeAdmins" class="back-btn" aria-label="رجوع"><svg class="back-btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg><span>رجوع</span></button>
+      <button id="closeAdmins" class="back-btn" aria-label="رجوع" title="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
       <h3 class="sheet-title">الإدارة</h3>
     </div>
     <div class="sheet-body">
@@ -742,7 +732,7 @@
 
   <section id="adminSheet" class="sheet small" aria-hidden="true">
     <div class="sheet-header">
-      <button id="closeAdmin" class="back-btn" aria-label="رجوع"><svg class="back-btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg><span>رجوع</span></button>
+      <button id="closeAdmin" class="back-btn" aria-label="رجوع" title="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
       <h3 id="adminTitle" class="sheet-title">بيانات المشرف</h3>
     </div>
     <div class="sheet-body">
@@ -908,8 +898,8 @@
     import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signOut, EmailAuthProvider, reauthenticateWithCredential } from "/shared/firebase.js";
     import { initializeFirestore, persistentSingleTabManager, collection, getDocs, query, where, doc, getDoc, setDoc, updateDoc, deleteField, serverTimestamp } from "/shared/firebase.js";
     import { startPresenceHeartbeat, watchPresence } from "/shared/presence.js";
-    import { mountStudentNotesSheet } from "/shared/student-notes-sheet.js?v=2026-10-06b";
-    import { mountTeacherClassSheet } from "/shared/teacher-class-sheet.js?v=2026-10-06b";
+    import { mountStudentNotesSheet } from "/shared/student-notes-sheet.js?v=2026-10-12d";
+    import { mountTeacherClassSheet } from "/shared/teacher-class-sheet.js?v=2026-10-12d";
     import { fetchClassList, sortClassList, primeClassList } from "/shared/class-registry.js";
     import {
       DEPARTMENTS,

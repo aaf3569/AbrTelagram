@@ -95,6 +95,8 @@
       gap:10px;
     }
 
+    .header-inner > .back-btn{ justify-self:start; }
+
     .header-center{
       display:flex;
       flex-direction:column;
@@ -564,23 +566,26 @@
   <meta name="twitter:title" content="تأخير الصباح - لوحة الإدارة | ثانوية أحمد البشر الرومي">
   <meta name="twitter:description" content="???? ?????? ???? ????? ??????.">
   <meta name="twitter:image" content="https://framerusercontent.com/images/jRnZLlPr90qwKsuUwfIlvDS9E.png?width=1200&height=630">
+  <!-- After the page's own styles, so the one back button wins. -->
+  <link rel="stylesheet" href="/shared/back-button.css" />
 </head>
 
 <body>
   <header class="site-header" id="siteHeader">
     <div class="header-inner">
-      <button class="icon-btn" id="refreshBtn" title="تحديث" aria-label="تحديث" type="button">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
-        </svg>
-      </button>
+      <!-- رجوع → the hub (/shared/hub-title-link.js picks it, as for the title). -->
+      <button class="back-btn" id="hubBackBtn" type="button" data-hub-back aria-label="رجوع" title="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
 
       <div class="header-center">
         <h1 class="site-title">ثانوية أحمد البشر الرومي</h1>
         <div class="site-subtitle">تأخير الصباح | لوحة الإدارة</div>
       </div>
 
-      <div></div>
+      <button class="icon-btn" id="refreshBtn" title="تحديث" aria-label="تحديث" type="button">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+        </svg>
+      </button>
     </div>
 
     <div class="date-chip">

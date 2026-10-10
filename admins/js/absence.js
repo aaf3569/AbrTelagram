@@ -23,14 +23,15 @@ const CSS_URL = new URL("../css/absence.css", import.meta.url).href;
 const MARKUP = `
   <header class="site-header">
     <div class="header-actions">
+      <button class="back-btn" id="backBtn" type="button" title="رجوع" aria-label="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+    </div>
+    <h1 class="site-title">تدقيق الغياب</h1>
+    <div class="header-actions">
       <button class="icon-btn ghost" id="menuBtn" title="القائمة" aria-label="فتح القائمة">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
           <path d="M4 6h16M4 12h16M4 18h16"/>
         </svg>
       </button>
-    </div>
-    <h1 class="site-title">تدقيق الغياب</h1>
-    <div class="header-actions">
       <button class="icon-btn" id="refreshView" title="تحديث">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
@@ -133,7 +134,7 @@ const MARKUP = `
   <!-- CLASSES SHEET -->
   <section id="classesSheet" class="sheet" aria-hidden="true" inert>
     <div class="sheet-header">
-      <button id="closeClasses" class="back-btn" aria-label="رجوع">رجوع</button>
+      <button id="closeClasses" class="back-btn" aria-label="رجوع" title="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
       <h3 id="classesTitle" class="sheet-title">—</h3>
     </div>
     <div class="sheet-body">
@@ -157,7 +158,7 @@ const MARKUP = `
   <!-- CLASS / GRADE / ALL ATTENDANCE SHEET -->
   <section id="absencesSheet" class="sheet" aria-hidden="true" inert>
     <div class="sheet-header">
-      <button id="closeAbsences" class="back-btn" aria-label="رجوع">رجوع</button>
+      <button id="closeAbsences" class="back-btn" aria-label="رجوع" title="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
       <h3 id="absencesTitle" class="sheet-title">—</h3>
     </div>
     <div class="sheet-body">
@@ -206,7 +207,7 @@ const MARKUP = `
         <span id="absCount" class="badge b-absent">0 حالة</span>
       </div>
       <div id="absencesList" class="list"></div>
-      <button id="loadMore" class="back-btn" type="button" hidden>عرض المزيد من السجلات</button>
+      <button id="loadMore" class="text-btn" type="button" hidden>عرض المزيد من السجلات</button>
     </div>
   </section>
 
@@ -216,7 +217,7 @@ const MARKUP = `
  * Renders the sheet into `host` and starts loading the school overview.
  *
  * hooks:
- *   close()       — close the sheet
+ *   close()       — رجوع: close the sheet
  *   openSidebar() — menu button: open adminpage.html's sidebar
  *   getSession()  — { user, data, classList } the page already resolved
  */
@@ -286,9 +287,10 @@ export async function mountDetailedAbsenceSheet(host, hooks) {
   const miniAbsent = sheetDoc.getElementById('miniAbsent');
   const miniLate = sheetDoc.getElementById('miniLate');
 
-  // Where the back button used to be: opens adminpage.html's sidebar,
-  // which sits above the sheet and can switch to any other section.
+  // Opens the host page's sidebar, which sits above the sheet and can
+  // switch to any other section; رجوع closes the sheet.
   menuBtn.addEventListener('click', () => hooks.openSidebar());
+  sheetDoc.getElementById('backBtn').addEventListener('click', () => hooks.close());
 
   // State variables
   let selectedGrade = null;
@@ -743,7 +745,7 @@ export async function mountDetailedAbsenceSheet(host, hooks) {
       recordsLoading = false;
       console.error('[absence] fetch failed', e);
       absMeta.textContent = 'تعذّر التحميل.';
-      absencesList.innerHTML = '<button type="button" class="back-btn">تعذّر تحميل السجلات. اضغط لإعادة المحاولة</button>';
+      absencesList.innerHTML = '<button type="button" class="text-btn">تعذّر تحميل السجلات. اضغط لإعادة المحاولة</button>';
       absencesList.firstElementChild.addEventListener('click', () => refetchAndRender());
     }
   }

@@ -49,6 +49,8 @@
   <meta name="twitter:title" content="جدول المعلّم - ثانوية أحمد البشر الرومي">
   <meta name="twitter:description" content="???? ?????? ???? ????? ??????.">
   <meta name="twitter:image" content="https://framerusercontent.com/images/jRnZLlPr90qwKsuUwfIlvDS9E.png?width=1200&height=630">
+  <!-- After the page's own styles, so the one back button wins. -->
+  <link rel="stylesheet" href="/shared/back-button.css" />
 </head>
 
 <body>
@@ -230,10 +232,7 @@
        الأسبوعي (read-only here). #teacherschedules. -->
   <section id="tsSheet" class="sheet" aria-hidden="true">
     <div class="sheet-header">
-      <button id="tsClose" class="back-btn" type="button">
-        <i class="fas fa-arrow-right"></i>
-        <span>رجوع</span>
-      </button>
+      <button id="tsClose" class="back-btn" type="button" aria-label="رجوع" title="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
       <h3 class="sheet-title">جداول المعلمين</h3>
     </div>
     <div class="sheet-body">
@@ -275,10 +274,7 @@
   <!-- MORE -->
   <section id="moreSheet" class="sheet" aria-hidden="true">
     <div class="sheet-header">
-      <button id="closeMore" class="back-btn" type="button">
-        <i class="fas fa-arrow-right"></i>
-        <span>رجوع</span>
-      </button>
+      <button id="closeMore" class="back-btn" type="button" aria-label="رجوع" title="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
       <h3 class="sheet-title">عرض جدول فصل آخر</h3>
     </div>
     <div class="sheet-body">
@@ -318,10 +314,7 @@
   <!-- OTHER CLASSES: pick a grade, then a class -->
   <section id="ocSheet" class="sheet" aria-hidden="true">
     <div class="sheet-header">
-      <button id="ocClose" class="back-btn" type="button">
-        <i class="fas fa-arrow-right"></i>
-        <span>رجوع</span>
-      </button>
+      <button id="ocClose" class="back-btn" type="button" aria-label="رجوع" title="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
       <h3 class="sheet-title">صفوف أخرى</h3>
     </div>
     <div class="sheet-body">
@@ -334,10 +327,7 @@
        took attendance for a lesson that isn't theirs (صفوف أخرى). -->
   <section id="dnSheet" class="sheet" aria-hidden="true">
     <div class="sheet-header">
-      <button id="dnClose" class="back-btn" type="button">
-        <i class="fas fa-arrow-right"></i>
-        <span>رجوع</span>
-      </button>
+      <button id="dnClose" class="back-btn" type="button" aria-label="رجوع" title="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
       <h3 class="sheet-title">إشعارات القسم</h3>
     </div>
     <div class="sheet-body">
@@ -353,10 +343,7 @@
        the browser's own back gesture/button closes it like a real page. -->
   <section id="dsSheet" class="sheet" aria-hidden="true">
     <div class="sheet-header">
-      <button id="dsClose" class="back-btn" type="button">
-        <i class="fas fa-arrow-right"></i>
-        <span>رجوع</span>
-      </button>
+      <button id="dsClose" class="back-btn" type="button" aria-label="رجوع" title="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
       <h3 class="sheet-title">جدول القسم</h3>
     </div>
     <div class="sheet-body ds-sheet-body">
@@ -422,10 +409,7 @@
        the day sheet, and اليوم swaps back); #dptschedual-week. -->
   <section id="dwSheet" class="sheet" aria-hidden="true">
     <div class="sheet-header">
-      <button id="dwClose" class="back-btn" type="button">
-        <i class="fas fa-arrow-right"></i>
-        <span>رجوع</span>
-      </button>
+      <button id="dwClose" class="back-btn" type="button" aria-label="رجوع" title="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
       <h3 class="sheet-title">جدول القسم — الأسبوع</h3>
     </div>
     <div class="sheet-body ds-sheet-body">
@@ -514,10 +498,7 @@
        gesture/button closes it like a real page. -->
   <section id="ssSheet" class="sheet" aria-hidden="true">
     <div class="sheet-header">
-      <button id="ssClose" class="back-btn" type="button">
-        <i class="fas fa-arrow-right"></i>
-        <span>رجوع</span>
-      </button>
+      <button id="ssClose" class="back-btn" type="button" aria-label="رجوع" title="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
       <h3 class="sheet-title">جدول المدرسة</h3>
     </div>
     <div class="sheet-body ss-sheet-body">
@@ -579,10 +560,7 @@
        convention as the other sheets. -->
   <section id="supervisorStudentsSheet" class="sheet" aria-hidden="true">
     <div class="sheet-header">
-      <button id="svsClose" class="back-btn" type="button">
-        <i class="fas fa-arrow-right"></i>
-        <span>رجوع</span>
-      </button>
+      <button id="svsClose" class="back-btn" type="button" aria-label="رجوع" title="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
       <h3 class="sheet-title">الطلاب</h3>
     </div>
     <div class="sheet-body svs-sheet-body">
@@ -624,7 +602,7 @@
       <!-- CLASS PAGE -->
       <section id="classSheet" class="sheet" aria-hidden="true">
         <div class="sheet-header">
-          <button id="closeClass" class="back-btn" aria-label="رجوع">رجوع</button>
+          <button id="closeClass" class="back-btn" aria-label="رجوع" title="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
           <h3 id="classTitle" class="sheet-title">—</h3>
         </div>
         <div class="sheet-body">
@@ -722,7 +700,7 @@
       <!-- STUDENT EDIT SHEET -->
       <section id="studentSheet" class="sheet small" aria-hidden="true">
         <div class="sheet-header">
-          <button id="closeStudent" class="back-btn" aria-label="رجوع">رجوع</button>
+          <button id="closeStudent" class="back-btn" aria-label="رجوع" title="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
           <h3 id="studentTitle" class="sheet-title">بيانات الطالب</h3>
         </div>
         <div class="sheet-body">
@@ -898,7 +876,7 @@
       <!-- ATTENDANCE DETAIL SHEET -->
       <section id="attDetailSheet" class="sheet small" aria-hidden="true">
         <div class="sheet-header">
-          <button id="closeAttDetail" class="back-btn" aria-label="رجوع">رجوع</button>
+          <button id="closeAttDetail" class="back-btn" aria-label="رجوع" title="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
           <h3 id="attDetailTitle" class="sheet-title">تفاصيل الحالة</h3>
           <button id="editAttBtn" class="btn secondary" type="button" style="margin-right: auto; display:none;">تعديل</button>
         </div>
@@ -930,7 +908,7 @@
       </section>
       <section id="recordDetailSheet" class="sheet small" aria-hidden="true">
         <div class="sheet-header">
-          <button id="closeRecordDetail" class="back-btn" aria-label="رجوع">رجوع</button>
+          <button id="closeRecordDetail" class="back-btn" aria-label="رجوع" title="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
           <h3 id="recordDetailTitle" class="sheet-title">التفاصيل</h3>
         </div>
         <div class="sheet-body">
@@ -987,9 +965,7 @@
   <div class="ss-popover-backdrop" id="ssPopBackdrop" aria-hidden="true"></div>
   <div class="ss-popover" id="ssPopover" role="dialog" aria-modal="true" aria-labelledby="ssPopTitleText" aria-hidden="true">
     <div class="ss-pop-head">
-      <button class="ss-pop-back ss-pop-back-hidden" id="ssPopBack" aria-label="رجوع" type="button">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
-      </button>
+      <button class="ss-pop-back back-btn ss-pop-back-hidden" id="ssPopBack" aria-label="رجوع" title="رجوع" type="button"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
       <div class="ss-pop-title">
         <b id="ssPopTitleText">—</b>
         <span id="ssPopSub">—</span>
@@ -1009,10 +985,7 @@
        edited, this is a parallel implementation living inside this page. -->
   <section id="mcSheet" class="sheet" aria-hidden="true">
     <div class="sheet-header">
-      <button id="mcClose" class="back-btn" type="button">
-        <i class="fas fa-arrow-right"></i>
-        <span>رجوع</span>
-      </button>
+      <button id="mcClose" class="back-btn" type="button" aria-label="رجوع" title="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
       <h3 id="mcSheetTitle" class="sheet-title">الطلاب</h3>
     </div>
     <div class="sheet-body mc-sheet-body">
@@ -1052,10 +1025,7 @@
        so it stacks on top of it. -->
   <section id="mcNotesSheet" class="sheet" aria-hidden="true">
     <div class="sheet-header">
-      <button id="mcNotesClose" class="back-btn" type="button">
-        <i class="fas fa-arrow-right"></i>
-        <span>رجوع</span>
-      </button>
+      <button id="mcNotesClose" class="back-btn" type="button" aria-label="رجوع" title="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
       <h3 id="mcNotesSheetTitle" class="sheet-title">الملاحظات</h3>
     </div>
     <div class="sheet-body mc-sheet-body">
@@ -1179,8 +1149,8 @@
     // for 5 minutes (_headers) while this HTML is always fresh, so right after
     // a deploy the page could otherwise run against the previous module —
     // bump it whenever this page starts relying on something new in there.
-    import { mountAttendanceSheet, LESSON_END_GRACE_MINUTES } from "/shared/attendance.js?v=2026-10-06c";
-    import { mountStudentNotesSheet } from "/shared/student-notes-sheet.js?v=2026-10-06";
+    import { mountAttendanceSheet, LESSON_END_GRACE_MINUTES } from "/shared/attendance.js?v=2026-10-12d";
+    import { mountStudentNotesSheet } from "/shared/student-notes-sheet.js?v=2026-10-12d";
     import { parseTimeToMinutes } from "/shared/kuwait-time.js";
     import { isTruthyFlag, canManageAttendance } from "/shared/auth-guard.js";
     import { startPresenceHeartbeat, stopPresenceHeartbeat } from "/shared/presence.js";
@@ -5946,7 +5916,7 @@
 
     function budgetMount(){
       if (!budgetMounting) {
-        budgetMounting = import('/shared/department-budgets.js?v=2026-10-12c')
+        budgetMounting = import('/shared/department-budgets.js?v=2026-10-12d')
           .then((m) => m.mountDepartmentBudgetsSheet(budgetHost, {
             close: () => closeBudgetSheet(),
             openSidebar: () => openSidebar(),

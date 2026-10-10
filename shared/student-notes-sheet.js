@@ -52,18 +52,14 @@ const CSS_TEXT = `
   border-bottom:1px solid var(--snp-border); flex-shrink:0;
   padding-top:env(safe-area-inset-top, 0px);
 }
-.snp-headrow{ min-height:58px; display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:10px; }
+.snp-headrow{ min-height:58px; display:grid; grid-template-columns:40px 1fr 40px; align-items:center; gap:10px; }
 .snp-pagetitle{
   grid-column:2; justify-self:center; color:var(--snp-text); font-weight:800; font-size:1rem;
   min-width:0; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
 }
-.snp-backbtn{
-  grid-column:1; justify-self:start; min-height:40px; padding:0 14px; border-radius:var(--snp-radius);
-  border:1px solid var(--snp-border); background:#fff; color:var(--snp-primary); font-weight:800; cursor:pointer;
-  display:inline-flex; align-items:center; gap:6px; font-size:.92rem; flex-shrink:0;
-  transition:background-color .15s ease, border-color .15s ease;
-}
-.snp-backbtn:hover{ background:var(--snp-primary-soft); border-color:rgba(11,74,99,.3); }
+/* Look comes from the host page's /shared/back-button.css (.back-btn);
+   position:static undoes a host page's pinned .back-btn placement. */
+.snp-overlay .snp-backbtn{ grid-column:1; justify-self:start; position:static; margin-top:0; transform:none; }
 .snp-scroll{ flex:1 1 auto; overflow-y:auto; -webkit-overflow-scrolling:touch; }
 .snp-main{ padding-block:16px 36px; display:grid; gap:14px; }
 .snp-hero{
@@ -269,12 +265,7 @@ const TEMPLATE_HTML = `
   <div class="snp-topbar">
     <div class="snp-wrap">
       <div class="snp-headrow">
-        <button type="button" class="snp-backbtn" aria-label="رجوع">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M19 12H5M12 19l-7-7 7-7"/>
-          </svg>
-          رجوع
-        </button>
+        <button type="button" class="snp-backbtn back-btn" aria-label="رجوع" title="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
         <div class="snp-pagetitle">ملف الطالب</div>
       </div>
     </div>

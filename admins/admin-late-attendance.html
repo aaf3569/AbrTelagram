@@ -87,6 +87,7 @@
       display: flex; align-items: center; gap: 10px;
     }
     .site-title i { font-size: 1.4em; }
+    .header-start { display: flex; align-items: center; gap: 12px; min-width: 0; }
 
     .top-right {
       display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
@@ -391,13 +392,13 @@
     .sheet{position:fixed;inset:0;z-index:1000;background:#fff;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .3s cubic-bezier(.22,.7,.25,1);overflow:hidden}
     .sheet.open{transform:translateX(0)}
     .sheet-header{background:#fff;border-bottom:1px solid var(--border);padding:18px 20px;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:10;box-shadow:var(--shadow-1)}
-    .back-btn{height:44px;padding:0 18px;border-radius:12px;border:1px solid rgba(2,43,66,.2);background:#fff;color:var(--primary);font-weight:800;cursor:pointer;box-shadow:var(--shadow-1);display:flex;align-items:center;gap:8px}
+    /* .back-btn: /shared/back-button.css */
     .sheet-title{margin:0;font-size:1.15rem;font-weight:900;color:var(--primary)}
     #moreSheet .sheet-header{justify-content:center}
-    #moreSheet .sheet-title{flex:none;justify-content:center;text-align:center}
-    .sheet-fab-back{position:fixed;bottom:18px;right:18px;z-index:1010;height:46px;padding:0 18px 0 20px;border-radius:999px;border:1px solid rgba(3,60,84,.16);background:rgba(255,255,255,.92);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);color:var(--primary);font-weight:900;font-size:.92rem;cursor:pointer;box-shadow:var(--shadow-1);transition:var(--transition);display:flex;align-items:center;gap:8px}
-    .sheet-fab-back:hover{transform:translateX(-2px);box-shadow:0 14px 32px rgba(3,60,84,.18)}
-    .sheet-fab-back:active{transform:scale(.97)}
+    /* The title stays centred on the full width; the padding keeps it clear
+       of the back button pinned to the start side. */
+    #moreSheet .sheet-title{flex:none;justify-content:center;text-align:center;padding:0 52px}
+    #moreSheet .back-btn{position:absolute;right:20px;top:50%;margin-top:-20px}
     .sheet-body{flex:1 1 auto;overflow:auto;padding:22px 20px;width:min(1100px,100%);margin:0 auto;display:flex;flex-direction:column;gap:18px}
     details{border:1px solid var(--border);border-radius:var(--radius);background:#fff;box-shadow:var(--shadow-1)}
     details:not([open]){overflow:hidden}
@@ -483,14 +484,20 @@
   <meta name="twitter:title" content="تأخّر المعلمين في الغياب - ثانوية أحمد البشر الرومي">
   <meta name="twitter:description" content="???? ?????? ???? ????? ??????.">
   <meta name="twitter:image" content="https://framerusercontent.com/images/jRnZLlPr90qwKsuUwfIlvDS9E.png?width=1200&height=630">
+  <!-- After the page's own styles, so the one back button wins. -->
+  <link rel="stylesheet" href="/shared/back-button.css" />
 </head>
 <body>
   <header class="site-header">
     <div class="header-container">
-      <h1 class="site-title">
-        <i class="fas fa-clock-rotate-left"></i>
-        تأخّر المعلمين في تسجيل الغياب
-      </h1>
+      <div class="header-start">
+        <!-- رجوع → the hub (/shared/hub-title-link.js picks it, as for the title). -->
+        <button id="hubBackBtn" class="back-btn" type="button" data-hub-back aria-label="رجوع" title="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+        <h1 class="site-title">
+          <i class="fas fa-clock-rotate-left"></i>
+          تأخّر المعلمين في تسجيل الغياب
+        </h1>
+      </div>
       <div class="top-right">
         <span class="badge">
           <i class="fas fa-user-shield"></i>
@@ -588,11 +595,8 @@
 
   <!-- "More/Other" grade browser sheet -->
   <section id="moreSheet" class="sheet" aria-hidden="true">
-    <button id="closeMore" class="sheet-fab-back" type="button" aria-label="رجوع">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-      رجوع
-    </button>
     <div class="sheet-header">
+      <button id="closeMore" class="back-btn" type="button" aria-label="رجوع" title="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
       <h3 class="sheet-title">اختر الصف</h3>
     </div>
     <div class="sheet-body">
@@ -624,10 +628,7 @@
   <!-- Class roster sheet -->
   <section id="classSheet" class="sheet" aria-hidden="true">
     <div class="sheet-header">
-      <button id="closeClass" class="back-btn" type="button" aria-label="رجوع">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-        رجوع
-      </button>
+      <button id="closeClass" class="back-btn" type="button" aria-label="رجوع" title="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
       <h3 class="sheet-title">الطلاب</h3>
     </div>
     <div class="sheet-body">
@@ -647,10 +648,7 @@
   <!-- Attendance log sheet -->
   <section id="logSheet" class="sheet" aria-hidden="true">
     <div class="sheet-header">
-      <button id="closeLog" class="back-btn" type="button" aria-label="رجوع">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-        رجوع
-      </button>
+      <button id="closeLog" class="back-btn" type="button" aria-label="رجوع" title="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
       <h3 class="sheet-title">تقارير الغياب</h3>
     </div>
     <div class="sheet-body">
@@ -661,10 +659,7 @@
   <!-- Attendance detail / edit sheet (legacy-schema reports only) -->
   <section id="logDetailSheet" class="sheet" aria-hidden="true">
     <div class="sheet-header">
-      <button id="closeLogDetail" class="back-btn" type="button" aria-label="رجوع">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-        رجوع
-      </button>
+      <button id="closeLogDetail" class="back-btn" type="button" aria-label="رجوع" title="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
       <h3 class="sheet-title" id="detailTitle">تعديل التقرير</h3>
     </div>
     <div class="sheet-body">

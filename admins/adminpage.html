@@ -248,8 +248,7 @@
     body.modal-open{ overflow:hidden; position:fixed; width:100%; }
     html.no-scroll, body.no-scroll{ position:fixed; overflow:hidden; width:100%; inset:0; overscroll-behavior:none; }
     .sheet-header{ background:#ffffff; border-bottom:1px solid var(--border); padding:14px 12px; display:flex; align-items:center; gap:10px; position:sticky; top:0; z-index:10 }
-    .back-btn{ height:40px; padding:0 14px; border-radius:12px; border:1px solid rgba(3,60,84,.25); background:#fff; color:#033C54; font-weight:900; cursor:pointer; box-shadow: var(--shadow-1); transition: transform .12s ease }
-    .back-btn:hover{ transform:translateY(-1px) }
+    /* .back-btn: /shared/back-button.css */
     .sheet-title{ margin:0; font-size:1.05rem; font-weight:900; color:#033C54 }
     .sheet-body{ flex:1 1 auto; overflow:auto; padding:16px; width:min(820px,94vw); margin:0 auto; display:flex; flex-direction:column; gap:12px }
 
@@ -878,7 +877,6 @@
 
       /* Sheets: give the full-screen panels room to breathe on wide screens */
       .sheet-header{ padding:22px 36px; gap:14px; }
-      .back-btn{ height:46px; padding:0 20px; font-size:.95rem; }
       .sheet-title{ font-size:1.2rem; }
       .sheet-body{ width:min(980px, 90vw); padding:32px 0 56px; gap:22px; }
       .sheet.small .sheet-body{ width:min(680px, 90vw); }
@@ -927,6 +925,8 @@
   <meta name="twitter:title" content="لوحة الإدارة - ثانوية أحمد البشر الرومي">
   <meta name="twitter:description" content="???? ?????? ???? ????? ??????.">
   <meta name="twitter:image" content="https://framerusercontent.com/images/jRnZLlPr90qwKsuUwfIlvDS9E.png?width=1200&height=630">
+  <!-- After the page's own styles, so the one back button wins. -->
+  <link rel="stylesheet" href="/shared/back-button.css" />
 </head>
 <body>
   <header class="site-header">
@@ -1330,7 +1330,7 @@
   <!-- اختيار المادة ثم إدارة المعلمين -->
   <section id="teachersSheet" class="sheet" aria-hidden="true">
     <div class="sheet-header">
-      <button id="closeTeachers" class="back-btn" aria-label="رجوع">رجوع</button>
+      <button id="closeTeachers" class="back-btn" aria-label="رجوع" title="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
       <h3 class="sheet-title">اختر المادة</h3>
     </div>
     <div class="sheet-body" id="subjectsList"></div>
@@ -1338,7 +1338,7 @@
 
   <section id="subjectSheet" class="sheet" aria-hidden="true">
     <div class="sheet-header">
-      <button id="closeSubject" class="back-btn" aria-label="رجوع">رجوع</button>
+      <button id="closeSubject" class="back-btn" aria-label="رجوع" title="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
       <h3 id="subjectTitle" class="sheet-title">—</h3>
     </div>
     <div class="sheet-body">
@@ -1362,7 +1362,7 @@
   <!-- محرر المعلّم -->
   <section id="teacherSheet" class="sheet small" aria-hidden="true">
     <div class="sheet-header">
-      <button id="closeTeacher" class="back-btn" aria-label="رجوع">رجوع</button>
+      <button id="closeTeacher" class="back-btn" aria-label="رجوع" title="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
       <h3 id="teacherTitle" class="sheet-title">بيانات المعلّم</h3>
     </div>
     <div class="sheet-body">
@@ -1501,7 +1501,7 @@
   <!-- صفحة الإدارة (المشرفون) -->
   <section id="adminsSheet" class="sheet" aria-hidden="true">
     <div class="sheet-header">
-      <button id="closeAdmins" class="back-btn" aria-label="رجوع">رجوع</button>
+      <button id="closeAdmins" class="back-btn" aria-label="رجوع" title="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
       <h3 class="sheet-title">إدارة المشرفين</h3>
     </div>
     <div class="sheet-body">
@@ -1548,7 +1548,7 @@
 
   <section id="notificationsSheet" class="sheet small" aria-hidden="true">
     <div class="sheet-header">
-      <button id="closeNotifications" class="back-btn" aria-label="رجوع">رجوع</button>
+      <button id="closeNotifications" class="back-btn" aria-label="رجوع" title="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
       <h3 class="sheet-title">الإشعارات</h3>
     </div>
     <div class="sheet-body">
@@ -1619,7 +1619,7 @@
   <!-- محرر المشرف -->
   <section id="adminSheet" class="sheet small" aria-hidden="true">
     <div class="sheet-header">
-      <button id="closeAdmin" class="back-btn" aria-label="رجوع">رجوع</button>
+      <button id="closeAdmin" class="back-btn" aria-label="رجوع" title="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
       <h3 id="adminTitle" class="sheet-title">بيانات المشرف</h3>
     </div>
     <div class="sheet-body">
@@ -2754,7 +2754,7 @@
         sidebarId: 'sidebarClassSchedules', exportName: 'mountClassSchedulesSheet', title: 'جداول الصفوف' }),
       makeScheduleSheet({ key: 'dept-budgets', hash: '#dept-budgets', sheetId: 'deptBudgetsSheet', hostId: 'deptBudgetsHost',
         sidebarId: 'sidebarDeptBudgets', exportName: 'mountDepartmentBudgetsSheet', title: 'ميزانيات الأقسام',
-        modulePath: '/shared/department-budgets.js?v=2026-10-12c', hooks: { role: 'admin' } }),
+        modulePath: '/shared/department-budgets.js?v=2026-10-12d', hooks: { role: 'admin' } }),
     ];
 
     // Sidebar: "غياب اليوم" / "الغياب المختصر" / "تدقيق في الغائب" open

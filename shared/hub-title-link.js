@@ -48,6 +48,9 @@
         wireElement(el, hubPath);
       }
     });
+
+    // A page's own رجوع button (data-hub-back) goes to the same hub.
+    document.querySelectorAll("[data-hub-back]").forEach((el) => wireElement(el, hubPath));
   }
 
   if (document.readyState === "loading") {

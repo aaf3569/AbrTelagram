@@ -720,25 +720,19 @@
       display: flex; align-items: center; justify-content: center;
       box-shadow: 0 2px 8px rgba(2, 43, 66, 0.06);
     }
+    /* Look comes from /shared/back-button.css; only the position lives here
+       (margin, not a transform, so the press-down scale can't shift it). */
     .back-btn {
       position: absolute;
       right: 20px;
       top: 50%;
-      transform: translateY(-50%);
-      height: 44px; padding: 0 18px; border-radius: var(--radius-sm);
-      border: 1px solid rgba(2, 43, 66, 0.25); background: var(--card-bg);
-      color: var(--primary); font-weight: 900; cursor: pointer;
-      box-shadow: var(--shadow-1); transition: var(--transition);
-      display: flex; align-items: center; gap: 8px;
-      font-family: var(--app-font);
+      margin-top: -20px;
     }
-    .back-btn:hover { transform: translateY(calc(-50% - 2px)); box-shadow: var(--shadow-2); }
-    .back-btn:active { transform: translateY(-50%) scale(0.97); }
     /* Back button is absolutely positioned to one side, so the title is
        centered against the header's full width rather than the leftover
-       space next to it — padding keeps it clear of the button at any
+       space next to it — padding keeps it clear of the 40px button at any
        text length. */
-    .sheet-title { margin: 0; font-size: 1.15rem; font-weight: 900; color: var(--primary); text-align: center; padding: 0 112px; }
+    .sheet-title { margin: 0; font-size: 1.15rem; font-weight: 900; color: var(--primary); text-align: center; padding: 0 52px; }
     .sheet-body {
       flex: 1 1 auto; overflow: auto; padding: 24px;
       max-width: 1200px; margin: 0 auto;
@@ -1224,8 +1218,8 @@
     @media (max-width: 480px) {
       .badge { padding: 6px 10px; }
       .sheet-header { padding: 14px 16px; }
-      .back-btn { right: 16px; padding: 0 14px; }
-      .sheet-title { font-size: 1rem; padding: 0 84px; }
+      .back-btn { right: 16px; }
+      .sheet-title { font-size: 1rem; padding: 0 48px; }
       .compact-cell, .compact-th { padding: 4px 5px; font-size: 0.72rem; min-height: 28px; }
       .compact-header { padding: 8px 10px; gap: 10px; }
 
@@ -1635,8 +1629,7 @@
       box-shadow: 0 2px 10px rgba(3,60,84,.06); flex-shrink: 0;
     }
     #attendanceSheet .sheet-title { padding: 0; font-size: 1.2rem; }
-    #attendanceSheet .back-btn { position: static; transform: none; }
-    #attendanceSheet .back-btn:hover { transform: translateY(-2px); }
+    #attendanceSheet .back-btn { position: static; margin-top: 0; }
     #attendanceSheet .sheet-body {
       width: min(1100px, 100%); max-width: 1100px; min-height: 0;
       padding: 24px 20px; touch-action: pan-y; -webkit-overflow-scrolling: touch;
@@ -1776,18 +1769,21 @@
     .ss-pop-head {
       flex-shrink: 0; width: 100%; box-sizing: border-box; background: #fff;
       border-bottom: 1px solid var(--border); padding: 14px 16px;
-      display: grid; grid-template-columns: 36px 1fr 36px; align-items: center; gap: 8px;
+      display: grid; grid-template-columns: 40px 1fr 40px; align-items: center; gap: 8px;
     }
     .ss-pop-title { width: 100%; min-width: 0; text-align: center; }
     .ss-pop-title b { color: var(--primary); font-size: 1.05rem; display: block; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .ss-pop-title span { color: var(--muted); font-weight: 900; font-size: .82rem; display: block; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 1px; }
-    .ss-pop-back, .ss-pop-close {
+    .ss-pop-close {
       width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--border);
       background: var(--primary-light); color: var(--primary); cursor: pointer;
       display: grid; place-items: center; transition: var(--transition);
+      justify-self: end;
     }
-    .ss-pop-back svg, .ss-pop-close svg { width: 15px; height: 15px; }
-    .ss-pop-back:hover, .ss-pop-close:hover { background: rgba(2,43,66,.12); transform: scale(1.06); }
+    .ss-pop-close svg { width: 15px; height: 15px; }
+    .ss-pop-close:hover { background: rgba(2,43,66,.12); transform: scale(1.06); }
+    /* Sits in the head's grid, not pinned like a sheet's back button. */
+    .ss-pop-back { position: static; margin-top: 0; }
     .ss-pop-back.ss-pop-back-hidden { visibility: hidden; pointer-events: none; }
 
     .ss-pop-body { padding: 18px; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; }

@@ -57,7 +57,7 @@ const HEAD_NOTE = "رئيس القسم";
 
 const ICON = {
   menu: '<svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>',
-  back: '<svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>',
+  back: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>',
 };
 
 // The footer under every view: /shared/credits-footer.js's card (logo,
@@ -105,6 +105,12 @@ function el(tag, props, ...kids) {
   const n = Object.assign(document.createElement(tag), props || {});
   kids.flat().forEach((k) => { if (k !== null && k !== undefined && k !== false) n.append(k); });
   return n;
+}
+// The site's back button (.back-btn in department-budgets.css): icon only.
+function backButton(onclick) {
+  const b = el("button", { className: "back-btn", type: "button", title: "رجوع", innerHTML: ICON.back, onclick });
+  b.setAttribute("aria-label", "رجوع");
+  return b;
 }
 const sum = (arr, f) => arr.reduce((a, x) => a + f(x), 0);
 const clone = (v) => JSON.parse(JSON.stringify(v));
@@ -388,9 +394,9 @@ export async function mountDepartmentBudgetsSheet(host, hooks = {}) {
   // sheet's back / menu buttons (the hero scrolls away with the content).
   wrap.innerHTML = `
     <header class="topbar">
-      <button class="icon-btn menu" type="button" aria-label="فتح القائمة" title="القائمة">${ICON.menu}</button>
+      <button class="icon-btn back back-btn on-dark" type="button" aria-label="رجوع" title="رجوع">${ICON.back}</button>
       <h2 class="topbar-school">${SCHOOL_NAME}</h2>
-      <button class="icon-btn back" type="button" aria-label="رجوع" title="رجوع">${ICON.back}</button>
+      <button class="icon-btn menu" type="button" aria-label="فتح القائمة" title="القائمة">${ICON.menu}</button>
     </header>
     <div class="scroller">
       <div class="hero">
@@ -582,12 +588,11 @@ function openEditor(dp) {
   const E = S.edit, ui = E.ui;
   const box = el("div");
   ui.saveMsg = el("div", { className: "msg", textContent: b ? "آخر حفظ: " + [b.updatedAt ? fmtDate(b.updatedAt) + " " + fmtTime(b.updatedAt) : "", b.updatedBy ? "(" + b.updatedBy + ")" : ""].filter(Boolean).join(" ") : "لم تُحفظ بعد" });
-  const back = S.role === "admin" ? el("button", { className: "btn ghost", type: "button", textContent: "رجوع", style: "flex:none;padding:6px 14px" }) : null;
-  if (back) back.onclick = () => setView("school");
+  const back = S.role === "admin" ? backButton(() => setView("school")) : null;
   // As the original page: the department and its weekly periods in one card.
   ui.periods = el("div");
   box.append(el("div", { className: "card" },
-    el("div", { className: "row top between" }, el("h2", { textContent: "ميزانية قسم " + dp, style: "margin:0;flex:1;min-width:0;font-size:16px" }), back),
+    el("div", { className: "row top between" }, back, el("h2", { textContent: "ميزانية قسم " + dp, style: "margin:0;flex:1;min-width:0;font-size:16px" })),
     el("p", { className: "lead", textContent: "اضغط على الشعبة لتختارها، واضغطها مرة أخرى لتزيلها. الضغط المطوّل يغيّر عدد حصصها إن خالفت المعتاد." }),
     el("label", { className: "lbl", textContent: "حصص الأسبوع للفصل الواحد" }), ui.periods,
     ui.saveMsg));
@@ -1036,9 +1041,8 @@ function deptTable(r) {
 // «معاينة»: one department as the official form (read only).
 function renderPreview(box) {
   const dp = S.preview, b = S.budgets.get(dp);
-  const back = el("button", { className: "btn ghost", type: "button", textContent: "رجوع" });
-  back.onclick = () => setView("school");
-  if (!b) { box.append(el("div", { className: "card" }, el("p", { className: "lead", textContent: "لا ميزانية محفوظة لهذا القسم." }), back)); return; }
+  const back = backButton(() => setView("school"));
+  if (!b) { box.append(el("div", { className: "card" }, el("div", { className: "row top" }, back), el("p", { className: "lead", textContent: "لا ميزانية محفوظة لهذا القسم." }))); return; }
   const edit = el("button", { className: "btn", type: "button", textContent: "تعديل" });
   edit.onclick = () => openEditor(dp);
   const msg = el("span", { className: "msg" });
@@ -1191,8 +1195,7 @@ function convertOld(json) {
 
 function renderImport(box) {
   const msg = el("div", { className: "msg" });
-  const back = el("button", { className: "btn ghost", type: "button", textContent: "رجوع" });
-  back.onclick = () => { S.importPlan = null; setView("school"); };
+  const back = backButton(() => { S.importPlan = null; setView("school"); });
   const fileIn = el("input", { type: "file", accept: ".json,application/json", hidden: true });
   const pick = el("button", { className: "btn", type: "button", textContent: S.importPlan ? "اختيار ملف آخر" : "اختيار الملف" });
   pick.onclick = () => fileIn.click();
@@ -1272,8 +1275,7 @@ function renderGrid(box) {
   setWide(true);
   const msg = el("span", { className: "msg" });
   S.gridMsg = msg;
-  const back = el("button", { className: "btn ghost", type: "button", textContent: "رجوع" });
-  back.onclick = () => setView("school");
+  const back = backButton(() => setView("school"));
   const refresh = el("button", { className: "btn ghost", type: "button", textContent: "تحديث" });
   refresh.onclick = () => load();
   const groups = gridColumns(), cols = groups.flatMap((g) => g.cols);

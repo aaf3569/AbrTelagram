@@ -194,7 +194,7 @@
     .sheet{ position:fixed; inset:0; z-index:60; background:var(--page); display:flex; flex-direction:column; transform:translateX(100%); transition:transform .28s cubic-bezier(.22,.7,.25,1); }
     .sheet.open{ transform:translateX(0); }
     .sheet-header{ background:var(--card-bg); border-bottom:1px solid var(--border); padding:14px 12px; display:flex; align-items:center; gap:10px; position:sticky; top:0; z-index:10; }
-    .back-btn{ height:40px; padding:0 14px; border-radius:12px; border:1px solid rgba(2,43,66,.2); background:var(--card-bg); color:var(--primary); font-weight:900; cursor:pointer; box-shadow:var(--shadow-1); display:inline-flex; align-items:center; gap:8px; }
+    /* .back-btn: /shared/back-button.css */
     .sheet-title{ margin:0; font-size:1.05rem; font-weight:900; color:var(--primary); }
     .sheet-body{ flex:1 1 auto; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:16px; width:min(760px,94vw); margin:0 auto; display:flex; flex-direction:column; gap:12px; }
 
@@ -404,6 +404,8 @@
   <meta name="twitter:title" content="القسم - ثانوية أحمد البشر الرومي">
   <meta name="twitter:description" content="???? ?????? ???? ????? ??????.">
   <meta name="twitter:image" content="https://framerusercontent.com/images/jRnZLlPr90qwKsuUwfIlvDS9E.png?width=1200&height=630">
+  <!-- After the page's own styles, so the one back button wins. -->
+  <link rel="stylesheet" href="/shared/back-button.css" />
 </head>
 
 <body>
@@ -558,7 +560,7 @@
   <!-- TEACHER PROFILE / EDIT SHEET -->
   <section id="teacherSheet" class="sheet" aria-hidden="true">
     <div class="sheet-header">
-      <button id="closeTeacher" class="back-btn" aria-label="رجوع"><i class="fas fa-arrow-right"></i><span>رجوع</span></button>
+      <button id="closeTeacher" class="back-btn" aria-label="رجوع" title="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
       <h3 class="sheet-title">ملف المعلّم</h3>
     </div>
     <div class="sheet-body">
@@ -688,8 +690,8 @@
       doc, getDoc, setDoc, updateDoc, deleteField, writeBatch, serverTimestamp
     } from "/shared/firebase.js";
     import { watchPresence, startPresenceHeartbeat } from "/shared/presence.js";
-    import { mountStudentNotesSheet } from "/shared/student-notes-sheet.js?v=2026-10-06b";
-    import { mountTeacherClassSheet } from "/shared/teacher-class-sheet.js?v=2026-10-06b";
+    import { mountStudentNotesSheet } from "/shared/student-notes-sheet.js?v=2026-10-12d";
+    import { mountTeacherClassSheet } from "/shared/teacher-class-sheet.js?v=2026-10-12d";
     import { fetchClassList, sortClassList, primeClassList } from "/shared/class-registry.js";
     import { resolveDepartmentName, getDepartmentSubjectFilters, isMergedDepartment, getMergedSubjectsForDepartment } from "/shared/departments.js";
     import { isTruthyFlag, canManageAttendance } from "/shared/auth-guard.js";

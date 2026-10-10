@@ -665,8 +665,7 @@
     .sheet-header{background:#fff;border-bottom:1px solid var(--border);padding:18px 20px;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:10;box-shadow:0 2px 10px rgba(3,60,84,.06)}
     .sheet-title{margin:0;font-size:1.2rem;font-weight:900;color:var(--primary);display:flex;align-items:center;gap:10px}
     .sheet-body{padding:20px;overflow-y:auto;flex:1}
-    .back-btn{height:48px;padding:0 20px;border-radius:14px;border:1px solid rgba(3,60,84,.2);background:#fff;color:var(--primary);font-weight:800;cursor:pointer;box-shadow:var(--shadow-1);transition:var(--transition);display:flex;align-items:center;gap:8px}
-    .back-btn:hover{border-color:rgba(3,60,84,.4);transform:translateX(-2px)}
+    /* .back-btn: /shared/back-button.css */
 
     .modal{position:fixed;inset:0;z-index:1100;display:none}
     .modal.open{display:grid;place-items:center}
@@ -706,16 +705,14 @@
   <meta name="twitter:title" content="جدول المعلّمين - ثانوية أحمد البشر الرومي">
   <meta name="twitter:description" content="???? ?????? ???? ????? ??????.">
   <meta name="twitter:image" content="https://framerusercontent.com/images/jRnZLlPr90qwKsuUwfIlvDS9E.png?width=1200&height=630">
+  <!-- After the page's own styles, so the one back button wins. -->
+  <link rel="stylesheet" href="/shared/back-button.css" />
 </head>
 
 <body>
   <header class="site-header" id="siteHeader">
     <div class="header-inner">
-      <button class="icon-btn" id="backBtn" title="رجوع" aria-label="رجوع">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M9 6l6 6-6 6"/>
-        </svg>
-      </button>
+      <button class="back-btn" id="backBtn" type="button" title="رجوع" aria-label="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
 
       <div class="header-center">
         <h1 class="site-title">ثانوية أحمد البشر الرومي</h1>

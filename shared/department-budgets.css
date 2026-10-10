@@ -35,8 +35,27 @@ button, input, select, textarea { font: inherit; }
 }
 .icon-btn:hover { background: rgba(255, 255, 255, .2); }
 .icon-btn svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 2.3; stroke-linecap: round; stroke-linejoin: round; }
-.menu { right: 12px; }
-.back { left: 12px; }
+.back { right: 12px; }
+.menu { left: 12px; }
+
+/* The site's back button — the same rules as /shared/back-button.css,
+   which the host page's styles can't reach inside this shadow root. The
+   doubled class keeps it over .icon-btn on the top bar. */
+.back-btn.back-btn {
+  width: 40px; height: 40px; min-width: 40px; min-height: 40px; padding: 0; flex: none;
+  display: inline-grid; place-items: center; border-radius: 12px;
+  border: 1px solid rgba(3, 60, 84, .2); background: #fff; color: #033C54;
+  box-shadow: none; font-size: 0; line-height: 0; cursor: pointer; transition: background .15s;
+}
+.back-btn.back-btn svg {
+  width: 22px; height: 22px; margin: 0; display: block; fill: none; stroke: currentColor;
+  stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round;
+}
+.back-btn.back-btn:hover, .back-btn.back-btn:focus-visible { background: #eef5f9; }
+.back-btn.back-btn:focus-visible { outline: 2px solid #033C54; outline-offset: 2px; }
+.back-btn.back-btn.on-dark { background: rgba(255, 255, 255, .12); border-color: rgba(255, 255, 255, .28); color: #fff; }
+.back-btn.back-btn.on-dark:hover, .back-btn.back-btn.on-dark:focus-visible { background: rgba(255, 255, 255, .22); }
+.back-btn.back-btn.on-dark:focus-visible { outline-color: #fff; }
 
 .scroller { flex: 1 1 auto; min-height: 0; overflow: auto; }
 .hero {

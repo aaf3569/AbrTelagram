@@ -69,9 +69,7 @@ const STYLES = `
   #attendanceSheet .att-lesson-dot.future{background:rgba(148,163,184,.10);color:#94a3b8;border-color:rgba(148,163,184,.25);opacity:.65;cursor:default}
   #attendanceSheet .att-lesson-dot.future:hover{transform:none}
   #attendanceSheet .special-case-icon{width:18px;height:18px;margin-inline-start:8px;flex-shrink:0}
-  #attendanceSheet .sheet-header .sheet-title{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);flex:none;text-align:center;max-width:calc(100% - 110px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  #attendanceSheet .sheet-header .att-back-btn{width:38px;height:38px;padding:0;border-radius:10px;flex-shrink:0;gap:0;display:inline-flex;align-items:center;justify-content:center;line-height:0}
-  #attendanceSheet .sheet-header .att-back-btn svg{width:16px;height:16px;flex-shrink:0;display:block;margin:0}
+  #attendanceSheet .sheet-header .sheet-title{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);flex:none;text-align:center;max-width:calc(100% - 128px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   #attendanceSheet .lesson-picker{width:100%}
   #attendanceSheet .att-row{display:flex;gap:12px;flex-wrap:wrap}
   #attendanceSheet .seg{display:flex;align-items:center;border:1px solid var(--border);border-radius:14px;overflow:hidden;background:#fff;box-shadow:var(--shadow-1)}
@@ -244,9 +242,7 @@ const STYLES = `
 const SHEET_HTML = `
   <section id="attendanceSheet" class="sheet" aria-hidden="true">
     <div class="sheet-header">
-      <button id="attCloseBtn" class="back-btn att-back-btn" type="button" aria-label="رجوع">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
-      </button>
+      <button id="attCloseBtn" class="back-btn att-back-btn" type="button" aria-label="رجوع" title="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
       <h3 id="attSheetTitle" class="sheet-title">تسجيل الغياب</h3>
     </div>
     <div class="sheet-body">

@@ -51,8 +51,7 @@ button:active,
 a.btn:active,
 .btn:active,
 .filter-btn:active,
-.fab-back:active,
-.sheet-fab-back:active {
+.fab-back:active {
   transform: scale(0.97) !important;
   transition: transform 0.08s ease !important;
 }

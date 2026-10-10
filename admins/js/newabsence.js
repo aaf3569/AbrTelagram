@@ -23,17 +23,20 @@ const FONT_AWESOME_URL = "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.
 const MARKUP = `
   <header class="site-header" id="siteHeader">
     <div class="header-inner">
-      <button class="icon-btn" id="menuBtn" title="القائمة" aria-label="فتح القائمة">
-        <i class="fas fa-bars"></i>
-      </button>
+      <button class="back-btn" id="backBtn" type="button" title="رجوع" aria-label="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
 
       <div class="header-center">
         <h1 class="site-title" id="navbarTitle">ثانوية أحمد البشر الرومي</h1>
       </div>
 
-      <button class="icon-btn" id="downloadBtn" title="تنزيل تقرير الغياب" aria-label="تنزيل تقرير الغياب">
-        <i class="fas fa-download"></i>
-      </button>
+      <div class="header-end">
+        <button class="icon-btn" id="menuBtn" title="القائمة" aria-label="فتح القائمة">
+          <i class="fas fa-bars"></i>
+        </button>
+        <button class="icon-btn" id="downloadBtn" title="تنزيل تقرير الغياب" aria-label="تنزيل تقرير الغياب">
+          <i class="fas fa-download"></i>
+        </button>
+      </div>
     </div>
 
     <div class="date-chip">
@@ -230,7 +233,7 @@ const MARKUP = `
  * Renders the sheet into `host` and starts loading today's grid.
  *
  * hooks:
- *   close()                 — title: close the sheet
+ *   close()                 — title / رجوع: close the sheet
  *   openSidebar()           — menu button: open adminpage.html's sidebar
  *   attendance              — the page's single mountAttendanceSheet() instance
  *   onAttendanceSaved(fn)   — subscribe to that instance's saves
@@ -342,6 +345,10 @@ export async function mountTodayAbsenceSheet(host, hooks) {
 
       // Make navbar title clickable
       navbarTitle.addEventListener('click', () => {
+        hooks.close();
+      });
+      // رجوع closes the sheet the same way.
+      sheetDoc.getElementById('backBtn').addEventListener('click', () => {
         hooks.close();
       });
 
@@ -1267,10 +1274,7 @@ export async function mountTodayAbsenceSheet(host, hooks) {
             </div>
 
             <div class="late-details-view" id="lateDetailsView">
-              <button class="back-button" id="backFromLateDetails">
-                <i class="fas fa-arrow-right"></i>
-                العودة
-              </button>
+              <button class="back-button back-btn" id="backFromLateDetails" type="button" aria-label="رجوع" title="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
               <div class="late-header">
                 <h4>تفاصيل المتأخرين</h4>
                 <span class="muted">الحصة ${niceLesson}</span>
