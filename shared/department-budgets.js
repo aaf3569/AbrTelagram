@@ -312,7 +312,10 @@ export async function mountDepartmentBudgetsSheet(host, hooks = {}) {
   wrap.innerHTML = `
     <header class="topbar">
       <button class="icon-btn menu" type="button" aria-label="فتح القائمة" title="القائمة">${ICON.menu}</button>
-      <h2 class="topbar-title">ميزانيات الأقسام</h2>
+      <div class="topbar-text">
+        <span class="topbar-school">${SCHOOL_NAME}</span>
+        <h2 class="topbar-title">ميزانيات الأقسام</h2>
+      </div>
       <button class="icon-btn back" type="button" aria-label="رجوع" title="رجوع">${ICON.back}</button>
     </header>
     <div class="scroller">
