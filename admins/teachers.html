@@ -1760,7 +1760,8 @@
       if(permissions.allowMorningLate) active.push('تسجيل تأخير الصباح');
       if(permissions.allowSupervisorStudents) active.push('ملفات الطلاب');
       if(permissions.allowManageAttendance) active.push('إدارة الغياب');
-      if(permissions.allowAllBudgets) active.push('كل الميزانيات');
+      // «السماح بتعديل الجدول» also opens ميزانيات الأقسام (firestore.rules' hasAllBudgetsPermission).
+      if(permissions.allowAllBudgets || permissions.allowEditSchedule) active.push('كل الميزانيات');
       if(!active.length){
         const empty=document.createElement('div');
         empty.className='perm-empty';

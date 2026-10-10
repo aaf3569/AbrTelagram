@@ -7,8 +7,8 @@
 //   - a head (teachers/{uid}.role == 'head'): their department's budget
 //     editor (cards on phones, a table on wide screens; the official form as
 //     Excel / PDF / image, and a filled Excel form read back in);
-//   - an admin, or a teacher with «السماح بكل الميزانيات»
-//     (permissions.allowAllBudgets): every department (summary, preview, edit any of them),
+//   - an admin, or a teacher with «السماح بكل الميزانيات» or «السماح بتعديل
+//     الجدول» (permissions.allowAllBudgets / allowEditSchedule): every department (summary, preview, edit any of them),
 //     «كل الأقسام» (class × subject, one teacher per cell), and a CSV of
 //     every teacher × class × subject.
 //
@@ -327,8 +327,10 @@ function editable(d) {
   return x;
 }
 
-// Strictly true, like firestore.rules' hasScheduleEditPermission().
-export const canEditAllBudgets = (data) => data?.permissions?.allowAllBudgets === true;
+// «السماح بكل الميزانيات» or «السماح بتعديل الجدول»; strictly true, like
+// firestore.rules' hasAllBudgetsPermission().
+export const canEditAllBudgets = (data) =>
+  data?.permissions?.allowAllBudgets === true || data?.permissions?.allowEditSchedule === true;
 
 /* ---------------- mount ---------------- */
 function dbFor() {
@@ -488,7 +490,7 @@ function render() {
 // Budgets are for heads (their own department) and for the admin view.
 function renderNone(box) {
   const text = S.role === "head" ? "لا يوجد قسم مسجّل لحسابك، فلا ميزانية تظهر هنا."
-    : "ميزانيات الأقسام لرؤساء الأقسام ومن لديه صلاحية «السماح بكل الميزانيات».";
+    : "ميزانيات الأقسام لرؤساء الأقسام ومن لديه صلاحية «السماح بكل الميزانيات» أو «السماح بتعديل الجدول».";
   box.append(el("div", { className: "card gold" }, el("h2", { textContent: "ميزانية القسم" }), el("p", { className: "lead", textContent: text })));
 }
 

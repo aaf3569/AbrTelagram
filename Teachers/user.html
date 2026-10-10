@@ -5946,7 +5946,7 @@
 
     function budgetMount(){
       if (!budgetMounting) {
-        budgetMounting = import('/shared/department-budgets.js?v=2026-10-11b')
+        budgetMounting = import('/shared/department-budgets.js?v=2026-10-11c')
           .then((m) => m.mountDepartmentBudgetsSheet(budgetHost, {
             close: () => closeBudgetSheet(),
             openSidebar: () => openSidebar(),
@@ -6010,12 +6010,14 @@
     });
 
     // ميزانية القسم: a head only (their own department).
-    // ميزانيات الأقسام: an admin, or «السماح بكل الميزانيات»
-    // (permissions.allowAllBudgets, strictly true like firestore.rules —
-    // the sheet reads the same flag, canEditAllBudgets) on top of their own.
+    // ميزانيات الأقسام: an admin, or «السماح بكل الميزانيات» / «السماح
+    // بتعديل الجدول» (permissions.allowAllBudgets / allowEditSchedule,
+    // strictly true like firestore.rules — the sheet reads the same flags,
+    // canEditAllBudgets) on top of their own.
     function updateBudgetButton(){
       const isAdminRole = currentRole === 'admin';
-      const allBudgets = isAdminRole || currentTeacherProfile?.permissions?.allowAllBudgets === true;
+      const perms = currentTeacherProfile?.permissions;
+      const allBudgets = isAdminRole || perms?.allowAllBudgets === true || perms?.allowEditSchedule === true;
       sidebarBudget.hidden = currentRole !== 'head';
       sidebarAllBudgets.hidden = !allBudgets;
       sidebarBudgetGroup.hidden = sidebarBudget.hidden && sidebarAllBudgets.hidden;

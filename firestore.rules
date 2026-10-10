@@ -130,17 +130,24 @@ service cloud.firestore {
 
     // «السماح بكل الميزانيات» (admins/teachers.html → صلاحيات المستخدم):
     // every department's budget — read, edit, CSV for the timetable sheet.
+    // «السماح بتعديل الجدول» (allowEditSchedule) grants the same, so a
+    // schedule editor sees ميزانيات الأقسام like an admin.
     // Mirrors canEditAllBudgets() in shared/department-budgets.js; only an
-    // admin can set it (teachers/{uid} update rules below).
+    // admin can set either flag (teachers/{uid} update rules below).
     function hasAllBudgetsPermission() {
       let d = myTeacherDoc();
       return signedIn()
         && d != null
         && ('permissions' in d)
         && (d.permissions is map)
-        && ('allowAllBudgets' in d.permissions)
-        && (d.permissions.allowAllBudgets is bool)
-        && d.permissions.allowAllBudgets == true;
+        && (
+          (('allowAllBudgets' in d.permissions)
+            && (d.permissions.allowAllBudgets is bool)
+            && d.permissions.allowAllBudgets == true)
+          || (('allowEditSchedule' in d.permissions)
+            && (d.permissions.allowEditSchedule is bool)
+            && d.permissions.allowEditSchedule == true)
+        );
     }
 
     function headDepartment() {
@@ -1267,7 +1274,8 @@ service cloud.firestore {
     // ميزانية القسم (/shared/department-budgets.js, opened from
     // Teachers/user.html and admins/adminpage.html): one doc per department,
     // keyed by its canonical name (shared/departments.js). An admin or a
-    // teacher with «السماح بكل الميزانيات» (hasAllBudgetsPermission) may read
+    // teacher with «السماح بكل الميزانيات» or «السماح بتعديل الجدول»
+    // (hasAllBudgetsPermission) may read
     // and write all of them; a head only their own department's; other
     // teachers none.
     match /departmentBudgets/{dept} {
