@@ -992,7 +992,7 @@ function renderSchool(box) {
     el("h2", { textContent: "ميزانية المدرسة" }),
     el("div", { className: "meta", textContent: rows.filter((r) => r.b).length + " من " + rows.length + " أقسام أدخلت ميزانيتها" }),
     el("div", { className: "wrap-x" }, table)));
-  if (S.showDetail) rows.filter((r) => r.b).forEach((r) => box.append(deptTable(r)));
+  if (S.showDetail) { setWide(true); rows.filter((r) => r.b).forEach((r) => box.append(deptTable(r))); }
 }
 
 // الجغرافيا والتاريخ and العلوم الفلسفية became الاجتماعيات (shared/departments.js).
@@ -1025,27 +1025,12 @@ async function mergeOldSocial(olds, msg) {
   toast("ميزانية الاجتماعيات: " + data.teachers.length + " معلماً من " + olds.join(" و") + ".");
 }
 
-// The department's budget in the layout of the paper form: teacher × classes, then نصاب and notes.
+// «عرض التفاصيل»: each department's budget as the official form (the same table as «معاينة»).
 function deptTable(r) {
-  const d = r.b.data, dup = dupes(d.teachers), multi = isMulti(r.dp);
-  const th = (t, props) => el("th", { textContent: t, ...(props || {}) });
-  const head1 = el("tr", {}, th("م", { rowSpan: 2 }), th("المعلم", { rowSpan: 2 }), multi ? th("المادة", { rowSpan: 2 }) : null,
-    ...S.classes.groups.map((g) => th(g.label, { colSpan: g.classes.length })), th("النصاب", { rowSpan: 2 }), th("ملاحظات", { rowSpan: 2 }));
-  const head2 = el("tr", {}, ...S.classes.classes.map((c) => th(String(S.classes.numOf[c]), { title: c })));
-  const body = d.teachers.map((t, i) => el("tr", {}, el("td", { textContent: i + 1 }), el("td", { className: "n", textContent: t.name }),
-    multi ? el("td", { className: "n", textContent: (t.subjects || []).join(" / ") }) : null,
-    ...S.classes.classes.map((c) => {
-      const sj = c in t.cells && (t.subjects || []).length > 1 ? subjOf(t, c) : "";
-      return el("td", { className: c in t.cells ? (dup.has(c) ? "dup" : "on") : "", title: sj }, c in t.cells ? String(t.cells[c]) : "", sj ? el("div", { className: "sj", textContent: sj.replace(/^ال/, "") }) : null);
-    }),
-    el("td", { textContent: nisab(t) }), el("td", { className: "n", textContent: t.note || "" })));
-  const have = d.teachers.length, gap = d.required == null ? null : d.required - have;
-  return el("div", { className: "card" },
+  return el("div", { className: "card keep-wide" },
     el("h2", { textContent: "قسم " + r.dp }),
-    el("div", { className: "meta", textContent: "رئيس القسم: " + r.head + " · المطلوب " + (d.required ?? "—") + " · الموجود " + have + " · العجز " + (gap ?? "—") }),
-    dup.size ? el("div", { className: "meta", style: "color:var(--gold-ink);font-weight:700", textContent: "فصول عند أكثر من معلم (طبيعي إذا اختلفت المادة): " + [...dup].join("، ") }) : null,
-    el("div", { className: "wrap-x" }, el("table", { className: "bt" }, el("thead", {}, head1, head2), el("tbody", {}, ...body))),
-    d.note ? el("div", { className: "meta", style: "margin-top:8px" }, el("b", { textContent: "ملاحظات: " }), d.note) : null);
+    el("div", { className: "meta", textContent: "رئيس القسم: " + r.head }),
+    el("div", { className: "wrap-x" }, formPage(r.dp, r.b.data, true)));
 }
 
 // «معاينة»: one department as the official form (read only).
@@ -1504,8 +1489,10 @@ async function buildXlsx(dp, d) {
   // Teachers, then 10 empty rows to add.
   let r = HR + 1, n = 0;
   const lines = [];
-  rows.forEach((t) => { n++; lines.push({ n, t, first: true, span: t.lines.length, line: t.lines[0] }); t.lines.slice(1).forEach((line) => lines.push({ t, line })); });
+  rows.forEach((t) => { n++; lines.push({ n, t, first: true, span: t.lines.length, line: t.lines[0] }); t.lines.slice(1).forEach((line) => lines.push({ n, t, line })); });
   for (let k = 0; k < 10; k++) lines.push({ n: ++n, t: null, first: true, span: 1, line: { subj: multi ? "" : dp, cells: {} } });
+  // Every other teacher (all their lines) on a light band; dotted = no periods (reads in black and white).
+  const band = fill("FFF0F6F2"), none = { type: "pattern", pattern: "lightGray", fgColor: { argb: "FF9E9E9E" }, bgColor: { argb: "FFFFFFFF" } };
   const first = r;
   lines.forEach((x) => {
     const row = ws.getRow(r);
@@ -1521,12 +1508,13 @@ async function buildXlsx(dp, d) {
     classes.forEach((c, i) => {
       const v = cellMark(d, dp, x.line.subj, c, x.line.cells[c]);
       if (v !== "") row.getCell(C0 + i).value = v;
-      // Grey: no periods for this subject in this class.
-      else if (defFor(d, dp, multi ? x.line.subj || null : null, c) === 0) row.getCell(C0 + i).fill = fill("FFD9D9D9");
+      // No periods for this subject in this class.
+      else if (defFor(d, dp, multi ? x.line.subj || null : null, c) === 0) row.getCell(C0 + i).fill = none;
     });
     row.getCell(HELP).value = { formula: `IFERROR(SUMPRODUCT((${L(C0)}${r}:${L(CN)}${r}="✓")*INDEX(${REF_GRID},MATCH($D${r},${REF_SUBJ},0),0)),0)+SUM(${L(C0)}${r}:${L(CN)}${r})` };
     for (let c = 1; c <= NOTE; c++) { const cell = row.getCell(c); cell.border = box; cell.alignment = c === 2 || c === NOTE ? { vertical: "middle", horizontal: "right", wrapText: true } : center; }
-    row.getCell(2).font = { bold: true }; row.getCell(3).font = { bold: true }; row.getCell(3).fill = fill("FFEEF6F1");
+    row.getCell(2).font = { bold: true }; row.getCell(3).font = { bold: true };
+    if (x.n % 2 === 0) for (let c = 1; c <= NOTE; c++) if (!row.getCell(c).fill) row.getCell(c).fill = band;
     for (const c of [2, ...(multi ? [4] : []), NOTE]) row.getCell(c).protection = { locked: false };
     for (let c = C0; c <= CN; c++) row.getCell(c).protection = { locked: false };
     row.height = 20;
@@ -1702,12 +1690,15 @@ const FORM_CSS = `
 .dbf-dept { font-size: 19px; margin-top: 6px; }
 .dbf-line { border-bottom: 4px double #217346; margin: 10px 0 12px; }
 .dbf-t { border-collapse: collapse; width: 100%; font-size: 14px; }
-.dbf-t th, .dbf-t td { border: 1px solid #777; padding: 4px 3px; text-align: center; }
-.dbf-t th { background: #dbe9e1; }
+.dbf-t th, .dbf-t td { border: 1px solid #666; padding: 4px 3px; text-align: center; }
+.dbf-t th { background: #dbe9e1; font-weight: 800; }
+.dbf-t tr.dbf-alt td { background: #f0f6f2; }
 .dbf-n { text-align: right !important; font-weight: 700; white-space: nowrap; }
-.dbf-s { font-weight: 700; background: #eef6f1; }
-.dbf-on { background: #fff2cc; }
-.dbf-off { background: #d9d9d9; }
+.dbf-s { font-weight: 700; }
+/* A class this line has (✓ or a number), and one with no periods for the
+   subject («–» too, so it still reads in black and white). */
+.dbf-t tr td.dbf-on { background: #fff2cc; font-weight: 700; }
+.dbf-t tr td.dbf-off { background: #e4e4e4; color: #888; }
 .dbf-note { font-size: 12px; text-align: right !important; }
 .dbf-cap { text-align: center; font-weight: 800; font-size: 16px; margin: 16px 0 6px; }
 .dbf-sum { width: 70%; margin: 0 auto; }
@@ -1726,13 +1717,14 @@ function formPage(dp, d, bare) {
       ...classes.map((c) => el("th", { textContent: compact(c), className: starts.has(c) ? "dbf-gb" : "" })), th("ملاحظات"))),
     el("tbody", {}, ...rows.flatMap((t, i) => t.lines.map((line, j) => {
       const total = t.lines.reduce((a, l) => a + Object.values(l.cells).reduce((x, y) => x + y, 0), 0);
-      const tr = el("tr");
+      // Every other teacher (all their lines) on a light band.
+      const tr = el("tr", { className: i % 2 ? "dbf-alt" : "" });
       if (j === 0) tr.append(el("td", { rowSpan: t.lines.length, textContent: i + 1 }), el("td", { rowSpan: t.lines.length, className: "dbf-n", textContent: t.name }), el("td", { rowSpan: t.lines.length, className: "dbf-s", textContent: total }));
       tr.append(el("td", { textContent: line.subj || "" }));
       classes.forEach((c) => {
         const v = cellMark(d, dp, multi ? line.subj : dp, c, line.cells[c]);
         const off = v === "" && defFor(d, dp, multi ? line.subj || null : null, c) === 0;
-        tr.append(el("td", { className: (v !== "" ? "dbf-on" : off ? "dbf-off" : "") + (starts.has(c) ? " dbf-gb" : ""), textContent: v }));
+        tr.append(el("td", { className: (v !== "" ? "dbf-on" : off ? "dbf-off" : "") + (starts.has(c) ? " dbf-gb" : ""), textContent: off ? "–" : v }));
       });
       if (j === 0) tr.append(el("td", { rowSpan: t.lines.length, className: "dbf-note", textContent: withHeadNote(dp, t.name, t.note) }));
       return tr;
