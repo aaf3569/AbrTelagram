@@ -1248,6 +1248,31 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    /* ---------- departmentBudgets ---------- */
+    // ميزانية القسم (/shared/department-budgets.js, opened from
+    // Teachers/user.html and admins/adminpage.html): one doc per department,
+    // keyed by its canonical name (shared/departments.js). Every teacher may
+    // read them (ميزانيتي shows a teacher's own rows from any department);
+    // only an admin, or the head of that same department, may write one.
+    match /departmentBudgets/{dept} {
+      allow read: if isTeacherOrAdmin();
+      allow create, update: if (isAdmin() || (isHead() && headDepartment() == dept))
+        && request.resource.data.keys().hasOnly(['periods', 'required', 'note', 'teachers', 'updatedAt', 'updatedBy', 'updatedByUid'])
+        && (request.resource.data.periods is map)
+        && (request.resource.data.teachers is list)
+        && request.resource.data.teachers.size() <= 60
+        && (request.resource.data.note is string)
+        && request.resource.data.note.size() <= 1000
+        && (request.resource.data.required == null
+            || (request.resource.data.required is int
+                && request.resource.data.required >= 0
+                && request.resource.data.required <= 99))
+        && (request.resource.data.updatedBy is string)
+        && request.resource.data.updatedByUid == request.auth.uid
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if isAdmin();
+    }
+
     /* ---------- fallback ---------- */
     match /{document=**} {
       allow read, write: if false;

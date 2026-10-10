@@ -99,6 +99,17 @@
         </button>
       </div>
 
+      <!-- ميزانية القسم (/shared/department-budgets.js): a teacher sees
+           ميزانيتي, a head their department's budget editor too, an admin
+           every department. Shown once the profile says which department. -->
+      <div id="sidebarBudgetGroup" class="sidebar-group" hidden>
+        <div class="sidebar-section-label">الميزانية</div>
+        <button id="sidebarBudget" class="sidebar-link" type="button">
+          <i class="fas fa-clipboard-list" aria-hidden="true"></i>
+          <span id="sidebarBudgetLabel">ميزانيتي</span>
+        </button>
+      </div>
+
       <div class="sidebar-group">
         <div class="sidebar-section-label">الصفوف</div>
         <button id="sidebarOtherClasses" class="sidebar-link" type="button">
@@ -204,6 +215,10 @@
   <section id="maTodaySheet" class="sheet" aria-hidden="true"><div id="maTodayHost" class="ma-host"></div></section>
   <section id="maOverallSheet" class="sheet" aria-hidden="true"><div id="maOverallHost" class="ma-host"></div></section>
   <section id="maDetailedSheet" class="sheet" aria-hidden="true"><div id="maDetailedHost" class="ma-host"></div></section>
+
+  <!-- ميزانية القسم / ميزانيتي: /shared/department-budgets.js renders into
+       #budgetHost (its own header included) the first time it's opened. -->
+  <section id="budgetSheet" class="sheet" aria-hidden="true"><div id="budgetHost" class="ma-host"></div></section>
 
   <!-- TEACHER SCHEDULES (جداول المعلمين): pick a department, then a
        teacher, and see that teacher's week — the same grid as جدولي
@@ -4225,6 +4240,7 @@
         [document.getElementById('dwSheet'), () => sidebarDeptSchedule],
         [ssSheetEl, () => sidebarSchoolSchedule],
         [svsSheetEl, () => sidebarSupervisorStudents],
+        [budgetSheetEl, () => sidebarBudget],
         [document.getElementById('maTodaySheet'), () => document.getElementById('sidebarMaToday')],
         [document.getElementById('maOverallSheet'), () => document.getElementById('sidebarMaOverall')],
         [document.getElementById('maDetailedSheet'), () => document.getElementById('sidebarMaDetailed')],
@@ -5909,6 +5925,82 @@
     sidebarEditSchedule.addEventListener('click', () => { closeSidebar(); location.href = '/admins/adminschedule.html'; });
     sidebarHeadDept.addEventListener('click', () => { closeSidebar(); location.href = '/dephead/department.html'; });
 
+    /* ========= ميزانية القسم / ميزانيتي (budget*) =========
+       /shared/department-budgets.js decides what it shows from the signed-in
+       teacher's own record: a teacher gets ميزانيتي (read-only), a head
+       (role 'head') their department's budget editor plus ميزانيتي, an admin
+       every department. What anyone may save is firestore.rules'
+       departmentBudgets match. Built once; later opens re-read the budgets.
+       Same #hash/history-entry convention as the sheets above (#dept-budget). */
+    const budgetSheetEl = document.getElementById('budgetSheet');
+    const budgetHost = document.getElementById('budgetHost');
+    const sidebarBudgetGroup = document.getElementById('sidebarBudgetGroup');
+    const sidebarBudget = document.getElementById('sidebarBudget');
+    const sidebarBudgetLabel = document.getElementById('sidebarBudgetLabel');
+    let budgetMounting = null;
+    let budgetApi = null;
+
+    function budgetMount(){
+      if (!budgetMounting) {
+        budgetMounting = import('/shared/department-budgets.js?v=2026-10-10')
+          .then((m) => m.mountDepartmentBudgetsSheet(budgetHost, {
+            close: () => closeBudgetSheet(),
+            openSidebar: () => openSidebar(),
+            getSession: () => ({ user: currentUser, data: currentTeacherProfile, classList: CLASS_OPTIONS }),
+          }))
+          .then((api) => { budgetApi = api; return api; })
+          .catch((e) => { budgetMounting = null; throw e; });
+      }
+      return budgetMounting;
+    }
+
+    function hideBudgetSheet(){
+      budgetSheetEl.classList.remove('open');
+      if (budgetSheetEl.contains(document.activeElement)) document.activeElement.blur();
+      budgetSheetEl.setAttribute('aria-hidden', 'true');
+    }
+
+    function openBudgetSheet(){
+      if (sidebarBudgetGroup.hidden || budgetSheetEl.classList.contains('open')) return;
+      budgetSheetEl.classList.add('open');
+      budgetSheetEl.setAttribute('aria-hidden', 'false');
+      try { history.pushState({ budgetSheetOpen: true }, '', '#dept-budget'); } catch {}
+      budgetApi?.refresh();
+      budgetMount().catch(async (e) => {
+        console.error('[department-budgets] failed to load', e);
+        closeBudgetSheet();
+        const retry = await showActionPopup({
+          title: 'تعذّر فتح الميزانية',
+          message: 'تحقّق من الاتصال وحاول مرة أخرى.',
+          confirmText: 'إعادة المحاولة',
+          cancelText: 'إغلاق',
+          icon: '!'
+        });
+        if (retry) openBudgetSheet();
+      });
+    }
+
+    function closeBudgetSheet(){
+      if (!budgetSheetEl.classList.contains('open')) return;
+      hideBudgetSheet();
+      if (history.state?.budgetSheetOpen) { try { history.back(); } catch {} }
+    }
+
+    window.addEventListener('popstate', () => {
+      if (budgetSheetEl.classList.contains('open') && !history.state?.budgetSheetOpen) hideBudgetSheet();
+    });
+
+    // A teacher with no department has no budget to see; heads and admins
+    // always get the button.
+    function updateBudgetButton(){
+      const role = currentRole === 'admin' ? 'admin' : currentRole === 'head' ? 'head' : 'teacher';
+      sidebarBudgetLabel.textContent = role === 'admin' ? 'ميزانيات الأقسام' : role === 'head' ? 'ميزانية القسم' : 'ميزانيتي';
+      sidebarBudgetGroup.hidden = !(role !== 'teacher' || myDeptSchedDepartment);
+      if (sidebarBudgetGroup.hidden) closeBudgetSheet();
+    }
+
+    sidebarBudget.addEventListener('click', () => { closeSidebar(); openBudgetSheet(); });
+
     /* ========= فصولي (mc*) =========
        An in-page copy of Teachers/user.html's own class buttons + student
        sheet — that page is never navigated to or edited, this
@@ -6914,6 +7006,7 @@
         '#today-absence': () => openManageAttendanceSheet('today'),
         '#overall-absence': () => openManageAttendanceSheet('overall'),
         '#detailed-absence': () => openManageAttendanceSheet('detailed'),
+        '#dept-budget': openBudgetSheet,
       };
       sections[hash]?.();
     }
@@ -7260,6 +7353,8 @@
           sidebarEditSchedule.hidden = true;
           sidebarHeadDept.hidden = true;
           sidebarAttendanceGroup.hidden = true;
+          closeBudgetSheet();
+          sidebarBudgetGroup.hidden = true;
           stopDeptNotifs();
           closeDeptNotifs();
           dsAttendance.setCanEditOthers(false);
@@ -7282,6 +7377,7 @@
       sidebarEditSchedule.hidden = true;
       sidebarHeadDept.hidden = true;
       sidebarAttendanceGroup.hidden = true;
+      sidebarBudgetGroup.hidden = true;
       stopDeptNotifs();
       dsAttendance.setCanEditOthers(false);
       currentUser = user;
@@ -7314,6 +7410,7 @@
               currentTeacherProfile?.department || currentTeacherProfile?.dept || currentTeacherProfile?.subject || ''
             );
             sidebarDeptSchedule.hidden = !myDeptSchedDepartment;
+            updateBudgetButton();
 
             // Extra per-teacher permissions granted from admins/teachers.html's
             // "صلاحيات المستخدم" editor (teachers/{uid}.permissions.*) — same

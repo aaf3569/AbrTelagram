@@ -238,6 +238,8 @@
     /* And the الجداول sheets (/admins/js/schedules.js). */
     #deptSchedulesHost, #teacherSchedulesHost,
     #schoolScheduleHost, #classSchedulesHost{ flex:1 1 auto; min-height:0; }
+    /* And ميزانيات الأقسام (/shared/department-budgets.js). */
+    #deptBudgetsHost{ flex:1 1 auto; min-height:0; }
 
     /* Scroll locks toggled on the real <body> by the غياب اليوم and
        الغياب المختصر sheets' own popups (modal-open) and by the shared
@@ -1024,6 +1026,10 @@
           <i class="fas fa-calendar-days" aria-hidden="true"></i>
           <span>تعديل الجداول</span>
         </button>
+        <button id="sidebarDeptBudgets" class="sidebar-link" type="button">
+          <i class="fas fa-clipboard-list" aria-hidden="true"></i>
+          <span>ميزانيات الأقسام</span>
+        </button>
       </div>
 
       <div class="sidebar-group">
@@ -1675,6 +1681,13 @@
   </section>
   <section id="classSchedulesSheet" class="sheet" aria-hidden="true">
     <div id="classSchedulesHost"></div>
+  </section>
+
+  <!-- ميزانيات الأقسام — /shared/department-budgets.js (the same sheet the
+       teachers' page opens) renders every department's budget into
+       #deptBudgetsHost the first time it's opened. -->
+  <section id="deptBudgetsSheet" class="sheet" aria-hidden="true">
+    <div id="deptBudgetsHost"></div>
   </section>
 
   <script type="module">
@@ -2682,18 +2695,21 @@
 
     /* ========= جداول الأقسام / جداول المعلمين sheets ========= */
     // Sidebar → الجداول. Same #hash / mount-once pattern as the absence
-    // sheets above; /admins/js/schedules.js builds both.
-    function makeScheduleSheet({ key, hash, sheetId, hostId, sidebarId, exportName, title }){
+    // sheets above; /admins/js/schedules.js builds both. ميزانيات الأقسام
+    // comes from /shared/department-budgets.js instead (modulePath), told
+    // it's the admin's view (hooks.role).
+    function makeScheduleSheet({ key, hash, sheetId, hostId, sidebarId, exportName, title, modulePath = '/admins/js/schedules.js', hooks = {} }){
       const entry = { key, hash, sheet: document.getElementById(sheetId), host: document.getElementById(hostId), mount: null, api: null };
       entry.mountOnce = () => {
         if(!entry.mount){
-          entry.mount = import('/admins/js/schedules.js')
+          entry.mount = import(modulePath)
             .then((m) => m[exportName](entry.host, {
               close: () => entry.close(),
               openSidebar: () => window.adminSidebar?.open(),
               attendance,
               onAttendanceSaved: (fn) => attendanceSavedListeners.add(fn),
               getSession: () => adminSession,
+              ...hooks,
             }))
             .then((api) => { entry.api = api; return api; })
             .catch((e) => { entry.mount = null; throw e; });
@@ -2736,6 +2752,9 @@
         sidebarId: 'sidebarSchoolSchedule', exportName: 'mountSchoolScheduleSheet', title: 'جدول المدرسة' }),
       makeScheduleSheet({ key: 'class-schedules', hash: '#class-schedules', sheetId: 'classSchedulesSheet', hostId: 'classSchedulesHost',
         sidebarId: 'sidebarClassSchedules', exportName: 'mountClassSchedulesSheet', title: 'جداول الصفوف' }),
+      makeScheduleSheet({ key: 'dept-budgets', hash: '#dept-budgets', sheetId: 'deptBudgetsSheet', hostId: 'deptBudgetsHost',
+        sidebarId: 'sidebarDeptBudgets', exportName: 'mountDepartmentBudgetsSheet', title: 'ميزانيات الأقسام',
+        modulePath: '/shared/department-budgets.js?v=2026-10-10', hooks: { role: 'admin' } }),
     ];
 
     // Sidebar: "غياب اليوم" / "الغياب المختصر" / "تدقيق في الغائب" open
