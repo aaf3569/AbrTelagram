@@ -157,8 +157,10 @@
       main{ padding: 14px; }
     }
     @media (max-width: 420px){
-      .btn span{ display:none; }
-      .btn{ width:48px; padding:0; justify-content:center; }
+      /* Only icon + label buttons shrink to their icon; plain-text buttons
+         (تعديل، حفظ، the delete modal's) keep their width. */
+      .btn:has(> .ic + span) > span{ display:none; }
+      .btn:has(> .ic + span){ width:48px; padding:0; justify-content:center; }
     }
 
     /* ===== Teacher management (ported from admins/teachers.html, remapped
