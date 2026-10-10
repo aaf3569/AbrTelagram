@@ -45,7 +45,8 @@ button, input, select, textarea { font: inherit; }
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='56' viewBox='0 0 56 56'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='.07'%3E%3Crect x='14' y='14' width='28' height='28'/%3E%3Crect x='14' y='14' width='28' height='28' transform='rotate(45 28 28)'/%3E%3C/g%3E%3C/svg%3E"),
     linear-gradient(135deg, var(--navy), var(--blue) 60%, var(--sky));
 }
-.hero .mark { width: 60px; height: 60px; display: block; margin: 4px auto 6px; filter: drop-shadow(0 2px 6px rgba(0, 0, 0, .25)); }
+/* The school's logo above «ميزانيات الأقسام»: blue calligraphy, so on a white plate. */
+.hero .hero-logo { display: block; width: min(200px, 60vw); height: auto; margin: 10px auto 10px; padding: 6px 14px; background: #fff; border-radius: 14px; box-shadow: 0 4px 14px rgba(0, 0, 0, .22); }
 .hero h1 { margin: 0; font-size: clamp(21px, 5vw, 28px); font-weight: 700; color: #f3d48f; }
 .hero .school { font-size: 15px; opacity: .85; margin-top: 4px; }
 .main { max-width: 760px; margin: -40px auto 0; padding: 0 16px 8px; position: relative; }

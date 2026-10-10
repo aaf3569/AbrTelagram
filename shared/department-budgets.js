@@ -34,8 +34,11 @@ import {
 } from "/shared/firebase.js";
 import { DEPARTMENT_LIST, DEPARTMENTS, SUBJECT_LIST, SUBJECT_TO_DEPARTMENT, resolveDepartmentName } from "/shared/departments.js";
 import { fetchClassList, parseClassKey, sortClassList } from "/shared/class-registry.js";
+import { OFFICIAL_PERIODS } from "/shared/official-periods.js?v=2026-10-11";
 
-const CSS_URL = new URL("./department-budgets.css", import.meta.url).href;
+// The stylesheet carries the version of the page that loads this module
+// ("?v=…" on /shared/department-budgets.js), so a new release isn't served a stale one.
+const CSS_URL = new URL("./department-budgets.css" + new URL(import.meta.url).search, import.meta.url).href;
 const COLLECTION = "departmentBudgets";
 const SCHOOL_NAME = "ثانوية أحمد البشر الرومي";
 const SCHOOL_LOGO = "/images/schoollogo.png";
@@ -52,8 +55,6 @@ const FORM_PLEA = "ارفع الميزانية بملف Excel من «تنزيل 
 const TICKS = ["✓", "✔", "√", "@", "x", "X", "×"];
 const HEAD_NOTE = "رئيس القسم";
 
-// The original page's mark (a calendar with one gold slot), on the hero.
-const MARK_SVG = '<svg class="mark" viewBox="0 0 48 48" aria-hidden="true"><rect x="6" y="9" width="36" height="33" rx="6" fill="none" stroke="#fff" stroke-width="2.5"/><path d="M6 18h36M16 5v8M32 5v8" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/><rect x="12" y="23" width="7" height="6" rx="1.5" fill="#f3d48f"/><rect x="21" y="23" width="7" height="6" rx="1.5" fill="#fff" opacity=".55"/><rect x="30" y="23" width="7" height="6" rx="1.5" fill="#fff" opacity=".55"/><rect x="12" y="32" width="7" height="6" rx="1.5" fill="#fff" opacity=".55"/><rect x="21" y="32" width="7" height="6" rx="1.5" fill="#fff" opacity=".55"/></svg>';
 const ICON = {
   menu: '<svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>',
   back: '<svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>',
@@ -131,6 +132,42 @@ const loadScript = (src) => new Promise((res, rej) => {
 });
 const needExcel = () => window.ExcelJS ? Promise.resolve() : loadScript(LIBS.excel);
 const needCanvas = () => Promise.all([window.html2canvas ? 0 : loadScript(LIBS.canvas), window.jspdf ? 0 : loadScript(LIBS.pdf)]);
+// «طباعة»: a copy of one part of the sheet, printed from a hidden frame so
+// neither the host page nor the sheet's bars and buttons end up on paper.
+let PRINT_CSS = "";
+function printNode(node, title) {
+  const copy = node.cloneNode(true);
+  const from = node.querySelectorAll("select");
+  copy.querySelectorAll("select").forEach((x, i) => {
+    const o = from[i]?.selectedOptions[0];
+    x.replaceWith(document.createTextNode(o && o.value ? o.textContent : ""));
+  });
+  copy.querySelectorAll("button, input, .row, .msg, .lead").forEach((x) => x.remove());
+  const frame = el("iframe", { title: "طباعة", style: "position:fixed;width:0;height:0;border:0;inset:auto 0 0 auto" });
+  document.body.append(frame);
+  const w = frame.contentWindow, doc = w.document;
+  doc.open();
+  doc.write(`<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>${title}</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap">
+<style>${PRINT_CSS}
+@page { size: A4 landscape; margin: 8mm; }
+html, body, :root { background: #fff !important; margin: 0; font-family: "Tajawal", Tahoma, sans-serif; direction: rtl; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.card { box-shadow: none; border: 0; padding: 0; margin: 0 0 10px; break-inside: auto; }
+.wrap-x, .gridWrap { overflow: visible !important; max-height: none !important; }
+.stick, th, thead { position: static !important; }
+.dbf { width: auto; padding: 0; }
+table { font-size: 10px; }
+</style></head><body></body></html>`);
+  doc.close();
+  doc.body.append(doc.importNode(copy, true));
+  const go = () => { w.focus(); w.print(); setTimeout(() => frame.remove(), 1000); };
+  (doc.fonts ? doc.fonts.ready : Promise.resolve()).then(() => setTimeout(go, 150));
+}
+function printButton(getNode, title) {
+  const b = el("button", { className: "btn ghost", type: "button", textContent: "طباعة" });
+  b.onclick = () => printNode(getNode(), title);
+  return b;
+}
 function saveBlob(blob, name) {
   const a = el("a", { href: URL.createObjectURL(blob), download: name });
   document.body.append(a); a.click(); a.remove();
@@ -176,6 +213,8 @@ function buildClassModel(list) {
 }
 // "11 / 2 ع" → "11/2ع": the column label on the official form.
 const compact = (c) => String(c).replace(/\s+/g, "");
+// "10 / 1" → "10/1", "11 / 2 ع" → "11ع2": the class as the timetable sheet writes it.
+const sheetClass = (c) => { const p = parseClassKey(c); return p.track ? `${p.grade}${p.track}${p.section}` : `${p.grade}/${p.section}`; };
 
 /* ---------------- state ---------------- */
 let S = null; // one sheet per page
@@ -193,12 +232,21 @@ const teacherKey = (t) => t.uid ? t.uid : "n:" + t.name;
 
 // The subject of one class: the class's own, else the teacher's only subject.
 const subjOf = (t, c) => (t.subj || {})[c] || ((t.subjects || []).length === 1 ? t.subjects[0] : "");
-// The department's default weekly periods for a subject in a class's grade group.
+// A single-subject department's one subject (its name, as the sheet spells it).
+const soleSubject = (dp) => budgetSubjects(dp)[0] || dp;
+// The official periods of a subject in a class (/shared/official-periods.js):
+// 0 when the subject has none there, null when the table doesn't know the subject.
+function officialFor(subj, c) {
+  const row = OFFICIAL_PERIODS[subj];
+  return row ? row[sheetClass(c)] ?? 0 : null;
+}
+// The department's default weekly periods for a subject in a class: the
+// head's own «حصص الأسبوع» for the class's grade group, else the official ones.
 function defFor(d, dp, subj, c) {
   const key = isMulti(dp) ? subj : dp;
   if (!key) return null;
   const v = ((d.periods || {})[key] || {})[S.classes.groupOf[c]];
-  return v === undefined ? null : v;
+  return v === undefined ? officialFor(isMulti(dp) ? subj : soleSubject(dp), c) : v;
 }
 const nisab = (t) => S.classes.classes.reduce((a, c) => a + (t.cells[c] || 0), 0);
 // A split is trusted only while it adds up to the cell.
@@ -293,6 +341,7 @@ export async function mountDepartmentBudgetsSheet(host, hooks = {}) {
   const res = await fetch(CSS_URL);
   if (!res.ok) throw new Error(`department-budgets.css: HTTP ${res.status}`);
   const css = await res.text();
+  PRINT_CSS = css.replace(/:host\b/g, ":root") + "\n" + FORM_CSS;
   const root = host.shadowRoot || host.attachShadow({ mode: "open" });
   root.replaceChildren();
   const style = el("style", { textContent: css + "\n" + FORM_CSS });
@@ -307,7 +356,7 @@ export async function mountDepartmentBudgetsSheet(host, hooks = {}) {
     </header>
     <div class="scroller">
       <div class="hero">
-        ${MARK_SVG}
+        <img class="hero-logo" src="${SCHOOL_LOGO}" alt="شعار ${SCHOOL_NAME}">
         <h1>ميزانيات الأقسام</h1>
         <div class="school"></div>
       </div>
@@ -378,6 +427,7 @@ async function load() {
         return {
           uid: d.id, name: teacherName(x), department: teacherDept(x), isHead: String(x.role || "").toLowerCase() === "head",
           subjects: [x.subject, x.subject2].map((s) => String(s || "").trim()).filter(Boolean),
+          civilId: String(x.civilId || "").replace(/\D+/g, ""),
         };
       }).filter((t) => DEPARTMENT_LIST.includes(t.department)).sort((a, b) => a.name.localeCompare(b.name, "ar"));
       S.budgets = new Map(bSnap.docs.map((d) => {
@@ -749,7 +799,7 @@ function teacherCard(t, i, dup) {
     onToggle(c, def, on) {
       if (on) { delete t.cells[c]; delete t.subj[c]; delete t.split[c]; changed(); renderTeachers(); return; }
       t.cells[c] = def ?? 0; changed(); renderTeachers();
-      if (def === null) setMsg(E.ui.saveMsg, "حدد «حصص الأسبوع» لهذا الصف، أو اضغط الفصل مطوّلاً واكتب العدد", "err");
+      if (!def) setMsg(E.ui.saveMsg, "حدد «حصص الأسبوع» لهذا الصف، أو اضغط الفصل مطوّلاً واكتب العدد", "err");
     },
     onHold(c, def) {
       const inp = el("input", { type: "number", inputMode: "numeric", min: 0, max: 40, value: t.cells[c] ?? def ?? "" });
@@ -906,7 +956,7 @@ function renderSchool(box) {
   // The one-time upload of the old site's data: admins only.
   const imp = S.realAdmin ? el("button", { className: "btn ghost", type: "button", textContent: "رفع بيانات الموقع القديم" }) : null;
   if (imp) imp.onclick = () => setView("import");
-  box.append(gridBtn, el("div", { className: "row", style: "margin:0 0 12px" }, refresh, detail, csv, imp, msg));
+  box.append(gridBtn, el("div", { className: "row", style: "margin:0 0 12px" }, refresh, detail, printButton(() => S.body, "ميزانية المدرسة"), csv, imp, msg));
   const depts = schoolDepartments();
   const rows = depts.map((dp) => {
     const b = S.budgets.get(dp);
@@ -966,30 +1016,41 @@ function renderPreview(box) {
   edit.onclick = () => openEditor(dp);
   const msg = el("span", { className: "msg" });
   setWide(true);
-  box.append(el("div", { className: "row", style: "margin:0 0 12px" }, back, edit),
-    el("div", { className: "card keep-wide" },
+  const card = el("div", { className: "card keep-wide" });
+  box.append(el("div", { className: "row", style: "margin:0 0 12px" }, back, edit, printButton(() => formPage(dp, b.data), "ميزانية قسم " + dp)),
+    card);
+  card.append(
       el("h2", { textContent: "ميزانية قسم " + dp }),
       el("div", { className: "meta", textContent: (b.updatedAt ? "آخر تحديث: " + fmtDate(b.updatedAt) : "") + (b.updatedBy ? " — " + b.updatedBy : "") }),
       el("div", { className: "row" }, ...downloadButtons(() => dp, () => b.data, msg), msg),
-      el("div", { className: "wrap-x", style: "margin-top:10px" }, formPage(dp, b.data, true))));
+      el("div", { className: "wrap-x", style: "margin-top:10px" }, formPage(dp, b.data, true)));
 }
 
+// «تصدير CSV للجدول»: one row per teacher × class × subject, in the format
+// the timetable sheet's importer reads (schedule-notes: tools/import_from_platform.gs):
+// classes and subjects spelled as the sheet's «التوزيع» has them. The importer
+// also brings «المعلمون» up to date from it (User ID, name, subjects, نصاب),
+// and gives a new teacher their الرقم المدني when it is 12 digits.
 function exportCsv(msg) {
-  const HEAD = ["المعرف", "الاسم", "القسم", "الصف", "المادة", "الحصص"];
+  const HEAD = ["المعرف", "اسم الشهرة", "الاسم الثلاثي", "القسم", "الصف", "المادة", "الحصص", "الرقم المدني"];
   const rows = [];
   for (const dp of DEPARTMENT_LIST) {
     const b = S.budgets.get(dp);
     if (!b) continue;
-    for (const t of b.data.teachers) for (const c of S.classes.classes) {
-      if (!(c in t.cells)) continue;
-      for (const p of partsOf(dp, t, c)) rows.push([t.uid || "", t.name, dp, c, p.subj || dp, p.h]);
+    for (const t of b.data.teachers) {
+      const civil = (t.uid && S.teachers.find((x) => x.uid === t.uid)?.civilId) || "";
+      for (const c of S.classes.classes) {
+        if (!(c in t.cells)) continue;
+        for (const p of partsOf(dp, t, c)) rows.push([t.uid || "", t.name, t.name, dp, sheetClass(c), p.subj || soleSubject(dp), p.h, civil.length === 12 ? civil : ""]);
+      }
     }
   }
   if (!rows.length) { setMsg(msg, "لا توجد ميزانيات للتصدير", "err"); return; }
   const q = (v) => '"' + String(v ?? "").replace(/"/g, '""') + '"';
-  const csv = "﻿" + [HEAD, ...rows].map((r) => r.map(q).join(",")).join("\r\n");
-  saveBlob(new Blob([csv], { type: "text/csv;charset=utf-8" }), "ميزانيات_الأقسام_" + new Date().toISOString().slice(0, 10) + ".csv");
-  setMsg(msg, rows.length + " سطراً لـ" + new Set(rows.map((r) => r[0] || r[1])).size + " معلماً", "ok");
+  const csv = "\uFEFF" + [HEAD, ...rows].map((r) => r.map(q).join(",")).join("\r\n");
+  saveBlob(new Blob([csv], { type: "text/csv;charset=utf-8" }), "ميزانية_المنصة_" + new Date().toISOString().slice(0, 10) + ".csv");
+  const blank = rows.filter((r) => !r[5]).length;
+  setMsg(msg, rows.length + " سطراً لـ" + new Set(rows.map((r) => r[0] || r[2])).size + " معلماً" + (blank ? " — " + blank + " بلا مادة" : ""), blank ? "err" : "ok");
 }
 
 /* =====================================================================
@@ -1223,11 +1284,13 @@ function renderGrid(box) {
         sel, cur.length > 1 ? el("small", { textContent: "+" + (cur.length - 1) }) : null);
     })));
   });
-  box.append(el("div", { className: "row", style: "margin:0 0 10px" }, back, refresh, msg),
-    el("div", { className: "card keep-wide", style: "padding:10px" },
+  const card = el("div", { className: "card keep-wide", style: "padding:10px" });
+  box.append(el("div", { className: "row", style: "margin:0 0 10px" }, back, refresh, printButton(() => card, "ميزانية كل الأقسام"), msg),
+    card);
+  card.append(
       el("h2", { textContent: "ميزانية كل الأقسام" }),
       el("p", { className: "lead", style: "font-size:14px", textContent: "اختر المعلم من القائمة فيُحفظ في ميزانية قسمه فوراً، والحصص من المعتاد. الخانة الحمراء حصصها تخالف المعتاد." }),
-      el("div", { className: "gridWrap" }, el("table", { className: "grid" }, head, body))));
+      el("div", { className: "gridWrap" }, el("table", { className: "grid" }, head, body)));
 }
 // One cell changed: the subject leaves whoever had it in that class and goes
 // to the chosen teacher, in the department's own budget.
@@ -1278,7 +1341,9 @@ function redrawGrid() {
    ===================================================================== */
 const formSubjects = (dp, d) => isMulti(dp) ? deptSubjects(dp, d.teachers) : [dp];
 const withHeadNote = (dp, name, note) => name && name === headOf(dp) && !/رئيس/.test(note || "") ? (note ? HEAD_NOTE + " — " + note : HEAD_NOTE) : note || "";
-const cellMark = (d, dp, subj, c, h) => h === undefined ? "" : h === defFor(d, dp, subj === dp ? null : subj, c) ? "✓" : h;
+// ✓ = the class's usual periods. (A department named like one of its subjects,
+// الرياضيات or اللغة الفرنسية, still asks about that subject.)
+const cellMark = (d, dp, subj, c, h) => h === undefined ? "" : h === defFor(d, dp, isMulti(dp) ? subj || null : null, c) ? "✓" : h;
 // One row per teacher × subject.
 function formRows(dp, d) {
   const subs = formSubjects(dp, d), multi = isMulti(dp);
@@ -1406,7 +1471,12 @@ async function buildXlsx(dp, d) {
       row.getCell(NOTE).value = note || (head ? { formula: `IF($B${r}=_منصة!$B$5,"${HEAD_NOTE}","")` } : null);
     }
     row.getCell(4).value = x.line.subj || null;
-    classes.forEach((c, i) => { const v = cellMark(d, dp, x.line.subj, c, x.line.cells[c]); if (v !== "") row.getCell(C0 + i).value = v; });
+    classes.forEach((c, i) => {
+      const v = cellMark(d, dp, x.line.subj, c, x.line.cells[c]);
+      if (v !== "") row.getCell(C0 + i).value = v;
+      // Grey: no periods for this subject in this class.
+      else if (defFor(d, dp, multi ? x.line.subj || null : null, c) === 0) row.getCell(C0 + i).fill = fill("FFD9D9D9");
+    });
     row.getCell(HELP).value = { formula: `IFERROR(SUMPRODUCT((${L(C0)}${r}:${L(CN)}${r}="✓")*INDEX(${REF_GRID},MATCH($D${r},${REF_SUBJ},0),0)),0)+SUM(${L(C0)}${r}:${L(CN)}${r})` };
     for (let c = 1; c <= NOTE; c++) { const cell = row.getCell(c); cell.border = box; cell.alignment = c === 2 || c === NOTE ? { vertical: "middle", horizontal: "right", wrapText: true } : center; }
     row.getCell(2).font = { bold: true }; row.getCell(3).font = { bold: true }; row.getCell(3).fill = fill("FFEEF6F1");
@@ -1577,6 +1647,7 @@ const FORM_CSS = `
 .dbf-n { text-align: right !important; font-weight: 700; white-space: nowrap; }
 .dbf-s { font-weight: 700; background: #eef6f1; }
 .dbf-on { background: #fff2cc; }
+.dbf-off { background: #d9d9d9; }
 .dbf-note { font-size: 12px; text-align: right !important; }
 .dbf-cap { text-align: center; font-weight: 800; font-size: 16px; margin: 16px 0 6px; }
 .dbf-sum { width: 70%; margin: 0 auto; }
@@ -1593,7 +1664,11 @@ function formPage(dp, d, bare) {
       const tr = el("tr");
       if (j === 0) tr.append(el("td", { rowSpan: t.lines.length, textContent: i + 1 }), el("td", { rowSpan: t.lines.length, className: "dbf-n", textContent: t.name }), el("td", { rowSpan: t.lines.length, className: "dbf-s", textContent: total }));
       tr.append(el("td", { textContent: line.subj || "" }));
-      classes.forEach((c) => { const v = cellMark(d, dp, multi ? line.subj : dp, c, line.cells[c]); tr.append(el("td", { className: v !== "" ? "dbf-on" : "", textContent: v })); });
+      classes.forEach((c) => {
+        const v = cellMark(d, dp, multi ? line.subj : dp, c, line.cells[c]);
+        const off = v === "" && defFor(d, dp, multi ? line.subj || null : null, c) === 0;
+        tr.append(el("td", { className: v !== "" ? "dbf-on" : off ? "dbf-off" : "", textContent: v }));
+      });
       if (j === 0) tr.append(el("td", { rowSpan: t.lines.length, className: "dbf-note", textContent: withHeadNote(dp, t.name, t.note) }));
       return tr;
     }))));
