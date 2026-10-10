@@ -51,7 +51,7 @@ const LIBS = {
 };
 const FORM_MARK = "نموذج ميزانية القسم";
 const FORM_VERSION = 1;
-const FORM_PLEA = "ارفع الميزانية بملف Excel من «تنزيل Excel» هنا: تقرؤه الصفحة وتملأ البطاقات منه، فلا تُعاد كتابة شيء.";
+const FORM_PLEA = "لإدخال الميزانية من ملف: نزّل «تنزيل Excel»، وعبّئه، ثم ارفعه من «رفع Excel».";
 const TICKS = ["✓", "✔", "√", "@", "x", "X", "×"];
 const HEAD_NOTE = "رئيس القسم";
 
@@ -118,6 +118,15 @@ function academicYear() {
   const d = new Date(), y = d.getFullYear();
   return d.getMonth() >= 7 ? `${y}/${y + 1}` : `${y - 1}/${y}`;
 }
+// The term a budget belongs to, from its date: August–January the first,
+// February–July the second.
+const semesterOf = (d) => "الفصل الدراسي " + (d.getMonth() >= 1 && d.getMonth() <= 6 ? "الثاني" : "الأول");
+// The date a department's budget was last saved (today if it never was).
+const budgetDate = (dp) => S.budgets.get(dp)?.updatedAt || new Date();
+const dayText = (d) => `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
+// Classes that open a new grade (the first 11 and the first 12): a heavy
+// line before them on the official form.
+const gradeStarts = (classes) => new Set(classes.filter((c, i) => i > 0 && parseClassKey(c).grade !== parseClassKey(classes[i - 1]).grade));
 function errText(e) {
   if (typeof e === "string") return e;
   if (e?.code === "permission-denied") return "لا تملك صلاحية التعديل على هذا القسم";
@@ -162,6 +171,14 @@ table { font-size: 10px; }
   const go = () => { w.focus(); w.print(); setTimeout(() => frame.remove(), 1000); };
   (doc.fonts ? doc.fonts.ready : Promise.resolve()).then(() => setTimeout(go, 150));
 }
+// A short message over the sheet (the save line can be out of view).
+function toast(text) {
+  S.toast?.remove();
+  S.toast = el("div", { className: "toast", role: "alert", textContent: text });
+  S.root.append(S.toast);
+  const t = S.toast;
+  setTimeout(() => { if (S.toast === t) { t.remove(); S.toast = null; } }, 6000);
+}
 function printButton(getNode, title) {
   const b = el("button", { className: "btn ghost", type: "button", textContent: "طباعة" });
   b.onclick = () => printNode(getNode(), title);
@@ -172,12 +189,17 @@ function saveBlob(blob, name) {
   document.body.append(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 }
-function armTwice(btn, label, armedLabel, fn) {
-  // Second tap confirms (no confirm(): in-app browsers block it); reverts after a few seconds.
+// A tap swaps the button for «question [تأكيد] [إلغاء]» in place (no
+// confirm(): in-app browsers such as WhatsApp's block it).
+function confirmFirst(btn, question, fn) {
   btn.onclick = () => {
-    if (btn.dataset.arm) { fn(); return; }
-    btn.dataset.arm = "1"; btn.textContent = armedLabel; btn.classList.add("armed");
-    setTimeout(() => { delete btn.dataset.arm; btn.textContent = label; btn.classList.remove("armed"); }, 4000);
+    const ok = el("button", { className: "btn small danger", type: "button", textContent: "تأكيد" });
+    const no = el("button", { className: "btn ghost small", type: "button", textContent: "إلغاء" });
+    const box = el("span", { className: "confirm" }, el("span", { textContent: question }), ok, no);
+    ok.onclick = () => { box.replaceWith(btn); fn(); };
+    no.onclick = () => box.replaceWith(btn);
+    btn.replaceWith(box);
+    ok.focus();
   };
 }
 
@@ -268,6 +290,21 @@ function setParts(t, c, parts) {
   t.cells[c] = parts.reduce((a, p) => a + p.h, 0);
   if (parts[0].subj) t.subj[c] = parts[0].subj; else delete t.subj[c];
   if (parts.length > 1) t.split[c] = Object.fromEntries(parts.map((p) => [p.subj, p.h]));
+}
+// The teacher in the department who already has class c for this subject
+// (any subject in a single-subject department), other than t.
+function holderOf(dp, t, c, subj) {
+  return S.edit.data.teachers.find((x) => x !== t && c in x.cells
+    && (!isMulti(dp) || partsOf(dp, x, c).some((p) => p.subj === subj)));
+}
+function refuseTaken(dp, t, c, subj) {
+  const x = holderOf(dp, t, c, subj);
+  if (!x) return false;
+  const msg = "الصف " + sheetClass(c) + (isMulti(dp) && subj ? " (" + subj + ")" : "") + " موجود لدى المعلم " + x.name
+    + "، يرجى إزالته من " + x.name + " لتستطيع إضافته عند " + (t.name || "هذا المعلم") + ".";
+  setMsg(S.edit.ui.saveMsg, msg, "err");
+  toast(msg);
+  return true;
 }
 // Classes held by more than one teacher in the same department.
 function dupes(teachers) {
@@ -428,6 +465,10 @@ async function load() {
         Array.isArray(ses.classList) && ses.classList.length ? ses.classList : fetchClassList(S.db),
       ]);
       S.classes = buildClassModel(classList);
+      // «مدير المدرسة» (admins/teachers.html → teachers/{uid}.permissions.isPrincipal):
+      // his name goes under «مدير المدرسة» on the official form.
+      const principal = tSnap.docs.map((d) => d.data() || {}).find((x) => x.permissions?.isPrincipal === true);
+      S.principal = principal ? teacherName(principal) : "";
       S.teachers = tSnap.docs.map((d) => {
         const x = d.data() || {};
         return {
@@ -547,14 +588,14 @@ function openEditor(dp) {
   ui.periods = el("div");
   box.append(el("div", { className: "card" },
     el("div", { className: "row top between" }, el("h2", { textContent: "ميزانية قسم " + dp, style: "margin:0;flex:1;min-width:0;font-size:16px" }), back),
-    el("p", { className: "lead", textContent: "اضغط على الشعبة لتختارها، واضغطها مرة أخرى لتزيلها. الضغط المطوّل يغيّر عدد حصصها إن خالفت المعتاد. الحفظ تلقائي." }),
+    el("p", { className: "lead", textContent: "اضغط على الشعبة لتختارها، واضغطها مرة أخرى لتزيلها. الضغط المطوّل يغيّر عدد حصصها إن خالفت المعتاد." }),
     el("label", { className: "lbl", textContent: "حصص الأسبوع للفصل الواحد" }), ui.periods,
     ui.saveMsg));
 
   ui.formMsg = el("span", { className: "msg" });
   ui.review = el("div", { className: "review", hidden: true });
   const fileIn = el("input", { type: "file", accept: ".xlsx", hidden: true });
-  const up = el("button", { className: "btn", type: "button", textContent: "رفع Excel معبّأ" });
+  const up = el("button", { className: "btn", type: "button", textContent: "رفع Excel" });
   up.onclick = () => fileIn.click();
   fileIn.onchange = async () => {
     const f = fileIn.files[0]; fileIn.value = "";
@@ -565,7 +606,7 @@ function openEditor(dp) {
     catch (e) { setMsg(ui.formMsg, String(e), "err"); }
   };
   box.append(el("div", { className: "card" }, el("h2", { textContent: "النموذج الرسمي" }),
-    el("p", { className: "lead", style: "font-size:14px", textContent: "نزّل ميزانية القسم بالنموذج الرسمي، أو ارفع النموذج معبّأً فتُملأ البطاقات منه." }),
+    el("p", { className: "lead", style: "font-size:14px", textContent: "نزّل ميزانية القسم بالنموذج الرسمي، أو ارفع النموذج بعد تعبئته." }),
     el("div", { className: "row", style: "margin-top:4px" }, ...downloadButtons(() => E.dp, () => E.data, ui.formMsg)),
     el("div", { className: "row" }, up, fileIn, ui.formMsg),
     el("p", { className: "plea", textContent: FORM_PLEA }), ui.review));
@@ -727,7 +768,7 @@ function addTeacherSelect(inTable) {
 function removeButton(i, short) {
   const t = S.edit.data.teachers[i];
   const del = el("button", { className: "del", type: "button", textContent: "🗑️", title: "حذف المعلم من الميزانية", ariaLabel: "حذف المعلم من الميزانية" });
-  armTwice(del, "🗑️", short ? "تأكيد؟" : "تأكيد حذف " + ((t.name || "").split(" ")[0] || "المعلم") + "؟", () => { S.edit.data.teachers.splice(i, 1); changed(); renderTeachers(); });
+  confirmFirst(del, "حذف " + ((t.name || "").split(" ").slice(0, short ? 1 : 2).join(" ") || "المعلم") + "؟", () => { S.edit.data.teachers.splice(i, 1); changed(); renderTeachers(); });
   return del;
 }
 
@@ -761,6 +802,7 @@ function teacherCard(t, i, dup) {
   box.append(classGrid(t, dp, d, {
     onToggle(c, def, on) {
       if (on) { delete t.cells[c]; delete t.subj[c]; delete t.split[c]; changed(); renderTeachers(); return; }
+      if (refuseTaken(dp, t, c, isMulti(dp) ? subjOf(t, c) || (t.subjects || [])[0] || "" : null)) return;
       t.cells[c] = def ?? 0; changed(); renderTeachers();
       if (!def) setMsg(E.ui.saveMsg, "حدد «حصص الأسبوع» لهذا الصف، أو اضغط الفصل مطوّلاً واكتب العدد", "err");
     },
@@ -771,6 +813,8 @@ function teacherCard(t, i, dup) {
       const pick = (t.subjects || []).length > 1 ? el("select", {}, el("option", { value: "", textContent: "المادة؟" }),
         ...t.subjects.map((x) => el("option", { value: x, textContent: x, selected: (t.subj || {})[c] === x }))) : null;
       ok.onclick = () => {
+        const sj = isMulti(dp) ? (pick && pick.value) || subjOf(t, c) || (t.subjects || [])[0] || "" : null;
+        if (refuseTaken(dp, t, c, sj)) return;
         t.cells[c] = Math.max(0, Math.min(40, Math.floor(Number(inp.value)) || 0));
         delete t.split[c];
         if (pick) { if (pick.value) t.subj[c] = pick.value; else delete t.subj[c]; }
@@ -860,7 +904,10 @@ function renderTable(focus) {
           title: c + (s ? " — " + s : "") + (def !== null ? " — المعتاد " + def : ""),
         });
         k.dataset.r = row; k.dataset.c = ci;
-        const put = (v) => { setLine(dp, t, s, c, v); changed(); renderTable({ r: row, c: ci }); };
+        const put = (v) => {
+          if (v !== null && h === undefined && refuseTaken(dp, t, c, multi ? s : null)) return;
+          setLine(dp, t, s, c, v); changed(); renderTable({ r: row, c: ci });
+        };
         k.onclick = () => {
           if (h !== undefined) return put(null);
           if (def === null) { setMsg(E.ui.saveMsg, "حدد «حصص الأسبوع» لهذا الصف أولاً، أو اكتب العدد في الخانة", "err"); k.focus(); return; }
@@ -914,12 +961,10 @@ function renderSchool(box) {
   refresh.onclick = () => load();
   const detail = el("button", { className: "btn ghost", type: "button", textContent: S.showDetail ? "إخفاء التفاصيل" : "عرض التفاصيل" });
   detail.onclick = () => { S.showDetail = !S.showDetail; render(); };
-  const csv = el("button", { className: "btn ghost", type: "button", textContent: "تصدير CSV للجدول" });
-  csv.onclick = () => exportCsv(msg);
   // The one-time upload of the old site's data: admins only.
   const imp = S.realAdmin ? el("button", { className: "btn ghost", type: "button", textContent: "رفع بيانات الموقع القديم" }) : null;
   if (imp) imp.onclick = () => setView("import");
-  box.append(gridBtn, el("div", { className: "row", style: "margin:0 0 12px" }, refresh, detail, printButton(() => S.body, "ميزانية المدرسة"), csv, imp, msg));
+  box.append(gridBtn, el("div", { className: "row", style: "margin:0 0 12px" }, refresh, detail, printButton(() => S.body, "ميزانية المدرسة"), imp, msg));
   const depts = schoolDepartments();
   const rows = depts.map((dp) => {
     const b = S.budgets.get(dp);
@@ -1184,7 +1229,7 @@ function renderImport(box) {
     write.disabled = false;
   };
   // Replacing saved budgets takes a second tap.
-  if (replacing) armTwice(write, write.textContent, "اضغط مرة أخرى: ستُستبدل " + replacing + " ميزانيات محفوظة", doWrite);
+  if (replacing) confirmFirst(write, "ستُستبدل " + replacing + " ميزانيات محفوظة.", doWrite);
   else write.onclick = doWrite;
   box.append(el("div", { className: "card" },
     el("h2", { textContent: "ما سيُكتب" }),
@@ -1248,11 +1293,14 @@ function renderGrid(box) {
     })));
   });
   const card = el("div", { className: "card keep-wide", style: "padding:10px" });
-  box.append(el("div", { className: "row", style: "margin:0 0 10px" }, back, refresh, printButton(() => card, "ميزانية كل الأقسام"), msg),
+  // The timetable sheet's CSV: every department's budget, so it lives here.
+  const csv = el("button", { className: "btn ghost", type: "button", textContent: "تصدير CSV للجدول" });
+  csv.onclick = () => exportCsv(msg);
+  box.append(el("div", { className: "row", style: "margin:0 0 10px" }, back, refresh, printButton(() => card, "ميزانية كل الأقسام"), csv, msg),
     card);
   card.append(
       el("h2", { textContent: "ميزانية كل الأقسام" }),
-      el("p", { className: "lead", style: "font-size:14px", textContent: "اختر المعلم من القائمة فيُحفظ في ميزانية قسمه فوراً، والحصص من المعتاد. الخانة الحمراء حصصها تخالف المعتاد." }),
+      el("p", { className: "lead", style: "font-size:14px", textContent: "اختر المعلم من القائمة. الخانة الحمراء حصصها تخالف المعتاد." }),
       el("div", { className: "gridWrap" }, el("table", { className: "grid" }, head, body)));
 }
 // One cell changed: the subject leaves whoever had it in that class and goes
@@ -1364,7 +1412,7 @@ async function buildXlsx(dp, d) {
   const ExcelJS = window.ExcelJS;
   const multi = isMulti(dp), classes = S.classes.classes, subs = formSubjects(dp, d), rows = formRows(dp, d);
   const C0 = 5, CN = C0 + classes.length - 1, NOTE = CN + 1, HELP = CN + 2, HR = 9;
-  const L = colName, lastL = L(NOTE), year = academicYear(), head = headOf(dp);
+  const L = colName, lastL = L(NOTE), year = academicYear(), head = headOf(dp), when = budgetDate(dp);
   const wb = new ExcelJS.Workbook(); wb.creator = SCHOOL_NAME;
   const ws = wb.addWorksheet("الميزانية", { views: [{ rightToLeft: true, showGridLines: false }] });
   const ref = wb.addWorksheet("الحصص", { views: [{ rightToLeft: true }] });
@@ -1410,6 +1458,8 @@ async function buildXlsx(dp, d) {
   put("A6:D6", SCHOOL_NAME, { size: 11 });
   put(`${L(C0 + 1)}2:${L(CN - 2)}3`, "ميزانية الأقسام العلمية للعام الدراسي " + year, { bold: true, size: 16 });
   put(`${L(C0 + 1)}4:${L(CN - 2)}5`, "القسم العلمي / " + dp, { bold: true, size: 13 });
+  // Row 6 also holds «العام الدراسي» from NOTE - 3: stop short of it (few classes).
+  put(`${L(C0 + 1)}6:${L(Math.max(C0 + 1, Math.min(CN - 2, NOTE - 4)))}6`, semesterOf(when), { size: 12 });
   put(`${L(NOTE - 3)}6:${lastL}6`, "العام الدراسي " + year, { size: 11 });
   for (let c = 1; c <= NOTE; c++) ws.getCell(8, c).border = { bottom: { style: "double", color: { argb: "FF217346" } } };
 
@@ -1454,6 +1504,19 @@ async function buildXlsx(dp, d) {
     if (multi && subs.length) ws.getCell(rr, 4).dataValidation = { type: "list", allowBlank: true, formulae: [`_منصة!$E$1:$E$${subs.length}`], showErrorMessage: true, errorStyle: "stop", errorTitle: "مادة غير معروفة", error: "اختر مادة من القائمة." };
     for (let c = C0; c <= CN; c++) ws.getCell(rr, c).dataValidation = { type: "custom", allowBlank: true, formulae: [`OR(${L(c)}${rr}="✓",AND(ISNUMBER(${L(c)}${rr}),${L(c)}${rr}>=0,${L(c)}${rr}<=40))`], showErrorMessage: true, errorStyle: "stop", errorTitle: "قيمة غير مقبولة", error: "اكتب ✓ (المعتاد) أو عدد الحصص من 1 إلى 40." };
   }
+  // A heavy line where a new grade starts (10 | 11 | 12), header and rows.
+  const heavy = { style: "thick", color: { argb: "FF000000" } };
+  const starts = gradeStarts(classes);
+  classes.forEach((c, i) => {
+    if (!starts.has(c)) return;
+    for (let rr = HR; rr <= last; rr++) {
+      const a = ws.getCell(rr, C0 + i - 1), b = ws.getCell(rr, C0 + i);
+      // The edge the two columns share: the first's right, the second's left
+      // (Excel mirrors both on a right-to-left sheet).
+      a.border = { ...a.border, right: heavy };
+      b.border = { ...b.border, left: heavy };
+    }
+  });
   ws.addConditionalFormatting({ ref: `${L(C0)}${first}:${L(CN)}${last}`, rules: [
     { type: "expression", priority: 1, formulae: [`${L(C0)}${first}<>""`], style: { fill: { type: "pattern", pattern: "solid", bgColor: { argb: "FFFFF2CC" } } } },
   ] });
@@ -1477,8 +1540,8 @@ async function buildXlsx(dp, d) {
   put(`A${f}:D${f}`, "رئيس القسم", { bold: true, size: 12 });
   put(`${L(NOTE - 3)}${f}:${lastL}${f}`, "مدير المدرسة", { bold: true, size: 12 });
   put(`A${f + 1}:D${f + 1}`, head, { size: 12 });
-  put(`A${f + 2}:D${f + 2}`, "التوقيع: ....................");
-  put(`${L(NOTE - 3)}${f + 2}:${lastL}${f + 2}`, "التوقيع: ....................");
+  put(`${L(NOTE - 3)}${f + 1}:${lastL}${f + 1}`, S.principal || "", { size: 12 });
+  put(`${L(NOTE - 3)}${f + 2}:${lastL}${f + 2}`, "تاريخ الميزانية: " + dayText(when), { size: 8, color: { argb: "FF555555" } });
 
   ws.pageSetup = { paperSize: 9, orientation: "landscape", fitToPage: true, fitToWidth: 1, fitToHeight: 1, horizontalCentered: true,
     margins: { left: 0.3, right: 0.3, top: 0.3, bottom: 0.3, header: 0.1, footer: 0.1 }, printArea: `A1:${lastL}${f + 2}` };
@@ -1489,8 +1552,8 @@ async function buildXlsx(dp, d) {
     ["1. لكل معلم سطر، ولكل مادة يدرّسها سطر. اسم المعلم ونصابه يُكتبان مرة واحدة.", false],
     ["2. المعلم الذي يدرّس مادة ثانية: اكتبها في السطر الذي تحته، واترك خانة الاسم فارغة.", false],
     ["3. في خانة الصف: ✓ تعني الحصص المعتادة لتلك المادة في ذلك الصف (ورقة «الحصص»)، أو اكتب عدد الحصص إن خالفها.", false],
-    ["4. النصاب يُحسب وحده. اسم المعلم والمادة من القوائم المنسدلة. لا تغيّر أسماء الأوراق ولا العناوين.", false],
-    ["5. ارفع الملف كما هو في الصفحة: «ميزانية القسم ← رفع Excel معبّأ» فتُملأ الميزانية آلياً.", false],
+    ["4. اسم المعلم والمادة من القوائم المنسدلة. لا تغيّر أسماء الأوراق ولا العناوين.", false],
+    ["5. ارفع الملف من الصفحة: «ميزانية القسم ← رفع Excel».", false],
   ].forEach(([t, b], i) => { const c = guide.getCell(i + 1, 1); c.value = t; c.font = { bold: b, size: b ? 13 : 12 }; c.alignment = { horizontal: "right", readingOrder: "rtl", wrapText: true }; });
   await guide.protect("", {});
 
@@ -1582,7 +1645,7 @@ function applyForm(parsed) {
   const close = () => { E.ui.review.replaceChildren(); E.ui.review.hidden = true; };
   ok.onclick = () => { E.review = null; close(); changed(); };
   no.onclick = () => { E.data = E.review; E.review = null; E.dirty = false; close(); renderPeriods(); renderTeachers(); setMsg(E.ui.saveMsg, "أُلغي ما جاء من الملف"); };
-  E.ui.review.replaceChildren(el("b", { textContent: "مُعبّأ من الملف — راجع ثم اضغط «اعتماد وحفظ». لم يُحفظ شيء بعد." }),
+  E.ui.review.replaceChildren(el("b", { textContent: "راجع البيانات ثم اضغط «اعتماد وحفظ». لم يُحفظ شيء بعد." }),
     items.length ? el("ul", {}, ...items.map((t) => el("li", { textContent: t }))) : el("div", { className: "meta", textContent: "لا ملاحظات على الملف." }),
     el("div", { className: "row" }, ok, no));
   E.ui.review.hidden = false;
@@ -1614,14 +1677,19 @@ const FORM_CSS = `
 .dbf-note { font-size: 12px; text-align: right !important; }
 .dbf-cap { text-align: center; font-weight: 800; font-size: 16px; margin: 16px 0 6px; }
 .dbf-sum { width: 70%; margin: 0 auto; }
+.dbf-t .dbf-gb { border-inline-start: 3px solid #000; }
+.dbf-sem { font-size: 16px; margin-top: 4px; }
+.dbf-date { font-size: 11px; color: #444; text-align: left; margin-top: 10px; }
 .dbf-sign { display: flex; justify-content: space-between; margin: 22px 80px 4px; text-align: center; font-size: 16px; line-height: 2; }
 .dbf-host { position: fixed; left: -10000px; top: 0; }
 `;
 function formPage(dp, d, bare) {
   const multi = isMulti(dp), classes = S.classes.classes, rows = formRows(dp, d), year = academicYear();
+  const when = budgetDate(dp), starts = gradeStarts(classes);
   const th = (t) => el("th", { textContent: t });
   const table = el("table", { className: "dbf-t" },
-    el("thead", {}, el("tr", {}, ...["م", "المعلم", "النصاب", "المادة", ...classes.map(compact), "ملاحظات"].map(th))),
+    el("thead", {}, el("tr", {}, ...["م", "المعلم", "النصاب", "المادة"].map(th),
+      ...classes.map((c) => el("th", { textContent: compact(c), className: starts.has(c) ? "dbf-gb" : "" })), th("ملاحظات"))),
     el("tbody", {}, ...rows.flatMap((t, i) => t.lines.map((line, j) => {
       const total = t.lines.reduce((a, l) => a + Object.values(l.cells).reduce((x, y) => x + y, 0), 0);
       const tr = el("tr");
@@ -1630,7 +1698,7 @@ function formPage(dp, d, bare) {
       classes.forEach((c) => {
         const v = cellMark(d, dp, multi ? line.subj : dp, c, line.cells[c]);
         const off = v === "" && defFor(d, dp, multi ? line.subj || null : null, c) === 0;
-        tr.append(el("td", { className: v !== "" ? "dbf-on" : off ? "dbf-off" : "", textContent: v }));
+        tr.append(el("td", { className: (v !== "" ? "dbf-on" : off ? "dbf-off" : "") + (starts.has(c) ? " dbf-gb" : ""), textContent: v }));
       });
       if (j === 0) tr.append(el("td", { rowSpan: t.lines.length, className: "dbf-note", textContent: withHeadNote(dp, t.name, t.note) }));
       return tr;
@@ -1643,12 +1711,13 @@ function formPage(dp, d, bare) {
   return el("div", { className: "dbf" },
     el("div", { className: "dbf-head" },
       el("div", { className: "dbf-side" }, el("b", { textContent: "وزارة التربية" }), el("span", { textContent: SCHOOL_NAME })),
-      el("div", { className: "dbf-mid" }, el("div", { className: "dbf-title", textContent: "ميزانية الأقسام العلمية للعام الدراسي " + year }), el("div", { className: "dbf-dept", textContent: "القسم العلمي / " + dp })),
+      el("div", { className: "dbf-mid" }, el("div", { className: "dbf-title", textContent: "ميزانية الأقسام العلمية للعام الدراسي " + year }), el("div", { className: "dbf-dept", textContent: "القسم العلمي / " + dp }), el("div", { className: "dbf-sem", textContent: semesterOf(when) })),
       el("div", { className: "dbf-side" }, el("img", { src: SCHOOL_LOGO, className: "dbf-logo", alt: "" }), el("span", { textContent: "العام الدراسي " + year }))),
     el("div", { className: "dbf-line" }), table, ...sums,
     el("div", { className: "dbf-sign" },
-      el("div", {}, el("b", { textContent: "رئيس القسم" }), el("div", { textContent: headOf(dp) || " " }), el("div", { textContent: "التوقيع: ...................." })),
-      el("div", {}, el("b", { textContent: "مدير المدرسة" }), el("div", { textContent: " " }), el("div", { textContent: "التوقيع: ...................." }))));
+      el("div", {}, el("b", { textContent: "رئيس القسم" }), el("div", { textContent: headOf(dp) || " " })),
+      el("div", {}, el("b", { textContent: "مدير المدرسة" }), el("div", { textContent: S.principal || " " }))),
+    el("div", { className: "dbf-date", textContent: "تاريخ الميزانية: " + dayText(when) }));
 }
 async function formCanvas(dp, d) {
   await needCanvas();

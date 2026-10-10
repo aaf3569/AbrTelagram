@@ -5946,7 +5946,7 @@
 
     function budgetMount(){
       if (!budgetMounting) {
-        budgetMounting = import('/shared/department-budgets.js?v=2026-10-11c')
+        budgetMounting = import('/shared/department-budgets.js?v=2026-10-12')
           .then((m) => m.mountDepartmentBudgetsSheet(budgetHost, {
             close: () => closeBudgetSheet(),
             openSidebar: () => openSidebar(),
