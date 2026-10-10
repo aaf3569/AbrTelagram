@@ -390,14 +390,14 @@ export async function mountDepartmentBudgetsSheet(host, hooks = {}) {
   root.replaceChildren();
   const style = el("style", { textContent: css + "\n" + FORM_CSS });
   const wrap = el("div", { style: "display:contents" });
-  // The site's header (white, frosted; school name centred, back on the
-  // right, menu on the left) stays put; under it a white title block —
+  // The site's header (white, frosted; school name centred, menu on the
+  // right, back on the left) stays put; under it a white title block —
   // the school's logo above the sheet's title — scrolls with the content.
   wrap.innerHTML = `
     <header class="site-header">
-      <button class="icon-btn back back-btn" type="button" aria-label="رجوع" title="رجوع">${ICON.back}</button>
-      <h2 class="site-title">${SCHOOL_NAME}</h2>
       <button class="icon-btn menu" type="button" aria-label="فتح القائمة" title="القائمة">${ICON.menu}</button>
+      <h2 class="site-title">${SCHOOL_NAME}</h2>
+      <button class="icon-btn back back-btn" type="button" aria-label="رجوع" title="رجوع">${ICON.back}</button>
     </header>
     <div class="scroller">
       <div class="title-block">

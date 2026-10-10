@@ -35,8 +35,8 @@ button, input, select, textarea { font: inherit; }
 }
 /* The header: only the school's name (the sheet's own title is below it). */
 .site-title {
-  margin: 0; font-family: var(--font-heading); font-size: clamp(1.15rem, 2.6vw, 1.45rem); font-weight: 700;
-  color: var(--navy); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+  margin: 0; font-family: var(--font-heading); font-size: clamp(1.15rem, 2.6vw, 1.45rem); font-weight: 900;
+  letter-spacing: .2px; color: var(--navy); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
   padding-block: .3em; margin-block: -.3em;
 }
 .icon-btn {
@@ -46,8 +46,8 @@ button, input, select, textarea { font: inherit; }
 }
 .icon-btn:hover { background: var(--tint); }
 .icon-btn svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 2.3; stroke-linecap: round; stroke-linejoin: round; }
-.back { right: 12px; }
-.menu { left: 12px; }
+.menu { right: 12px; }
+.back { left: 12px; }
 
 /* The site's back button — the same rules as /shared/back-button.css,
    which the host page's styles can't reach inside this shadow root. The
