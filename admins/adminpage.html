@@ -2946,16 +2946,6 @@
       myClassesSection.hidden = false;
     }
 
-    // «مدير المدرسة» in the site footer (/shared/credits-footer.js): the
-    // teacher marked «مدير المدرسة» in admins/teachers.html.
-    async function loadFooterPrincipal(){
-      try{
-        const snap = await getDocs(query(collection(db, 'teachers'), where('permissions.isPrincipal', '==', true), limit(1)));
-        const d = snap.empty ? {} : (snap.docs[0].data() || {});
-        window.CreditsFooter?.setPrincipal(d.name || d.fullName || '');
-      }catch(e){ console.warn('[credits-footer] principal not loaded', e); }
-    }
-
     onAuthStateChanged(auth, async (user)=>{
       if(!user){
         avatarUserUid = null;
@@ -2990,7 +2980,6 @@
         show(sAdmin);
         initNotificationPopup(db, { uid: user.uid, name: data?.name || '' });
         startPresenceHeartbeat(db, user.uid);
-        loadFooterPrincipal();
         if(window.location.hash === '#admins') openAdminsPanel();
         if(window.location.hash === NOTIFICATIONS_HASH) openNotificationsPanel(false);
         if(window.location.hash === TODAY_ABSENCE_HASH) openTodayAbsenceSheet(false);

@@ -948,8 +948,7 @@
             writeBatch,
             Timestamp,
             setDoc,
-            or,
-            limit
+            or
         } from "/shared/firebase.js";
         import { showActionPopup } from "/shared/action-popup.js";
         import { mountTelegramSettings } from "/shared/telegram-settings.js";
@@ -2195,16 +2194,6 @@
             classesButtons.querySelectorAll('.btn.class-btn.current-lesson').forEach(btn => btn.classList.remove('current-lesson'));
         }
 
-        // «مدير المدرسة» in the site footer (/shared/credits-footer.js): the
-        // teacher marked «مدير المدرسة» in admins/teachers.html.
-        async function loadFooterPrincipal(){
-            try{
-                const snap = await getDocs(query(collection(db, 'teachers'), where('permissions.isPrincipal', '==', true), limit(1)));
-                const d = snap.empty ? {} : (snap.docs[0].data() || {});
-                window.CreditsFooter?.setPrincipal(d.name || d.fullName || '');
-            }catch(e){ console.warn('[credits-footer] principal not loaded', e); }
-        }
-
         onAuthStateChanged(auth, async (user)=>{
             if(!user){
                 avatarUserUid = null;
@@ -2250,7 +2239,6 @@
                 await loadSchoolBreaksSettings();
 
                 displayName.textContent = data?.name || (user.email ? user.email.split('@')[0] : 'قائد قسم');
-                loadFooterPrincipal();
 
                 avatarUserUid = user.uid;
                 loadStoredAvatar(user.uid);
