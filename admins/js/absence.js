@@ -32,7 +32,6 @@ const MARKUP = `
           <path d="M4 6h16M4 12h16M4 18h16"/>
         </svg>
       </button>
-      <button class="refresh-btn" id="refreshView" type="button" title="تحديث" aria-label="تحديث"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg></button>
       <button class="icon-btn" id="exportData" title="تصدير تقرير">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
@@ -244,7 +243,6 @@ export async function mountDetailedAbsenceSheet(host, hooks) {
   const sDenied  = sheetDoc.getElementById('stateDenied');
   const sHome    = sheetDoc.getElementById('stateHome');
   const menuBtn = sheetDoc.getElementById('menuBtn');
-  const refreshView = sheetDoc.getElementById('refreshView');
   const exportData = sheetDoc.getElementById('exportData');
   const exportModal = sheetDoc.getElementById('exportModal');
   const closeExportModal = sheetDoc.getElementById('closeExportModal');
@@ -975,24 +973,6 @@ export async function mountDetailedAbsenceSheet(host, hooks) {
 
   sheetDoc.getElementById('loadMore').addEventListener('click', () => { visibleLimit += 40; renderFilteredList(true); });
   closeAbsences.addEventListener('click', () => closeSheet(absencesSheet));
-  refreshView.addEventListener('click', async () => {
-    if (refreshView.disabled) return;
-    refreshView.disabled = true;
-    refreshView.classList.add('is-loading');
-    refreshView.setAttribute('aria-busy', 'true');
-    try {
-      dataCache.clear();
-      if (absencesSheet.classList.contains('open')) await refetchAndRender();
-      else if (classesSheet.classList.contains('open')) await loadGradeStats(selectedGrade);
-      else await loadHomeStats();
-    } catch (e) {
-      console.error(e);
-    } finally {
-      refreshView.disabled = false;
-      refreshView.classList.remove('is-loading');
-      refreshView.removeAttribute('aria-busy');
-    }
-  });
 
   // ---------- PDF export ----------
   let pdfLibraries;

@@ -11,10 +11,7 @@
      Disables btn and shows a small spinner at its start while fn runs.
      On success: notify(opts.ok) if given. On failure: notify(opts.err or
      a default message, "err"); rethrows only when opts.rethrow is true.
-     Always restores the button. Returns fn's result.
-
-   Any <button data-reload-page> (the hub pages' «تحديث الشاشة» button)
-   shows the refresh spinner, then reloads the page. */
+     Always restores the button. Returns fn's result. */
 (function () {
   "use strict";
   if (window.Feedback) return;
@@ -180,16 +177,6 @@
       }
     }
   }
-
-  document.addEventListener("click", (event) => {
-    const btn = event.target.closest && event.target.closest("[data-reload-page]");
-    if (!btn || btn.disabled) return;
-    btn.disabled = true;
-    btn.classList.add("is-loading");
-    btn.setAttribute("aria-busy", "true");
-    // Let the spinner paint before the page starts unloading.
-    requestAnimationFrame(() => requestAnimationFrame(() => location.reload()));
-  });
 
   window.Feedback = { notify, busy };
 })();

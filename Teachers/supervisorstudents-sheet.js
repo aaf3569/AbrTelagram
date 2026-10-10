@@ -42,7 +42,6 @@ const classSheet = document.getElementById('classSheet');
 const closeClass = document.getElementById('closeClass');
 const classTitle = document.getElementById('classTitle');
 const classNameStrong = document.getElementById('classNameStrong');
-const refreshStudents = document.getElementById('refreshStudents');
 const openAddStudent = document.getElementById('openAddStudent');
 const addStudentForm = document.getElementById('addStudentForm');
 const stName = document.getElementById('stName');
@@ -391,22 +390,6 @@ openAddStudent.addEventListener('click', ()=>{
   addStudentForm.style.display = addStudentForm.style.display==='none' ? 'block' : 'none';
   asOk.style.display='none'; asErr.style.display='none';
   if(addStudentForm.style.display==='block'){ stName.focus(); }
-});
-
-refreshStudents.addEventListener('click', async ()=>{
-  if(!selectedClass || refreshStudents.disabled) return;
-  refreshStudents.disabled = true;
-  refreshStudents.classList.add('is-loading');
-  refreshStudents.setAttribute('aria-busy', 'true');
-  try{
-    await Promise.all([loadStudents(selectedClass), loadClassStatistics(selectedClass)]);
-  }catch(e){
-    console.error(e);
-  }finally{
-    refreshStudents.disabled = false;
-    refreshStudents.classList.remove('is-loading');
-    refreshStudents.removeAttribute('aria-busy');
-  }
 });
 
 // MODIFIED: loadStudents function with filtering and special case icon

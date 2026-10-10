@@ -67,9 +67,6 @@
     }
     .sidebar-toggle-btn:hover { transform: translateY(calc(-50% - 2px)); box-shadow: var(--shadow-2); border-color: rgba(3, 60, 84, 0.4); }
     .sidebar-toggle-btn:active { transform: translateY(-50%) scale(0.97); }
-    /* «تحديث الشاشة» — look: /shared/actions.css; mirrors the menu button
-       on the end side of the header. */
-    .header-refresh-btn { position: absolute; left: 0; top: 50%; transform: translateY(-50%); }
     /* Toggle button is absolutely positioned to one side, so the title stays
        centered against the header's full width instead of the leftover
        space beside the button — symmetric padding keeps it clear of the

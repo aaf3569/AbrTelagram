@@ -58,7 +58,6 @@ const HEAD_NOTE = "رئيس القسم";
 const ICON = {
   menu: '<svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>',
   back: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>',
-  refresh: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>',
 };
 
 // The footer under every view: /shared/credits-footer.js's card (logo,
@@ -111,24 +110,6 @@ function el(tag, props, ...kids) {
 function backButton(onclick) {
   const b = el("button", { className: "back-btn", type: "button", title: "رجوع", innerHTML: ICON.back, onclick });
   b.setAttribute("aria-label", "رجوع");
-  return b;
-}
-// The site's refresh button (.refresh-btn in department-budgets.css): icon
-// only; spins and stays disabled until load() resolves.
-function refreshButton() {
-  const b = el("button", { className: "refresh-btn", type: "button", title: "تحديث", innerHTML: ICON.refresh });
-  b.setAttribute("aria-label", "تحديث");
-  b.onclick = async () => {
-    if (b.disabled) return;
-    b.disabled = true;
-    b.classList.add("is-loading");
-    b.setAttribute("aria-busy", "true");
-    try { await load(); } catch (e) { console.error(e); } finally {
-      b.disabled = false;
-      b.classList.remove("is-loading");
-      b.removeAttribute("aria-busy");
-    }
-  };
   return b;
 }
 const sum = (arr, f) => arr.reduce((a, x) => a + f(x), 0);
@@ -982,7 +963,6 @@ function renderSchool(box) {
   const msg = el("span", { className: "meta" });
   const gridBtn = el("button", { className: "btn gridBtn", type: "button", textContent: "ميزانية كل الأقسام" });
   gridBtn.onclick = () => setView("grid");
-  const refresh = refreshButton();
   const detail = el("button", { className: "btn ghost", type: "button", textContent: S.showDetail ? "إخفاء التفاصيل" : "عرض التفاصيل" });
   detail.onclick = () => { S.showDetail = !S.showDetail; render(); };
   // The one-time upload of the old site's data: admins only.
@@ -992,7 +972,7 @@ function renderSchool(box) {
   const olds = OLD_SOCIAL.filter((dp) => S.budgets.has(dp));
   const merge = olds.length && S.realAdmin ? el("button", { className: "btn", type: "button", textContent: "دمج ميزانيتي القسمين في الاجتماعيات" }) : null;
   if (merge) confirmFirst(merge, "تُجمع ميزانية " + olds.join(" و") + " في ميزانية الاجتماعيات" + (S.budgets.has(SOCIAL) ? " مع الموجودة فيها" : "") + ".", () => mergeOldSocial(olds, msg));
-  box.append(gridBtn, el("div", { className: "row", style: "margin:0 0 12px" }, refresh, detail, printButton(() => S.body, "ميزانية المدرسة"), imp, merge, msg));
+  box.append(gridBtn, el("div", { className: "row", style: "margin:0 0 12px" }, detail, printButton(() => S.body, "ميزانية المدرسة"), imp, merge, msg));
   const depts = schoolDepartments();
   const rows = depts.map((dp) => {
     const b = S.budgets.get(dp);
@@ -1295,7 +1275,6 @@ function renderGrid(box) {
   const msg = el("span", { className: "msg" });
   S.gridMsg = msg;
   const back = backButton(() => setView("school"));
-  const refresh = refreshButton();
   const groups = gridColumns(), cols = groups.flatMap((g) => g.cols);
   // who[dp|subj][class] = [{ t, h }]
   const who = {};
@@ -1335,7 +1314,7 @@ function renderGrid(box) {
   // The timetable sheet's CSV: every department's budget, so it lives here.
   const csv = el("button", { className: "btn ghost", type: "button", textContent: "تصدير CSV للجدول" });
   csv.onclick = () => exportCsv(msg);
-  box.append(el("div", { className: "row", style: "margin:0 0 10px" }, back, refresh, printButton(() => card, "ميزانية كل الأقسام"), csv, msg),
+  box.append(el("div", { className: "row", style: "margin:0 0 10px" }, back, printButton(() => card, "ميزانية كل الأقسام"), csv, msg),
     card);
   card.append(
       el("h2", { textContent: "ميزانية كل الأقسام" }),

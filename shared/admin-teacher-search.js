@@ -10,7 +10,6 @@ export function initAdminTeacherSearch(db) {
   const teachers = byId('teacherSearchTeachers');
   const results = byId('teacherSearchResults');
   const status = byId('teacherSearchStatus');
-  const refresh = byId('teacherSearchRefresh');
   const days = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس'];
   const periods = ['الأولى', 'الثانية', 'الثالثة', 'الرابعة', 'الخامسة', 'السادسة', 'السابعة'];
   let profiles = [], schedules = [], selectedUid = '', generation = 0;
@@ -76,9 +75,7 @@ export function initAdminTeacherSearch(db) {
   async function load() {
     const request = ++generation;
     const previousDepartment = department.value;
-    search.disabled = department.disabled = teachers.disabled = refresh.disabled = true;
-    refresh.classList.add('is-loading');
-    refresh.setAttribute('aria-busy', 'true');
+    search.disabled = department.disabled = teachers.disabled = true;
     status.textContent = 'جارٍ تحميل المعلّمين والحصص…';
     results.replaceChildren();
     try {
@@ -102,13 +99,7 @@ export function initAdminTeacherSearch(db) {
     } catch (error) {
       if (request !== generation || !dialog.open) return;
       console.error('[admin-teacher-search]', error);
-      status.textContent = 'تعذّر تحميل البيانات. اضغط تحديث للمحاولة مرة أخرى.';
-    } finally {
-      if (request === generation) {
-        refresh.disabled = false;
-        refresh.classList.remove('is-loading');
-        refresh.removeAttribute('aria-busy');
-      }
+      status.textContent = 'تعذّر تحميل البيانات. أغلق النافذة وافتحها للمحاولة مرة أخرى.';
     }
   }
   byId('teacherSearchBtn').addEventListener('click', () => {
@@ -124,5 +115,4 @@ export function initAdminTeacherSearch(db) {
   search.addEventListener('input', filterTeachers);
   department.addEventListener('change', filterTeachers);
   teachers.addEventListener('change', () => { selectedUid = teachers.value; renderReport(); });
-  refresh.addEventListener('click', load);
 }

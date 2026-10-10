@@ -1,88 +1,10 @@
-/* Shared action controls: the one refresh button and the busy spinner.
-   Every page links this file after /shared/back-button.css; the doubled
-   class lifts it over each page's older refresh-button rules without
-   !important. Position stays with the page — this file only sets the look.
+/* Shared action controls: the busy spinner on action buttons.
    Modules that render into a shadow root carry a copy of these rules in
    their own sheet (department-budgets.css, absence.css, newabsence.css,
-   overallabsence.css).
-
-   Markup:
-   <button class="refresh-btn" type="button" aria-label="تحديث" title="تحديث">
-     <svg viewBox="0 0 24 24" aria-hidden="true">
-       <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
-       <path d="M21 3v5h-5"/>
-       <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
-       <path d="M8 16H3v5"/>
-     </svg>
-   </button>
-   While reloading: class "is-loading" + disabled + aria-busy="true". */
-.refresh-btn.refresh-btn {
-  width: 40px;
-  height: 40px;
-  min-width: 40px;
-  min-height: 40px;
-  padding: 0;
-  gap: 0;
-  flex: none;
-  display: inline-grid;
-  place-items: center;
-  border-radius: 12px;
-  border: 1px solid rgba(3, 60, 84, .2);
-  background: #fff;
-  color: #033C54;
-  box-shadow: none;
-  font-size: 0;
-  line-height: 0;
-  text-decoration: none;
-  cursor: pointer;
-  transition: background .15s;
-}
-
-.refresh-btn.refresh-btn[hidden] {
-  display: none;
-}
-
-.refresh-btn.refresh-btn svg {
-  width: 22px;
-  height: 22px;
-  margin: 0;
-  display: block;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2.4;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  transform: none;
-}
-
-.refresh-btn.refresh-btn:hover,
-.refresh-btn.refresh-btn:focus-visible {
-  background: #eef5f9;
-  box-shadow: none;
-}
-
-.refresh-btn.refresh-btn:focus-visible {
-  outline: 2px solid #033C54;
-  outline-offset: 2px;
-}
-
-.refresh-btn.refresh-btn:disabled {
-  cursor: default;
-  opacity: 1;
-}
-
-.refresh-btn.refresh-btn.is-loading svg {
-  animation: refresh-btn-spin .8s linear infinite;
-}
+   overallabsence.css). */
 
 @keyframes refresh-btn-spin {
   to { transform: rotate(360deg); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .refresh-btn.refresh-btn.is-loading svg {
-    animation: none;
-  }
 }
 
 /* Busy state for any action button (set by window.Feedback.busy): a small

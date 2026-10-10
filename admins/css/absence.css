@@ -366,24 +366,9 @@
     .back-btn.back-btn:hover, .back-btn.back-btn:focus-visible{ background:#eef5f9; }
     .back-btn.back-btn:focus-visible{ outline:2px solid #033C54; outline-offset:2px; }
 
-    /* The site's refresh button and busy spinner — the same rules as
+    /* The site's busy spinner — the same rules as
        /shared/actions.css, which the host page's styles can't reach inside
        this shadow root. */
-    .refresh-btn.refresh-btn{
-      width:40px; height:40px; min-width:40px; min-height:40px; padding:0; gap:0; flex:none;
-      display:inline-grid; place-items:center; border-radius:12px;
-      border:1px solid rgba(3,60,84,.2); background:#fff; color:#033C54;
-      box-shadow:none; font-size:0; line-height:0; cursor:pointer; transition:background .15s;
-    }
-    .refresh-btn.refresh-btn[hidden]{ display:none; }
-    .refresh-btn.refresh-btn svg{
-      width:22px; height:22px; margin:0; display:block; fill:none; stroke:currentColor;
-      stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round; transform:none;
-    }
-    .refresh-btn.refresh-btn:hover, .refresh-btn.refresh-btn:focus-visible{ background:#eef5f9; box-shadow:none; }
-    .refresh-btn.refresh-btn:focus-visible{ outline:2px solid #033C54; outline-offset:2px; }
-    .refresh-btn.refresh-btn:disabled{ cursor:default; opacity:1; }
-    .refresh-btn.refresh-btn.is-loading svg{ animation:refresh-btn-spin .8s linear infinite; }
     .is-busy{ cursor:progress; }
     .is-busy::before{
       content:""; display:inline-block; width:16px; height:16px; margin-inline-end:6px;
@@ -393,7 +378,6 @@
     }
     @keyframes refresh-btn-spin{ to{ transform:rotate(360deg); } }
     @media (prefers-reduced-motion: reduce){
-      .refresh-btn.refresh-btn.is-loading svg{ animation:none; }
       .is-busy::before{ animation:none; border-inline-end-color:currentColor; opacity:.5; }
     }
 
