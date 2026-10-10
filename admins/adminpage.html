@@ -145,6 +145,9 @@
     }
     .header-toggle-btn:hover{ transform:translateY(calc(-50% - 2px)); box-shadow:0 12px 26px rgba(3,60,84,.18); border-color:rgba(3,60,84,.4); }
     .header-toggle-btn:active{ transform:translateY(-50%) scale(.96); }
+    /* «تحديث الشاشة» — look: /shared/actions.css; mirrors the menu button
+       on the end side of the header. */
+    .header-refresh-btn{ position:absolute; left:14px; top:50%; transform:translateY(-50%); z-index:1; }
 
     .sidebar-backdrop{
       position:fixed; inset:0; z-index:95; background:rgba(3,60,84,.55);
@@ -834,6 +837,7 @@
          between the absence sheets. Sits further from the edge to match
          the wider desktop header padding. */
       .header-toggle-btn{ right:24px; }
+      .header-refresh-btn{ left:24px; }
 
       main{ padding:56px 40px 72px; align-items:flex-start; }
       .column{ width:min(1180px, 92vw); align-items:stretch; gap:36px; }
@@ -927,6 +931,8 @@
   <meta name="twitter:image" content="https://framerusercontent.com/images/jRnZLlPr90qwKsuUwfIlvDS9E.png?width=1200&height=630">
   <!-- After the page's own styles, so the one back button wins. -->
   <link rel="stylesheet" href="/shared/back-button.css" />
+  <link rel="stylesheet" href="/shared/actions.css" />
+  <script src="/shared/feedback.js" defer></script>
 </head>
 <body>
   <header class="site-header">
@@ -935,6 +941,7 @@
     </button>
     <img class="site-logo" src="/images/schoollogo.png" alt="" aria-hidden="true">
     <h1 class="site-title">ثانوية أحمد البشر الرومي</h1>
+    <button class="refresh-btn header-refresh-btn" type="button" data-reload-page aria-label="تحديث الشاشة" title="تحديث الشاشة"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg></button>
   </header>
 
   <!-- ===== Sidebar =====
@@ -1345,8 +1352,8 @@
       <div class="section">
         <div class="row" style="justify-content:space-between;">
           <div class="label" style="margin:0;">إدارة المعلّمين لمادة <span id="subjectNameStrong" style="font-weight:900;"></span></div>
-          <div class="actions-inline" style="display:flex; gap:10px; flex-wrap:wrap;">
-            <button id="refreshTeachers" class="btn ghost" type="button" style="max-width:200px; height:48px;">تحديث</button>
+          <div class="actions-inline" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+            <button id="refreshTeachers" class="refresh-btn" type="button" aria-label="تحديث القائمة" title="تحديث القائمة"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg></button>
             <button id="openAddUser" class="btn primary" type="button" style="max-width:220px; height:48px;">إضافة معلم</button>
           </div>
         </div>
@@ -1508,8 +1515,8 @@
       <div class="section">
         <div class="row" style="justify-content:space-between;">
           <div class="label" style="margin:0;">إنشاء حساب مشرف (الدور يُحفظ تلقائيًا: admin)</div>
-          <div class="actions-inline" style="display:flex; gap:10px; flex-wrap:wrap;">
-            <button id="refreshAdmins" class="btn ghost" type="button" style="max-width:200px; height:48px;">تحديث</button>
+          <div class="actions-inline" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+            <button id="refreshAdmins" class="refresh-btn" type="button" aria-label="تحديث القائمة" title="تحديث القائمة"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg></button>
             <button id="openAddAdmin" class="btn primary" type="button" style="max-width:220px; height:48px;">إضافة مشرف</button>
           </div>
         </div>
@@ -2754,7 +2761,7 @@
         sidebarId: 'sidebarClassSchedules', exportName: 'mountClassSchedulesSheet', title: 'جداول الصفوف' }),
       makeScheduleSheet({ key: 'dept-budgets', hash: '#dept-budgets', sheetId: 'deptBudgetsSheet', hostId: 'deptBudgetsHost',
         sidebarId: 'sidebarDeptBudgets', exportName: 'mountDepartmentBudgetsSheet', title: 'ميزانيات الأقسام',
-        modulePath: '/shared/department-budgets.js?v=2026-10-12d', hooks: { role: 'admin' } }),
+        modulePath: '/shared/department-budgets.js?v=2026-10-13', hooks: { role: 'admin' } }),
     ];
 
     // Sidebar: "غياب اليوم" / "الغياب المختصر" / "تدقيق في الغائب" open
@@ -3392,6 +3399,7 @@
               }
               await loadCurrentNotif();
               loadNotifHistory();
+              Feedback.notify('تم الحفظ');
             } catch (e) {
               editErrEl.textContent = 'تعذّر حفظ التعديل: ' + (e?.message || '');
               editErrEl.style.display = 'block';
@@ -3424,8 +3432,10 @@
               }
               await loadCurrentNotif();
               loadNotifHistory();
+              Feedback.notify('تم الحذف');
             } catch (e) {
-              alert('تعذّر حذف الإشعار: ' + (e?.message || ''));
+              console.error(e);
+              Feedback.notify('تعذّر حذف الإشعار: ' + (e?.message || ''), 'err');
               editBtn.disabled = false;
               deleteBtn.disabled = false;
             }
@@ -3604,6 +3614,22 @@
       }
     });
 
+    // Refresh buttons (/shared/actions.css): spin and stay disabled until
+    // the reload finishes.
+    async function runRefresh(btn, load){
+      if(btn.disabled) return;
+      btn.disabled = true;
+      btn.classList.add('is-loading');
+      btn.setAttribute('aria-busy', 'true');
+      try{ await load(); }
+      catch(e){ console.error(e); }
+      finally{
+        btn.disabled = false;
+        btn.classList.remove('is-loading');
+        btn.removeAttribute('aria-busy');
+      }
+    }
+
     async function loadTeachers(subject){
       teachersList.innerHTML='';
       try{
@@ -3659,7 +3685,7 @@
       }
     }
 
-    refreshTeachers.addEventListener('click', () => loadTeachers(selectedSubject));
+    refreshTeachers.addEventListener('click', () => runRefresh(refreshTeachers, () => loadTeachers(selectedSubject)));
 
     let currentTeacher = { uid:null, data:null };
 
@@ -3807,7 +3833,7 @@
       addAdminForm.style.display = addAdminForm.style.display==='none' ? 'block' : 'none';
       adOk.style.display='none'; adErr.style.display='none';
     });
-    refreshAdmins.addEventListener('click', loadAdmins);
+    refreshAdmins.addEventListener('click', () => runRefresh(refreshAdmins, loadAdmins));
 
     createAdminBtn.addEventListener('click', async ()=>{
       adOk.style.display='none'; adErr.style.display='none';

@@ -51,6 +51,8 @@
   <meta name="twitter:image" content="https://framerusercontent.com/images/jRnZLlPr90qwKsuUwfIlvDS9E.png?width=1200&height=630">
   <!-- After the page's own styles, so the one back button wins. -->
   <link rel="stylesheet" href="/shared/back-button.css" />
+  <link rel="stylesheet" href="/shared/actions.css" />
+  <script src="/shared/feedback.js" defer></script>
 </head>
 
 <body>
@@ -61,6 +63,7 @@
         <span id="sidebarToggleDot" class="toggle-dot" hidden></span>
       </button>
       <h1 class="site-title">ثانوية أحمد البشر الرومي</h1>
+      <button class="refresh-btn header-refresh-btn" type="button" data-reload-page aria-label="تحديث الشاشة" title="تحديث الشاشة"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg></button>
     </div>
   </header>
   <button id="btnToday" type="button" hidden aria-hidden="true" tabindex="-1" aria-label="عرض اليوم للمعلم"></button>
@@ -612,8 +615,8 @@
           <div class="section">
             <div class="row" style="justify-content:space-between;">
               <div class="label" style="margin:0;">إدارة الطلاب لفصل <span id="classNameStrong" style="font-weight:900;"></span></div>
-              <div style="display:flex; gap:12px; flex-wrap:wrap;">
-                <button id="refreshStudents" class="btn ghost" type="button" style="height:48px; padding:0 16px;">تحديث</button>
+              <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
+                <button id="refreshStudents" class="refresh-btn" type="button" aria-label="تحديث القائمة" title="تحديث القائمة"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg></button>
                 <button id="openAddStudent" class="btn primary" type="button" style="height:48px; padding:0 16px; display:none;">إضافة طالب</button>
               </div>
             </div>
@@ -1153,7 +1156,7 @@
     // a deploy the page could otherwise run against the previous module —
     // bump it whenever this page starts relying on something new in there.
     import { mountAttendanceSheet, LESSON_END_GRACE_MINUTES } from "/shared/attendance.js?v=2026-10-12d";
-    import { mountStudentNotesSheet } from "/shared/student-notes-sheet.js?v=2026-10-12d";
+    import { mountStudentNotesSheet } from "/shared/student-notes-sheet.js?v=2026-10-13";
     import { parseTimeToMinutes } from "/shared/kuwait-time.js";
     import { isTruthyFlag, canManageAttendance } from "/shared/auth-guard.js";
     import { startPresenceHeartbeat, stopPresenceHeartbeat } from "/shared/presence.js";
@@ -5919,7 +5922,7 @@
 
     function budgetMount(){
       if (!budgetMounting) {
-        budgetMounting = import('/shared/department-budgets.js?v=2026-10-12d')
+        budgetMounting = import('/shared/department-budgets.js?v=2026-10-13')
           .then((m) => m.mountDepartmentBudgetsSheet(budgetHost, {
             close: () => closeBudgetSheet(),
             openSidebar: () => openSidebar(),

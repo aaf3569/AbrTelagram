@@ -406,6 +406,8 @@
   <meta name="twitter:image" content="https://framerusercontent.com/images/jRnZLlPr90qwKsuUwfIlvDS9E.png?width=1200&height=630">
   <!-- After the page's own styles, so the one back button wins. -->
   <link rel="stylesheet" href="/shared/back-button.css" />
+  <link rel="stylesheet" href="/shared/actions.css" />
+  <script src="/shared/feedback.js" defer></script>
 </head>
 
 <body>
@@ -690,7 +692,7 @@
       doc, getDoc, setDoc, updateDoc, deleteField, writeBatch, serverTimestamp
     } from "/shared/firebase.js";
     import { watchPresence, startPresenceHeartbeat } from "/shared/presence.js";
-    import { mountStudentNotesSheet } from "/shared/student-notes-sheet.js?v=2026-10-12d";
+    import { mountStudentNotesSheet } from "/shared/student-notes-sheet.js?v=2026-10-13";
     import { mountTeacherClassSheet } from "/shared/teacher-class-sheet.js?v=2026-10-12d";
     import { fetchClassList, sortClassList, primeClassList } from "/shared/class-registry.js";
     import { resolveDepartmentName, getDepartmentSubjectFilters, isMergedDepartment, getMergedSubjectsForDepartment } from "/shared/departments.js";
@@ -1171,8 +1173,17 @@
       }
     });
 
+    // Busy state for an action button (/shared/actions.css .is-busy): a
+    // small spinner, disabled so it can't be pressed twice.
+    function setBusy(btn, on){
+      btn.disabled=on;
+      btn.classList.toggle('is-busy', on);
+      if(on) btn.setAttribute('aria-busy','true'); else btn.removeAttribute('aria-busy');
+    }
+
     saveTeacherBtn.addEventListener('click', async ()=>{
       edOk.style.display='none'; edErr.style.display='none';
+      setBusy(saveTeacherBtn, true);
       try{
         const { uid } = currentTeacher;
         if(!uid) throw new Error('لم يتم اختيار معلّم.');
@@ -1194,6 +1205,8 @@
       }catch(e){
         edErr.textContent=e?.message||'تعذّر الحفظ.';
         edErr.style.display='block';
+      }finally{
+        setBusy(saveTeacherBtn, false);
       }
     });
 

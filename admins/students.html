@@ -1325,6 +1325,8 @@ html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%;
   <meta name="twitter:image" content="https://framerusercontent.com/images/jRnZLlPr90qwKsuUwfIlvDS9E.png?width=1200&height=630">
   <!-- After the page's own styles, so the one back button wins. -->
   <link rel="stylesheet" href="/shared/back-button.css" />
+  <link rel="stylesheet" href="/shared/actions.css" />
+  <script src="/shared/feedback.js" defer></script>
 </head>
 <body>
 <header class="site-header">
@@ -2262,7 +2264,7 @@ import { initializeApp, getApp, getApps } from "/shared/firebase.js";
 import { getAuth, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from "/shared/firebase.js";
 import { initializeFirestore, persistentSingleTabManager, collection, collectionGroup, getDocs, query, where, orderBy, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp, writeBatch, arrayUnion, arrayRemove } from "/shared/firebase.js";
 import { mountAttendanceSheet } from "/shared/attendance.js";
-import { mountStudentNotesSheet } from "/shared/student-notes-sheet.js?v=2026-10-12d";
+import { mountStudentNotesSheet } from "/shared/student-notes-sheet.js?v=2026-10-13";
 import { mountClassNotesOverview } from "/shared/teacher-class-sheet.js?v=2026-10-12d";
 import { fetchStudentAttendanceData, makeAttTile, makeMorningLateTile, makeAbsenceDayTile, makeLateAbsenceTile, LATES_PER_ABSENCE_DAY } from "/shared/attendance-tiles.js?v=2026-10-04";
 import { renderWarningState, renderExcusedWarningState } from "/shared/warning-system.js";
@@ -3047,7 +3049,7 @@ edSSpecialCase.addEventListener('change', async function() {
       if (selectedClass) await loadStudents(selectedClass);
     } catch (error) {
       console.error('[turnOffSpecialCase]', error);
-      alert('حدث خطأ أثناء إلغاء الحالة الخاصة');
+      Feedback.notify('حدث خطأ أثناء إلغاء الحالة الخاصة', 'err');
     }
   }
 });
@@ -3086,7 +3088,8 @@ saveSpecialCase.addEventListener('click', async () => {
   
   specialCaseReasonError.classList.remove('show');
   
-  try {
+  const savesNow = !!(specialCaseModalContext.isEdit && specialCaseModalContext.studentId);
+  await Feedback.busy(saveSpecialCase, async () => {
     if (specialCaseModalContext.isEdit && specialCaseModalContext.studentId) {
       // Update existing student
       await updateDoc(doc(db, 'students', specialCaseModalContext.studentId), {
@@ -3106,10 +3109,7 @@ saveSpecialCase.addEventListener('click', async () => {
     
     closeModal(specialCaseModal);
     resetModalInputs();
-  } catch (error) {
-    console.error('[saveSpecialCase]', error);
-    alert('حدث خطأ أثناء حفظ الملاحظة');
-  }
+  }, { ok: savesNow ? 'تم الحفظ' : '', err: 'حدث خطأ أثناء حفظ الملاحظة' });
 });
 
 /* ========= Excused Absence Modal Handlers ========= */
@@ -3149,7 +3149,9 @@ saveExcused.addEventListener('click', async () => {
   
   excusedReasonError.classList.remove('show');
   
-  try {
+  // The success line below stays; Feedback only adds the busy state and
+  // the failure toast.
+  await Feedback.busy(saveExcused, async () => {
     const { studentId, date } = excusedModalContext;
     const latest = await getDocs(collection(db, 'students', studentId, 'attendance'));
     const dayRecords = latest.docs.filter((snapshot) => {
@@ -3194,11 +3196,7 @@ saveExcused.addEventListener('click', async () => {
     successMsg.style.display = 'block';
     (absenceDaySheet.classList.contains('open') ? absenceDaySheet.querySelector('.section') : attDetailBody).appendChild(successMsg);
     setTimeout(() => { successMsg.style.display = 'none'; }, 3000);
-    
-  } catch (error) {
-    console.error('[saveExcused]', error);
-    alert('حدث خطأ أثناء حفظ الغياب بعذر');
-  }
+  }, { err: 'حدث خطأ أثناء حفظ الغياب بعذر' });
 });
 
 /* ========= Auth + role ========= */
@@ -4871,7 +4869,7 @@ saveReorderBtn.addEventListener('click', async () => {
     
   } catch (error) {
     console.error('[saveReorder]', error);
-    alert('حدث خطأ أثناء حفظ الترتيب. يرجى المحاولة مرة أخرى.');
+    Feedback.notify('حدث خطأ أثناء حفظ الترتيب. يرجى المحاولة مرة أخرى.', 'err');
   } finally {
     saveReorderBtn.textContent = 'حفظ الترتيب';
     saveReorderBtn.disabled = false;
@@ -5198,6 +5196,7 @@ deleteMorningLateBtn.addEventListener('click', async ()=>{
   try{
     await deleteDoc(doc(db, 'morningLates', currentMorningLateRecord.id));
     closeMorningLateDetailFn();
+    Feedback.notify('تم الحذف');
     await loadStudentAttendance(currentStudent.id);
   }catch(e){
     console.error('[deleteMorningLate]', e);
@@ -5369,7 +5368,9 @@ saveStatusBtn.addEventListener('click', async () => {
   const newStatus = selectedOption.dataset.status;
   if (newStatus === currentAttendanceRecord.status) { statusEditForm.classList.remove('active'); return; }
   
-  try {
+  // The success line below stays; Feedback only adds the busy state and
+  // the failure toast.
+  await Feedback.busy(saveStatusBtn, async () => {
     const updateData = { 
       status: newStatus, 
       updatedBy: auth.currentUser.uid, 
@@ -5426,9 +5427,7 @@ saveStatusBtn.addEventListener('click', async () => {
     
     const successMsg = document.createElement('div'); successMsg.className = 'ok'; successMsg.textContent = 'تم تحديث حالة الحضور بنجاح'; successMsg.style.display = 'block';
     attDetailBody.appendChild(successMsg); setTimeout(() => { successMsg.style.display = 'none'; }, 3000);
-  } catch (error) {
-    console.error('Error updating attendance status:', error); alert('تعذر تحديث حالة الحضور. يرجى المحاولة مرة أخرى.');
-  }
+  }, { err: 'تعذر تحديث حالة الحضور. يرجى المحاولة مرة أخرى.' });
 });
 
 /* ========= Tabs ========= */
@@ -5496,14 +5495,13 @@ function renderCommitCard(sid, c){
   `;
   const sel = wrap.querySelector('select[data-act="status"]'); const save = wrap.querySelector('button[data-act="save"]'); const del = wrap.querySelector('button[data-act="del"]');
   save.addEventListener('click', async ()=>{
-    try{ await updateDoc(doc(db,'students', sid, 'commitments', c.id), { status: sel.value, updatedBy: getMe(), updatedAt: serverTimestamp() });
+    await Feedback.busy(save, async ()=>{ await updateDoc(doc(db,'students', sid, 'commitments', c.id), { status: sel.value, updatedBy: getMe(), updatedAt: serverTimestamp() });
       wrap.querySelector('.card-sub').innerHTML = `${badgeForStatus(sel.value)} ${dueText} • ${tag(aud)}`;
-    }catch(e){ alert('تعذّر الحفظ'); }
+    }, { ok:'تم الحفظ', err:'تعذّر الحفظ' });
   });
-  del.addEventListener('click', async ()=>{
+  del.addEventListener('click', async (ev)=>{
     if(!confirm('حذف التعهد؟')) return;
-    try{ await deleteDoc(doc(db,'students', sid, 'commitments', c.id)); wrap.remove(); if(!commitList.children.length){ commitEmpty.style.display='block'; } }
-    catch(e){ alert('تعذّر الحذف'); }
+    await Feedback.busy(ev.currentTarget, async ()=>{ await deleteDoc(doc(db,'students', sid, 'commitments', c.id)); wrap.remove(); if(!commitList.children.length){ commitEmpty.style.display='block'; } }, { ok:'تم الحذف', err:'تعذّر الحذف' });
   });
   return wrap;
 }
@@ -5512,7 +5510,7 @@ commitSave.addEventListener('click', async ()=>{
   if(!currentStudent.id) return;
   const title = (commitTitle.value||'').trim(); const reason = (commitReason.value||'').trim(); const due = (commitDue.value||'').trim(); const audience = commitAudience.value || 'guardian';
   if(!title){ alert('أدخل العنوان'); return; }
-  try{
+  await Feedback.busy(commitSave, async ()=>{
     const ref = doc(collection(db,'students', currentStudent.id, 'commitments'));
     await setDoc(ref, {
       title, body: reason || '', status: 'sent', audience, class: currentStudent.data?.class || selectedClass || '', dueDate: due || null,
@@ -5520,7 +5518,7 @@ commitSave.addEventListener('click', async ()=>{
     });
     commitTitle.value=''; commitReason.value=''; commitDue.value=''; commitAudience.value='guardian'; commitQuick.style.display='none';
     await loadCommitments(currentStudent.id);
-  }catch(e){ console.error(e); alert('تعذّر الحفظ'); }
+  }, { ok:'تمت الإضافة', err:'تعذّر الحفظ' });
 });
 
 /* ========= Enrollments CRUD ========= */
@@ -5554,10 +5552,9 @@ function renderEnrollCard(sid, r){
       <button class="btn danger mini" data-act="del">حذف</button>
     </div>
   `;
-  wrap.querySelector('[data-act="del"]').addEventListener('click', async ()=>{
+  wrap.querySelector('[data-act="del"]').addEventListener('click', async (ev)=>{
     if(!confirm('حذف القيد؟')) return;
-    try{ await deleteDoc(doc(db,'students', sid, 'enrollments', r.id)); wrap.remove(); if(!enrollList.children.length){ enrollEmpty.style.display='block'; } }
-    catch(e){ alert('تعذّر الحذف'); }
+    await Feedback.busy(ev.currentTarget, async ()=>{ await deleteDoc(doc(db,'students', sid, 'enrollments', r.id)); wrap.remove(); if(!enrollList.children.length){ enrollEmpty.style.display='block'; } }, { ok:'تم الحذف', err:'تعذّر الحذف' });
   });
   return wrap;
 }
@@ -5566,7 +5563,7 @@ enrollSave.addEventListener('click', async ()=>{
   if(!currentStudent.id) return;
   const title = (enrollTitle.value||'').trim(); const reason= (enrollReason.value||'').trim(); const lengthText = (enrollLength.value||'').trim(); const from = (enrollFrom.value||'').trim(); const to = (enrollTo.value||'').trim();
   if(!title){ alert('أدخل العنوان'); return; }
-  try{
+  await Feedback.busy(enrollSave, async ()=>{
     const ref = doc(collection(db,'students', currentStudent.id, 'enrollments'));
     await setDoc(ref, {
       title, reason, lengthText, from: from||null, to: to||null, class: currentStudent.data?.class || selectedClass || '',
@@ -5574,7 +5571,7 @@ enrollSave.addEventListener('click', async ()=>{
     });
     enrollTitle.value=''; enrollReason.value=''; enrollLength.value=''; enrollFrom.value=''; enrollTo.value=''; enrollQuick.style.display='none';
     await loadEnrollments(currentStudent.id);
-  }catch(e){ console.error(e); alert('تعذّر الحفظ'); }
+  }, { ok:'تمت الإضافة', err:'تعذّر الحفظ' });
 });
 
 /* ========= Reports CRUD ========= */
@@ -5606,10 +5603,9 @@ function renderReportCard(sid, r){
       <button class="btn danger mini" data-act="del">حذف</button>
     </div>
   `;
-  wrap.querySelector('[data-act="del"]').addEventListener('click', async ()=>{
+  wrap.querySelector('[data-act="del"]').addEventListener('click', async (ev)=>{
     if(!confirm('حذف التقرير؟')) return;
-    try{ await deleteDoc(doc(db,'students', sid, 'reports', r.id)); wrap.remove(); if(!reportList.children.length){ reportEmpty.style.display='block'; } }
-    catch(e){ alert('تعذّر الحذف'); }
+    await Feedback.busy(ev.currentTarget, async ()=>{ await deleteDoc(doc(db,'students', sid, 'reports', r.id)); wrap.remove(); if(!reportList.children.length){ reportEmpty.style.display='block'; } }, { ok:'تم الحذف', err:'تعذّر الحذف' });
   });
   return wrap;
 }
@@ -5618,7 +5614,7 @@ reportSave.addEventListener('click', async ()=>{
   if(!currentStudent.id) return;
   const type = reportType.value || 'behavior'; const title = (reportTitle.value||'').trim(); const reason= (reportReason.value||'').trim(); const date = (reportDate.value||'').trim();
   if(!title || !date){ alert('أكمل الحقول'); return; }
-  try{
+  await Feedback.busy(reportSave, async ()=>{
     const ref = doc(collection(db,'students', currentStudent.id, 'reports'));
     await setDoc(ref, {
       type, title, reason, date, class: currentStudent.data?.class || selectedClass || '',
@@ -5626,7 +5622,7 @@ reportSave.addEventListener('click', async ()=>{
     });
     reportTitle.value=''; reportReason.value=''; reportDate.value=''; reportType.value='behavior'; reportQuick.style.display='none';
     await loadReports(currentStudent.id);
-  }catch(e){ console.error(e); alert('تعذّر الحفظ'); }
+  }, { ok:'تمت الإضافة', err:'تعذّر الحفظ' });
 });
 
 /* ========= Notes CRUD ========= */
@@ -5663,16 +5659,15 @@ function renderNoteCard(sid, n){
   `;
   const pinBtn = wrap.querySelector('button[data-act="togglePin"]'); const delBtn = wrap.querySelector('button[data-act="del"]');
   pinBtn.addEventListener('click', async ()=>{
-    try{ await updateDoc(doc(db,'students', sid, 'notes', n.id), { pinned: !n.pinned, updatedBy:getMe(), updatedAt: serverTimestamp() });
+    await Feedback.busy(pinBtn, async ()=>{ await updateDoc(doc(db,'students', sid, 'notes', n.id), { pinned: !n.pinned, updatedBy:getMe(), updatedAt: serverTimestamp() });
       n.pinned = !n.pinned; pinBtn.textContent = n.pinned? 'إلغاء التثبيت' : 'تثبيت';
       const sub = wrap.querySelector('.card-sub'); const t = (tMap[n.type] || n.type || '—'); const pinBadge2 = n.pinned ? `<span class="k-badge k-warn">مثبّت</span>` : '';
       sub.innerHTML = `${tag(t)} ${pinBadge2} ${when? ` • ${when}`:''}`;
-    }catch(e){ alert('تعذّر التحديث'); }
+    }, { ok:'تم التحديث', err:'تعذّر التحديث' });
   });
-  delBtn.addEventListener('click', async ()=>{
+  delBtn.addEventListener('click', async (ev)=>{
     if(!confirm('حذف الملاحظة؟')) return;
-    try{ await deleteDoc(doc(db,'students', sid, 'notes', n.id)); wrap.remove(); if(!noteList.children.length){ noteEmpty.style.display='block'; } }
-    catch(e){ alert('تعذّر الحذف'); }
+    await Feedback.busy(ev.currentTarget, async ()=>{ await deleteDoc(doc(db,'students', sid, 'notes', n.id)); wrap.remove(); if(!noteList.children.length){ noteEmpty.style.display='block'; } }, { ok:'تم الحذف', err:'تعذّر الحذف' });
   });
   return wrap;
 }
@@ -5681,7 +5676,7 @@ noteSave.addEventListener('click', async ()=>{
   if(!currentStudent.id) return;
   const body = (noteBody.value||'').trim(); const type = noteType.value || 'general'; const pinned = !!notePinned.checked;
   if(!body){ alert('أدخل نص الملاحظة'); return; }
-  try{
+  await Feedback.busy(noteSave, async ()=>{
     const ref = doc(collection(db,'students', currentStudent.id, 'notes'));
     await setDoc(ref, {
       body, type, pinned, visibility: 'teachers', class: currentStudent.data?.class || selectedClass || '',
@@ -5689,7 +5684,7 @@ noteSave.addEventListener('click', async ()=>{
     });
     noteBody.value=''; notePinned.checked=false; noteType.value='general'; noteQuick.style.display='none';
     await loadNotes(currentStudent.id);
-  }catch(e){ console.error(e); alert('تعذّر الحفظ'); }
+  }, { ok:'تمت الإضافة', err:'تعذّر الحفظ' });
 });
 </script>
 

@@ -58,6 +58,7 @@ const HEAD_NOTE = "رئيس القسم";
 const ICON = {
   menu: '<svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>',
   back: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>',
+  refresh: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>',
 };
 
 // The footer under every view: /shared/credits-footer.js's card (logo,
@@ -110,6 +111,24 @@ function el(tag, props, ...kids) {
 function backButton(onclick) {
   const b = el("button", { className: "back-btn", type: "button", title: "رجوع", innerHTML: ICON.back, onclick });
   b.setAttribute("aria-label", "رجوع");
+  return b;
+}
+// The site's refresh button (.refresh-btn in department-budgets.css): icon
+// only; spins and stays disabled until load() resolves.
+function refreshButton() {
+  const b = el("button", { className: "refresh-btn", type: "button", title: "تحديث", innerHTML: ICON.refresh });
+  b.setAttribute("aria-label", "تحديث");
+  b.onclick = async () => {
+    if (b.disabled) return;
+    b.disabled = true;
+    b.classList.add("is-loading");
+    b.setAttribute("aria-busy", "true");
+    try { await load(); } catch (e) { console.error(e); } finally {
+      b.disabled = false;
+      b.classList.remove("is-loading");
+      b.removeAttribute("aria-busy");
+    }
+  };
   return b;
 }
 const sum = (arr, f) => arr.reduce((a, x) => a + f(x), 0);
@@ -962,8 +981,7 @@ function renderSchool(box) {
   const msg = el("span", { className: "meta" });
   const gridBtn = el("button", { className: "btn gridBtn", type: "button", textContent: "ميزانية كل الأقسام" });
   gridBtn.onclick = () => setView("grid");
-  const refresh = el("button", { className: "btn ghost", type: "button", textContent: "تحديث" });
-  refresh.onclick = () => load();
+  const refresh = refreshButton();
   const detail = el("button", { className: "btn ghost", type: "button", textContent: S.showDetail ? "إخفاء التفاصيل" : "عرض التفاصيل" });
   detail.onclick = () => { S.showDetail = !S.showDetail; render(); };
   // The one-time upload of the old site's data: admins only.
@@ -1276,8 +1294,7 @@ function renderGrid(box) {
   const msg = el("span", { className: "msg" });
   S.gridMsg = msg;
   const back = backButton(() => setView("school"));
-  const refresh = el("button", { className: "btn ghost", type: "button", textContent: "تحديث" });
-  refresh.onclick = () => load();
+  const refresh = refreshButton();
   const groups = gridColumns(), cols = groups.flatMap((g) => g.cols);
   // who[dp|subj][class] = [{ t, h }]
   const who = {};

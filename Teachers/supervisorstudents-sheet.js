@@ -393,10 +393,19 @@ openAddStudent.addEventListener('click', ()=>{
   if(addStudentForm.style.display==='block'){ stName.focus(); }
 });
 
-refreshStudents.addEventListener('click', ()=>{ 
-  if(selectedClass) {
-    loadStudents(selectedClass);
-    loadClassStatistics(selectedClass);
+refreshStudents.addEventListener('click', async ()=>{
+  if(!selectedClass || refreshStudents.disabled) return;
+  refreshStudents.disabled = true;
+  refreshStudents.classList.add('is-loading');
+  refreshStudents.setAttribute('aria-busy', 'true');
+  try{
+    await Promise.all([loadStudents(selectedClass), loadClassStatistics(selectedClass)]);
+  }catch(e){
+    console.error(e);
+  }finally{
+    refreshStudents.disabled = false;
+    refreshStudents.classList.remove('is-loading');
+    refreshStudents.removeAttribute('aria-busy');
   }
 });
 
@@ -785,7 +794,9 @@ saveStatusBtn.addEventListener('click', async () => {
   const newStatus = selectedOption.dataset.status;
   if (newStatus === currentAttendanceRecord.status) { statusEditForm.classList.remove('active'); return; }
   
-  try {
+  // The success line below stays; Feedback only adds the busy state and
+  // the failure toast.
+  await Feedback.busy(saveStatusBtn, async () => {
     // Update the record in Firestore
     await updateDoc(doc(db, 'students', currentStudent.id, 'attendance', currentAttendanceRecord.id),
     { status: newStatus, updatedBy: auth.currentUser.uid, updatedAt: serverTimestamp() });
@@ -802,9 +813,7 @@ saveStatusBtn.addEventListener('click', async () => {
     // Show success message
     const successMsg = document.createElement('div'); successMsg.className = 'ok'; successMsg.textContent = 'تم تحديث حالة الحضور بنجاح'; successMsg.style.display = 'block';
     attDetailBody.appendChild(successMsg); setTimeout(() => { successMsg.style.display = 'none'; }, 3000);
-  } catch (error) {
-    console.error('Error updating attendance status:', error); alert('تعذر تحديث حالة الحضور. يرجى المحاولة مرة أخرى.');
-  }
+  }, { err: 'تعذر تحديث حالة الحضور. يرجى المحاولة مرة أخرى.' });
 });
 
 /* ========= Statistics functionality ========= */
@@ -1211,14 +1220,13 @@ function renderCommitCard(sid, c){
   `;
   const sel = wrap.querySelector('select[data-act="status"]'); const save = wrap.querySelector('button[data-act="save"]'); const del = wrap.querySelector('button[data-act="del"]');
   save.addEventListener('click', async ()=>{
-    try{ await updateDoc(doc(db,'students', sid, 'commitments', c.id), { status: sel.value, updatedBy: getMe(), updatedAt: serverTimestamp() });
+    await Feedback.busy(save, async ()=>{ await updateDoc(doc(db,'students', sid, 'commitments', c.id), { status: sel.value, updatedBy: getMe(), updatedAt: serverTimestamp() });
       wrap.querySelector('.card-sub').innerHTML = `${badgeForStatus(sel.value)} ${dueText} • ${tag(aud)}`;
-    }catch(e){ alert('تعذّر الحفظ'); }
+    }, { ok:'تم الحفظ', err:'تعذّر الحفظ' });
   });
-  del.addEventListener('click', async ()=>{
+  del.addEventListener('click', async (ev)=>{
     if(!confirm('حذف التعهد؟')) return;
-    try{ await deleteDoc(doc(db,'students', sid, 'commitments', c.id)); wrap.remove(); if(!commitList.children.length){ commitEmpty.style.display='block'; } }
-    catch(e){ alert('تعذّر الحذف'); }
+    await Feedback.busy(ev.currentTarget, async ()=>{ await deleteDoc(doc(db,'students', sid, 'commitments', c.id)); wrap.remove(); if(!commitList.children.length){ commitEmpty.style.display='block'; } }, { ok:'تم الحذف', err:'تعذّر الحذف' });
   });
   bindCardOpen(wrap, ()=> {
     openRecordDetail('تفاصيل التعهد', [
@@ -1237,7 +1245,7 @@ commitSave.addEventListener('click', async ()=>{
   if(!currentStudent.id) return;
   const title = (commitTitle.value||'').trim(); const reason = (commitReason.value||'').trim(); const due = (commitDue.value||'').trim(); const audience = commitAudience.value || 'guardian';
   if(!title){ alert('أدخل العنوان'); return; }
-  try{
+  await Feedback.busy(commitSave, async ()=>{
     const ref = doc(collection(db,'students', currentStudent.id, 'commitments'));
     await setDoc(ref, {
       title, body: reason || '', status: 'sent', audience, class: currentStudent.data?.class || selectedClass || '', dueDate: due || null,
@@ -1245,7 +1253,7 @@ commitSave.addEventListener('click', async ()=>{
     });
     commitTitle.value=''; commitReason.value=''; commitDue.value=''; commitAudience.value='guardian'; closeQuickForm(commitQuick);
     await loadCommitments(currentStudent.id);
-  }catch(e){ console.error(e); alert('تعذّر الحفظ'); }
+  }, { ok:'تمت الإضافة', err:'تعذّر الحفظ' });
 });
 
 /* ========= Enrollments CRUD ========= */
@@ -1279,10 +1287,9 @@ function renderEnrollCard(sid, r){
       <button class="btn danger mini" data-act="del">حذف</button>
     </div>
   `;
-  wrap.querySelector('[data-act="del"]').addEventListener('click', async ()=>{
+  wrap.querySelector('[data-act="del"]').addEventListener('click', async (ev)=>{
     if(!confirm('حذف القيد؟')) return;
-    try{ await deleteDoc(doc(db,'students', sid, 'enrollments', r.id)); wrap.remove(); if(!enrollList.children.length){ enrollEmpty.style.display='block'; } }
-    catch(e){ alert('تعذّر الحذف'); }
+    await Feedback.busy(ev.currentTarget, async ()=>{ await deleteDoc(doc(db,'students', sid, 'enrollments', r.id)); wrap.remove(); if(!enrollList.children.length){ enrollEmpty.style.display='block'; } }, { ok:'تم الحذف', err:'تعذّر الحذف' });
   });
   bindCardOpen(wrap, ()=> {
     openRecordDetail('تفاصيل القيد', [
@@ -1301,7 +1308,7 @@ enrollSave.addEventListener('click', async ()=>{
   if(!currentStudent.id) return;
   const title = (enrollTitle.value||'').trim(); const reason= (enrollReason.value||'').trim(); const lengthText = (enrollLength.value||'').trim(); const from = (enrollFrom.value||'').trim(); const to = (enrollTo.value||'').trim();
   if(!title){ alert('أدخل العنوان'); return; }
-  try{
+  await Feedback.busy(enrollSave, async ()=>{
     const ref = doc(collection(db,'students', currentStudent.id, 'enrollments'));
     await setDoc(ref, {
       title, reason, lengthText, from: from||null, to: to||null, class: currentStudent.data?.class || selectedClass || '',
@@ -1309,7 +1316,7 @@ enrollSave.addEventListener('click', async ()=>{
     });
     enrollTitle.value=''; enrollReason.value=''; enrollLength.value=''; enrollFrom.value=''; enrollTo.value=''; closeQuickForm(enrollQuick);
     await loadEnrollments(currentStudent.id);
-  }catch(e){ console.error(e); alert('تعذّر الحفظ'); }
+  }, { ok:'تمت الإضافة', err:'تعذّر الحفظ' });
 });
 
 /* ========= Reports CRUD ========= */
@@ -1342,10 +1349,9 @@ function renderReportCard(sid, r){
       <button class="btn danger mini" data-act="del">حذف</button>
     </div>
   `;
-  wrap.querySelector('[data-act="del"]').addEventListener('click', async ()=>{
+  wrap.querySelector('[data-act="del"]').addEventListener('click', async (ev)=>{
     if(!confirm('حذف التقرير؟')) return;
-    try{ await deleteDoc(doc(db,'students', sid, 'reports', r.id)); wrap.remove(); if(!reportList.children.length){ reportEmpty.style.display='block'; } }
-    catch(e){ alert('تعذّر الحذف'); }
+    await Feedback.busy(ev.currentTarget, async ()=>{ await deleteDoc(doc(db,'students', sid, 'reports', r.id)); wrap.remove(); if(!reportList.children.length){ reportEmpty.style.display='block'; } }, { ok:'تم الحذف', err:'تعذّر الحذف' });
   });
   bindCardOpen(wrap, ()=> {
     openRecordDetail('تفاصيل التقرير', [
@@ -1363,7 +1369,7 @@ reportSave.addEventListener('click', async ()=>{
   if(!currentStudent.id) return;
   const type = reportType.value || 'behavior'; const title = (reportTitle.value||'').trim(); const reason= (reportReason.value||'').trim(); const date = (reportDate.value||'').trim();
   if(!title || !date){ alert('أكمل الحقول'); return; }
-  try{
+  await Feedback.busy(reportSave, async ()=>{
     const ref = doc(collection(db,'students', currentStudent.id, 'reports'));
     await setDoc(ref, {
       type, title, reason, date, class: currentStudent.data?.class || selectedClass || '',
@@ -1371,7 +1377,7 @@ reportSave.addEventListener('click', async ()=>{
     });
     reportTitle.value=''; reportReason.value=''; reportDate.value=''; reportType.value='behavior'; closeQuickForm(reportQuick);
     await loadReports(currentStudent.id);
-  }catch(e){ console.error(e); alert('تعذّر الحفظ'); }
+  }, { ok:'تمت الإضافة', err:'تعذّر الحفظ' });
 });
 
 /* ========= Notes CRUD ========= */
@@ -1409,16 +1415,15 @@ function renderNoteCard(sid, n){
   `;
   const pinBtn = wrap.querySelector('button[data-act="togglePin"]'); const delBtn = wrap.querySelector('button[data-act="del"]');
   pinBtn.addEventListener('click', async ()=>{
-    try{ await updateDoc(doc(db,'students', sid, 'notes', n.id), { pinned: !n.pinned, updatedBy:getMe(), updatedAt: serverTimestamp() });
+    await Feedback.busy(pinBtn, async ()=>{ await updateDoc(doc(db,'students', sid, 'notes', n.id), { pinned: !n.pinned, updatedBy:getMe(), updatedAt: serverTimestamp() });
       n.pinned = !n.pinned; pinBtn.textContent = n.pinned? 'إلغاء التثبيت' : 'تثبيت';
       const sub = wrap.querySelector('.card-sub'); const t = (tMap[n.type] || n.type || '—'); const pinBadge2 = n.pinned ? `<span class="k-badge k-warn">مثبّت</span>` : '';
       sub.innerHTML = `${tag(t)} ${pinBadge2} ${when? ` • ${when}`:''}`;
-    }catch(e){ alert('تعذّر التحديث'); }
+    }, { ok:'تم التحديث', err:'تعذّر التحديث' });
   });
-  delBtn.addEventListener('click', async ()=>{
+  delBtn.addEventListener('click', async (ev)=>{
     if(!confirm('حذف الملاحظة؟')) return;
-    try{ await deleteDoc(doc(db,'students', sid, 'notes', n.id)); wrap.remove(); if(!noteList.children.length){ noteEmpty.style.display='block'; } }
-    catch(e){ alert('تعذّر الحذف'); }
+    await Feedback.busy(ev.currentTarget, async ()=>{ await deleteDoc(doc(db,'students', sid, 'notes', n.id)); wrap.remove(); if(!noteList.children.length){ noteEmpty.style.display='block'; } }, { ok:'تم الحذف', err:'تعذّر الحذف' });
   });
   bindCardOpen(wrap, ()=> {
     openRecordDetail('تفاصيل الملاحظة', [
@@ -1436,7 +1441,7 @@ noteSave.addEventListener('click', async ()=>{
   if(!currentStudent.id) return;
   const body = (noteBody.value||'').trim(); const type = noteType.value || 'general'; const pinned = !!notePinned.checked;
   if(!body){ alert('أدخل نص الملاحظة'); return; }
-  try{
+  await Feedback.busy(noteSave, async ()=>{
     const ref = doc(collection(db,'students', currentStudent.id, 'notes'));
     await setDoc(ref, {
       body, type, pinned, visibility: 'teachers', class: currentStudent.data?.class || selectedClass || '',
@@ -1444,5 +1449,5 @@ noteSave.addEventListener('click', async ()=>{
     });
     noteBody.value=''; notePinned.checked=false; noteType.value='general'; closeQuickForm(noteQuick);
     await loadNotes(currentStudent.id);
-  }catch(e){ console.error(e); alert('تعذّر الحفظ'); }
+  }, { ok:'تمت الإضافة', err:'تعذّر الحفظ' });
 });

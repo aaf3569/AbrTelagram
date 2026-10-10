@@ -188,7 +188,7 @@
     /* Department page top: count on one side, compact actions on the other. */
     .subject-summary{display:flex;flex-direction:column;gap:2px;min-width:0}
     .subject-summary-count{font-size:.84rem;font-weight:800;color:var(--muted)}
-    .subject-actions{display:flex;gap:8px;flex-wrap:wrap}
+    .subject-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
     .subject-actions .btn{height:44px;padding:0 16px}
 
     /* Teacher/admin rows: initials + presence dot, name with role badges,
@@ -504,6 +504,8 @@
   </style>
   <!-- After the page's own styles, so the one back button wins. -->
   <link rel="stylesheet" href="/shared/back-button.css" />
+  <link rel="stylesheet" href="/shared/actions.css" />
+  <script src="/shared/feedback.js" defer></script>
 </head>
 <body>
   <header class="site-header">
@@ -581,7 +583,7 @@
             <div id="subjectTeacherCount" class="subject-summary-count">—</div>
           </div>
           <div class="subject-actions">
-            <button id="refreshTeachers" class="btn ghost" type="button" aria-label="تحديث القائمة">تحديث</button>
+            <button id="refreshTeachers" class="refresh-btn" type="button" aria-label="تحديث القائمة" title="تحديث القائمة"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg></button>
             <button id="openAddUser" class="btn primary" type="button">+ إضافة معلم</button>
           </div>
         </div>
@@ -697,7 +699,7 @@
             <div id="telegramSummary" class="subject-summary-count">—</div>
           </div>
           <div class="subject-actions">
-            <button id="refreshTelegram" class="btn ghost" type="button" aria-label="تحديث القائمة">تحديث</button>
+            <button id="refreshTelegram" class="refresh-btn" type="button" aria-label="تحديث القائمة" title="تحديث القائمة"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg></button>
           </div>
         </div>
       </div>
@@ -717,8 +719,8 @@
       <div class="section">
         <div class="row" style="justify-content:space-between;">
           <div class="label" style="margin:0;">إدارة حسابات المشرفين</div>
-          <div style="display:flex;gap:10px;flex-wrap:wrap;">
-            <button id="refreshAdmins" class="btn ghost" type="button">تحديث</button>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+            <button id="refreshAdmins" class="refresh-btn" type="button" aria-label="تحديث القائمة" title="تحديث القائمة"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg></button>
             <button id="openAddAdmin" class="btn primary" type="button">إضافة مشرف</button>
           </div>
         </div>
@@ -898,7 +900,7 @@
     import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signOut, EmailAuthProvider, reauthenticateWithCredential } from "/shared/firebase.js";
     import { initializeFirestore, persistentSingleTabManager, collection, getDocs, query, where, doc, getDoc, setDoc, updateDoc, deleteField, serverTimestamp } from "/shared/firebase.js";
     import { startPresenceHeartbeat, watchPresence } from "/shared/presence.js";
-    import { mountStudentNotesSheet } from "/shared/student-notes-sheet.js?v=2026-10-12d";
+    import { mountStudentNotesSheet } from "/shared/student-notes-sheet.js?v=2026-10-13";
     import { mountTeacherClassSheet } from "/shared/teacher-class-sheet.js?v=2026-10-12d";
     import { fetchClassList, sortClassList, primeClassList } from "/shared/class-registry.js";
     import {
@@ -1411,6 +1413,28 @@
     // collection is small, and admins already have full read access to it
     // for every other feature on this page. ====
     let allTeachersCache=[];
+    // Refresh buttons (/shared/actions.css): spin and stay disabled until
+    // the reload finishes.
+    // Busy state for an action button (/shared/actions.css .is-busy): a
+    // small spinner, disabled so it can't be pressed twice.
+    function setBusy(btn,on){
+      btn.disabled=on;
+      btn.classList.toggle('is-busy',on);
+      if(on) btn.setAttribute('aria-busy','true'); else btn.removeAttribute('aria-busy');
+    }
+    async function runRefresh(btn, load){
+      if(btn.disabled) return;
+      btn.disabled=true;
+      btn.classList.add('is-loading');
+      btn.setAttribute('aria-busy','true');
+      try{ await load(); }
+      catch(e){ console.error(e); }
+      finally{
+        btn.disabled=false;
+        btn.classList.remove('is-loading');
+        btn.removeAttribute('aria-busy');
+      }
+    }
     async function loadAllTeachersCache(){
       try{
         const snap=await getDocs(collection(db,'teachers'));
@@ -1492,7 +1516,7 @@
     let teacherOpenedFromTelegram=false;
     statTelegramBtn.addEventListener('click', openTelegramPanel);
     closeTelegram.addEventListener('click', closeTelegramPanel);
-    refreshTelegram.addEventListener('click', ()=>loadAllTeachersCache());
+    refreshTelegram.addEventListener('click', ()=>runRefresh(refreshTelegram, loadAllTeachersCache));
     function escapeHtml(str){
       return (str||'').toString().replace(/[&<>"]/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
     }
@@ -2186,6 +2210,7 @@
     edAEmail.addEventListener('input',()=>{const digits=edAEmail.value.replace(/\D+/g,''); if(edAEmail.value!==digits) edAEmail.value=digits;});
     saveAdmin.addEventListener('click', async ()=>{
       edAOk.style.display='none';edAErr.style.display='none';
+      setBusy(saveAdmin,true);
       try{
         const {uid}=currentAdmin;if(!uid) throw new Error('لم يتم اختيار مشرف.');
         const name=edAName.value.trim(), civilId=edAEmail.value.trim().replace(/\D+/g,'');
@@ -2204,7 +2229,7 @@
         setTimeout(()=>{edAOk.style.display='none';},900);
         await loadAdmins();
         loadAllTeachersCache();
-      }catch(e){edAErr.textContent=e?.message||'تعذّر الحفظ.';edAErr.style.display='block';}
+      }catch(e){edAErr.textContent=e?.message||'تعذّر الحفظ.';edAErr.style.display='block';}finally{setBusy(saveAdmin,false);}
     });
     deleteAdminBtn.addEventListener('click',()=>{
       if(!currentAdmin.uid) return;
@@ -2259,6 +2284,7 @@
     addAdminModal.addEventListener('click',(e)=>{if(e.target===addAdminModal) closeModal(addAdminModal,{fallbackFocus:openAddAdmin});});
     createAdminBtn.addEventListener('click', async ()=>{
       adOk.style.display='none';adErr.style.display='none';
+      setBusy(createAdminBtn,true);
       try{
         const name=adName.value.trim(), civilId=adEmail.value.trim().replace(/\D+/g,'');
         const email=civilId?`t${civilId}@gmail.com`:'';
@@ -2277,7 +2303,7 @@
         openSuccessModal();
         await loadAdmins();
         loadAllTeachersCache();
-      }catch(e){adErr.textContent=e?.message||'تعذّر إنشاء الحساب.';adErr.style.display='block';}
+      }catch(e){adErr.textContent=e?.message||'تعذّر إنشاء الحساب.';adErr.style.display='block';}finally{setBusy(createAdminBtn,false);}
     });
     // Leaving a teacher's profile for another sidebar panel (a department,
     // الإدارة, Telegram) without going through its رجوع button. Closing the
@@ -2382,7 +2408,8 @@
     supervisorGradeModal.addEventListener('click',(e)=>{
       if(e.target===supervisorGradeModal) closeSupervisorGradePicker({ restorePrevious:true });
     });
-    refreshTeachers.addEventListener('click',()=>{if(selectedSubject)loadTeachers(selectedSubject);});
+    refreshTeachers.addEventListener('click',()=>{if(selectedSubject)runRefresh(refreshTeachers, ()=>loadTeachers(selectedSubject));});
+    refreshAdmins.addEventListener('click',()=>runRefresh(refreshAdmins, loadAdmins));
 
     function resetTeacherForm(){
       teacherName.value='';
@@ -2550,6 +2577,7 @@
 
     saveTeacher.addEventListener('click', async ()=>{
       edOk.style.display='none';edErr.style.display='none';
+      setBusy(saveTeacher,true);
       try{
         const {uid}=currentTeacher;if(!uid) throw new Error('لم يتم اختيار معلّم.');
         const name=edTName.value.trim(), civilId=edTEmail.value.trim().replace(/\D+/g,''), phone=edTPhone.value.trim();
@@ -2588,7 +2616,7 @@
         edOk.textContent='تم حفظ التعديلات.';edOk.style.display='block';setTimeout(()=>{edOk.style.display='none';closeTeacherView();},900);
         if(selectedSubject) await loadTeachers(selectedSubject);
         loadAllTeachersCache();
-      }catch(e){edErr.textContent=e?.message||'تعذّر الحفظ.';edErr.style.display='block';}
+      }catch(e){edErr.textContent=e?.message||'تعذّر الحفظ.';edErr.style.display='block';}finally{setBusy(saveTeacher,false);saveTeacher.disabled=!teacherEditMode||!isEditFormDirty();}
     });
 
     deleteTeacherBtn.addEventListener('click',()=>{
@@ -2712,6 +2740,7 @@
     });
 
     createTeacherBtn.addEventListener('click', async ()=>{
+      setBusy(createTeacherBtn,true);
       try{
         const name=teacherName.value.trim(), civilId=teacherEmail.value.trim().replace(/\D+/g,''), email=civilId?`t${civilId}@gmail.com`:'', password=teacherPassword.value, phone=teacherPhone.value.trim();
         const displayedPassword=teacherDisplayedPassword.value||password;
@@ -2747,7 +2776,7 @@
         closeModal(addTeacherModal);openSuccessModal();
         await loadTeachers(selectedSubject);
         loadAllTeachersCache();
-      }catch(e){alert('تعذّر إنشاء الحساب: ' + (e?.message||''));}
+      }catch(e){Feedback.notify('تعذّر إنشاء الحساب: ' + (e?.message||''),'err');}finally{setBusy(createTeacherBtn,false);}
     });
 
     async function applyTeacherRoute(){

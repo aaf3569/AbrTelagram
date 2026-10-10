@@ -486,6 +486,8 @@
   <meta name="twitter:image" content="https://framerusercontent.com/images/jRnZLlPr90qwKsuUwfIlvDS9E.png?width=1200&height=630">
   <!-- After the page's own styles, so the one back button wins. -->
   <link rel="stylesheet" href="/shared/back-button.css" />
+  <link rel="stylesheet" href="/shared/actions.css" />
+  <script src="/shared/feedback.js" defer></script>
 </head>
 <body>
   <header class="site-header">
@@ -1645,7 +1647,16 @@
         dCountAbsent.textContent = `غياب: ${absent}`;
     }
 
+    // Busy state for an action button (/shared/actions.css .is-busy): a
+    // small spinner, disabled so it can't be pressed twice.
+    function setBusy(btn, on){
+        btn.disabled = on;
+        btn.classList.toggle('is-busy', on);
+        if(on) btn.setAttribute('aria-busy', 'true'); else btn.removeAttribute('aria-busy');
+    }
+
     saveDetail.addEventListener('click', async ()=>{
+        setBusy(saveDetail, true);
         try{
             if(!auth.currentUser){
                 openError('تعذّر الحفظ','يرجى تسجيل الدخول.');
@@ -1716,6 +1727,8 @@
         }catch(e){
             console.error(e);
             openError('تعذّر الحفظ','تحقق من الصلاحيات أو الشبكة.');
+        }finally{
+            setBusy(saveDetail, false);
         }
     });
     /* ========= Logout ========= */

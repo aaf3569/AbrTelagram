@@ -543,14 +543,11 @@ export function mountStudentNotesSheet({ db, auth, onChange }) {
       btn.addEventListener("click", async () => {
         const path = btn.getAttribute("data-del");
         if (!confirm("تأكيد حذف الملاحظة؟ لا يمكن التراجع.")) return;
-        try {
+        await window.Feedback.busy(btn, async () => {
           await deleteDoc(doc(db, path));
           notifyChange();
           await loadAll();
-        } catch (e) {
-          console.error(e);
-          alert("تعذّر الحذف.");
-        }
+        }, { ok: "تم الحذف", err: "تعذّر الحذف." });
       });
     });
   }
@@ -587,7 +584,8 @@ export function mountStudentNotesSheet({ db, auth, onChange }) {
       alert("يرجى تعبئة جميع الحقول.");
       return;
     }
-    try {
+    let saved = false;
+    await window.Feedback.busy(saveBtn, async () => {
       const user = auth.currentUser;
       if (!user) { alert("يرجى تسجيل الدخول"); return; }
       const colRef = collection(db, "students", studentId, "notes_by_teacher", user.uid, paths[pendingType]);
@@ -598,13 +596,12 @@ export function mountStudentNotesSheet({ db, auth, onChange }) {
         date, studentName: studentName || null, studentClass: studentClass || null,
         createdAt: serverTimestamp(), updatedAt: serverTimestamp(), createdBy: user.uid, updatedBy: user.uid,
       });
+      saved = true;
       closeModal();
       notifyChange();
       await loadAll();
-    } catch (e) {
-      console.error(e);
-      alert("تعذّر الحفظ.");
-    }
+    }, { err: "تعذّر الحفظ." });
+    if (saved) window.Feedback.notify("تم الحفظ");
   });
 
   async function open(id, meta = {}) {

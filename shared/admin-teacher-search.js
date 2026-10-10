@@ -77,6 +77,8 @@ export function initAdminTeacherSearch(db) {
     const request = ++generation;
     const previousDepartment = department.value;
     search.disabled = department.disabled = teachers.disabled = refresh.disabled = true;
+    refresh.classList.add('is-loading');
+    refresh.setAttribute('aria-busy', 'true');
     status.textContent = 'جارٍ تحميل المعلّمين والحصص…';
     results.replaceChildren();
     try {
@@ -102,7 +104,11 @@ export function initAdminTeacherSearch(db) {
       console.error('[admin-teacher-search]', error);
       status.textContent = 'تعذّر تحميل البيانات. اضغط تحديث للمحاولة مرة أخرى.';
     } finally {
-      if (request === generation) refresh.disabled = false;
+      if (request === generation) {
+        refresh.disabled = false;
+        refresh.classList.remove('is-loading');
+        refresh.removeAttribute('aria-busy');
+      }
     }
   }
   byId('teacherSearchBtn').addEventListener('click', () => {

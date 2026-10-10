@@ -1183,18 +1183,13 @@ export async function mountTodayAbsenceSheet(host, hooks) {
             const time = modalBody.querySelector('#mlTime').value;
             const reason = modalBody.querySelector('#mlReason').value.trim();
             if (!time) { modalBody.querySelector('#mlTime').focus(); return; }
-            saveBtn.disabled = true;
-            try {
+            await window.Feedback.busy(saveBtn, async () => {
               await updateDoc(doc(db, 'morningLates', d.id), { time, reason, updatedAt: serverTimestamp() });
               d.time = time;
               d.reason = reason;
               renderGrid();
               showView();
-            } catch (e) {
-              console.error(e);
-              saveBtn.disabled = false;
-              alert('تعذّر الحفظ. تحقق من الصلاحيات أو الشبكة.');
-            }
+            }, { ok: 'تم الحفظ', err: 'تعذّر الحفظ. تحقق من الصلاحيات أو الشبكة.' });
           });
           modalFooter.appendChild(saveBtn);
 
@@ -1206,9 +1201,9 @@ export async function mountTodayAbsenceSheet(host, hooks) {
           modalFooter.appendChild(cancelBtn);
         };
 
-        const removeLate = async () => {
+        const removeLate = async (ev) => {
           if (!confirm(`حذف تأخير الصبح للطالب ${row.name}؟ لا يمكن التراجع.`)) return;
-          try {
+          await window.Feedback.busy(ev?.currentTarget || null, async () => {
             await deleteDoc(doc(db, 'morningLates', d.id));
             const entry = morningLatesMap[className];
             if (entry) {
@@ -1217,10 +1212,7 @@ export async function mountTodayAbsenceSheet(host, hooks) {
             }
             closeModal();
             renderGrid();
-          } catch (e) {
-            console.error(e);
-            alert('تعذّر الحذف. تحقق من الصلاحيات أو الشبكة.');
-          }
+          }, { ok: 'تم الحذف', err: 'تعذّر الحذف. تحقق من الصلاحيات أو الشبكة.' });
         };
 
         showView();

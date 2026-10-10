@@ -191,6 +191,8 @@
         /* Header */
         .site-header{position:sticky;top:0;z-index:100;background:rgba(255,255,255,.95);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);color:var(--primary);padding:16px 24px;display:flex;align-items:center;justify-content:center;border-bottom:1px solid rgba(3,60,84,.1);box-shadow:0 2px 15px rgba(3,60,84,.08)}
         .site-title{margin:0;font-weight:900;letter-spacing:.2px;font-size:clamp(1.2rem,2.5vw,1.6rem);text-shadow:0 1px 0 rgba(255,255,255,.6)}
+        /* «تحديث الشاشة» — look: /shared/actions.css; on the end side of the header. */
+        .header-refresh-btn{position:absolute;left:16px;top:50%;transform:translateY(-50%)}
         main{flex:1;padding:24px 16px 40px;display:flex;width:100%}
         .column{width:min(1100px,100%);margin:0 auto;display:flex;flex-direction:column;align-items:center;gap:20px}
         .panel{width:100%;background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:24px 20px;box-shadow:var(--shadow-1);transition:var(--transition)}
@@ -522,6 +524,7 @@
             }
 
             .site-header{ padding:20px 40px; gap:14px; }
+            .header-refresh-btn{ left:24px; }
             .site-logo{ display:block; width:38px; height:38px; object-fit:contain; filter:drop-shadow(0 4px 10px rgba(3,60,84,.25)); }
             .site-title{ font-size:1.4rem; }
 
@@ -618,7 +621,9 @@
             .mini-ghost { width: 100%; justify-content: center; }
         }
         @media (max-width:480px){
-            .site-header{padding:14px 16px}
+            /* Keep the centred title clear of the refresh button. */
+            .site-header{padding:14px 64px}
+            .site-title{font-size:clamp(1rem,5vw,1.2rem);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-block:.3em;margin-block:-.3em}
             main{padding:16px 12px 32px}
             .panel{padding:20px 16px}
             .avatar{width:120px;height:120px}
@@ -651,11 +656,14 @@
   <meta name="twitter:image" content="https://framerusercontent.com/images/jRnZLlPr90qwKsuUwfIlvDS9E.png?width=1200&height=630">
   <!-- After the page's own styles, so the one back button wins. -->
   <link rel="stylesheet" href="/shared/back-button.css" />
+  <link rel="stylesheet" href="/shared/actions.css" />
+  <script src="/shared/feedback.js" defer></script>
 </head>
 <body>
     <header class="site-header">
         <img class="site-logo" src="/images/schoollogo.png" alt="" aria-hidden="true">
         <h1 class="site-title">ثانوية أحمد البشر الرومي</h1>
+        <button class="refresh-btn header-refresh-btn" type="button" data-reload-page aria-label="تحديث الشاشة" title="تحديث الشاشة"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg></button>
     </header>
     <main>
         <div class="column">
@@ -2928,7 +2936,16 @@
             confirmLateList.style.display = 'block';
         });
 
+        // Busy state for an action button (/shared/actions.css .is-busy): a
+        // small spinner, disabled so it can't be pressed twice.
+        function setBusy(btn, on){
+            btn.disabled = on;
+            btn.classList.toggle('is-busy', on);
+            if(on) btn.setAttribute('aria-busy', 'true'); else btn.removeAttribute('aria-busy');
+        }
+
         confirmSave.addEventListener('click', async ()=>{
+            setBusy(confirmSave, true);
             try {
                 if(!currentUser){
                     openError('تعذّر الحفظ','يرجى تسجيل الدخول.');
@@ -3025,6 +3042,7 @@
                 openError('تعذّر الحفظ', 'حدث خطأ أثناء الحفظ. يرجى المحاولة مرة أخرى.');
             } finally {
                 pendingSave = null;
+                setBusy(confirmSave, false);
             }
         });
 
