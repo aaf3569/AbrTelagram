@@ -2,7 +2,7 @@
    renders into a shadow root (Teachers/user.html and admins/adminpage.html),
    so nothing here can collide with either page's own classes.
    The look is the rest of the site's (/shared/identity.css): the white
-   frosted site header, #033C54 titles in Readex Pro, the standard buttons,
+   frosted site header, #033C54 titles in Tajawal, the standard buttons,
    #eef5f9 tints. The printable form (PDF / image) carries its own styles in
    that file (FORM_CSS) — that's the document, not the UI. */
 :host {
@@ -11,10 +11,10 @@
   --bg: #f6f8fb; --card: #fff; --ink: #0f172a; --mute: #6b7f9f; --line: #e6edf7;
   --ok: #1a7f37; --ok-soft: #ddf2e6; --err: #b42318; --warn: #a06d00; --new: #fff1cc; --off: #e4e8ec;
   --r: 16px; --shadow: 0 1px 2px rgba(3, 60, 84, .05), 0 8px 22px rgba(3, 60, 84, .08);
-  --font-heading: "Readex Pro", "Tajawal", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --font-heading: "Tajawal", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
   display: flex; flex-direction: column; height: 100%;
   overflow: hidden; background: var(--bg); color: var(--ink);
-  /* Tajawal (text) and Readex Pro (titles, buttons): the site's fonts,
+  /* Tajawal (text, titles, buttons): the site's one font,
      loaded by both host pages' Google Fonts link (@font-face reaches into
      this shadow root). */
   font: 16px/1.7 "Tajawal", system-ui, -apple-system, "Segoe UI", Tahoma, sans-serif;
@@ -117,7 +117,7 @@ button, input, select, textarea { font: inherit; }
 
 /* ---- Cards and text ---- */
 .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 18px; margin-bottom: 14px; box-shadow: var(--shadow); }
-/* Card titles: the site's card-title scale (1.05rem, Readex Pro 700, #033C54). */
+/* Card titles: the site's card-title scale (1.05rem, Tajawal 700, #033C54). */
 .card h2, .card .h2 { display: flex; align-items: center; gap: 8px; font-family: var(--font-heading); font-size: 1.05rem; font-weight: 700; margin: 0 0 4px; color: var(--navy); }
 /* A note card (no budget for this account, the old-site import): the site's tint. */
 .card.note { background: var(--tint); border-color: rgba(3, 60, 84, .12); }
@@ -137,7 +137,7 @@ input, textarea, select { padding: 11px 12px; border: 1.5px solid var(--line); b
 input:focus, textarea:focus, select:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 4px rgba(3, 60, 84, .12); background: #fff; }
 textarea { width: 100%; min-height: 96px; resize: vertical; }
 /* The site's standard buttons (/shared/identity.css): 48px, 14px corners,
-   Readex Pro 700; primary gradient, white ghost, white danger. */
+   Tajawal 700; primary gradient, white ghost, white danger. */
 .btn { min-height: 48px; padding: 8px 20px; border: 0; border-radius: 14px; background: linear-gradient(145deg, var(--blue), var(--navy)); color: #fff; font-family: var(--font-heading); font-weight: 700; cursor: pointer; transition: transform .1s, box-shadow .15s; }
 .btn:hover { box-shadow: 0 4px 14px rgba(3, 60, 84, .25); }
 .btn:active { transform: translateY(1px); }

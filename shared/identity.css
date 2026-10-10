@@ -7,14 +7,14 @@
    values. Modules that render into a shadow root carry a copy of what they
    need of these rules in their own sheet (department-budgets.css).
 
-   Fonts: body text stays Tajawal (/shared/base.css). Titles and button
-   labels use Readex Pro 600/700, loaded by each page's Google Fonts <link>
-   next to Tajawal (which stays the fallback).
+   Font: Tajawal everywhere — body text (/shared/base.css), titles and
+   button labels alike — loaded by each page's Google Fonts <link>.
+   --font-heading stays as the one hook for titles and buttons.
 
-   Scale: page / site title clamp(1.15rem, 2.6vw, 1.45rem) 700 · sheet title
+   Scale: page / site title clamp(1.15rem, 2.6vw, 1.45rem) 900 · sheet title
    1.2rem 700 · card title 1.05rem 700 · small labels .78rem.
 
-   Buttons (.btn): 48px tall, 14px corners, Readex Pro 700.
+   Buttons (.btn): 48px tall, 14px corners, Tajawal 700.
      .primary (or .solid)  #065372 → #033C54 gradient, white text
      .ghost / .cancel      white, thin #033C54 border, #033C54 text
      .danger               white, soft red border, #b42318 text
@@ -23,7 +23,7 @@
      .btn-menu             the large full-width menu buttons: 64px, 16px corners
      .mini / .small        keep their own (smaller) height */
 :root {
-  --font-heading: "Readex Pro", "Tajawal", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --font-heading: "Tajawal", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
 }
 
 /* ---- Headings ---- */
@@ -35,8 +35,8 @@ h1, h2, h3, h4,
 
 .site-title.site-title {
   font-size: clamp(1.15rem, 2.6vw, 1.45rem);
-  font-weight: 700;
-  letter-spacing: 0;
+  font-weight: 900;
+  letter-spacing: .2px;
 }
 
 .sheet-title.sheet-title {

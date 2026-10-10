@@ -18,7 +18,7 @@
     .credits-card{position:relative;width:100%;background:#ffffff;border:1px solid var(--border,#e6edf7);border-radius:24px;box-shadow:0 16px 40px rgba(3,60,84,.08),0 2px 6px rgba(3,60,84,.04);padding:36px 28px 22px;display:flex;flex-direction:column;align-items:center;text-align:center;overflow:hidden}
     .credits-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--primary,#033C54) 0%,var(--primary-light,#065372) 50%,var(--primary,#033C54) 100%)}
     .credits-logo{width:96px;height:96px;object-fit:contain;filter:drop-shadow(0 10px 18px rgba(3,60,84,.18));margin-bottom:18px}
-    .credits-school-name{margin:0;font-family:var(--font-heading,"Readex Pro","Tajawal",system-ui,sans-serif);font-size:1.1rem;font-weight:700;color:var(--primary,#033C54);letter-spacing:.2px;line-height:1.4}
+    .credits-school-name{margin:0;font-family:var(--font-heading,"Tajawal",system-ui,sans-serif);font-size:1.1rem;font-weight:900;color:var(--primary,#033C54);letter-spacing:.2px;line-height:1.4}
     .credits-tagline{margin:6px 0 22px;font-size:.78rem;font-weight:700;color:var(--muted,#6b7f9f);letter-spacing:.5px}
     .credits-info{width:100%;display:flex;flex-direction:column;gap:10px;margin-bottom:22px}
     .credits-row{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:14px;background:#f8fbfd;border:1px solid rgba(3,60,84,.06);transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease}

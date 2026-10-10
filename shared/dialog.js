@@ -94,7 +94,7 @@
 .abr-dlg-title {
   margin: 0 0 6px;
   color: #0f172a;
-  font-family: "Readex Pro", var(--app-font, "Tajawal"), system-ui, sans-serif;
+  font-family: var(--app-font, "Tajawal"), system-ui, sans-serif;
   font-size: 1.1rem;
   font-weight: 700;
   line-height: 1.5;
@@ -143,7 +143,7 @@
   padding: 0 12px;
   border-radius: 14px;
   border: 0;
-  font-family: "Readex Pro", var(--app-font, "Tajawal"), system-ui, sans-serif;
+  font-family: var(--app-font, "Tajawal"), system-ui, sans-serif;
   font-size: .95rem;
   font-weight: 700;
   line-height: 1.3;

@@ -30,8 +30,8 @@
   --ss-shadow-1: 0 4px 12px rgba(3, 60, 84, .08);
   --ss-shadow-2: 0 10px 25px rgba(3, 60, 84, .12);
   /* Titles and button labels: /shared/identity.css's heading font (the host
-     page loads Readex Pro; @font-face reaches into shadow roots). */
-  --font-heading: "Readex Pro", "Tajawal", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+     page loads Tajawal; @font-face reaches into shadow roots). */
+  --font-heading: "Tajawal", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
   --ss-transition: transform .12s ease, box-shadow .12s ease, background-color .12s ease, border-color .12s ease, color .12s ease, opacity .12s ease;
   display: flex; flex-direction: column; height: 100%;
   overflow: hidden; background: var(--page); color: var(--text);

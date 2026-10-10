@@ -3,13 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://abrschool-bot.onrender.com https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.gstatic.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; manifest-src 'self'; upgrade-insecure-requests; block-all-mixed-content">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; connect-src 'self' https://abrschool-bot.onrender.com https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.gstatic.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; manifest-src 'self'; upgrade-insecure-requests; block-all-mixed-content">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
 <!-- perf: start the module graph downloading immediately -->
+<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
 <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js" crossorigin>
 <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js" crossorigin>
 <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js" crossorigin>
@@ -30,8 +31,9 @@
   <title>لوحة الإدارة - ثانوية أحمد البشر الرومي</title>
 
   <!-- Tajawal -->
-  <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@600;700&family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet"/>
   <script src="/shared/arabic-text-fix.js" defer></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
   <link rel="stylesheet" href="/shared/base.css" />
   <style>
@@ -67,8 +69,10 @@
       border-bottom:1px solid rgba(3,60,84,.08);
       box-shadow: 0 2px 10px rgba(3,60,84,.06);
     }
-    /* Font, size and weight: /shared/identity.css. */
+    /* Font and weight: /shared/identity.css. header.site-header outranks its
+       size rule so this page keeps its own title size. */
     .site-title{ margin:0; color:#033C54; text-shadow:0 1px 0 rgba(255,255,255,.6) }
+    header.site-header .site-title{ font-size:clamp(1.1rem,2.4vw,1.5rem) }
 
     main{ flex:1; padding:24px 14px 32px; display:flex }
     .column{
@@ -145,9 +149,6 @@
     }
     .header-toggle-btn:hover{ transform:translateY(calc(-50% - 2px)); box-shadow:0 12px 26px rgba(3,60,84,.18); border-color:rgba(3,60,84,.4); }
     .header-toggle-btn:active{ transform:translateY(-50%) scale(.96); }
-    /* «تحديث الشاشة» — look: /shared/actions.css; mirrors the menu button
-       on the end side of the header. */
-    .header-refresh-btn{ position:absolute; left:14px; top:50%; transform:translateY(-50%); z-index:1; }
 
     .sidebar-backdrop{
       position:fixed; inset:0; z-index:95; background:rgba(3,60,84,.55);
@@ -165,11 +166,11 @@
     .sidebar.open{ transform:translateX(0); }
     .sidebar-head{
       position:relative; padding:16px; display:flex; flex-direction:column; align-items:center; gap:12px; text-align:center;
-      background:linear-gradient(135deg, #065372, #033C54); color:#fff; flex-shrink:0;
+      background:linear-gradient(135deg, #044563, #022b42); color:#fff; flex-shrink:0;
     }
     .sidebar-school-logo{ display:block; width:120px; max-width:calc(100% - 80px); height:auto; object-fit:contain; }
     .sidebar-head h2{ margin:0; font-size:clamp(.74rem,4.3vw,.98rem); font-weight:900; display:flex; align-items:baseline; gap:7px; min-width:0; overflow:hidden; }
-    .sidebar-head h2 .ic{ flex-shrink:0; font-size:.9em; opacity:.85; }
+    .sidebar-head h2 i{ flex-shrink:0; font-size:.9em; opacity:.85; }
     .sidebar-head h2 span{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .sidebar-close{
       position:absolute; top:16px; left:16px; width:32px; height:32px; flex-shrink:0; border-radius:10px;
@@ -204,15 +205,15 @@
       font-family:"Tajawal", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
       font-weight:800; font-size:.91rem; cursor:pointer; text-align:right; transition:var(--transition); width:100%;
     }
-    .sidebar-link .ic{
-      width:32px; height:32px; padding:7px; flex-shrink:0;
+    .sidebar-link i{
+      width:32px; height:32px; flex-shrink:0; display:inline-flex; align-items:center; justify-content:center;
       border-radius:9px; background:rgba(3,60,84,.08); color:var(--primary-light); font-size:.95rem;
     }
     @media (hover:hover) and (pointer:fine){ .sidebar-link:hover{ background:rgba(3,60,84,.08); } }
     .sidebar-link:active{ background:rgba(3,60,84,.08); }
     .sidebar-link[hidden]{ display:none; }
     .sidebar-link.is-current{ background:rgba(3,60,84,.08); border-color:rgba(3,60,84,.18); color:var(--primary); box-shadow:inset -4px 0 0 var(--primary); }
-    .sidebar-link.is-current .ic{ background:linear-gradient(145deg, var(--primary-light), var(--primary)); color:#fff; }
+    .sidebar-link.is-current i{ background:linear-gradient(145deg, var(--primary-light), var(--primary)); color:#fff; }
     #sidebarLogout{ justify-content:center; text-align:center; }
 
     .sidebar-classes{ display:flex; flex-direction:column; gap:6px; padding:2px 2px 4px; }
@@ -502,6 +503,7 @@
          off the dots above/below letters like ث and ي — the padding grows
          the clip box to fit them, the negative margin keeps the height. */
       .site-title{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding-block:.3em; margin-block:-.3em; }
+      header.site-header .site-title{ font-size:clamp(1rem, 5vw, 1.25rem); }
       .column{ width:100% }
       .panel{ padding:16px 10px }
       .btn{
@@ -663,7 +665,7 @@
       font-family:inherit; text-align:right; color:#fff;
       background:
         radial-gradient(420px 220px at 0% 0%, rgba(121,179,200,.35), transparent 60%),
-        linear-gradient(150deg, #065372, #033C54 55%, #033C54);
+        linear-gradient(150deg, #065372, #033C54 55%, #022b42);
       box-shadow:0 18px 40px rgba(3,60,84,.30);
       transition:var(--transition);
     }
@@ -685,7 +687,7 @@
       padding:6px 12px; border-radius:999px; font-size:.78rem; font-weight:800;
       background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.18);
     }
-    .today-open .ic{ font-size:.7rem; }
+    .today-open i{ font-size:.7rem; }
 
     .today-main{ align-items:center; gap:18px; }
     .today-ring{ position:relative; width:118px; height:118px; flex-shrink:0; display:grid; place-items:center; }
@@ -720,13 +722,13 @@
       padding:10px 4px 9px; border-radius:16px; text-align:center;
       background:rgba(255,255,255,.10); border:1px solid rgba(255,255,255,.12);
     }
-    .today-stat .ic{ font-size:.85rem; opacity:.9; }
+    .today-stat i{ font-size:.85rem; opacity:.9; }
     .today-stat b{ font-size:1.28rem; font-weight:900; line-height:1.15; }
     .today-stat span{ font-size:.7rem; font-weight:700; opacity:.82; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
-    .today-stat.present .ic{ color:#7ee2a8; }
-    .today-stat.absent .ic{ color:#ff8a80; }
-    .today-stat.late .ic{ color:#ffd166; }
-    .today-stat.morning .ic{ color:#ffb86b; }
+    .today-stat.present i{ color:#7ee2a8; }
+    .today-stat.absent i{ color:#ff8a80; }
+    .today-stat.late i{ color:#ffd166; }
+    .today-stat.morning i{ color:#ffb86b; }
     .today-error{ font-size:.82rem; font-weight:800; opacity:.9; }
     .today-error[hidden]{ display:none; }
 
@@ -762,7 +764,7 @@
     .dash-tile:focus-visible{ outline:3px solid var(--focus); outline-offset:2px; }
     @media (hover:hover) and (pointer:fine){ .dash-tile:hover{ transform:translateY(-3px); box-shadow:0 16px 32px rgba(3,60,84,.16); border-color:rgba(3,60,84,.28); } }
     .dash-icon{
-      width:42px; height:42px; padding:11px; flex-shrink:0;
+      display:grid; place-items:center; width:42px; height:42px; flex-shrink:0;
       border-radius:13px; font-size:1.05rem;
       background:rgba(3,60,84,.08); color:var(--primary-light);
     }
@@ -777,7 +779,7 @@
       background:linear-gradient(145deg,var(--primary),var(--primary-light));
       box-shadow:0 14px 30px rgba(3,60,84,.28);
     }
-    .dash-tile.primary .dash-icon{ background:rgba(255,255,255,.16); color:#fff; width:48px; height:48px; padding:13px; font-size:1.2rem; }
+    .dash-tile.primary .dash-icon{ background:rgba(255,255,255,.16); color:#fff; width:48px; height:48px; font-size:1.2rem; }
     .dash-tile.primary .dash-title{ color:#fff; font-size:1.12rem; }
     .dash-tile.primary .dash-sub{ color:rgba(255,255,255,.78); }
     /* An odd tile out at the end of a 2-column grid fills the row. */
@@ -828,13 +830,13 @@
 
       .site-header{ padding:20px 40px; gap:14px; }
       .site-logo{ display:block; width:38px; height:38px; object-fit:contain; filter:drop-shadow(0 4px 10px rgba(3,60,84,.25)); }
+      header.site-header .site-title{ font-size:1.35rem; }
       /* Stays visible on desktop too (unlike Admin/admin.html's copy of
          this sidebar, which hides it there since its desktop dashboard
          already lists every action in a grid) — here it's also the way
          between the absence sheets. Sits further from the edge to match
          the wider desktop header padding. */
       .header-toggle-btn{ right:24px; }
-      .header-refresh-btn{ left:24px; }
 
       main{ padding:56px 40px 72px; align-items:flex-start; }
       .column{ width:min(1180px, 92vw); align-items:stretch; gap:36px; }
@@ -855,7 +857,7 @@
       .today-lessons b{ font-size:2.5rem; }
       .today-stats{ gap:14px; }
       .today-stat{ padding:16px 8px 14px; border-radius:18px; gap:5px; }
-      .today-stat .ic{ font-size:1rem; }
+      .today-stat i{ font-size:1rem; }
       .today-stat b{ font-size:1.7rem; }
       .today-stat span{ font-size:.82rem; }
       .skel-card{ min-height:400px; }
@@ -867,7 +869,7 @@
       .dash-grid{ grid-template-columns:repeat(4, minmax(0,1fr)); gap:20px; }
       .dash-tile{ min-height:150px; padding:24px; border-radius:22px; gap:16px; }
       .dash-tile:hover{ transform:translateY(-5px); }
-      .dash-icon{ width:50px; height:50px; padding:14px; border-radius:15px; font-size:1.2rem; }
+      .dash-icon{ width:50px; height:50px; border-radius:15px; font-size:1.2rem; }
       .dash-title{ font-size:1.12rem; }
       .dash-sub{ font-size:.85rem; }
       .dash-tile.wide{ grid-column:span 2; flex-direction:column; align-items:flex-start; min-height:150px; }
@@ -935,11 +937,10 @@
 <body>
   <header class="site-header">
     <button id="btnSidebarToggle" class="header-toggle-btn" type="button" aria-label="فتح القائمة" aria-controls="sidebar" aria-expanded="false">
-      <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-menu"/></svg>
+      <i class="fas fa-bars" aria-hidden="true"></i>
     </button>
     <img class="site-logo" src="/images/schoollogo.png" alt="" aria-hidden="true">
     <h1 class="site-title">ثانوية أحمد البشر الرومي</h1>
-    <button class="refresh-btn header-refresh-btn" type="button" data-reload-page aria-label="تحديث الشاشة" title="تحديث الشاشة"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg></button>
   </header>
 
   <!-- ===== Sidebar =====
@@ -950,16 +951,16 @@
   <aside id="sidebar" class="sidebar" aria-hidden="true">
     <div class="sidebar-head">
       <img class="sidebar-school-logo" src="/images/WhiteLogo.png?v=2" alt="شعار المدرسة" width="1976" height="796">
-      <h2><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-school"/></svg><span>ثانوية أحمد البشر الرومي</span></h2>
+      <h2><i class="fas fa-school" aria-hidden="true"></i><span>ثانوية أحمد البشر الرومي</span></h2>
       <button id="sidebarClose" class="sidebar-close" type="button" aria-label="إغلاق القائمة">
-        <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-x"/></svg>
+        <i class="fas fa-times" aria-hidden="true"></i>
       </button>
     </div>
 
     <!-- The signed-in admin's name and photo (tap it to change the photo) —
          moved here from the top of the home screen. -->
     <div id="sidebarUser" class="sidebar-user" hidden>
-      <div id="profileAvatar" class="sidebar-user-avatar"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-user-shield"/></svg></div>
+      <div id="profileAvatar" class="sidebar-user-avatar"><i class="fas fa-user-shield" aria-hidden="true"></i></div>
       <div class="sidebar-user-info">
         <span id="adminName" class="sidebar-user-name"></span>
         <span class="sidebar-user-role">مشرف للنظام</span>
@@ -969,7 +970,7 @@
     <nav class="sidebar-nav">
       <div class="sidebar-group">
         <button id="sidebarHome" class="sidebar-link is-current" type="button">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-home"/></svg>
+          <i class="fas fa-house" aria-hidden="true"></i>
           <span>الرئيسية</span>
         </button>
       </div>
@@ -982,19 +983,19 @@
       <div class="sidebar-group">
         <div class="sidebar-section-label">الغياب</div>
         <button id="sidebarTodayAbsence" class="sidebar-link" type="button">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-calendar-day"/></svg>
+          <i class="fas fa-calendar-day" aria-hidden="true"></i>
           <span>غياب اليوم</span>
         </button>
         <button id="sidebarOverallAbsence" class="sidebar-link" type="button">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-list-check"/></svg>
+          <i class="fas fa-list-check" aria-hidden="true"></i>
           <span>الغياب المختصر</span>
         </button>
         <button id="sidebarDetailedAbsence" class="sidebar-link" type="button">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-search"/></svg>
+          <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
           <span>تدقيق في الغائب</span>
         </button>
         <button id="sidebarMorningLate" class="sidebar-link" type="button">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-clock"/></svg>
+          <i class="fas fa-clock" aria-hidden="true"></i>
           <span>تسجيل التأخير الصباحي</span>
         </button>
       </div>
@@ -1004,35 +1005,35 @@
         <!-- جدولي / جدولي الأسبوعي only show for an admin who also teaches
              (has classes) — they open Teachers/user.html's own sections. -->
         <button id="sidebarMySchedule" class="sidebar-link" type="button" hidden>
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-calendar-day"/></svg>
+          <i class="fas fa-calendar-day" aria-hidden="true"></i>
           <span>جدولي</span>
         </button>
         <button id="sidebarMyWeek" class="sidebar-link" type="button" hidden>
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-calendar-week"/></svg>
+          <i class="fas fa-calendar-week" aria-hidden="true"></i>
           <span>جدولي الأسبوعي</span>
         </button>
         <button id="sidebarDeptSchedules" class="sidebar-link" type="button">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-class"/></svg>
+          <i class="fas fa-users-rectangle" aria-hidden="true"></i>
           <span>جداول الأقسام</span>
         </button>
         <button id="sidebarTeacherSchedules" class="sidebar-link" type="button">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-teacher"/></svg>
+          <i class="fas fa-chalkboard-user" aria-hidden="true"></i>
           <span>جداول المعلمين</span>
         </button>
         <button id="sidebarSchoolSchedule" class="sidebar-link" type="button">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-grid"/></svg>
+          <i class="fas fa-table-cells" aria-hidden="true"></i>
           <span>جدول المدرسة</span>
         </button>
         <button id="sidebarClassSchedules" class="sidebar-link" type="button">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-board"/></svg>
+          <i class="fas fa-chalkboard" aria-hidden="true"></i>
           <span>جداول الصفوف</span>
         </button>
         <button id="sidebarSchedules" class="sidebar-link" type="button">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-calendar-days"/></svg>
+          <i class="fas fa-calendar-days" aria-hidden="true"></i>
           <span>تعديل الجداول</span>
         </button>
         <button id="sidebarDeptBudgets" class="sidebar-link" type="button">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-clipboard-list"/></svg>
+          <i class="fas fa-clipboard-list" aria-hidden="true"></i>
           <span>ميزانيات الأقسام</span>
         </button>
       </div>
@@ -1040,15 +1041,15 @@
       <div class="sidebar-group">
         <div class="sidebar-section-label">الإجراءات السريعة</div>
         <button id="sidebarTeachers" class="sidebar-link" type="button">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-teacher"/></svg>
+          <i class="fas fa-chalkboard-user" aria-hidden="true"></i>
           <span>المعلمون</span>
         </button>
         <button id="sidebarStudents" class="sidebar-link" type="button">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-school"/></svg>
+          <i class="fas fa-school" aria-hidden="true"></i>
           <span>الطلاب</span>
         </button>
         <button id="sidebarNotifications" class="sidebar-link" type="button">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-bell"/></svg>
+          <i class="fas fa-bell" aria-hidden="true"></i>
           <span>الإشعارات</span>
         </button>
       </div>
@@ -1058,7 +1059,7 @@
           <span>إعدادات المستخدم</span>
         </button>
         <button id="sidebarLogout" class="sidebar-link" type="button">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-logout"/></svg>
+          <i class="fas fa-right-from-bracket" aria-hidden="true"></i>
           <span>تسجيل الخروج</span>
         </button>
       </div>
@@ -1148,7 +1149,7 @@
               <span id="todayGreeting" class="today-greeting">أهلًا بك</span>
               <span id="todayDate" class="today-date">—</span>
             </span>
-            <span class="today-open">التفاصيل<svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-chevron-left"/></svg></span>
+            <span class="today-open">التفاصيل<i class="fas fa-chevron-left" aria-hidden="true"></i></span>
           </span>
           <span class="today-main">
             <span id="todayRing" class="today-ring" style="--p:0">
@@ -1165,31 +1166,31 @@
               <span class="today-lessons-label">الحصص المسجّلة اليوم</span>
               <b id="todayTaken" class="stat-num">—</b>
               <span id="todayMissed" class="today-missed" hidden>
-                <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-alert-triangle"/></svg><span id="todayMissedText"></span>
+                <i class="fas fa-triangle-exclamation" aria-hidden="true"></i><span id="todayMissedText"></span>
               </span>
               <span id="todayAllGood" class="today-allgood" hidden>
-                <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-check-circle"/></svg><span>لا توجد حصص فائتة</span>
+                <i class="fas fa-circle-check" aria-hidden="true"></i><span>لا توجد حصص فائتة</span>
               </span>
             </span>
           </span>
           <span class="today-stats">
             <span class="today-stat present">
-              <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-user-check"/></svg>
+              <i class="fas fa-user-check" aria-hidden="true"></i>
               <b id="statPresent" class="stat-num">—</b>
               <span>حاضرون</span>
             </span>
             <span class="today-stat absent">
-              <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-user-x"/></svg>
+              <i class="fas fa-user-xmark" aria-hidden="true"></i>
               <b id="statAbsent" class="stat-num">—</b>
               <span>غائبون</span>
             </span>
             <span class="today-stat late">
-              <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-user-clock"/></svg>
+              <i class="fas fa-user-clock" aria-hidden="true"></i>
               <b id="statLate" class="stat-num">—</b>
               <span>متأخرون</span>
             </span>
             <span class="today-stat morning">
-              <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-sun"/></svg>
+              <i class="fas fa-sun" aria-hidden="true"></i>
               <b id="statMorning" class="stat-num">—</b>
               <span>تأخير الصبح</span>
             </span>
@@ -1205,43 +1206,43 @@
         <h2 class="dash-section-title">الإجراءات السريعة</h2>
         <div class="dash-grid" role="group" aria-label="أوامر الإدارة">
           <button id="openAbsence" class="dash-tile primary wide" type="button" aria-label="الغياب">
-            <svg class="ic dash-icon" aria-hidden="true"><use href="/shared/icons.svg#i-clipboard-list"/></svg>
+            <i class="fas fa-clipboard-list dash-icon" aria-hidden="true"></i>
             <span class="dash-text">
               <span class="dash-title">الغياب</span>
               <span class="dash-sub">غياب اليوم، المختصر، والتدقيق</span>
             </span>
-            <svg class="ic dash-chev" aria-hidden="true"><use href="/shared/icons.svg#i-chevron-left"/></svg>
+            <i class="fas fa-chevron-left dash-chev" aria-hidden="true"></i>
           </button>
           <button id="openTeachers" class="dash-tile" type="button" aria-label="إدارة المعلمين">
-            <svg class="ic dash-icon" aria-hidden="true"><use href="/shared/icons.svg#i-teacher"/></svg>
+            <i class="fas fa-chalkboard-user dash-icon" aria-hidden="true"></i>
             <span class="dash-text">
               <span class="dash-title">المعلمون</span>
               <span class="dash-sub">الحسابات والبيانات</span>
             </span>
           </button>
           <button id="openClasses" class="dash-tile" type="button" aria-label="الطلاب">
-            <svg class="ic dash-icon" aria-hidden="true"><use href="/shared/icons.svg#i-school"/></svg>
+            <i class="fas fa-school dash-icon" aria-hidden="true"></i>
             <span class="dash-text">
               <span class="dash-title">الطلاب</span>
               <span class="dash-sub">فصول المدرسة</span>
             </span>
           </button>
           <button id="openSchedules" class="dash-tile" type="button" aria-label="جدول المدرسة">
-            <svg class="ic dash-icon" aria-hidden="true"><use href="/shared/icons.svg#i-calendar-days"/></svg>
+            <i class="fas fa-calendar-days dash-icon" aria-hidden="true"></i>
             <span class="dash-text">
               <span class="dash-title">جدول المدرسة</span>
               <span class="dash-sub">الجدول الأسبوعي</span>
             </span>
           </button>
           <button id="openSchoolSchedule" class="dash-tile" type="button" aria-label="الجداول">
-            <svg class="ic dash-icon" aria-hidden="true"><use href="/shared/icons.svg#i-grid"/></svg>
+            <i class="fas fa-table-cells dash-icon" aria-hidden="true"></i>
             <span class="dash-text">
               <span class="dash-title">الجداول</span>
               <span class="dash-sub">كل المعلمين والحصص</span>
             </span>
           </button>
           <button id="openNotifications" class="dash-tile wide-sm" type="button" aria-label="الإشعارات">
-            <svg class="ic dash-icon" aria-hidden="true"><use href="/shared/icons.svg#i-bell"/></svg>
+            <i class="fas fa-bell dash-icon" aria-hidden="true"></i>
             <span class="dash-text">
               <span class="dash-title">الإشعارات</span>
               <span class="dash-sub">إرسال ومتابعة</span>
@@ -1252,7 +1253,7 @@
         <div class="dash-utility" role="group" aria-label="الحساب">
           <div id="telegramSettingsSlot"></div>
           <button id="logoutBtn" class="dash-row danger" type="button" aria-label="تسجيل الخروج">
-            <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-logout"/></svg>
+            <i class="fas fa-right-from-bracket" aria-hidden="true"></i>
             <span>تسجيل الخروج</span>
           </button>
         </div>
@@ -1271,24 +1272,24 @@
       </div>
       <div class="absence-modal-body">
         <button id="todayAbsenceBtn" class="absence-opt primary" type="button">
-          <span class="opt-icon"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-calendar-day"/></svg></span>
+          <span class="opt-icon"><i class="fas fa-calendar-day" aria-hidden="true"></i></span>
           <span class="opt-label">الغياب اليوم</span>
-          <svg class="ic opt-chevron" aria-hidden="true"><use href="/shared/icons.svg#i-chevron-left"/></svg>
+          <i class="fas fa-chevron-left opt-chevron" aria-hidden="true"></i>
         </button>
         <button id="overallAbsenceBtn" class="absence-opt" type="button">
-          <span class="opt-icon"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-list-check"/></svg></span>
+          <span class="opt-icon"><i class="fas fa-list-check" aria-hidden="true"></i></span>
           <span class="opt-label">الغياب المختصر</span>
-          <svg class="ic opt-chevron" aria-hidden="true"><use href="/shared/icons.svg#i-chevron-left"/></svg>
+          <i class="fas fa-chevron-left opt-chevron" aria-hidden="true"></i>
         </button>
         <button id="detailedAbsenceBtn" class="absence-opt" type="button">
-          <span class="opt-icon"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-search"/></svg></span>
+          <span class="opt-icon"><i class="fas fa-magnifying-glass" aria-hidden="true"></i></span>
           <span class="opt-label">تدقيق في الغائب</span>
-          <svg class="ic opt-chevron" aria-hidden="true"><use href="/shared/icons.svg#i-chevron-left"/></svg>
+          <i class="fas fa-chevron-left opt-chevron" aria-hidden="true"></i>
         </button>
         <button id="morningLateBtn" class="absence-opt" type="button">
-          <span class="opt-icon"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-clock"/></svg></span>
+          <span class="opt-icon"><i class="fas fa-clock" aria-hidden="true"></i></span>
           <span class="opt-label">تسجيل التأخير الصباحي</span>
-          <svg class="ic opt-chevron" aria-hidden="true"><use href="/shared/icons.svg#i-chevron-left"/></svg>
+          <i class="fas fa-chevron-left opt-chevron" aria-hidden="true"></i>
         </button>
       </div>
       <div class="absence-modal-foot">
@@ -1306,24 +1307,24 @@
       </div>
       <div class="absence-modal-body">
         <button id="schedOptDept" class="absence-opt primary" type="button">
-          <span class="opt-icon"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-class"/></svg></span>
+          <span class="opt-icon"><i class="fas fa-users-rectangle" aria-hidden="true"></i></span>
           <span class="opt-label">جداول الأقسام</span>
-          <svg class="ic opt-chevron" aria-hidden="true"><use href="/shared/icons.svg#i-chevron-left"/></svg>
+          <i class="fas fa-chevron-left opt-chevron" aria-hidden="true"></i>
         </button>
         <button id="schedOptTeachers" class="absence-opt" type="button">
-          <span class="opt-icon"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-teacher"/></svg></span>
+          <span class="opt-icon"><i class="fas fa-chalkboard-user" aria-hidden="true"></i></span>
           <span class="opt-label">جداول المعلمين</span>
-          <svg class="ic opt-chevron" aria-hidden="true"><use href="/shared/icons.svg#i-chevron-left"/></svg>
+          <i class="fas fa-chevron-left opt-chevron" aria-hidden="true"></i>
         </button>
         <button id="schedOptSchool" class="absence-opt" type="button">
-          <span class="opt-icon"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-grid"/></svg></span>
+          <span class="opt-icon"><i class="fas fa-table-cells" aria-hidden="true"></i></span>
           <span class="opt-label">جدول المدرسة</span>
-          <svg class="ic opt-chevron" aria-hidden="true"><use href="/shared/icons.svg#i-chevron-left"/></svg>
+          <i class="fas fa-chevron-left opt-chevron" aria-hidden="true"></i>
         </button>
         <button id="schedOptClasses" class="absence-opt" type="button">
-          <span class="opt-icon"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-board"/></svg></span>
+          <span class="opt-icon"><i class="fas fa-chalkboard" aria-hidden="true"></i></span>
           <span class="opt-label">جداول الصفوف</span>
-          <svg class="ic opt-chevron" aria-hidden="true"><use href="/shared/icons.svg#i-chevron-left"/></svg>
+          <i class="fas fa-chevron-left opt-chevron" aria-hidden="true"></i>
         </button>
       </div>
       <div class="absence-modal-foot">
@@ -1805,7 +1806,7 @@
     // home screen's account row uses.
     {
       const tgBtn = document.getElementById('telegramSettingsBtn');
-      if(tgBtn) tgBtn.innerHTML = '<svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-settings"/></svg><span>إعدادات المستخدم</span>';
+      if(tgBtn) tgBtn.innerHTML = '<i class="fas fa-gear" aria-hidden="true"></i><span>إعدادات المستخدم</span>';
     }
 
     // NEW: Absence modal refs
@@ -2937,7 +2938,7 @@
         btn.type = 'button';
         btn.setAttribute('aria-label', `تسجيل الحضور — ${classKey}`);
         btn.innerHTML = `
-          <svg class="ic dash-icon" aria-hidden="true"><use href="/shared/icons.svg#i-board"/></svg>
+          <i class="fas fa-chalkboard dash-icon" aria-hidden="true"></i>
           <span class="dash-text">
             <span class="dash-title">${toArabicDigits(classKey)}</span>
             <span class="dash-sub">تسجيل الحضور</span>
