@@ -117,21 +117,21 @@ function ensureStyles() {
     }
     /* Important variant — red glow */
     #${HOST_ID}.anp-important .anp-dialog {
-      border-color: rgba(220, 38, 38, 0.30);
+      border-color: rgba(180, 35, 24, 0.30);
       background: linear-gradient(180deg, #fff8f8 0%, #fff 100%);
       box-shadow:
         0 28px 60px rgba(185, 28, 28, .22),
-        0 0 0 1px rgba(220, 38, 38, .10),
-        0 0 55px rgba(220, 38, 38, .14);
+        0 0 0 1px rgba(180, 35, 24, .10),
+        0 0 55px rgba(180, 35, 24, .14);
     }
     #${HOST_ID}.anp-important .anp-badge {
       background: rgba(185, 28, 28, .10);
-      color: #b91c1c;
+      color: #b42318;
     }
     #${HOST_ID}.anp-important .anp-title { color: #7f1d1d; }
     #${HOST_ID}.anp-important .anp-text  { color: #7c2828; }
     #${HOST_ID}.anp-important .anp-close {
-      background: linear-gradient(145deg, #b91c1c, #dc2626);
+      background: linear-gradient(145deg, #b42318, #b42318);
       box-shadow: 0 14px 32px rgba(185, 28, 28, .35);
     }
     #${HOST_ID}.anp-important .anp-close:hover {

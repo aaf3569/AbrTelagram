@@ -22,7 +22,7 @@ const STYLE_ID = "snp-styles";
 
 const CSS_TEXT = `
 .snp-overlay{
-  --snp-primary:var(--primary, #0b4a63);
+  --snp-primary:var(--primary, #033C54);
   --snp-primary-deep:var(--primary-2, var(--primary-light, #083648));
   --snp-primary-soft:#e3eef2;
   --snp-ground:#f2f5f7; --snp-text:#13232e; --snp-muted:#66798a;

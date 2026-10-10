@@ -20,35 +20,35 @@
   <title>القسم - ثانوية أحمد البشر الرومي</title>
 
   <!-- Tajawal -->
-  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@600;700&family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet"/>
   <script src="/shared/arabic-text-fix.js" defer></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
 
   <link rel="stylesheet" href="/shared/base.css" />
   <style>
     :root{
-      --primary:#022b42;
-      --primary-2:#044563;
-      --primary-light: rgba(2, 43, 66, 0.08);
+      --primary:#033C54;
+      --primary-2:#065372;
+      --primary-light: rgba(3, 60, 84, 0.08);
 
-      --page:#f8fafc;
+      --page:#f6f8fb;
       --card-bg:#ffffff;
 
       --text:#0f172a;
-      --muted:#64748b;
+      --muted:#6b7f9f;
 
-      --border:#e2e8f0;
+      --border:#e6edf7;
       --border-light:#f1f5f9;
 
       --radius:16px;
       --radius-sm:12px;
 
-      --shadow-1:0 4px 12px rgba(2,43,66,.08);
-      --shadow-2:0 12px 28px rgba(2,43,66,.12);
+      --shadow-1:0 4px 12px rgba(3,60,84,.08);
+      --shadow-2:0 12px 28px rgba(3,60,84,.12);
 
-      --success:#10b981;
-      --danger:#ef4444;
-      --warning:#f59e0b;
+      --success:#1a7f37;
+      --danger:#b42318;
+      --warning:#a06d00;
 
       --transition: transform .12s ease, box-shadow .12s ease, background-color .12s ease, border-color .12s ease, color .12s ease, opacity .12s ease;
     }
@@ -57,7 +57,8 @@
     html, body{ height:100%; }
 
     /* Force Tajawal everywhere */
-    body, button, input, textarea, select, .btn, .chip, .tbtn, .cbtn, .stat, .card, .muted {
+    /* Buttons (.btn) and titles take the heading font from /shared/identity.css. */
+    body, input, textarea, select, .chip, .tbtn, .cbtn, .stat, .card, .muted {
       font-family:"Tajawal", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif !important;
     }
 
@@ -77,8 +78,8 @@
       background: rgba(255,255,255,0.85);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
-      border-bottom:1px solid rgba(2,43,66,0.10);
-      box-shadow: 0 2px 10px rgba(2,43,66,0.06);
+      border-bottom:1px solid rgba(3,60,84,0.10);
+      box-shadow: 0 2px 10px rgba(3,60,84,0.06);
       padding: 14px 18px;
     }
     .header-container{
@@ -90,25 +91,26 @@
     }
     .header-side{ display:flex; align-items:center; }
     .header-side.end{ justify-content:flex-end; }
+    /* The page title: /shared/identity.css's scale. */
     .dept-label{
       justify-self:center;
-      font-weight:900;
+      font-family:var(--font-heading);
+      font-weight:700;
       color:var(--primary);
-      font-size:1.15rem;
+      font-size:clamp(1.15rem, 2.6vw, 1.45rem);
       text-align:center;
       white-space:nowrap;
       overflow:hidden;
       text-overflow:ellipsis;
     }
 
+    /* Height, corners, font and the solid / ghost / danger colours:
+       /shared/identity.css. */
     .btn{
-      height:44px;
       padding:0 16px;
-      border-radius: var(--radius-sm);
-      border:1px solid rgba(2,43,66,0.20);
+      border:1px solid rgba(3,60,84,0.20);
       background: var(--card-bg);
       color: var(--primary);
-      font-weight:900;
       cursor:pointer;
       box-shadow: var(--shadow-1);
       transition: var(--transition);
@@ -118,18 +120,9 @@
       font-size: 0.9rem;
       position:relative;
     }
-    .btn:hover{ transform: translateY(-2px); box-shadow: var(--shadow-2); border-color: rgba(2,43,66,0.35); }
+    .btn:hover{ transform: translateY(-2px); box-shadow: var(--shadow-2); border-color: rgba(3,60,84,0.35); }
     .btn:active{ transform: translateY(0); }
     .btn[disabled]{ opacity:.6; cursor:not-allowed; transform:none; }
-    .btn.solid{
-      background: linear-gradient(135deg, var(--primary-2), var(--primary));
-      border-color: rgba(2,43,66,0.15);
-      color: #fff;
-    }
-    .btn.ghost{
-      background: rgba(2,43,66,0.04);
-      border-color: rgba(2,43,66,0.14);
-    }
     .btn.loading::after{
       content:"";
       width:10px; height:10px;
@@ -167,7 +160,7 @@
     }
     @media (max-width: 420px){
       .btn span{ display:none; }
-      .btn{ width:44px; padding:0; justify-content:center; }
+      .btn{ width:48px; padding:0; justify-content:center; }
     }
 
     /* ===== Teacher management (ported from admins/teachers.html, remapped
@@ -182,7 +175,7 @@
       display:flex; align-items:center; justify-content:space-between;
       cursor:pointer; transition:var(--transition);
     }
-    .teacher-item:hover{ transform:translateY(-2px); box-shadow:var(--shadow-2); border-color:rgba(2,43,66,.3); }
+    .teacher-item:hover{ transform:translateY(-2px); box-shadow:var(--shadow-2); border-color:rgba(3,60,84,.3); }
     .teacher-sub{ font-size:.86rem; color:var(--muted); font-weight:700; }
     .presence-dot{ width:9px; height:9px; border-radius:50%; background:#c3ccd6; flex-shrink:0; box-shadow:0 0 0 2px var(--card-bg); }
     .presence-dot.online{ background:#22c55e; }
@@ -195,7 +188,7 @@
     .sheet.open{ transform:translateX(0); }
     .sheet-header{ background:var(--card-bg); border-bottom:1px solid var(--border); padding:14px 12px; display:flex; align-items:center; gap:10px; position:sticky; top:0; z-index:10; }
     /* .back-btn: /shared/back-button.css */
-    .sheet-title{ margin:0; font-size:1.05rem; font-weight:900; color:var(--primary); }
+    .sheet-title{ margin:0; color:var(--primary); }
     .sheet-body{ flex:1 1 auto; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:16px; width:min(760px,94vw); margin:0 auto; display:flex; flex-direction:column; gap:12px; }
 
     /* Form primitives */
@@ -204,8 +197,8 @@
     .input{ flex:1; height:48px; border:none; outline:none; background:transparent; font-size:16px; color:var(--text); min-width:0; }
     .input:disabled{ color:var(--text); opacity:1; cursor:default; }
     .input-wrap.password-field{ padding-inline-end:8px; }
-    .eye-toggle{ width:38px; height:38px; border-radius:10px; border:1px solid rgba(2,43,66,.2); background:var(--card-bg); color:var(--muted); display:inline-flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; font-weight:900; }
-    .eye-toggle:hover{ border-color:rgba(2,43,66,.4); color:var(--primary); }
+    .eye-toggle{ width:38px; height:38px; border-radius:10px; border:1px solid rgba(3,60,84,.2); background:var(--card-bg); color:var(--muted); display:inline-flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; font-weight:900; }
+    .eye-toggle:hover{ border-color:rgba(3,60,84,.4); color:var(--primary); }
     .eye-toggle:disabled{ opacity:.5; cursor:not-allowed; }
     .eye-toggle.is-revealed{ color:#0f766e; border-color:rgba(15,118,110,.45); }
     .plain-value{ padding:2px 0 8px; color:var(--text); font-weight:900; min-height:30px; font-size:.95rem; line-height:1.8; overflow-wrap:anywhere; word-break:break-word; }
@@ -217,9 +210,9 @@
     .classes-list{ display:flex; flex-direction:column; gap:10px; }
     .class-row{ display:flex; flex-direction:column; gap:8px; border:1px dashed var(--border); border-radius:14px; padding:10px; background:var(--page); }
     .class-row .top{ display:flex; gap:10px; align-items:center; }
-    .class-row .remove{ height:40px; padding:0 12px; border-radius:10px; border:1px solid rgba(239,68,68,.35); color:var(--danger); background:var(--card-bg); font-weight:800; cursor:pointer; }
+    .class-row .remove{ height:40px; padding:0 12px; border-radius:10px; border:1px solid rgba(180,35,24,.35); color:var(--danger); background:var(--card-bg); font-weight:800; cursor:pointer; }
     .inline-add{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
-    .inline-add .add{ height:44px; padding:0 16px; border-radius:12px; border:1px solid rgba(2,43,66,.3); background:var(--card-bg); color:var(--primary); font-weight:900; cursor:pointer; box-shadow:var(--shadow-1); }
+    .inline-add .add{ height:44px; padding:0 16px; border-radius:12px; border:1px solid rgba(3,60,84,.3); background:var(--card-bg); color:var(--primary); font-weight:900; cursor:pointer; box-shadow:var(--shadow-1); }
     /* View mode: one big tappable row per class (opens its students and
        this teacher's notes). The edit mode has its own editor instead. */
     .class-chips{ display:grid; gap:10px; }
@@ -229,8 +222,8 @@
       border:1px solid var(--border); border-radius:14px; background:var(--card-bg); box-shadow:var(--shadow-1);
       color:var(--text); font-family:inherit; text-align:start; cursor:pointer; transition:var(--transition);
     }
-    .class-chip:hover{ transform:translateY(-2px); border-color:rgba(2,43,66,.35); box-shadow:var(--shadow-2); }
-    .class-chip-icon{ width:44px; height:44px; flex-shrink:0; border-radius:12px; display:grid; place-items:center; background:linear-gradient(145deg,var(--primary-2),var(--primary)); color:#fff; font-size:1.05rem; box-shadow:0 8px 18px rgba(2,43,66,.22); }
+    .class-chip:hover{ transform:translateY(-2px); border-color:rgba(3,60,84,.35); box-shadow:var(--shadow-2); }
+    .class-chip-icon{ width:44px; height:44px; flex-shrink:0; border-radius:12px; display:grid; place-items:center; background:linear-gradient(145deg,var(--primary-2),var(--primary)); color:#fff; font-size:1.05rem; box-shadow:0 8px 18px rgba(3,60,84,.22); }
     .class-chip-text{ display:grid; gap:2px; flex:1; min-width:0; }
     .class-chip-name{ font-size:1.25rem; font-weight:900; color:var(--primary); line-height:1.2; }
     .class-chip-sub{ font-size:.82rem; font-weight:700; color:var(--muted); }
@@ -246,7 +239,7 @@
     .profile-shell{ display:flex; flex-direction:column; gap:12px; }
     .profile-hero{ display:flex; align-items:center; justify-content:space-between; gap:14px; padding:14px; border:1px solid var(--border); border-radius:16px; background:linear-gradient(180deg,var(--card-bg),var(--page)); box-shadow:var(--shadow-1); }
     .profile-head{ display:flex; align-items:center; gap:12px; min-width:0; }
-    .avatar{ width:56px; height:56px; border-radius:50%; display:grid; place-items:center; background:linear-gradient(180deg,var(--primary-2),var(--primary)); color:#fff; font-weight:900; font-size:1.08rem; box-shadow:0 10px 24px rgba(2,43,66,.28); flex-shrink:0; }
+    .avatar{ width:56px; height:56px; border-radius:50%; display:grid; place-items:center; background:linear-gradient(180deg,var(--primary-2),var(--primary)); color:#fff; font-weight:900; font-size:1.08rem; box-shadow:0 10px 24px rgba(3,60,84,.28); flex-shrink:0; }
     .profile-name-wrap{ min-width:0; }
     .profile-name{ font-weight:900; font-size:1.02rem; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .profile-email{ font-size:.88rem; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -257,7 +250,7 @@
     .info-grid{ display:grid; grid-template-columns:1fr; gap:10px; }
     .profile-actions{ display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; }
     .profile-actions-group{ display:flex; gap:10px; flex-wrap:wrap; }
-    .btn.danger{ background:var(--card-bg); color:var(--danger); border:1px solid rgba(239,68,68,.4); box-shadow:var(--shadow-1); }
+    .btn.danger{ box-shadow:var(--shadow-1); }
     /* Several elements on this page (.field, .btn, ...) set their own
        display:flex/inline-flex, which — being an author rule — outranks the
        browser's default [hidden]{display:none} (a UA-stylesheet rule, the
@@ -309,7 +302,7 @@
     }
     .sidebar-backdrop.open{ opacity:1; pointer-events:auto; }
     .sidebar{
-      --primary:#022b42; --primary-light:#044563; --text:#0f172a; --muted:#64748b; --border:#e2e8f0;
+      --primary:#033C54; --primary-light:#065372; --text:#0f172a; --muted:#6b7f9f; --border:#e6edf7;
       --shadow-1:0 8px 22px rgba(3,60,84,.14);
       position:fixed; top:0; right:0; bottom:0; z-index:96;
       width:min(320px, 86vw); background:#fff;
@@ -321,7 +314,7 @@
     .sidebar.open{ transform:translateX(0); visibility:visible; }
     .sidebar-head{
       position:relative; padding:16px; display:flex; flex-direction:column; align-items:center; gap:12px; text-align:center;
-      background:linear-gradient(135deg, #044563, #022b42); color:#fff; flex-shrink:0;
+      background:linear-gradient(135deg, #065372, #033C54); color:#fff; flex-shrink:0;
     }
     .sidebar-school-logo{ display:block; width:120px; max-width:calc(100% - 80px); height:auto; object-fit:contain; }
     .sidebar-head h2{ margin:0; font-size:clamp(.74rem,4.3vw,.98rem); font-weight:900; display:flex; align-items:baseline; gap:7px; min-width:0; overflow:hidden; }
@@ -374,9 +367,9 @@
       border-radius:12px; border:none; cursor:pointer;
       background:linear-gradient(145deg, var(--primary-light), var(--primary));
       color:#fff; font-weight:900; font-size:.92rem;
-      box-shadow:0 10px 22px rgba(2,43,66,.24); transition:var(--transition);
+      box-shadow:0 10px 22px rgba(3,60,84,.24); transition:var(--transition);
     }
-    .sidebar-class-btn:hover{ transform:translateY(-2px); box-shadow:0 14px 28px rgba(2,43,66,.3); }
+    .sidebar-class-btn:hover{ transform:translateY(-2px); box-shadow:0 14px 28px rgba(3,60,84,.3); }
     .sidebar .fas, .sidebar .fa-solid{ font-family:"Font Awesome 6 Free" !important; font-weight:900; }
     #btnSidebarToggle{ width:44px; padding:0; justify-content:center; font-size:1.05rem; }
   </style>
@@ -404,7 +397,8 @@
   <meta name="twitter:title" content="القسم - ثانوية أحمد البشر الرومي">
   <meta name="twitter:description" content="???? ?????? ???? ????? ??????.">
   <meta name="twitter:image" content="https://framerusercontent.com/images/jRnZLlPr90qwKsuUwfIlvDS9E.png?width=1200&height=630">
-  <!-- After the page's own styles, so the one back button wins. -->
+  <!-- After the page's own styles, so the site's identity (titles, buttons) and the one back button win. -->
+  <link rel="stylesheet" href="/shared/identity.css" />
   <link rel="stylesheet" href="/shared/back-button.css" />
   <link rel="stylesheet" href="/shared/actions.css" />
   <script src="/shared/feedback.js" defer></script>
@@ -623,7 +617,7 @@
         <p class="delete-confirm-text">هل تريد حذف المعلّم <strong id="dtName"></strong> نهائيًا؟ سيُحذف ملفه وحساب دخوله، ولا يمكن التراجع عن هذا الإجراء.</p>
         <div id="dtErr" class="err"></div>
       </div>
-      <div class="modal-footer"><button id="cancelDeleteTeacher" class="btn ghost" type="button">إلغاء</button><button id="confirmDeleteTeacher" class="btn danger" type="button">حذف نهائيًا</button></div>
+      <div class="modal-footer"><button id="cancelDeleteTeacher" class="btn ghost" type="button">إلغاء</button><button id="confirmDeleteTeacher" class="btn danger confirm-delete" type="button">حذف نهائيًا</button></div>
     </div>
   </div>
 
@@ -692,8 +686,8 @@
       doc, getDoc, setDoc, updateDoc, deleteField, writeBatch, serverTimestamp
     } from "/shared/firebase.js";
     import { watchPresence, startPresenceHeartbeat } from "/shared/presence.js";
-    import { mountStudentNotesSheet } from "/shared/student-notes-sheet.js?v=2026-10-13";
-    import { mountTeacherClassSheet } from "/shared/teacher-class-sheet.js?v=2026-10-12d";
+    import { mountStudentNotesSheet } from "/shared/student-notes-sheet.js?v=2026-10-14";
+    import { mountTeacherClassSheet } from "/shared/teacher-class-sheet.js?v=2026-10-14d";
     import { fetchClassList, sortClassList, primeClassList } from "/shared/class-registry.js";
     import { resolveDepartmentName, getDepartmentSubjectFilters, isMergedDepartment, getMergedSubjectsForDepartment } from "/shared/departments.js";
     import { isTruthyFlag, canManageAttendance } from "/shared/auth-guard.js";

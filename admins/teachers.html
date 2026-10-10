@@ -17,7 +17,7 @@
 <link rel="modulepreload" href="/shared/firebase.js">
 <link rel="modulepreload" href="/shared/presence.js">
   <title>إدارة المعلّمين - ثانوية أحمد البشر الرومي</title>
-  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@600;700&family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet"/>
   <script src="/shared/arabic-text-fix.js" defer></script>
 
   <!-- iOS home screen icon -->
@@ -51,7 +51,8 @@
     html,body{height:100%;margin:0;padding:0}
     body{background:var(--page);color:var(--text);font-family:"Tajawal", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;display:flex;flex-direction:column;min-height:100vh}
     .site-header{position:sticky;top:0;z-index:10;background:rgba(255,255,255,.68);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);color:var(--primary);padding:16px 20px;display:flex;align-items:center;justify-content:center;border-bottom:1px solid rgba(3,60,84,.08);box-shadow:0 2px 10px rgba(3,60,84,.06)}
-    .site-title{margin:0;font-weight:900;letter-spacing:.2px;font-size:clamp(1.1rem,2.4vw,1.5rem)}
+    /* Font, size and weight: /shared/identity.css. */
+    .site-title{margin:0}
     /* Look: /shared/back-button.css; only the position lives here. */
     .header-admin-back{position:absolute;top:50%;right:20px;margin-top:-20px}
     @media (max-width:700px){.header-admin-back{right:12px}}
@@ -64,11 +65,12 @@
     @keyframes spin{to{transform:rotate(360deg)}}
     .error{color:#a11;background:#fde8e8;border:1px solid #f5c5c5;padding:12px;border-radius:14px}
     .muted{color:var(--muted)}
-    .btn{font-family:"Tajawal", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;height:52px;border:none;border-radius:14px;cursor:pointer;font-weight:900;font-size:.98rem;padding:0 16px;transition:.14s ease}
+    /* Height, corners, font and colours: /shared/identity.css. */
+    .btn{border:none;cursor:pointer;font-size:.98rem;padding:0 16px;transition:.14s ease}
     .btn:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
-    .btn.primary{background:linear-gradient(180deg,#065372,#033C54);color:#fff;box-shadow:0 12px 28px rgba(3,60,84,.26)}
-    .btn.ghost{background:#fff;color:#033C54;border:1px solid rgba(3,60,84,.35);box-shadow:var(--shadow-1)}
-    .btn.danger{background:#fff;color:#cb2b2b;border:1px solid rgba(203,43,43,.4);box-shadow:var(--shadow-1)}
+    .btn.primary{box-shadow:0 12px 28px rgba(3,60,84,.26)}
+    .btn.ghost{box-shadow:var(--shadow-1)}
+    .btn.danger{box-shadow:var(--shadow-1)}
     .subject{width:100%;background:#fff;border:1px solid #d6e4f2;border-radius:14px;padding:15px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;box-shadow:0 3px 10px rgba(3,60,84,.06);color:#0f2743;font-weight:800;transition:transform .14s ease, box-shadow .14s ease, border-color .14s ease}
     .subject:hover{transform:translateY(-2px);box-shadow:0 12px 24px rgba(3,60,84,.12);border-color:#a3bfd8}
     .subject:active{transform:translateY(0);box-shadow:0 5px 12px rgba(3,60,84,.09)}
@@ -94,7 +96,7 @@
     .sheet.open{transform:translateX(0)}
     .sheet-header{background:#fff;border-bottom:1px solid var(--border);padding:14px 12px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10}
     /* .back-btn: /shared/back-button.css */
-    .sheet-title{margin:0;font-size:1.05rem;font-weight:900;color:#033C54}
+    .sheet-title{margin:0;color:#033C54}
     .sheet-body{flex:1 1 auto;overflow:auto;padding:16px;width:min(820px,94vw);margin:0 auto;display:flex;flex-direction:column;gap:12px}
     .sheet.small .sheet-body{width:min(620px,94vw)}
     body.teacher-route-active main, body.teacher-route-active #subjectSheet{display:none !important}
@@ -104,7 +106,7 @@
     .label{font-size:.92rem;font-weight:800;color:#0f2743}
     .field-hint{font-size:.82rem;font-weight:700;color:#a35b00;margin-top:2px}
     .delete-confirm-text{margin:0;color:#334155;font-weight:700;line-height:1.8}
-    .delete-confirm-text strong{color:#cb2b2b}
+    .delete-confirm-text strong{color:#b42318}
     .input-wrap{display:flex;align-items:center;gap:10px;min-height:52px;padding:0 14px;background:#fff;border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-1);overflow:hidden}
     .input{flex:1;height:48px;border:none;outline:none;background:transparent;font-size:16px;color:#0a0a0a;font-family:"Tajawal", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;min-width:0}
     .input:disabled{color:#334155;opacity:1;cursor:default}
@@ -119,7 +121,7 @@
     .checkbox-wrap{display:flex;align-items:center;gap:10px}
     .ok,.err{padding:12px;border-radius:14px;margin-top:6px;font-size:.9rem;box-shadow:var(--shadow-1);display:none}
     .ok{color:#126a2e;background:#e6f6ea;border:1px solid #c7ebd0}.err{color:#a12;background:#fde8e8;border:1px solid #f5c5c5}
-    .classes-list{display:flex;flex-direction:column;gap:10px}.class-row{display:flex;flex-direction:column;gap:8px;border:1px dashed var(--border);border-radius:14px;padding:10px;background:#fcfeff}.class-row .top{display:flex;gap:10px;align-items:center}.class-row .remove{height:40px;padding:0 12px;border-radius:10px;border:1px solid rgba(203,43,43,.35);color:#cb2b2b;background:#fff;font-weight:800;cursor:pointer;font-family:"Tajawal", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif}.inline-add{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.inline-add .add{height:44px;padding:0 16px;border-radius:12px;border:1px solid rgba(3,60,84,.3);background:#fff;color:#033C54;font-weight:900;cursor:pointer;box-shadow:var(--shadow-1);font-family:"Tajawal", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif}
+    .classes-list{display:flex;flex-direction:column;gap:10px}.class-row{display:flex;flex-direction:column;gap:8px;border:1px dashed var(--border);border-radius:14px;padding:10px;background:#fcfeff}.class-row .top{display:flex;gap:10px;align-items:center}.class-row .remove{height:40px;padding:0 12px;border-radius:10px;border:1px solid rgba(180,35,24,.35);color:#b42318;background:#fff;font-weight:800;cursor:pointer;font-family:"Tajawal", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif}.inline-add{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.inline-add .add{height:44px;padding:0 16px;border-radius:12px;border:1px solid rgba(3,60,84,.3);background:#fff;color:#033C54;font-weight:900;cursor:pointer;box-shadow:var(--shadow-1);font-family:"Tajawal", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif}
     .profile-shell{display:flex;flex-direction:column;gap:12px}
     .profile-hero{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px;border:1px solid var(--border);border-radius:16px;background:linear-gradient(180deg,#ffffff,#f5fbff);box-shadow:var(--shadow-1)}
     .profile-head{display:flex;align-items:center;gap:12px;min-width:0}
@@ -180,7 +182,7 @@
     #saveTeacher:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
     .teacher-readonly .account-actions-card{display:none}
     .account-actions{display:flex;gap:10px;flex-wrap:wrap}
-    .account-actions .btn{flex:1 1 160px;height:46px}
+    .account-actions .btn{flex:1 1 160px}
     .profile-actions-card .profile-actions-group{flex:1}
     .profile-actions-card .profile-actions-group .btn{flex:1 1 0;min-width:110px}
     .teacher-editing .profile-actions-card{padding:10px 12px}
@@ -189,7 +191,7 @@
     .subject-summary{display:flex;flex-direction:column;gap:2px;min-width:0}
     .subject-summary-count{font-size:.84rem;font-weight:800;color:var(--muted)}
     .subject-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-    .subject-actions .btn{height:44px;padding:0 16px}
+    .subject-actions .btn{padding:0 16px}
 
     /* Teacher/admin rows: initials + presence dot, name with role badges,
        one tidy meta line and the presence text under it. */
@@ -435,7 +437,6 @@
       .sheet .sheet-header{
         position:static;background:transparent;border-bottom:none;padding:26px 32px 0;
       }
-      .sheet .sheet-title{font-size:1.32rem}
       /* A plain "رجوع" label reads ambiguous once a persistent sidebar
          nav exists — the icon makes clear it's a directional "back",
          and clicking it now also clears the sidebar's own highlight so
@@ -502,7 +503,8 @@
       .add-teacher-body > .add-teacher-full{grid-column:1 / -1}
     }
   </style>
-  <!-- After the page's own styles, so the one back button wins. -->
+  <!-- After the page's own styles, so the site's identity (titles, buttons) and the one back button win. -->
+  <link rel="stylesheet" href="/shared/identity.css" />
   <link rel="stylesheet" href="/shared/back-button.css" />
   <link rel="stylesheet" href="/shared/actions.css" />
   <script src="/shared/feedback.js" defer></script>
@@ -794,7 +796,7 @@
         <p class="delete-confirm-text">هل تريد حذف ملف المشرف <strong id="daName"></strong> نهائيًا؟ لا يمكن التراجع عن هذا الإجراء.</p>
         <div id="daErr" class="err"></div>
       </div>
-      <div class="modal-footer"><button id="cancelDeleteAdmin" class="btn ghost" type="button">إلغاء</button><button id="confirmDeleteAdmin" class="btn danger" type="button">حذف نهائيًا</button></div>
+      <div class="modal-footer"><button id="cancelDeleteAdmin" class="btn ghost" type="button">إلغاء</button><button id="confirmDeleteAdmin" class="btn danger confirm-delete" type="button">حذف نهائيًا</button></div>
     </div>
   </div>
 
@@ -860,7 +862,7 @@
         <p class="delete-confirm-text">هل تريد حذف ملف المعلّم <strong id="dtName"></strong> نهائيًا؟ لا يمكن التراجع عن هذا الإجراء.</p>
         <div id="dtErr" class="err"></div>
       </div>
-      <div class="modal-footer"><button id="cancelDeleteTeacher" class="btn ghost" type="button">إلغاء</button><button id="confirmDeleteTeacher" class="btn danger" type="button">حذف نهائيًا</button></div>
+      <div class="modal-footer"><button id="cancelDeleteTeacher" class="btn ghost" type="button">إلغاء</button><button id="confirmDeleteTeacher" class="btn danger confirm-delete" type="button">حذف نهائيًا</button></div>
     </div>
   </div>
 
@@ -900,8 +902,8 @@
     import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signOut, EmailAuthProvider, reauthenticateWithCredential } from "/shared/firebase.js";
     import { initializeFirestore, persistentSingleTabManager, collection, getDocs, query, where, doc, getDoc, setDoc, updateDoc, deleteField, serverTimestamp } from "/shared/firebase.js";
     import { startPresenceHeartbeat, watchPresence } from "/shared/presence.js";
-    import { mountStudentNotesSheet } from "/shared/student-notes-sheet.js?v=2026-10-13";
-    import { mountTeacherClassSheet } from "/shared/teacher-class-sheet.js?v=2026-10-12d";
+    import { mountStudentNotesSheet } from "/shared/student-notes-sheet.js?v=2026-10-14";
+    import { mountTeacherClassSheet } from "/shared/teacher-class-sheet.js?v=2026-10-14d";
     import { fetchClassList, sortClassList, primeClassList } from "/shared/class-registry.js";
     import {
       DEPARTMENTS,

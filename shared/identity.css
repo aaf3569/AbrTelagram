@@ -1,0 +1,108 @@
+/* The site's one visual identity: heading font, heading scale and the
+   standard buttons. Every page links this file after its own styles and
+   before /shared/back-button.css and /shared/actions.css; the doubled class
+   lifts it over each page's older rules without !important. Colours: the
+   primary is #033C54 (secondary #065372) — each page keeps its own token
+   names (--primary, --primary-2 / --primary-light, ...) set to these
+   values. Modules that render into a shadow root carry a copy of what they
+   need of these rules in their own sheet (department-budgets.css).
+
+   Fonts: body text stays Tajawal (/shared/base.css). Titles and button
+   labels use Readex Pro 600/700, loaded by each page's Google Fonts <link>
+   next to Tajawal (which stays the fallback).
+
+   Scale: page / site title clamp(1.15rem, 2.6vw, 1.45rem) 700 · sheet title
+   1.2rem 700 · card title 1.05rem 700 · small labels .78rem.
+
+   Buttons (.btn): 48px tall, 14px corners, Readex Pro 700.
+     .primary (or .solid)  #065372 → #033C54 gradient, white text
+     .ghost / .cancel      white, thin #033C54 border, #033C54 text
+     .danger               white, soft red border, #b42318 text
+     .danger.confirm-delete  the button that performs a delete inside a
+                           confirm dialog: filled #b42318, white text
+     .btn-menu             the large full-width menu buttons: 64px, 16px corners
+     .mini / .small        keep their own (smaller) height */
+:root {
+  --font-heading: "Readex Pro", "Tajawal", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+/* ---- Headings ---- */
+h1, h2, h3, h4,
+.site-title, .sheet-title, .modal-title, .card-title,
+.dash-section-title, .sec-title, .pop-title, .profile-card-title {
+  font-family: var(--font-heading);
+}
+
+.site-title.site-title {
+  font-size: clamp(1.15rem, 2.6vw, 1.45rem);
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.sheet-title.sheet-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.card-title.card-title,
+.card.card > h2 {
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+/* Very narrow phones: the long school name must still fit on one line. */
+@media (max-width: 360px) {
+  .site-title.site-title { font-size: clamp(.95rem, 5vw, 1.15rem); }
+}
+
+/* ---- Buttons ---- */
+.btn.btn {
+  min-height: 48px;
+  border-radius: 14px;
+  font-family: var(--font-heading);
+  font-weight: 700;
+}
+
+.btn.btn.mini,
+.btn.btn.small {
+  min-height: 38px;
+}
+
+.btn.btn.btn-menu {
+  min-height: 64px;
+  border-radius: 16px;
+}
+
+.btn.btn.primary,
+.btn.btn.solid {
+  background: linear-gradient(145deg, #065372, #033C54);
+  color: #fff;
+  border: 0;
+}
+
+.btn.btn.ghost,
+.btn.btn.cancel {
+  background: #fff;
+  color: #033C54;
+  border: 1px solid rgba(3, 60, 84, .25);
+}
+
+.btn.btn.danger {
+  background: #fff;
+  color: #b42318;
+  border: 1.5px solid #e5a39d;
+}
+
+.btn.btn.danger:hover {
+  background: #fef3f2;
+}
+
+.btn.btn.danger.confirm-delete {
+  background: #b42318;
+  color: #fff;
+  border-color: #b42318;
+}
+
+.btn.btn.danger.confirm-delete:hover {
+  background: #9b1d14;
+}

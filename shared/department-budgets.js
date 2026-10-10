@@ -409,17 +409,18 @@ export async function mountDepartmentBudgetsSheet(host, hooks = {}) {
   root.replaceChildren();
   const style = el("style", { textContent: css + "\n" + FORM_CSS });
   const wrap = el("div", { style: "display:contents" });
-  // The original page's hero, under a slim bar that stays put with the
-  // sheet's back / menu buttons (the hero scrolls away with the content).
+  // The site's header (white, frosted; school name centred, back on the
+  // right, menu on the left) stays put; under it a white title block —
+  // the school's logo above the sheet's title — scrolls with the content.
   wrap.innerHTML = `
-    <header class="topbar">
-      <button class="icon-btn back back-btn on-dark" type="button" aria-label="رجوع" title="رجوع">${ICON.back}</button>
-      <h2 class="topbar-school">${SCHOOL_NAME}</h2>
+    <header class="site-header">
+      <button class="icon-btn back back-btn" type="button" aria-label="رجوع" title="رجوع">${ICON.back}</button>
+      <h2 class="site-title">${SCHOOL_NAME}</h2>
       <button class="icon-btn menu" type="button" aria-label="فتح القائمة" title="القائمة">${ICON.menu}</button>
     </header>
     <div class="scroller">
-      <div class="hero">
-        <img class="hero-logo" src="${SCHOOL_LOGO}" alt="شعار ${SCHOOL_NAME}">
+      <div class="title-block">
+        <img class="title-logo" src="${SCHOOL_LOGO}" alt="شعار ${SCHOOL_NAME}">
         <h1>ميزانيات الأقسام</h1>
         <div class="school"></div>
       </div>
@@ -431,7 +432,7 @@ export async function mountDepartmentBudgetsSheet(host, hooks = {}) {
   root.append(style, wrap);
   S = {
     root, hooks, db: dbFor(),
-    title: root.querySelector(".hero h1"), subtitle: root.querySelector(".hero .school"),
+    title: root.querySelector(".title-block h1"), subtitle: root.querySelector(".title-block .school"),
     scroller: root.querySelector(".scroller"), main: root.querySelector(".main"),
     tabs: root.querySelector(".tabs"), body: root.querySelector(".content"),
     role: "teacher", me: {}, teachers: [], classes: buildClassModel([]), budgets: new Map(),
@@ -529,7 +530,7 @@ function setView(v) {
   else render();
 }
 
-// The hero's title and subtitle. No tabs: a head has one view, and the
+// The title block's title and subtitle. No tabs: a head has one view, and the
 // admin moves between views with buttons, as on the original page.
 function renderTabs() {
   S.title.textContent = S.role === "head" ? "ميزانية القسم" : "ميزانيات الأقسام";
@@ -557,7 +558,7 @@ function render() {
 function renderNone(box) {
   const text = S.role === "head" ? "لا يوجد قسم مسجّل لحسابك، فلا ميزانية تظهر هنا."
     : "ميزانيات الأقسام لرؤساء الأقسام ومن لديه صلاحية «السماح بكل الميزانيات» أو «السماح بتعديل الجدول».";
-  box.append(el("div", { className: "card gold" }, el("h2", { textContent: "ميزانية القسم" }), el("p", { className: "lead", textContent: text })));
+  box.append(el("div", { className: "card note" }, el("h2", { textContent: "ميزانية القسم" }), el("p", { className: "lead", textContent: text })));
 }
 
 // One row per grade group, the same spot for a class on every card.
@@ -974,7 +975,7 @@ function renderTable(focus) {
 function schoolDepartments() {
   return DEPARTMENT_LIST.filter((dp) => deptStaff(dp).length || S.budgets.has(dp));
 }
-// As the original page: the gold «ميزانية كل الأقسام» button, a row of
+// As the original page: the «ميزانية كل الأقسام» button, a row of
 // tools, «ميزانية المدرسة» (one row per department), and «عرض التفاصيل»
 // (every department's table under it).
 function renderSchool(box) {
@@ -1230,7 +1231,7 @@ function renderImport(box) {
     } catch (e) { setMsg(msg, typeof e === "string" ? e : "تعذّرت قراءة الملف.", "err"); }
   };
   box.append(el("div", { className: "row", style: "margin:0 0 12px" }, back),
-    el("div", { className: "card gold" },
+    el("div", { className: "card note" },
       el("h2", { textContent: "رفع بيانات الموقع القديم" }),
       el("p", { className: "lead", textContent: "اختر ملف «school-budgets-data.json». يُقرأ في هذا المتصفح، ويُطابَق كل معلم بمعرّفه (uid) مع معلمي الموقع، ثم تراجع ما سيُكتب قبل الحفظ." }),
       el("div", { className: "row" }, pick, fileIn, S.importFile ? el("span", { className: "meta", textContent: S.importFile }) : null), msg));

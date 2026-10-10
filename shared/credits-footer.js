@@ -1,12 +1,24 @@
+// The site's footer card (logo, school, credits, socials). Pages put a
+// <div data-credits-footer></div> where it goes and load this file.
+//
+// «مدير المدرسة» isn't hard-coded: it's the teacher marked «مدير المدرسة»
+// in admins/teachers.html (teachers/{uid}.permissions.isPrincipal). This is
+// a classic script with no Firebase of its own, so the page reads that
+// teacher with its own Firestore and hands the name over:
+//   window.CreditsFooter?.setPrincipal(name)
+// The row shows «—» until then (and stays «—» if nobody is marked); a name
+// given before the footer mounts is kept and shown when it does.
 (function () {
   const STYLE_ID = "credits-footer-style";
+  const PRINCIPAL_PLACEHOLDER = "—";
+  let principalName = "";
 
   const STYLES = `
     .credits-footer{width:100%;max-width:760px;margin:0 auto;display:flex;justify-content:center;padding:32px 16px 40px;box-sizing:border-box;font-family:"Tajawal", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif}
     .credits-card{position:relative;width:100%;background:#ffffff;border:1px solid var(--border,#e6edf7);border-radius:24px;box-shadow:0 16px 40px rgba(3,60,84,.08),0 2px 6px rgba(3,60,84,.04);padding:36px 28px 22px;display:flex;flex-direction:column;align-items:center;text-align:center;overflow:hidden}
     .credits-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--primary,#033C54) 0%,var(--primary-light,#065372) 50%,var(--primary,#033C54) 100%)}
     .credits-logo{width:96px;height:96px;object-fit:contain;filter:drop-shadow(0 10px 18px rgba(3,60,84,.18));margin-bottom:18px}
-    .credits-school-name{margin:0;font-size:1.1rem;font-weight:900;color:var(--primary,#033C54);letter-spacing:.2px;line-height:1.4}
+    .credits-school-name{margin:0;font-family:var(--font-heading,"Readex Pro","Tajawal",system-ui,sans-serif);font-size:1.1rem;font-weight:700;color:var(--primary,#033C54);letter-spacing:.2px;line-height:1.4}
     .credits-tagline{margin:6px 0 22px;font-size:.78rem;font-weight:700;color:var(--muted,#6b7f9f);letter-spacing:.5px}
     .credits-info{width:100%;display:flex;flex-direction:column;gap:10px;margin-bottom:22px}
     .credits-row{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:14px;background:#f8fbfd;border:1px solid rgba(3,60,84,.06);transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease}
@@ -14,7 +26,7 @@
     .credits-icon{flex-shrink:0;width:34px;height:34px;border-radius:11px;background:linear-gradient(145deg,var(--primary,#033C54),var(--primary-light,#065372));color:#fff;display:grid;place-items:center;box-shadow:0 4px 10px rgba(3,60,84,.18)}
     .credits-icon svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
     .credits-text{flex:1;display:flex;flex-direction:column;gap:2px;text-align:start;min-width:0}
-    .credits-label{font-size:.7rem;font-weight:800;color:var(--muted,#6b7f9f);letter-spacing:.3px}
+    .credits-label{font-size:.78rem;font-weight:800;color:var(--muted,#6b7f9f);letter-spacing:.3px}
     .credits-value{font-size:.94rem;font-weight:800;color:var(--text,#0f172a);line-height:1.4;word-break:break-word}
     .credits-socials{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:20px}
     .credits-social{position:relative;width:42px;height:42px;border-radius:12px;background:#f1f6fa;border:1px solid rgba(3,60,84,.08);color:var(--primary,#033C54);display:grid;place-items:center;text-decoration:none;overflow:hidden;transition:transform .25s ease,box-shadow .25s ease,color .25s ease,border-color .25s ease}
@@ -52,7 +64,7 @@
             </span>
             <div class="credits-text">
               <span class="credits-label">مدير المدرسة</span>
-              <span class="credits-value">أ/ صلاح الناصر</span>
+              <span class="credits-value" data-credits-principal>${PRINCIPAL_PLACEHOLDER}</span>
             </div>
           </div>
           <div class="credits-row">
@@ -97,7 +109,22 @@
     wrapper.innerHTML = FOOTER_HTML.trim();
     const footer = wrapper.firstElementChild;
     placeholder.replaceWith(footer);
+    renderPrincipal();
   }
+
+  function renderPrincipal() {
+    const el = document.querySelector("[data-credits-principal]");
+    if (el) el.textContent = principalName ? "أ/ " + principalName : PRINCIPAL_PLACEHOLDER;
+  }
+
+  window.CreditsFooter = {
+    // name: the principal's name as stored on their teacher doc; empty or
+    // missing keeps «—».
+    setPrincipal(name) {
+      principalName = String(name || "").trim().replace(/^أ\s*\/\s*/, "");
+      renderPrincipal();
+    },
+  };
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", mount);

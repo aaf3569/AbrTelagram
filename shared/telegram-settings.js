@@ -56,7 +56,7 @@ function ensureStyles() {
       width: min(480px, 100%);
       background: #ffffff;
       border-radius: 22px;
-      box-shadow: 0 28px 60px rgba(2, 43, 66, 0.28);
+      box-shadow: 0 28px 60px rgba(3, 60, 84, 0.28);
       overflow: hidden;
       color: #0f172a;
       transform: translateY(12px) scale(0.98);
@@ -165,7 +165,7 @@ function ensureStyles() {
       background: linear-gradient(135deg, #16a34a, #0f8a4b);
     }
     .tg-settings-status-card.is-disconnected .tg-settings-status-icon {
-      background: linear-gradient(135deg, #dc2626, #b91c1c);
+      background: linear-gradient(135deg, #b42318, #b42318);
     }
     .tg-settings-status-content {
       display: grid;
@@ -200,8 +200,8 @@ function ensureStyles() {
       animation: tgPulse 1.8s ease-in-out infinite;
     }
     .tg-settings-status-card.is-disconnected .tg-settings-status-dot {
-      background: #dc2626;
-      box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.18);
+      background: #b42318;
+      box-shadow: 0 0 0 4px rgba(180, 35, 24, 0.18);
     }
     @keyframes tgPulse {
       0%, 100% { box-shadow: 0 0 0 4px rgba(22, 163, 74, 0.18); }
@@ -232,7 +232,7 @@ function ensureStyles() {
       border-color: #c4ecd1;
     }
     .tg-settings-message.error {
-      color: #b91c1c;
+      color: #b42318;
       background: #fdecec;
       border-color: #f3c8c8;
     }
@@ -244,9 +244,9 @@ function ensureStyles() {
       width: 100%;
       height: 48px;
       border-radius: 12px;
-      border: 1px solid rgba(2, 43, 66, 0.18);
+      border: 1px solid rgba(3, 60, 84, 0.18);
       background: #ffffff;
-      color: #022b42;
+      color: #033C54;
       font-family: inherit;
       font-size: 0.95rem;
       font-weight: 800;
@@ -263,7 +263,7 @@ function ensureStyles() {
     }
     .tg-settings-btn:hover:not(:disabled) {
       transform: translateY(-1px);
-      box-shadow: 0 12px 24px rgba(2, 43, 66, 0.14);
+      box-shadow: 0 12px 24px rgba(3, 60, 84, 0.14);
     }
     .tg-settings-btn:active:not(:disabled) {
       transform: translateY(0);
@@ -283,7 +283,7 @@ function ensureStyles() {
     }
     .tg-settings-btn.danger {
       border-color: rgba(185, 28, 28, 0.32);
-      color: #b91c1c;
+      color: #b42318;
       background: #fff5f5;
     }
     .tg-settings-btn.danger:hover:not(:disabled) {

@@ -19,7 +19,7 @@
 <link rel="modulepreload" href="/shared/presence.js">
 <link rel="modulepreload" href="/shared/schedule-priority.js">
   <title>جدول المعلّم - ثانوية أحمد البشر الرومي</title>
-  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@600;700&family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet"/>
   <script src="/shared/arabic-text-fix.js" defer></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
@@ -49,7 +49,8 @@
   <meta name="twitter:title" content="جدول المعلّم - ثانوية أحمد البشر الرومي">
   <meta name="twitter:description" content="???? ?????? ???? ????? ??????.">
   <meta name="twitter:image" content="https://framerusercontent.com/images/jRnZLlPr90qwKsuUwfIlvDS9E.png?width=1200&height=630">
-  <!-- After the page's own styles, so the one back button wins. -->
+  <!-- After the page's own styles, so the site's identity (titles, buttons) and the one back button win. -->
+  <link rel="stylesheet" href="/shared/identity.css" />
   <link rel="stylesheet" href="/shared/back-button.css" />
   <link rel="stylesheet" href="/shared/actions.css" />
   <script src="/shared/feedback.js" defer></script>
@@ -1135,7 +1136,7 @@
     import {
       initializeFirestore, persistentSingleTabManager,
       collection, getDocs, query, where, doc, getDoc, setDoc,
-      serverTimestamp, updateDoc, onSnapshot
+      serverTimestamp, updateDoc, onSnapshot, limit
     } from "/shared/firebase.js";
     import {
       getOverriddenClassKeys, mergeCustomIntoLessonMap, classKeyFromRow, normalizeClassKey
@@ -1155,8 +1156,8 @@
     // for 5 minutes (_headers) while this HTML is always fresh, so right after
     // a deploy the page could otherwise run against the previous module —
     // bump it whenever this page starts relying on something new in there.
-    import { mountAttendanceSheet, LESSON_END_GRACE_MINUTES } from "/shared/attendance.js?v=2026-10-12d";
-    import { mountStudentNotesSheet } from "/shared/student-notes-sheet.js?v=2026-10-13";
+    import { mountAttendanceSheet, LESSON_END_GRACE_MINUTES } from "/shared/attendance.js?v=2026-10-14d";
+    import { mountStudentNotesSheet } from "/shared/student-notes-sheet.js?v=2026-10-14";
     import { parseTimeToMinutes } from "/shared/kuwait-time.js";
     import { isTruthyFlag, canManageAttendance } from "/shared/auth-guard.js";
     import { startPresenceHeartbeat, stopPresenceHeartbeat } from "/shared/presence.js";
@@ -1555,7 +1556,7 @@
       statusEl.textContent = message;
       statusEl.style.display = 'flex';
       statusEl.style.background = isError ? '#fef2f2' : 'var(--primary-light)';
-      statusEl.style.color = isError ? '#dc2626' : 'var(--primary)';
+      statusEl.style.color = isError ? '#b42318' : 'var(--primary)';
     }
     function setLoading(btn, on=true){
       if(!btn) return;
@@ -2963,7 +2964,7 @@
             table-layout: fixed;
           }
           #pdfScheduleCard thead th {
-            background: linear-gradient(135deg, #0e3a5c, #1c5b88);
+            background: linear-gradient(135deg, #033C54, #065372);
             color: #ffffff;
             border-left: 1px solid rgba(255, 255, 255, 0.20);
             padding: 12px 6px;
@@ -5289,7 +5290,7 @@
           #dsPdfCard .sub { font-size:13px; font-weight:800; color:#355f81; }
           #dsPdfCard .sep { border-top:2px solid #dbe7f2; margin:14px 0 12px; }
           #dsPdfCard table { width:100%; border-collapse:collapse; table-layout:fixed; border:1px solid #cddff0; }
-          #dsPdfCard thead th { background:linear-gradient(135deg,#0e3a5c,#1c5b88); color:#fff; font-size:10.5px; font-weight:900; padding:10px 4px; border-left:1px solid rgba(255,255,255,.2); }
+          #dsPdfCard thead th { background:linear-gradient(135deg,#033C54,#065372); color:#fff; font-size:10.5px; font-weight:900; padding:10px 4px; border-left:1px solid rgba(255,255,255,.2); }
           #dsPdfCard thead th.corner { width:150px; }
           #dsPdfCard tbody th.name { background:#f4f8fc; font-size:11px; font-weight:900; color:#163e63; padding:9px 8px; text-align:right; border-top:1px solid #d9e6f3; }
           #dsPdfCard tbody td { text-align:center; font-size:11px; font-weight:800; color:#94a3b8; padding:9px 4px; border-top:1px solid #e1ebf5; border-left:1px solid #e1ebf5; }
@@ -5922,7 +5923,7 @@
 
     function budgetMount(){
       if (!budgetMounting) {
-        budgetMounting = import('/shared/department-budgets.js?v=2026-10-13')
+        budgetMounting = import('/shared/department-budgets.js?v=2026-10-14')
           .then((m) => m.mountDepartmentBudgetsSheet(budgetHost, {
             close: () => closeBudgetSheet(),
             openSidebar: () => openSidebar(),
@@ -6571,7 +6572,7 @@
           #slPdfCard .sl-sep { border-top: 2px solid #dbe7f2; margin: 14px 0 16px; }
           #slPdfCard table { width: 100%; border-collapse: collapse; table-layout: fixed; border: 1px solid #b9cfe3; }
           #slPdfCard thead th {
-            background: linear-gradient(135deg, #0e3a5c, #1c5b88); color: #fff;
+            background: linear-gradient(135deg, #033C54, #065372); color: #fff;
             font-size: 14px; font-weight: 800; height: 38px; padding: 0 8px; text-align: center;
             border-left: 1px solid rgba(255,255,255,.22);
           }
@@ -7340,6 +7341,16 @@
     /* ========= Auth ========= */
     setPersistence(auth, browserLocalPersistence).catch(()=>{});
 
+    // «مدير المدرسة» in the site footer (/shared/credits-footer.js): the
+    // teacher marked «مدير المدرسة» in admins/teachers.html.
+    async function loadFooterPrincipal(){
+      try{
+        const snap = await getDocs(query(collection(db, 'teachers'), where('permissions.isPrincipal', '==', true), limit(1)));
+        const d = snap.empty ? {} : (snap.docs[0].data() || {});
+        window.CreditsFooter?.setPrincipal(d.name || d.fullName || '');
+      }catch(e){ console.warn('[credits-footer] principal not loaded', e); }
+    }
+
     onAuthStateChanged(auth, async (user)=>{
       // Debounced: a transient null immediately followed by the real user
       // again (a brief SDK flicker) shouldn't yank the sheet closed or
@@ -7389,6 +7400,7 @@
       // reads presence/{uid}; this is the page teachers actually live on,
       // so it's the one that has to keep it fresh.
       startPresenceHeartbeat(db, user.uid);
+      loadFooterPrincipal();
       currentRole = '';
       updateSidebarUser();
 

@@ -19,7 +19,7 @@
   <title>تأخير الصباح - لوحة الإدارة | ثانوية أحمد البشر الرومي</title>
 
   <!-- Tajawal -->
-  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@600;700&family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet"/>
   <script src="/shared/arabic-text-fix.js" defer></script>
   <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -42,11 +42,11 @@
       --radius-lg:18px;
       --focus:#79b3c8;
 
-      --red:#ef4444;
-      --yellow:#f59e0b;
-      --green:#10b981;
+      --red:#b42318;
+      --yellow:#a06d00;
+      --green:#1a7f37;
 
-      --yellowBg: rgba(245,158,11,.10);
+      --yellowBg: rgba(160,109,0,.10);
       --chip:#f1f5f9;
 
       --headerH: 122px;
@@ -109,11 +109,9 @@
       padding:2px 0;
     }
 
+    /* Font, size and weight: /shared/identity.css. */
     .site-title{
       margin:0;
-      font-weight:900;
-      letter-spacing:.2px;
-      font-size: clamp(1.05rem, 2.8vw, 1.5rem);
       color: var(--primary);
       line-height:1.25;
     }
@@ -568,7 +566,8 @@
   <meta name="twitter:title" content="تأخير الصباح - لوحة الإدارة | ثانوية أحمد البشر الرومي">
   <meta name="twitter:description" content="???? ?????? ???? ????? ??????.">
   <meta name="twitter:image" content="https://framerusercontent.com/images/jRnZLlPr90qwKsuUwfIlvDS9E.png?width=1200&height=630">
-  <!-- After the page's own styles, so the one back button wins. -->
+  <!-- After the page's own styles, so the site's identity (titles, buttons) and the one back button win. -->
+  <link rel="stylesheet" href="/shared/identity.css" />
   <link rel="stylesheet" href="/shared/back-button.css" />
   <link rel="stylesheet" href="/shared/actions.css" />
   <script src="/shared/feedback.js" defer></script>

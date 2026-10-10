@@ -18,7 +18,7 @@
 <link rel="modulepreload" href="/shared/firebase.js">
 <link rel="modulepreload" href="/shared/warning-system.js">
 <link rel="preconnect" href="https://www.gstatic.com" crossorigin><title>الفصول - ثانوية أحمد البشر الرومي</title>
-<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@600;700&family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet"/>
 <script src="/shared/arabic-text-fix.js" defer></script>
 <link rel="stylesheet" href="/shared/base.css" />
 <link rel="stylesheet" href="/shared/attendance-tiles.css" />
@@ -77,7 +77,8 @@ body{
 }
 body.student-profile-open #studentTopBack{ display:inline-grid; }
 .site-title{
-  margin:0; font-weight:900; letter-spacing:.2px; font-size:clamp(1.2rem,2.4vw,1.6rem);
+  /* Font, size and weight: /shared/identity.css. */
+  margin:0;
   text-shadow:0 1px 0 rgba(255,255,255,.6)
 }
 
@@ -96,22 +97,20 @@ main{ flex:1; padding:32px 20px 40px; display:flex }
 .muted{ color:var(--muted) }
 
 /* === Buttons + clickable rows === */
+/* Height, corners, font and the primary / ghost / danger colours: /shared/identity.css. */
 .btn{
-  font-family:"Tajawal", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  height:56px; border:none; border-radius:16px; cursor:pointer; font-weight:800; font-size:1.02rem; letter-spacing:.2px;
+  border:none; cursor:pointer; font-size:1.02rem;
   transition: var(--transition); display: inline-flex; align-items: center; justify-content: center; padding: 0 20px;
 }
 .btn:active{ transform:translateY(0) scale(.995) }
 .btn:focus-visible{ outline:3px solid var(--focus); outline-offset:2px }
 .btn:disabled{ opacity:.5; cursor:not-allowed; box-shadow:none !important; transform:none !important; }
-.btn.primary{
-  background: linear-gradient(180deg, #065372, #033C54); color:#fff; box-shadow: 0 12px 28px rgba(3,60,84,.26)
-}
+.btn.primary{ box-shadow: 0 12px 28px rgba(3,60,84,.26) }
 .btn.primary:hover{ transform:translateY(-2px); box-shadow: 0 16px 36px rgba(3,60,84,.34); filter:brightness(1.02) }
-.btn.ghost{ background:#fff; color:#033C54; border:1px solid rgba(3,60,84,.35); box-shadow: var(--shadow-1) }
-.btn.ghost:hover{ transform:translateY(-2px); box-shadow: 0 14px 34px rgba(3,60,84,.18); border-color:rgba(3,60,84,.55) }
-.btn.danger{ background:#fff; color:#cb2b2b; border:1px solid rgba(203,43,43,.4); box-shadow: var(--shadow-1) }
-.btn.danger:hover{ transform:translateY(-2px); box-shadow: 0 16px 32px rgba(203,43,43,.18); border-color:rgba(203,43,43,.55) }
+.btn.ghost{ box-shadow: var(--shadow-1) }
+.btn.ghost:hover{ transform:translateY(-2px); box-shadow: 0 14px 34px rgba(3,60,84,.18) }
+.btn.danger{ box-shadow: var(--shadow-1) }
+.btn.danger:hover{ transform:translateY(-2px); box-shadow: 0 16px 32px rgba(180,35,24,.18) }
 .btn.secondary{ background:#fff; color:#6b7f9f; border:1px solid rgba(107,127,159,.4); box-shadow: var(--shadow-1) }
 .btn.secondary:hover{ transform:translateY(-2px); box-shadow: 0 16px 32px rgba(107,127,159,.18); border-color:rgba(107,127,159,.55) }
 
@@ -529,7 +528,7 @@ mark.search-hit{ background:rgba(255,196,0,.45); color:inherit; border-radius:4p
   position:sticky; top:0; z-index:10; box-shadow: 0 2px 10px rgba(0,0,0,0.03);
 }
 /* .back-btn: /shared/back-button.css */
-.sheet-title{ margin:0; font-size:1.1rem; font-weight:900; color:#033C54 }
+.sheet-title{ margin:0; color:#033C54 }
 /* Class page: the class name centered in the header, back button on the
    right, an empty column on the left balancing it. */
 #classSheet .sheet-header{ display:grid; grid-template-columns:1fr auto 1fr; }
@@ -602,7 +601,7 @@ body.student-route-active #studentSheet .sheet-header{
 .tab:hover{ transform:translateY(-1px); box-shadow:0 10px 26px rgba(3,60,84,.14); border-color:rgba(3,60,84,.4) } .tab.active{ background:linear-gradient(180deg, #065372, #033C54); color:#fff; border-color:transparent; box-shadow:0 14px 30px rgba(3,60,84,.26) }
 .tab-panels{ display:flex; flex-direction:column; gap:16px } .tab-panel{ display:none } .tab-panel.active{ display:flex; flex-direction:column; gap:16px }
 .card{ padding:16px; border:1px solid var(--border); border-radius:16px; background:#fff; box-shadow: var(--shadow-1); display:flex; gap:14px; justify-content:space-between; align-items:flex-start; }
-.card-title{ font-weight:800; color:#033C54; margin-bottom: 4px; } .card-sub{ color:#6b7f9f; font-weight:700; font-size:.92rem; line-height: 1.5; }
+.card-title{ color:#033C54; margin-bottom: 4px; } .card-sub{ color:#6b7f9f; font-weight:700; font-size:.92rem; line-height: 1.5; }
 .tag{ padding:5px 10px; border-radius:999px; background:var(--chip); border:1px solid var(--border); font-weight:800; font-size:.82rem }
 .mini{ height:38px; padding:0 14px; border-radius:10px; font-size:.92rem } .actions{ display:flex; gap:10px; flex-wrap:wrap } .divider{ height:1px; background:var(--border); width:100%; margin:6px 0 }
 .k-badge{ padding:5px 10px; border-radius:999px; font-weight:800; font-size:.82rem; border:1px solid rgba(3,60,84,.2) }
@@ -1009,7 +1008,6 @@ html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%;
 #attConfirmModal h3, #attErrorModal h3, #attLessonDetailModal h3 { margin: 0 0 8px; font-size: 1.15rem; color: var(--primary); font-weight: 900; }
 #attConfirmModal p, #attErrorModal p, #attLessonDetailModal p { margin: 0 0 12px; color: var(--muted); font-weight: 800; }
 #attConfirmModal .row, #attErrorModal .row, #attLessonDetailModal .row { display: flex; gap: 10px; justify-content: flex-start; margin-top: 16px; flex-wrap: wrap; }
-.btn.cancel { background: #fff; color: var(--primary); border: 1px solid rgba(3,60,84,.25); }
 
 .modal-header {
   padding: 20px 24px;
@@ -1123,7 +1121,7 @@ html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%;
   .students-section{ background:transparent; border:0; box-shadow:none; padding:0; border-radius:0; }
 }
 @media (max-width: 480px) {
-  .btn { height: 50px; font-size: 0.95rem; } .subject { padding: 14px 16px; } .item { padding: 14px 16px; }
+  .btn { font-size: 0.95rem; } .subject { padding: 14px 16px; } .item { padding: 14px 16px; }
   .school-total-value { font-size: 1.8rem; }
   .school-grade { padding: 7px 8px; }
   .school-grade-value { font-size: 1.08rem; }
@@ -1263,7 +1261,7 @@ html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%;
     padding:20px;
     box-shadow:0 16px 34px rgba(3,60,84,.22);
   }
-  .btn.primary.student-request-toggle{ background:#fff; color:var(--primary); }
+  .btn.btn.primary.student-request-toggle{ background:#fff; color:var(--primary); }
   .class-settings-shell{ margin-top:14px; }
 
   /* ---- Class roster + secondary sheets: more room, card grid ---- */
@@ -1282,7 +1280,6 @@ html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%;
 
   /* ---- Sheet chrome + modals: a bit more room on wide screens ---- */
   .sheet-header{ padding:20px 28px; }
-  .sheet-title{ font-size:1.15rem; }
   .modal, .reorder-modal{ max-width:640px; }
 }
 
@@ -1323,7 +1320,8 @@ html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%;
   <meta name="twitter:title" content="الفصول - ثانوية أحمد البشر الرومي">
   <meta name="twitter:description" content="???? ?????? ???? ????? ??????.">
   <meta name="twitter:image" content="https://framerusercontent.com/images/jRnZLlPr90qwKsuUwfIlvDS9E.png?width=1200&height=630">
-  <!-- After the page's own styles, so the one back button wins. -->
+  <!-- After the page's own styles, so the site's identity (titles, buttons) and the one back button win. -->
+  <link rel="stylesheet" href="/shared/identity.css" />
   <link rel="stylesheet" href="/shared/back-button.css" />
   <link rel="stylesheet" href="/shared/actions.css" />
   <script src="/shared/feedback.js" defer></script>
@@ -1695,7 +1693,7 @@ html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%;
     </div>
     <div class="modal-footer">
       <button id="cancelDeleteClassConfirm" class="btn ghost" type="button">إلغاء</button>
-      <button id="confirmDeleteClassBtn" class="btn danger" type="button">حذف نهائيًا</button>
+      <button id="confirmDeleteClassBtn" class="btn danger confirm-delete" type="button">حذف نهائيًا</button>
     </div>
   </div>
 </div>
@@ -1773,7 +1771,7 @@ html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%;
     </div>
     <div class="modal-footer">
       <button id="cancelDeleteAllType" class="btn ghost" type="button">إلغاء</button>
-      <button id="confirmDeleteAllBtn" class="btn danger" type="button" disabled>حذف كل الطلاب نهائيًا</button>
+      <button id="confirmDeleteAllBtn" class="btn danger confirm-delete" type="button" disabled>حذف كل الطلاب نهائيًا</button>
     </div>
   </div>
 </div>
@@ -2264,8 +2262,8 @@ import { initializeApp, getApp, getApps } from "/shared/firebase.js";
 import { getAuth, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from "/shared/firebase.js";
 import { initializeFirestore, persistentSingleTabManager, collection, collectionGroup, getDocs, query, where, orderBy, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp, writeBatch, arrayUnion, arrayRemove } from "/shared/firebase.js";
 import { mountAttendanceSheet } from "/shared/attendance.js";
-import { mountStudentNotesSheet } from "/shared/student-notes-sheet.js?v=2026-10-13";
-import { mountClassNotesOverview } from "/shared/teacher-class-sheet.js?v=2026-10-12d";
+import { mountStudentNotesSheet } from "/shared/student-notes-sheet.js?v=2026-10-14";
+import { mountClassNotesOverview } from "/shared/teacher-class-sheet.js?v=2026-10-14d";
 import { fetchStudentAttendanceData, makeAttTile, makeMorningLateTile, makeAbsenceDayTile, makeLateAbsenceTile, LATES_PER_ABSENCE_DAY } from "/shared/attendance-tiles.js?v=2026-10-04";
 import { renderWarningState, renderExcusedWarningState } from "/shared/warning-system.js";
 import { DEFAULT_CLASS_LIST, fetchClassList, groupByGrade, availableNumbersToAdd, buildClassKey, primeClassList, parseClassKey } from "/shared/class-registry.js";

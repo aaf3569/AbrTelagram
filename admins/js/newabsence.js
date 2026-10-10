@@ -2497,7 +2497,7 @@ export async function mountTodayAbsenceSheet(host, hooks) {
             #dlPdfPage .dl-pdf-badge {
               display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 10px; font-weight: 900;
             }
-            #dlPdfPage .dl-pdf-badge.absent { background: rgba(239,68,68,.14); color: #b91c1c; }
+            #dlPdfPage .dl-pdf-badge.absent { background: rgba(180,35,24,.14); color: #b42318; }
             #dlPdfPage .dl-pdf-badge.late { background: rgba(245,158,11,.16); color: #92400e; }
             #dlPdfPage .pdf-footer {
               margin-top: auto; padding-top: 10px; display: flex; justify-content: space-between;

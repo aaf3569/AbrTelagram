@@ -22,7 +22,7 @@
 <link rel="modulepreload" href="/shared/telegram-settings.js">
 <link rel="preconnect" href="https://www.gstatic.com" crossorigin>    <title>لوحة قائد القسم - ثانوية أحمد البشر الرومي</title>
     <!-- Tajawal -->
-    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@600;700&family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet"/>
     <script src="/shared/arabic-text-fix.js" defer></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/shared/base.css" />
@@ -190,7 +190,8 @@
 
         /* Header */
         .site-header{position:sticky;top:0;z-index:100;background:rgba(255,255,255,.95);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);color:var(--primary);padding:16px 24px;display:flex;align-items:center;justify-content:center;border-bottom:1px solid rgba(3,60,84,.1);box-shadow:0 2px 15px rgba(3,60,84,.08)}
-        .site-title{margin:0;font-weight:900;letter-spacing:.2px;font-size:clamp(1.2rem,2.5vw,1.6rem);text-shadow:0 1px 0 rgba(255,255,255,.6)}
+        /* Font, size and weight: /shared/identity.css. */
+        .site-title{margin:0;text-shadow:0 1px 0 rgba(255,255,255,.6)}
         /* «تحديث الشاشة» — look: /shared/actions.css; on the end side of the header. */
         .header-refresh-btn{position:absolute;left:16px;top:50%;transform:translateY(-50%)}
         main{flex:1;padding:24px 16px 40px;display:flex;width:100%}
@@ -236,16 +237,18 @@
         .stack{width:100%;display:flex;flex-direction:column;gap:18px;margin-top:16px;align-items:center}
         .stack.wide .btn{width:100%}
         #telegramSettingsBtn{margin-top:16px;margin-bottom:16px}
-        .btn{font-family:"Tajawal", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;width:100%;min-height:68px;border:none;border-radius:18px;cursor:pointer;font-weight:800;font-size:1.1rem;letter-spacing:.2px;padding:18px 24px;transition:var(--transition);user-select:none;display:flex;align-items:center;justify-content:center;gap:12px;position:relative;overflow:hidden}
+        /* Height, corners, font and colours: /shared/identity.css (.btn-menu:
+           the large menu buttons, 64px). */
+        .btn{width:100%;border:none;cursor:pointer;font-size:1.1rem;padding:8px 24px;transition:var(--transition);user-select:none;display:flex;align-items:center;justify-content:center;gap:12px;position:relative;overflow:hidden}
         .btn::after{content:'';position:absolute;inset:0;background:rgba(255,255,255,.1);opacity:0;transition:var(--transition)}
         .btn:hover::after{opacity:1}
         .btn .icon{width:24px;height:24px;display:inline-block;flex-shrink:0}
-        .btn.ghost{background:#fff;color:var(--primary);border:1px solid rgba(3,60,84,.25);box-shadow:var(--shadow-1)}
+        .btn.ghost{box-shadow:var(--shadow-1)}
         .btn.ghost:hover{transform:translateY(-3px);box-shadow:0 18px 40px rgba(3,60,84,.22);border-color:rgba(3,60,84,.4)}
-        .btn.class-btn{background:linear-gradient(145deg,var(--primary),var(--primary-light));color:#fff;box-shadow:0 18px 40px rgba(3,60,84,.32)}
+        .btn.class-btn{background:linear-gradient(145deg,var(--primary-light),var(--primary));color:#fff;box-shadow:0 18px 40px rgba(3,60,84,.32)}
         .btn.class-btn:hover{transform:translateY(-3px);box-shadow:0 22px 48px rgba(3,60,84,.38)}
         .btn.class-btn.current-lesson{isolation:isolate;box-shadow:0 0 0 1.5px rgba(3,60,84,.28),0 0 14px rgba(3,60,84,.16),0 22px 48px rgba(3,60,84,.40);animation:classLessonPulse 3.6s ease-in-out infinite}
-        .btn.class-btn.current-lesson::before{content:"";position:absolute;inset:0;border-radius:18px;padding:1.5px;background:conic-gradient(from var(--border-angle),transparent 0%,transparent 78%,rgba(148,197,255,.55) 89%,rgba(219,234,254,.9) 94%,rgba(148,197,255,.55) 99%,transparent 100%);-webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);mask-composite:exclude;pointer-events:none;animation:borderChase 4s linear infinite}
+        .btn.class-btn.current-lesson::before{content:"";position:absolute;inset:0;border-radius:16px;padding:1.5px;background:conic-gradient(from var(--border-angle),transparent 0%,transparent 78%,rgba(148,197,255,.55) 89%,rgba(219,234,254,.9) 94%,rgba(148,197,255,.55) 99%,transparent 100%);-webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);mask-composite:exclude;pointer-events:none;animation:borderChase 4s linear infinite}
         @keyframes classLessonPulse{0%,100%{box-shadow:0 0 0 1.5px rgba(3,60,84,.24),0 0 10px rgba(3,60,84,.12),0 22px 48px rgba(3,60,84,.40)}50%{box-shadow:0 0 0 2px rgba(3,60,84,.34),0 0 16px rgba(3,60,84,.2),0 22px 48px rgba(3,60,84,.40)}}
         @keyframes borderChase{to{--border-angle:1turn}}
 
@@ -263,7 +266,7 @@
         .sheet.open{transform:translateX(0)}
         .sheet-header{background:#fff;border-bottom:1px solid var(--border);padding:18px 20px;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:10;box-shadow:0 2px 10px rgba(3,60,84,.06)}
         /* .back-btn: /shared/back-button.css */
-        .sheet-title{margin:0;font-size:1.2rem;font-weight:900;color:var(--primary);display:flex;align-items:center;gap:10px}
+        .sheet-title{margin:0;color:var(--primary);display:flex;align-items:center;gap:10px}
         #moreSheet .sheet-header{justify-content:center}
         /* The title stays centred on the full width; the padding keeps it
            clear of the back button pinned to the start side. */
@@ -277,8 +280,8 @@
         summary .chev{width:24px;height:24px;transform:rotate(180deg);transition:transform .25s ease}
         details[open] summary .chev{transform:rotate(0deg)}
         .grade-list{padding:16px 20px;display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px}
-        .mini{min-height:60px;border-radius:14px;font-weight:800;font-size:1.05rem;padding:16px}
-        .mini.class-btn{background:linear-gradient(145deg,var(--primary),var(--primary-light));color:#fff;border:none}
+        .mini{font-size:1.05rem;padding:16px}
+        .mini.class-btn{background:linear-gradient(145deg,var(--primary-light),var(--primary));color:#fff;border:none}
         .class-hero,.att-hero{border:2px dashed rgba(3,60,84,.2);background:var(--blueGlass);border-radius:20px;padding:24px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
         .class-name,.att-class{margin:0;font-size:clamp(1.3rem,4vw,1.8rem);color:var(--primary);font-weight:900}
         .action-row,.att-row{display:flex;gap:12px;flex-wrap:wrap}
@@ -412,7 +415,7 @@
         .pill.y{color:var(--yellow);border-color:var(--yellowBg);background:var(--yellowBg)}
         .pill.r{color:var(--red);border-color:var(--redBg);background:var(--redBg)}
         .submit-row{display:flex;justify-content:flex-start}
-        .btn.submit{min-height:60px;padding-inline:26px;border-radius:16px;box-shadow:0 16px 40px rgba(3,60,84,.32)}
+        .btn.submit{padding-inline:26px;box-shadow:0 16px 40px rgba(3,60,84,.32)}
 
         /* lesson control row */
         .lesson-controls {
@@ -481,9 +484,7 @@
         .names-list ul{margin:0;padding-inline-start:18px}
         .names-list li{margin:6px 0;font-weight:800}
         .modal .row{display:flex;gap:10px;justify-content:flex-start;margin-top:16px;flex-wrap:wrap}
-        .btn.cancel{background:#fff;color:var(--primary);border:1px solid rgba(3,60,84,.25)}
-        .btn.primary{background:linear-gradient(145deg,var(--primary-light),var(--primary));color:#fff;border:none}
-        .card.error{border-color:rgba(180,35,24,.25);box-shadow:0 24px 60px rgba(180,35,24,.20)}
+                .card.error{border-color:rgba(180,35,24,.25);box-shadow:0 24px 60px rgba(180,35,24,.20)}
         .card.error h3{color:var(--red)}
         .card.error .row .btn.primary{background:linear-gradient(145deg,#a93a33,#b42318)}
 
@@ -526,7 +527,6 @@
             .site-header{ padding:20px 40px; gap:14px; }
             .header-refresh-btn{ left:24px; }
             .site-logo{ display:block; width:38px; height:38px; object-fit:contain; filter:drop-shadow(0 4px 10px rgba(3,60,84,.25)); }
-            .site-title{ font-size:1.4rem; }
 
             main{ padding:48px 40px 72px; align-items:flex-start; }
             .column{ width:min(1160px, 94vw); gap:32px; }
@@ -604,7 +604,6 @@
 
             /* Sheets: give the full-screen panels room to breathe on wide screens */
             .sheet-header{ padding:22px 36px; gap:14px; }
-            .sheet-title{ font-size:1.25rem; }
 
             .modal .card{ width:min(50vw, 620px); padding:28px; }
             .schedule-modal .card{ width:min(40vw, 460px); }
@@ -623,11 +622,11 @@
         @media (max-width:480px){
             /* Keep the centred title clear of the refresh button. */
             .site-header{padding:14px 64px}
-            .site-title{font-size:clamp(1rem,5vw,1.2rem);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-block:.3em;margin-block:-.3em}
+            .site-title{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-block:.3em;margin-block:-.3em}
             main{padding:16px 12px 32px}
             .panel{padding:20px 16px}
             .avatar{width:120px;height:120px}
-            .btn{min-height:62px;font-size:1rem}
+            .btn{font-size:1rem}
         }
     </style>
 
@@ -654,7 +653,8 @@
   <meta name="twitter:title" content="لوحة قائد القسم - ثانوية أحمد البشر الرومي">
   <meta name="twitter:description" content="???? ?????? ???? ????? ??????.">
   <meta name="twitter:image" content="https://framerusercontent.com/images/jRnZLlPr90qwKsuUwfIlvDS9E.png?width=1200&height=630">
-  <!-- After the page's own styles, so the one back button wins. -->
+  <!-- After the page's own styles, so the site's identity (titles, buttons) and the one back button win. -->
+  <link rel="stylesheet" href="/shared/identity.css" />
   <link rel="stylesheet" href="/shared/back-button.css" />
   <link rel="stylesheet" href="/shared/actions.css" />
   <script src="/shared/feedback.js" defer></script>
@@ -675,18 +675,18 @@
                 </div>
                 <div class="divider" aria-hidden="true"></div>
                 <div class="stack wide" style="margin-top:10px;">
-                    <div class="btn ghost skel-fill"></div>
-                    <div class="btn ghost skel-fill"></div>
+                    <div class="btn btn-menu ghost skel-fill"></div>
+                    <div class="btn btn-menu ghost skel-fill"></div>
                 </div>
                 <!-- teacherScheduleBtn, moreBtn, deptBtn, the Telegram-
                      settings button (mounted into #telegramSettingsSlot),
                      logoutBtn — 5 buttons visible by default. -->
                 <div class="stack wide">
-                    <div class="btn ghost skel-fill"></div>
-                    <div class="btn ghost skel-fill"></div>
-                    <div class="btn ghost skel-fill"></div>
-                    <div class="btn ghost skel-fill"></div>
-                    <div class="btn ghost skel-fill"></div>
+                    <div class="btn btn-menu ghost skel-fill"></div>
+                    <div class="btn btn-menu ghost skel-fill"></div>
+                    <div class="btn btn-menu ghost skel-fill"></div>
+                    <div class="btn btn-menu ghost skel-fill"></div>
+                    <div class="btn btn-menu ghost skel-fill"></div>
                 </div>
             </div>
             <div id="stateNotLogged" class="state panel">
@@ -711,35 +711,35 @@
                 <div id="classesButtons" class="stack wide" style="margin-top:10px;"></div>
                 <div class="dash-section-title">الإجراءات السريعة</div>
                 <div class="stack wide">
-                    <button id="teacherScheduleBtn" class="btn ghost" type="button">
+                    <button id="teacherScheduleBtn" class="btn btn-menu ghost" type="button">
                         <span>جدول المعلم</span>
                         <span class="icon" aria-hidden="true">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M8 15h2M14 15h2M8 18h2M14 18h2"/></svg>
                         </span>
                         <span class="dash-sub">عرض جدولك الأسبوعي</span>
                     </button>
-                    <button id="moreBtn" class="btn ghost" type="button">
+                    <button id="moreBtn" class="btn btn-menu ghost" type="button">
                         <span>أُخرى</span>
                         <span class="icon" aria-hidden="true">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
                         </span>
                         <span class="dash-sub">تصفح الفصول حسب الصف</span>
                     </button>
-                    <button id="deptBtn" class="btn ghost" type="button">
+                    <button id="deptBtn" class="btn btn-menu ghost" type="button">
                         <span>قسمي</span>
                         <span class="icon" aria-hidden="true">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16M12 4v16"/></svg>
                         </span>
                         <span class="dash-sub">إدارة معلمي القسم</span>
                     </button>
-                    <button id="adminScheduleEditBtn" class="btn ghost" type="button" hidden>
+                    <button id="adminScheduleEditBtn" class="btn btn-menu ghost" type="button" hidden>
                         <span>تعديل جدول الإدارة</span>
                         <span class="icon" aria-hidden="true">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16M12 4v16"/></svg>
                         </span>
                         <span class="dash-sub">تعديل الجدول الأسبوعي العام</span>
                     </button>
-                    <button id="morningLateBtn" class="btn ghost" type="button" hidden>
+                    <button id="morningLateBtn" class="btn btn-menu ghost" type="button" hidden>
                         <span>تسجيل تأخير الصباح</span>
                         <span class="icon" aria-hidden="true">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16M12 4v16"/></svg>
@@ -747,7 +747,7 @@
                         <span class="dash-sub">تسجيل تأخر الطلاب صباحًا</span>
                     </button>
                     <div id="telegramSettingsSlot"></div>
-                    <button id="logoutBtn" class="btn ghost" type="button">تسجيل الخروج</button>
+                    <button id="logoutBtn" class="btn btn-menu ghost" type="button">تسجيل الخروج</button>
                 </div>
             </section>
         </div>
@@ -954,7 +954,8 @@
             writeBatch,
             Timestamp,
             setDoc,
-            or
+            or,
+            limit
         } from "/shared/firebase.js";
         import { showActionPopup } from "/shared/action-popup.js";
         import { mountTelegramSettings } from "/shared/telegram-settings.js";
@@ -2200,6 +2201,16 @@
             classesButtons.querySelectorAll('.btn.class-btn.current-lesson').forEach(btn => btn.classList.remove('current-lesson'));
         }
 
+        // «مدير المدرسة» in the site footer (/shared/credits-footer.js): the
+        // teacher marked «مدير المدرسة» in admins/teachers.html.
+        async function loadFooterPrincipal(){
+            try{
+                const snap = await getDocs(query(collection(db, 'teachers'), where('permissions.isPrincipal', '==', true), limit(1)));
+                const d = snap.empty ? {} : (snap.docs[0].data() || {});
+                window.CreditsFooter?.setPrincipal(d.name || d.fullName || '');
+            }catch(e){ console.warn('[credits-footer] principal not loaded', e); }
+        }
+
         onAuthStateChanged(auth, async (user)=>{
             if(!user){
                 avatarUserUid = null;
@@ -2245,6 +2256,7 @@
                 await loadSchoolBreaksSettings();
 
                 displayName.textContent = data?.name || (user.email ? user.email.split('@')[0] : 'قائد قسم');
+                loadFooterPrincipal();
 
                 avatarUserUid = user.uid;
                 loadStoredAvatar(user.uid);
@@ -2343,7 +2355,7 @@
             uniqueSorted.forEach(cls=>{
                 const btn = document.createElement('button');
                 btn.type = 'button';
-                btn.className = 'btn class-btn';
+                btn.className = 'btn btn-menu class-btn';
                 btn.dataset.classKey = cls;
                 btn.textContent = formatClassLabel(cls);
                 btn.addEventListener('click', ()=> openClassView(cls));

@@ -31,7 +31,7 @@
   <title>لوحة الإدارة - ثانوية أحمد البشر الرومي</title>
 
   <!-- Tajawal -->
-  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@600;700&family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet"/>
   <script src="/shared/arabic-text-fix.js" defer></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
@@ -69,7 +69,8 @@
       border-bottom:1px solid rgba(3,60,84,.08);
       box-shadow: 0 2px 10px rgba(3,60,84,.06);
     }
-    .site-title{ margin:0; font-weight:900; font-size:clamp(1.1rem,2.4vw,1.5rem); text-shadow:0 1px 0 rgba(255,255,255,.6) }
+    /* Font, size and weight: /shared/identity.css. */
+    .site-title{ margin:0; color:#033C54; text-shadow:0 1px 0 rgba(255,255,255,.6) }
 
     main{ flex:1; padding:24px 14px 32px; display:flex }
     .column{
@@ -114,11 +115,12 @@
 
 
     .stack{ width:min(640px, 100%); display:flex; flex-direction:column; gap:20px; margin-top:16px; align-items:center; margin-inline:auto }
+    /* Height, corners, font and the primary / ghost / danger colours:
+       /shared/identity.css (.btn-menu for the large menu buttons). */
     .btn{
-      font-family:"Tajawal", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-      width:100%; min-height:72px; border:none; border-radius:18px; cursor:pointer;
-      font-weight:800; font-size:clamp(1rem, 2.2vw, 1.1rem); letter-spacing:.2px;
-      padding:18px 24px; transition:var(--transition);
+      width:100%; border:none; cursor:pointer;
+      font-size:clamp(1rem, 2.2vw, 1.1rem);
+      padding:8px 24px; transition:var(--transition);
       user-select:none; display:flex; align-items:center; justify-content:center; gap:12px;
       position:relative; overflow:hidden; isolation:isolate;
     }
@@ -126,12 +128,12 @@
     .btn:hover::after{opacity:1}
     .btn:active{ transform:translateY(0) scale(.995) }
     .btn:focus-visible{ outline:3px solid var(--focus); outline-offset:2px }
-    .btn.primary{ background:linear-gradient(145deg,var(--primary),var(--primary-light)); color:#fff; box-shadow:0 18px 40px rgba(3,60,84,.32) }
+    .btn.primary{ box-shadow:0 18px 40px rgba(3,60,84,.32) }
     .btn.primary:hover{ transform:translateY(-3px); box-shadow:0 22px 48px rgba(3,60,84,.38) }
-    .btn.ghost{ background:#fff; color:#033C54; border:1px solid rgba(3,60,84,.25); box-shadow:var(--shadow-1) }
-    .btn.ghost:hover{ transform:translateY(-3px); box-shadow:0 18px 40px rgba(3,60,84,.22); border-color:rgba(3,60,84,.4) }
-    .btn.danger{ background:#fff; color:#cb2b2b; border:1px solid rgba(203,43,43,.4); box-shadow:var(--shadow-1) }
-    .btn.danger:hover{ transform:translateY(-3px); box-shadow:0 18px 40px rgba(203,43,43,.2); border-color:rgba(203,43,43,.55) }
+    .btn.ghost{ box-shadow:var(--shadow-1) }
+    .btn.ghost:hover{ transform:translateY(-3px); box-shadow:0 18px 40px rgba(3,60,84,.22) }
+    .btn.danger{ box-shadow:var(--shadow-1) }
+    .btn.danger:hover{ transform:translateY(-3px); box-shadow:0 18px 40px rgba(180,35,24,.2) }
 
     /* ===== Sidebar =====
        Ported as-is from the Admin/admin.html sidebar design (same commit
@@ -165,7 +167,7 @@
     .sidebar.open{ transform:translateX(0); }
     .sidebar-head{
       position:relative; padding:16px; display:flex; flex-direction:column; align-items:center; gap:12px; text-align:center;
-      background:linear-gradient(135deg, #044563, #022b42); color:#fff; flex-shrink:0;
+      background:linear-gradient(135deg, #065372, #033C54); color:#fff; flex-shrink:0;
     }
     .sidebar-school-logo{ display:block; width:120px; max-width:calc(100% - 80px); height:auto; object-fit:contain; }
     .sidebar-head h2{ margin:0; font-size:clamp(.74rem,4.3vw,.98rem); font-weight:900; display:flex; align-items:baseline; gap:7px; min-width:0; overflow:hidden; }
@@ -252,7 +254,7 @@
     html.no-scroll, body.no-scroll{ position:fixed; overflow:hidden; width:100%; inset:0; overscroll-behavior:none; }
     .sheet-header{ background:#ffffff; border-bottom:1px solid var(--border); padding:14px 12px; display:flex; align-items:center; gap:10px; position:sticky; top:0; z-index:10 }
     /* .back-btn: /shared/back-button.css */
-    .sheet-title{ margin:0; font-size:1.05rem; font-weight:900; color:#033C54 }
+    .sheet-title{ margin:0; color:#033C54 }
     .sheet-body{ flex:1 1 auto; overflow:auto; padding:16px; width:min(820px,94vw); margin:0 auto; display:flex; flex-direction:column; gap:12px }
 
     .subject{
@@ -301,8 +303,8 @@
     .classes-list{ display:flex; flex-direction:column; gap:10px; }
     .class-row{ display:flex; flex-direction:column; gap:8px; border:1px dashed var(--border); border-radius:14px; padding:10px; background:#fcfeff }
     .class-row .top{ display:flex; gap:10px; align-items:center }
-    .class-row .remove{ height:40px; padding:0 12px; border-radius:10px; border:1px solid rgba(203,43,43,.35); color:#cb2b2b; background:#fff; font-weight:800; cursor:pointer; transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease }
-    .class-row .remove:hover{ transform:translateY(-1px); box-shadow:0 10px 22px rgba(203,43,43,.12); border-color:rgba(203,43,43,.55) }
+    .class-row .remove{ height:40px; padding:0 12px; border-radius:10px; border:1px solid rgba(180,35,24,.35); color:#b42318; background:#fff; font-weight:800; cursor:pointer; transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease }
+    .class-row .remove:hover{ transform:translateY(-1px); box-shadow:0 10px 22px rgba(180,35,24,.12); border-color:rgba(180,35,24,.55) }
     .inline-add{ display:flex; gap:10px; align-items:center; flex-wrap:wrap }
     .inline-add .add{ height:44px; padding:0 16px; border-radius:12px; border:1px solid rgba(3,60,84,.3); background:#fff; color:#033C54; font-weight:900; cursor:pointer; box-shadow: var(--shadow-1); transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease }
     .inline-add .add:hover{ transform:translateY(-1px); box-shadow: 0 12px 26px rgba(3,60,84,.16); border-color:rgba(3,60,84,.55) }
@@ -423,7 +425,6 @@
     #attConfirmModal .row, #attErrorModal .row, #attBlockedModal .row, #attSuccessModal .row, #attLessonDetailModal .row{
       display: flex; gap: 10px; justify-content: flex-start; margin-top: 16px; flex-wrap: wrap;
     }
-    .btn.cancel{ background:#fff; color:var(--primary); border:1px solid rgba(3,60,84,.25); }
 
     /* Add Teacher Modal refinements */
     #addTeacherModal .modal {
@@ -502,12 +503,11 @@
       /* overflow:hidden (for the ellipsis) clips at the line box, which cut
          off the dots above/below letters like ث and ي — the padding grows
          the clip box to fit them, the negative margin keeps the height. */
-      .site-title{ font-size:clamp(1rem, 5vw, 1.25rem); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding-block:.3em; margin-block:-.3em; }
+      .site-title{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding-block:.3em; margin-block:-.3em; }
       .column{ width:100% }
       .panel{ padding:16px 10px }
       .btn{
-        min-height:78px;
-        padding:18px 20px;
+        padding:8px 20px;
         font-size:1.08rem;
       }
       .stack{ gap:14px }
@@ -521,7 +521,7 @@
     }
 
     /* ===== Notification Admin Form ===== */
-    .notif-open-btn { width:100%; min-height:60px; }
+    .notif-open-btn { width:100%; }
     .notif-open-btn svg { transition: transform .25s ease; flex-shrink:0; }
     .notif-form {
       display:flex; flex-direction:column; gap:14px;
@@ -565,7 +565,7 @@
       font-size:.78rem; font-weight:800; margin-bottom:8px;
       background:rgba(3,60,84,.08); color:#033C54;
     }
-    .nc-badge.important { background:rgba(185,28,28,.10); color:#b91c1c; }
+    .nc-badge.important { background:rgba(185,28,28,.10); color:#b42318; }
     .nc-title { font-weight:900; color:#083b57; margin-bottom:6px; font-size:1rem; }
     /* ===== Notification History ===== */
     .notif-hist-stack { display:flex; flex-direction:column; gap:10px; }
@@ -608,13 +608,13 @@
 
     .notif-current-actions { margin-top:10px; display:flex; justify-content:flex-end; }
     .notif-deactivate-btn {
-      padding:8px 14px; border-radius:10px; border:1px solid rgba(203,43,43,.35);
-      background:#fff; color:#cb2b2b; font-weight:800; font-size:.82rem; cursor:pointer;
+      padding:8px 14px; border-radius:10px; border:1px solid rgba(180,35,24,.35);
+      background:#fff; color:#b42318; font-weight:800; font-size:.82rem; cursor:pointer;
       font-family:"Tajawal", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
       transition:background .12s ease, border-color .12s ease;
       display:inline-flex; align-items:center; gap:6px;
     }
-    .notif-deactivate-btn:hover { background:#fdecec; border-color:rgba(203,43,43,.5); }
+    .notif-deactivate-btn:hover { background:#fdecec; border-color:rgba(180,35,24,.5); }
     .notif-deactivate-btn:disabled { opacity:.6; cursor:not-allowed; }
     .notif-active-tag { color:#126a2e; font-weight:800; }
 
@@ -630,8 +630,8 @@
     .notif-icon-btn:hover { background:#e8f0f8; border-color:rgba(3,60,84,.3); }
     .notif-icon-btn:active { transform:scale(.92); }
     .notif-icon-btn:disabled { opacity:.5; cursor:not-allowed; }
-    .notif-icon-btn.delete { color:#cb2b2b; }
-    .notif-icon-btn.delete:hover { background:#fdecec; border-color:rgba(203,43,43,.4); }
+    .notif-icon-btn.delete { color:#b42318; }
+    .notif-icon-btn.delete:hover { background:#fdecec; border-color:rgba(180,35,24,.4); }
 
     .notif-edit-form {
       display:none; flex-direction:column; gap:12px;
@@ -665,7 +665,7 @@
       font-family:inherit; text-align:right; color:#fff;
       background:
         radial-gradient(420px 220px at 0% 0%, rgba(121,179,200,.35), transparent 60%),
-        linear-gradient(150deg, #065372, #033C54 55%, #022b42);
+        linear-gradient(150deg, #065372, #033C54 55%, #033C54);
       box-shadow:0 18px 40px rgba(3,60,84,.30);
       transition:var(--transition);
     }
@@ -830,7 +830,6 @@
 
       .site-header{ padding:20px 40px; gap:14px; }
       .site-logo{ display:block; width:38px; height:38px; object-fit:contain; filter:drop-shadow(0 4px 10px rgba(3,60,84,.25)); }
-      .site-title{ font-size:1.35rem; }
       /* Stays visible on desktop too (unlike Admin/admin.html's copy of
          this sidebar, which hides it there since its desktop dashboard
          already lists every action in a grid) — here it's also the way
@@ -881,7 +880,6 @@
 
       /* Sheets: give the full-screen panels room to breathe on wide screens */
       .sheet-header{ padding:22px 36px; gap:14px; }
-      .sheet-title{ font-size:1.2rem; }
       .sheet-body{ width:min(980px, 90vw); padding:32px 0 56px; gap:22px; }
       .sheet.small .sheet-body{ width:min(680px, 90vw); }
 
@@ -929,7 +927,8 @@
   <meta name="twitter:title" content="لوحة الإدارة - ثانوية أحمد البشر الرومي">
   <meta name="twitter:description" content="???? ?????? ???? ????? ??????.">
   <meta name="twitter:image" content="https://framerusercontent.com/images/jRnZLlPr90qwKsuUwfIlvDS9E.png?width=1200&height=630">
-  <!-- After the page's own styles, so the one back button wins. -->
+  <!-- After the page's own styles, so the site's identity (titles, buttons) and the one back button win. -->
+  <link rel="stylesheet" href="/shared/identity.css" />
   <link rel="stylesheet" href="/shared/back-button.css" />
   <link rel="stylesheet" href="/shared/actions.css" />
   <script src="/shared/feedback.js" defer></script>
@@ -1560,7 +1559,7 @@
     </div>
     <div class="sheet-body">
       <div class="section">
-        <button id="openNotifForm" class="btn primary notif-open-btn">
+        <button id="openNotifForm" class="btn btn-menu primary notif-open-btn">
           <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           إرسال إشعار جديد
         </button>
@@ -1595,7 +1594,7 @@
             <textarea id="notifText" class="notif-textarea" placeholder="اكتب نص الإشعار هنا..." maxlength="1000"></textarea>
           </div>
 
-          <button id="sendNotifBtn" class="btn primary" style="min-height:56px;">إرسال الإشعار</button>
+          <button id="sendNotifBtn" class="btn primary">إرسال الإشعار</button>
           <div id="notifOk" class="ok"></div>
           <div id="notifErr" class="err"></div>
         </div>
@@ -2761,7 +2760,7 @@
         sidebarId: 'sidebarClassSchedules', exportName: 'mountClassSchedulesSheet', title: 'جداول الصفوف' }),
       makeScheduleSheet({ key: 'dept-budgets', hash: '#dept-budgets', sheetId: 'deptBudgetsSheet', hostId: 'deptBudgetsHost',
         sidebarId: 'sidebarDeptBudgets', exportName: 'mountDepartmentBudgetsSheet', title: 'ميزانيات الأقسام',
-        modulePath: '/shared/department-budgets.js?v=2026-10-13', hooks: { role: 'admin' } }),
+        modulePath: '/shared/department-budgets.js?v=2026-10-14', hooks: { role: 'admin' } }),
     ];
 
     // Sidebar: "غياب اليوم" / "الغياب المختصر" / "تدقيق في الغائب" open
@@ -2951,6 +2950,16 @@
       myClassesSection.hidden = false;
     }
 
+    // «مدير المدرسة» in the site footer (/shared/credits-footer.js): the
+    // teacher marked «مدير المدرسة» in admins/teachers.html.
+    async function loadFooterPrincipal(){
+      try{
+        const snap = await getDocs(query(collection(db, 'teachers'), where('permissions.isPrincipal', '==', true), limit(1)));
+        const d = snap.empty ? {} : (snap.docs[0].data() || {});
+        window.CreditsFooter?.setPrincipal(d.name || d.fullName || '');
+      }catch(e){ console.warn('[credits-footer] principal not loaded', e); }
+    }
+
     onAuthStateChanged(auth, async (user)=>{
       if(!user){
         avatarUserUid = null;
@@ -2985,6 +2994,7 @@
         show(sAdmin);
         initNotificationPopup(db, { uid: user.uid, name: data?.name || '' });
         startPresenceHeartbeat(db, user.uid);
+        loadFooterPrincipal();
         if(window.location.hash === '#admins') openAdminsPanel();
         if(window.location.hash === NOTIFICATIONS_HASH) openNotificationsPanel(false);
         if(window.location.hash === TODAY_ABSENCE_HASH) openTodayAbsenceSheet(false);

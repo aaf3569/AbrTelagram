@@ -145,8 +145,8 @@ const STYLES = `
   #attBlockedModal .blocked-close{position:absolute;top:8px;left:8px;width:32px;height:32px;border-radius:999px;border:1px solid rgba(185,28,28,.18);background:#fff;color:#7f1d1d;font-weight:900;cursor:pointer}
   #attBlockedModal .blocked-icon{width:96px;height:96px;display:grid;place-items:center}
   #attBlockedModal .blocked-icon svg{width:96px;height:96px;overflow:visible}
-  #attBlockedModal .blocked-icon circle{fill:none;stroke:#dc2626;stroke-width:6;stroke-dasharray:220;stroke-dashoffset:220;animation:attBlockedRingDraw 1.2s ease-in-out infinite}
-  #attBlockedModal .blocked-icon path{fill:none;stroke:#dc2626;stroke-width:7;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:56;stroke-dashoffset:56;animation:attBlockedXDraw 1.2s ease-in-out infinite}
+  #attBlockedModal .blocked-icon circle{fill:none;stroke:#b42318;stroke-width:6;stroke-dasharray:220;stroke-dashoffset:220;animation:attBlockedRingDraw 1.2s ease-in-out infinite}
+  #attBlockedModal .blocked-icon path{fill:none;stroke:#b42318;stroke-width:7;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:56;stroke-dashoffset:56;animation:attBlockedXDraw 1.2s ease-in-out infinite}
   #attBlockedModal .blocked-title{margin:0;color:#991b1b;font-weight:900;font-size:1.06rem}
   #attBlockedModal .blocked-msg{margin:0;color:#7f1d1d;font-weight:800;font-size:.95rem;line-height:1.7}
   #attBlockedModal .blocked-actions{width:100%;display:flex;justify-content:center;gap:10px;flex-wrap:wrap}
@@ -208,17 +208,17 @@ const STYLES = `
      failures (network/server errors), never for routine validation.
      Pulsing red frame around the whole viewport plus a loud modal, so a
      real failure can't be mistaken for an ordinary message. */
-  #attCriticalBorder{position:fixed;inset:0;z-index:1150;pointer-events:none;opacity:0;visibility:hidden;transition:opacity .18s ease,visibility .18s ease;box-shadow:inset 0 0 0 8px #dc2626,inset 0 0 70px 12px rgba(220,38,38,.65)}
+  #attCriticalBorder{position:fixed;inset:0;z-index:1150;pointer-events:none;opacity:0;visibility:hidden;transition:opacity .18s ease,visibility .18s ease;box-shadow:inset 0 0 0 8px #b42318,inset 0 0 70px 12px rgba(180,35,24,.65)}
   #attCriticalBorder.open{opacity:1;visibility:visible;animation:attCriticalPulse 1.4s ease-in-out infinite}
   #attCriticalErrorModal .overlay{background:rgba(127,29,29,.35);backdrop-filter:blur(4px)}
-  #attCriticalErrorModal .critical-error-card{position:relative;z-index:1;width:min(380px,92vw);background:linear-gradient(180deg,#ffffff 0%,#fff5f5 100%);border:2px solid #dc2626;border-radius:20px;box-shadow:0 24px 70px rgba(185,28,28,.35);padding:26px 22px;display:grid;justify-items:center;gap:14px;text-align:center}
+  #attCriticalErrorModal .critical-error-card{position:relative;z-index:1;width:min(380px,92vw);background:linear-gradient(180deg,#ffffff 0%,#fff5f5 100%);border:2px solid #b42318;border-radius:20px;box-shadow:0 24px 70px rgba(185,28,28,.35);padding:26px 22px;display:grid;justify-items:center;gap:14px;text-align:center}
   #attCriticalErrorModal.open .critical-error-card{animation:attBlockedCardIn .2s ease}
   #attCriticalErrorModal .critical-error-icon{width:72px;height:72px;display:grid;place-items:center}
   #attCriticalErrorModal .critical-error-icon svg{width:72px;height:72px;overflow:visible}
-  #attCriticalErrorModal .critical-error-icon circle{fill:none;stroke:#dc2626;stroke-width:6}
-  #attCriticalErrorModal .critical-error-icon line{stroke:#dc2626;stroke-width:8;stroke-linecap:round}
-  #attCriticalErrorModal .critical-error-icon .dot{fill:#dc2626;stroke:none}
-  #attCriticalErrorModal .critical-error-title{margin:0;color:#dc2626;font-weight:900;font-size:2rem;letter-spacing:.5px}
+  #attCriticalErrorModal .critical-error-icon circle{fill:none;stroke:#b42318;stroke-width:6}
+  #attCriticalErrorModal .critical-error-icon line{stroke:#b42318;stroke-width:8;stroke-linecap:round}
+  #attCriticalErrorModal .critical-error-icon .dot{fill:#b42318;stroke:none}
+  #attCriticalErrorModal .critical-error-title{margin:0;color:#b42318;font-weight:900;font-size:2rem;letter-spacing:.5px}
   #attCriticalErrorModal .critical-error-msg{margin:0;color:#7f1d1d;font-weight:800;font-size:1rem;line-height:1.8}
   #attCriticalErrorModal .critical-error-close{width:100%;min-height:52px;margin-top:4px}
   @keyframes attCriticalPulse{0%,100%{opacity:.65}50%{opacity:1}}

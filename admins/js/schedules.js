@@ -1052,7 +1052,7 @@ function buildDayPdf(d, dept, teachers) {
       .p .t { font-size:17px; font-weight:800; color:#1d4d72; margin-bottom:6px; }
       .p .d { font-size:13px; font-weight:800; color:#355f81; }
       .p table { width:100%; border-collapse:collapse; table-layout:fixed; border:1px solid #cddff0; margin-top:14px; }
-      .p thead th { background:linear-gradient(135deg,#0e3a5c,#1c5b88); color:#fff; font-size:10.5px; font-weight:900; padding:10px 4px; }
+      .p thead th { background:linear-gradient(135deg,#033C54,#065372); color:#fff; font-size:10.5px; font-weight:900; padding:10px 4px; }
       .p thead th.c { width:150px; }
       .p th.name { background:#f4f8fc; font-size:11px; font-weight:900; color:#163e63; padding:9px 8px; text-align:right; border-top:1px solid #d9e6f3; }
       .p td { text-align:center; font-size:11px; font-weight:800; color:#94a3b8; padding:9px 4px; border-top:1px solid #e1ebf5; border-left:1px solid #e1ebf5; }

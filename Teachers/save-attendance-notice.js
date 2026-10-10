@@ -60,7 +60,7 @@ function ensureStyles() {
       max-height: calc(100dvh - 40px); overflow-y: auto;
       border-radius: 26px;
       background: #fff;
-      box-shadow: 0 30px 70px rgba(127, 29, 29, .38), 0 0 0 4px rgba(220, 38, 38, .18);
+      box-shadow: 0 30px 70px rgba(127, 29, 29, .38), 0 0 0 4px rgba(180, 35, 24, .18);
       text-align: center;
       transform: translateY(18px) scale(.9);
       opacity: 0;
@@ -71,11 +71,11 @@ function ensureStyles() {
       animation: sa-glow 2.4s ease-in-out .4s infinite;
     }
     @keyframes sa-glow {
-      0%, 100% { box-shadow: 0 30px 70px rgba(127, 29, 29, .38), 0 0 0 4px rgba(220, 38, 38, .18); }
-      50%      { box-shadow: 0 30px 70px rgba(127, 29, 29, .38), 0 0 0 9px rgba(220, 38, 38, .30); }
+      0%, 100% { box-shadow: 0 30px 70px rgba(127, 29, 29, .38), 0 0 0 4px rgba(180, 35, 24, .18); }
+      50%      { box-shadow: 0 30px 70px rgba(127, 29, 29, .38), 0 0 0 9px rgba(180, 35, 24, .30); }
     }
     #${HOST_ID} .sa-head {
-      background: linear-gradient(145deg, #b91c1c, #ef4444);
+      background: linear-gradient(145deg, #b42318, #b42318);
       color: #fff;
       padding: 26px 20px 22px;
       border-radius: 26px 26px 0 0;
@@ -105,14 +105,14 @@ function ensureStyles() {
       font-size: 1.22rem; font-weight: 800; line-height: 1.9;
     }
     #${HOST_ID} .sa-text mark {
-      background: #fee2e2; color: #b91c1c;
+      background: #fee2e2; color: #b42318;
       padding: 1px 8px; border-radius: 8px;
     }
     #${HOST_ID} .sa-ok {
       display: block; width: 100%;
       margin-top: 22px; min-height: 56px;
       border: none; border-radius: 16px;
-      background: linear-gradient(145deg, #b91c1c, #dc2626);
+      background: linear-gradient(145deg, #b42318, #b42318);
       color: #fff;
       font: inherit; font-size: 1.08rem; font-weight: 900;
       cursor: pointer;

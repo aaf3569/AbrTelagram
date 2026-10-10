@@ -40,14 +40,14 @@ function ensurePopupStyles() {
     }
 
     #${POPUP_HOST_ID} .abr-popup-dialog {
-      --abr-accent: #0b5f88;
-      --abr-accent-2: #0f7cb0;
-      --abr-accent-soft: #e6f1f8;
-      --abr-accent-glow: rgba(11, 95, 136, 0.32);
+      --abr-accent: #033C54;
+      --abr-accent-2: #065372;
+      --abr-accent-soft: #eef5f9;
+      --abr-accent-glow: rgba(3, 60, 84, 0.28);
       position: relative;
       width: min(360px, calc(100vw - 32px));
       border-radius: 24px;
-      border: 1px solid #dbe7f2;
+      border: 1px solid #e6edf7;
       background: #ffffff;
       box-shadow: 0 30px 70px rgba(10, 30, 60, 0.32);
       padding: 30px 22px 20px;
@@ -106,9 +106,10 @@ function ensurePopupStyles() {
     #${POPUP_HOST_ID} .abr-popup-title {
       position: relative;
       margin: 0 0 8px;
-      color: #0a2f47;
+      color: #033C54;
+      font-family: "Readex Pro", var(--app-font, "Tajawal"), system-ui, sans-serif;
       font-size: 1.2rem;
-      font-weight: 900;
+      font-weight: 700;
       line-height: 1.5;
     }
 
@@ -116,7 +117,7 @@ function ensurePopupStyles() {
       position: relative;
       margin: 0 auto;
       max-width: 290px;
-      color: #4a6478;
+      color: #6b7f9f;
       font-size: 0.95rem;
       font-weight: 600;
       line-height: 1.85;
@@ -133,10 +134,10 @@ function ensurePopupStyles() {
     #${POPUP_HOST_ID} .abr-popup-btn {
       border: 0;
       border-radius: 14px;
-      min-height: 50px;
+      min-height: 48px;
       padding: 0 12px;
-      font-family: inherit;
-      font-weight: 800;
+      font-family: "Readex Pro", var(--app-font, "Tajawal"), system-ui, sans-serif;
+      font-weight: 700;
       font-size: 0.95rem;
       cursor: pointer;
       transition: transform .14s ease, box-shadow .14s ease, background-color .14s ease;
@@ -152,17 +153,17 @@ function ensurePopupStyles() {
     }
 
     #${POPUP_HOST_ID} .abr-popup-btn.cancel {
-      background: #f1f5f9;
-      color: #33526a;
-      border: 1px solid #dbe5ee;
+      background: #fff;
+      color: #033C54;
+      border: 1px solid rgba(3, 60, 84, .25);
     }
 
     #${POPUP_HOST_ID} .abr-popup-btn.cancel:hover {
-      background: #e6edf4;
+      background: #eef5f9;
     }
 
     #${POPUP_HOST_ID} .abr-popup-btn.confirm {
-      background: linear-gradient(145deg, var(--abr-accent), var(--abr-accent-2));
+      background: linear-gradient(145deg, var(--abr-accent-2), var(--abr-accent));
       color: #fff;
       box-shadow: 0 12px 26px var(--abr-accent-glow);
     }
@@ -173,8 +174,9 @@ function ensurePopupStyles() {
     }
 
     #${POPUP_HOST_ID}.is-danger .abr-popup-dialog {
+      /* The confirm button of a delete: filled #b42318, flat. */
       --abr-accent: #b42318;
-      --abr-accent-2: #dc2626;
+      --abr-accent-2: #b42318;
       --abr-accent-soft: #fdeceb;
       --abr-accent-glow: rgba(180, 35, 24, 0.32);
       border-color: #f4d3d3;
