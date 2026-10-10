@@ -218,9 +218,6 @@
       </div>
     </div>
   </main>
-  <!-- The school's card (مدير المدرسة, تصميم و برمجة), as on the admin and department-head pages. -->
-  <div data-credits-footer></div>
-  <script src="/shared/credits-footer.js" defer></script>
 
   <!-- الغياب sheets (إدارة الغياب). /admins/js/newabsence.js, overallabsence.js
        and absence.js render into these hosts (each in its own shadow root)
@@ -1136,7 +1133,7 @@
     import {
       initializeFirestore, persistentSingleTabManager,
       collection, getDocs, query, where, doc, getDoc, setDoc,
-      serverTimestamp, updateDoc, onSnapshot, limit
+      serverTimestamp, updateDoc, onSnapshot
     } from "/shared/firebase.js";
     import {
       getOverriddenClassKeys, mergeCustomIntoLessonMap, classKeyFromRow, normalizeClassKey
@@ -7346,16 +7343,6 @@
     /* ========= Auth ========= */
     setPersistence(auth, browserLocalPersistence).catch(()=>{});
 
-    // «مدير المدرسة» in the site footer (/shared/credits-footer.js): the
-    // teacher marked «مدير المدرسة» in admins/teachers.html.
-    async function loadFooterPrincipal(){
-      try{
-        const snap = await getDocs(query(collection(db, 'teachers'), where('permissions.isPrincipal', '==', true), limit(1)));
-        const d = snap.empty ? {} : (snap.docs[0].data() || {});
-        window.CreditsFooter?.setPrincipal(d.name || d.fullName || '');
-      }catch(e){ console.warn('[credits-footer] principal not loaded', e); }
-    }
-
     onAuthStateChanged(auth, async (user)=>{
       // Debounced: a transient null immediately followed by the real user
       // again (a brief SDK flicker) shouldn't yank the sheet closed or
@@ -7405,7 +7392,6 @@
       // reads presence/{uid}; this is the page teachers actually live on,
       // so it's the one that has to keep it fresh.
       startPresenceHeartbeat(db, user.uid);
-      loadFooterPrincipal();
       currentRole = '';
       updateSidebarUser();
 
