@@ -3,14 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.gstatic.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; manifest-src 'self'; upgrade-insecure-requests; block-all-mixed-content">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.gstatic.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; manifest-src 'self'; upgrade-insecure-requests; block-all-mixed-content">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
 <!-- perf: start the module graph downloading immediately -->
-<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
 <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js" crossorigin>
 <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js" crossorigin>
 <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js" crossorigin>
@@ -24,9 +23,6 @@
   <!-- Tajawal -->
   <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@600;700&family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet"/>
   <script src="/shared/arabic-text-fix.js" defer></script>
-  <!-- Font Awesome -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
-
   <link rel="stylesheet" href="/shared/base.css" />
   <style>
     @property --border-angle{syntax:'<angle>';inherits:false;initial-value:0turn}
@@ -85,7 +81,7 @@
       color: var(--primary);
       display: flex; align-items: center; gap: 10px;
     }
-    .site-title i { font-size: 1.4em; }
+    .site-title .ic { font-size: 1.4em; }
     .header-start { display: flex; align-items: center; gap: 12px; min-width: 0; }
 
     .top-right {
@@ -258,7 +254,7 @@
       align-items: center;
       gap: 6px;
     }
-    .late-teacher i { color: #eab308; }
+    .late-teacher .ic { color: #eab308; }
 
     .late-lesson-text {
       font-weight: 700;
@@ -277,7 +273,7 @@
       gap: 8px;
       align-items: center;
     }
-    .late-sub i { font-size: 0.85rem; }
+    .late-sub .ic { font-size: 0.85rem; }
 
     .late-date {
       font-weight: 700;
@@ -330,7 +326,7 @@
       gap: 8px;
       font-size: 0.9rem;
     }
-    .empty-state i {
+    .empty-state .ic {
       font-size: 1.8rem;
       color: var(--border);
     }
@@ -498,17 +494,17 @@
         <!-- رجوع → the hub (/shared/hub-title-link.js picks it, as for the title). -->
         <button id="hubBackBtn" class="back-btn" type="button" data-hub-back aria-label="رجوع" title="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
         <h1 class="site-title">
-          <i class="fas fa-clock-rotate-left"></i>
+          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-history"/></svg>
           تأخّر المعلمين في تسجيل الغياب
         </h1>
       </div>
       <div class="top-right">
         <span class="badge">
-          <i class="fas fa-user-shield"></i>
+          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-user-shield"/></svg>
           لوحة خاصة للإدارة فقط
         </span>
         <a id="teacherScheduleBtn" href="/teachers/user.html" class="link-btn">
-          <i class="fas fa-calendar-alt"></i>
+          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-calendar-days"/></svg>
           <span>جدول المعلّم</span>
         </a>
       </div>
@@ -548,34 +544,34 @@
         </div>
         <div class="card">
           <div id="status" class="status-message">
-            <i class="fas fa-circle-notch fa-spin"></i>
+            <svg class="ic ic-spin" aria-hidden="true"><use href="/shared/icons.svg#i-loader"/></svg>
             <span>جاري تحميل بيانات التأخّر...</span>
           </div>
 
           <div class="filters-row">
             <div class="filters-row-title">
-              <i class="fas fa-sliders-h"></i>
+              <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-sliders"/></svg>
               <span>الترتيب</span>
             </div>
 
             <button id="btnSortRecent" class="pill-btn active" type="button">
-              <i class="fas fa-sort-amount-down"></i>
+              <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-sort-desc"/></svg>
               <span>الأحدث أولاً</span>
             </button>
 
             <button id="btnSortOldest" class="pill-btn" type="button">
-              <i class="fas fa-sort-amount-up"></i>
+              <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-sort-asc"/></svg>
               <span>الأقدم أولاً</span>
             </button>
 
             <button id="btnSortLesson" class="pill-btn" type="button">
-              <i class="fas fa-list-ol"></i>
+              <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-list-ordered"/></svg>
               <span>حسب رقم الحصة (1 → 7)</span>
             </button>
 
             <div class="lesson-filter">
               <span class="filters-row-title" style="margin-inline-end: 4px;">
-                <i class="far fa-clock"></i>
+                <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-clock"/></svg>
                 <span>فلترة بالحصة</span>
               </span>
               <select id="lessonFilter" class="select">

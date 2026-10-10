@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; connect-src 'self' https://abrschool-bot.onrender.com http://127.0.0.1:3000 http://localhost:3000 https://cdn.jsdelivr.net https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.gstatic.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; manifest-src 'self'; upgrade-insecure-requests; block-all-mixed-content">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://abrschool-bot.onrender.com http://127.0.0.1:3000 http://localhost:3000 https://cdn.jsdelivr.net https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.gstatic.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; manifest-src 'self'; upgrade-insecure-requests; block-all-mixed-content">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1295,6 +1295,9 @@ html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%;
 #attDetailBody .row[hidden], #lateDetailActions[hidden], .late-rule-note[hidden]{ display:none !important }
 #lateDetailActions{ display:flex; margin-top:6px }
 #lateDetailActions .btn{ flex:1; height:48px }
+/* Line icons (/shared/icons.svg) next to a label. */
+#openClassSettings{ gap:8px; }
+.head-crown{ color:#b7791f; }
 </style>
 
   <!-- iOS home screen icon -->
@@ -1384,7 +1387,7 @@ html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%;
       </div>
       <div id="gradesMain">
         <div class="section" id="globalStudentSearchShell">
-          <div class="label" style="margin:0 0 8px;">🔍 ابحث عن طالب في كل المدرسة</div>
+          <div class="label" style="margin:0 0 8px;"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-search"/></svg> ابحث عن طالب في كل المدرسة</div>
           <div class="input-wrap">
             <input id="globalStudentSearchInput" class="input" type="text" placeholder="اكتب اسم الطالب…" autocomplete="off">
           </div>
@@ -1411,7 +1414,7 @@ html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%;
         </div>
 
         <div class="class-settings-shell" aria-label="إعدادات الفصول">
-          <button id="openClassSettings" class="btn ghost" type="button">⚙️ إعدادات الفصول</button>
+          <button id="openClassSettings" class="btn ghost" type="button"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-settings"/></svg> إعدادات الفصول</button>
         </div>
       </div>
     </section>
@@ -2263,8 +2266,8 @@ import { initializeApp, getApp, getApps } from "/shared/firebase.js";
 import { getAuth, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from "/shared/firebase.js";
 import { initializeFirestore, persistentSingleTabManager, collection, collectionGroup, getDocs, query, where, orderBy, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp, writeBatch, arrayUnion, arrayRemove } from "/shared/firebase.js";
 import { mountAttendanceSheet } from "/shared/attendance.js";
-import { mountStudentNotesSheet } from "/shared/student-notes-sheet.js?v=2026-10-15";
-import { mountClassNotesOverview } from "/shared/teacher-class-sheet.js?v=2026-10-14d";
+import { mountStudentNotesSheet } from "/shared/student-notes-sheet.js?v=2026-10-16";
+import { mountClassNotesOverview } from "/shared/teacher-class-sheet.js?v=2026-10-16d";
 import { fetchStudentAttendanceData, makeAttTile, makeMorningLateTile, makeAbsenceDayTile, makeLateAbsenceTile, LATES_PER_ABSENCE_DAY } from "/shared/attendance-tiles.js?v=2026-10-04";
 import { renderWarningState, renderExcusedWarningState } from "/shared/warning-system.js";
 import { DEFAULT_CLASS_LIST, fetchClassList, groupByGrade, availableNumbersToAdd, buildClassKey, primeClassList, parseClassKey } from "/shared/class-registry.js";
@@ -4450,7 +4453,7 @@ function renderClassTeachersList(){
     el.className='item will-change';
     el.innerHTML = `
       <div>
-        <div>${isHead ? '<span aria-hidden="true" title="رئيس القسم">👑</span> ' : ''}${t.name || t.email || t.uid}</div>
+        <div>${isHead ? '<span class="head-crown" title="رئيس القسم"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-crown"/></svg></span> ' : ''}${t.name || t.email || t.uid}</div>
         <div class="sub">${subject}</div>
       </div>
       <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>

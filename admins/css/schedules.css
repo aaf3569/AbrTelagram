@@ -454,8 +454,8 @@ button.sch-wg-cell:focus-visible { outline: 3px solid #79b3c8; outline-offset: -
 .sch-option:disabled { opacity: .55; cursor: wait; }
 .sch-option b { display: block; font-weight: 900; font-size: .98rem; }
 .sch-option small { color: var(--muted); font-weight: 800; font-size: .8rem; }
-.sch-option .ic { width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; background: rgba(4, 69, 99, .08); flex-shrink: 0; }
-.sch-option .ic svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 2; }
+.sch-option .opt-ic { width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; background: rgba(4, 69, 99, .08); flex-shrink: 0; }
+.sch-option .opt-ic svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 2; }
 .sch-dl-status { text-align: center; font-weight: 800; font-size: .86rem; color: var(--muted); }
 .sch-dl-status.error { color: var(--danger); }
 
@@ -479,3 +479,11 @@ button.sch-wg-cell:focus-visible { outline: 3px solid #79b3c8; outline-offset: -
 /* Headings: /shared/identity.css's font, which the host page's styles can't
    reach inside this shadow root. */
 h1, h2, h3, h4, .ss-pop-title b { font-family: var(--font-heading); }
+
+/* Line icons from /shared/icons.svg — a copy of /shared/identity.css's
+   .ic rules, which don't reach into this shadow root. */
+:where(svg.ic) { width: 1.15em; height: 1.15em; vertical-align: -0.18em; flex: none; }
+svg.ic { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+svg.ic.ic-spin { animation: ic-spin .9s linear infinite; }
+@keyframes ic-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { svg.ic.ic-spin { animation-duration: 2.4s; } }

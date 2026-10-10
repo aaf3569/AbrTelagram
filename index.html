@@ -3,14 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; img-src 'self' data: blob: https://framerusercontent.com; font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; connect-src 'self' https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com https://firebaseinstallations.googleapis.com https://www.googleapis.com https://www.gstatic.com https://*.gstatic.com https://*.firebaseio.com wss://*.firebaseio.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; manifest-src 'self'; upgrade-insecure-requests; block-all-mixed-content">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https://framerusercontent.com; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com https://firebaseinstallations.googleapis.com https://www.googleapis.com https://www.gstatic.com https://*.gstatic.com https://*.firebaseio.com wss://*.firebaseio.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; manifest-src 'self'; upgrade-insecure-requests; block-all-mixed-content">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
 <!-- perf: start the module graph downloading immediately -->
-<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
 <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js" crossorigin>
 <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js" crossorigin>
 <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js" crossorigin>
@@ -20,7 +19,6 @@
   <!-- Font & Icons -->
   <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@600;700&family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
   <script src="/shared/arabic-text-fix.js" defer></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
   <!-- iOS home screen icon -->
   <link rel="apple-touch-icon" sizes="180x180" href="./images/appicon.png" />
@@ -356,6 +354,8 @@
       flex-shrink: 0;
     }
 
+    .checkmark .ic { stroke-width: 3; }
+
     .remember-me:hover .checkmark {
       border-color: var(--primary);
     }
@@ -552,7 +552,7 @@
       transform: translateY(8px) scale(.94);
     }
     .loader-pill[hidden] { display: none; }
-    .loader-pill i { font-size: 1.15rem; flex-shrink: 0; }
+    .loader-pill .ic { font-size: 1.15rem; flex-shrink: 0; }
     .loader-overlay.show .loader-pill { animation: loaderPillIn .5s .45s var(--ld-ease) forwards; }
     /* A name that only arrives after the overlay opened pops in right away
        rather than waiting out the intro delay a second time */
@@ -798,7 +798,7 @@
         <label for="loginEmail" class="form-label">رقم المستخدم</label>
         <div class="input-container">
           <div class="input-icon" aria-hidden="true">
-            <i class="fas fa-id-card"></i>
+            <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-id-card"/></svg>
           </div>
           <input
             type="text"
@@ -817,13 +817,13 @@
         <div class="input-container">
           <input type="password" id="loginPassword" class="form-input" placeholder="••••••••" autocomplete="current-password">
           <button type="button" class="password-toggle" id="togglePassword" aria-label="إظهار كلمة المرور">
-            <i class="fas fa-eye"></i>
+            <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-eye"/></svg>
           </button>
         </div>
       </div>
 
       <div id="rememberToggle" class="remember-me" role="checkbox" aria-checked="false" tabindex="0">
-        <div class="checkmark" aria-hidden="true">✓</div>
+        <div class="checkmark" aria-hidden="true"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-check"/></svg></div>
         <div>تذكرني</div>
       </div>
 
@@ -851,7 +851,7 @@
       </div>
       <div class="loader-mask"><h2 class="loader-title">مرحباً بك</h2></div>
       <p id="loaderName" class="loader-pill" hidden>
-        <i class="fas fa-circle-user" aria-hidden="true"></i>
+        <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-user-circle"/></svg>
         <span id="loaderNameText"></span>
       </p>
     </div>
@@ -864,7 +864,7 @@
       <div class="loader-liquid-body"></div>
       <div class="loader-header">
         <div class="loader-header-inner">
-          <span class="loader-header-btn"><i class="fas fa-bars"></i></span>
+          <span class="loader-header-btn"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-menu"/></svg></span>
           <img class="loader-header-logo" src="./images/schoollogo.png" alt="">
           <span class="loader-header-title">ثانوية أحمد البشر الرومي</span>
         </div>
@@ -912,7 +912,7 @@
     const loginBtn = document.getElementById('loginBtn');
     const msgEl = document.getElementById('msg');
     const togglePasswordBtn = document.getElementById('togglePassword');
-    const eyeIcon = togglePasswordBtn.querySelector('i');
+    const eyeIcon = togglePasswordBtn.querySelector('use');
     const loader = document.getElementById('loader');
     const loaderName = document.getElementById('loaderName');
     const loaderNameText = document.getElementById('loaderNameText');
@@ -994,7 +994,7 @@
     function togglePasswordVisibility() {
       passwordVisible = !passwordVisible;
       passEl.type = passwordVisible ? 'text' : 'password';
-      eyeIcon.className = passwordVisible ? 'fas fa-eye-slash' : 'fas fa-eye';
+      eyeIcon.setAttribute('href', '/shared/icons.svg#i-' + (passwordVisible ? 'eye-off' : 'eye'));
       togglePasswordBtn.setAttribute('aria-label', passwordVisible ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور');
 
       togglePasswordBtn.classList.add('will-change');
@@ -1105,7 +1105,7 @@
     // Fire-and-forget: nothing here is awaited by the redirect, so the
     // animation's timing is exactly what it was. Whatever hasn't finished
     // when the page navigates is simply dropped. Same-origin only — the
-    // Firebase SDK and Font Awesome are already cached from this page, and
+    // Firebase SDK and the icon sprite are already cached from this page, and
     // this page's CSP wouldn't allow fetching other origins anyway.
     const warmedUrls = new Set();
     const MAX_WARMED_FILES = 60; // a safety cap; a page uses ~15-25
@@ -1295,7 +1295,7 @@
       isLoginAttemptInProgress = true;
 
       try {
-        loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري تسجيل الدخول';
+        loginBtn.innerHTML = '<svg class="ic ic-spin" aria-hidden="true"><use href="/shared/icons.svg#i-loader"/></svg> جاري تسجيل الدخول';
         loginBtn.disabled = true;
 
         const cred = await signInWithEmailAndPassword(auth, email, password);

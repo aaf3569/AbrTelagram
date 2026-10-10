@@ -11,7 +11,7 @@
 
    Uses the host page's .sheet/.sheet-header/.back-btn/.sheet-title/
    .sheet-body chrome; everything else is "tcs-" scoped, with inline SVG
-   icons (not every host loads Font Awesome). Appended to the end of <body>
+   icons. Appended to the end of <body>
    so both sheets stack above the teacher profile sheet.
 
    Also exports mountClassNotesOverview (admins/students.html → a class →

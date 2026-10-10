@@ -146,7 +146,7 @@ export async function maybeShowSaveAttendanceNotice({ db, uid }) {
     <div class="sa-backdrop"></div>
     <div class="sa-dialog" role="alertdialog" aria-modal="true" aria-labelledby="saTitle" aria-describedby="saText">
       <div class="sa-head">
-        <div class="sa-icon"><i class="fas fa-triangle-exclamation" aria-hidden="true"></i></div>
+        <div class="sa-icon"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-alert-triangle"/></svg></div>
         <h2 id="saTitle" class="sa-title">مهم</h2>
       </div>
       <div class="sa-body">

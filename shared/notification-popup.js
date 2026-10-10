@@ -170,7 +170,7 @@ function showPopup(notif, db, uid, name) {
   host.innerHTML = `
     <div class="anp-backdrop"></div>
     <div class="anp-dialog" role="alertdialog" aria-modal="true" aria-labelledby="anpDialogTitle">
-      <div class="anp-badge">${isImportant ? '🔴&nbsp;إشعار مهم' : '📢&nbsp;إشعار'}</div>
+      <div class="anp-badge">${isImportant ? '<svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-alert-circle"/></svg>إشعار مهم' : '<svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-megaphone"/></svg>إشعار'}</div>
       ${notif.title ? `<h3 id="anpDialogTitle" class="anp-title">${escHtml(notif.title)}</h3>` : ''}
       <p class="anp-text">${escHtml(notif.text)}</p>
       <button type="button" class="anp-close">إغلاق</button>

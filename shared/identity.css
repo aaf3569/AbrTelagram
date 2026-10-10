@@ -106,3 +106,39 @@ h1, h2, h3, h4,
 .btn.btn.danger.confirm-delete:hover {
   background: #9b1d14;
 }
+
+/* ---- Icons ----
+   One icon style for the whole site: the thin line icons of
+   /shared/icons.svg (24×24, no fill, round ends), drawn in the text colour:
+     <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-NAME"/></svg>
+   The size sits in :where() so a page's own rule for an icon's box (a
+   coloured square in a menu, say) always wins over it; the stroke does not.
+   An icon that is the only content of a button needs aria-label on the
+   button. .ic-spin turns one (the loader) while something loads. Modules
+   that render into a shadow root carry a copy of these rules. */
+:where(svg.ic) {
+  width: 1.15em;
+  height: 1.15em;
+  vertical-align: -0.18em;
+  flex: none;
+}
+
+svg.ic {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+svg.ic.ic-spin {
+  animation: ic-spin .9s linear infinite;
+}
+
+@keyframes ic-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  svg.ic.ic-spin { animation-duration: 2.4s; }
+}

@@ -319,3 +319,11 @@ table.grid tr.gsep th, table.grid tr.gsep td { border-top: 2px solid #c9d3dc; }
   .periods { gap: 4px; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+/* Line icons from /shared/icons.svg — a copy of /shared/identity.css's
+   .ic rules, which don't reach into this shadow root. */
+:where(svg.ic) { width: 1.15em; height: 1.15em; vertical-align: -0.18em; flex: none; }
+svg.ic { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+svg.ic.ic-spin { animation: ic-spin .9s linear infinite; }
+@keyframes ic-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { svg.ic.ic-spin { animation-duration: 2.4s; } }

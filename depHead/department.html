@@ -3,14 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; connect-src 'self' https://abrschool-bot.onrender.com http://127.0.0.1:3000 http://localhost:3000 https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.gstatic.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; manifest-src 'self'; upgrade-insecure-requests; block-all-mixed-content">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://abrschool-bot.onrender.com http://127.0.0.1:3000 http://localhost:3000 https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.gstatic.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; manifest-src 'self'; upgrade-insecure-requests; block-all-mixed-content">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
 <!-- perf: start the module graph downloading immediately -->
-<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
 <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js" crossorigin>
 <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js" crossorigin>
 <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js" crossorigin>
@@ -22,7 +21,6 @@
   <!-- Tajawal -->
   <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@600;700&family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet"/>
   <script src="/shared/arabic-text-fix.js" defer></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
 
   <link rel="stylesheet" href="/shared/base.css" />
   <style>
@@ -318,7 +316,7 @@
     }
     .sidebar-school-logo{ display:block; width:120px; max-width:calc(100% - 80px); height:auto; object-fit:contain; }
     .sidebar-head h2{ margin:0; font-size:clamp(.74rem,4.3vw,.98rem); font-weight:900; display:flex; align-items:baseline; gap:7px; min-width:0; overflow:hidden; }
-    .sidebar-head h2 i{ flex-shrink:0; font-size:.9em; opacity:.85; }
+    .sidebar-head h2 .ic{ flex-shrink:0; font-size:.9em; opacity:.85; }
     .sidebar-head h2 span{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .sidebar-close{
       position:absolute; top:16px; left:16px; width:32px; height:32px; flex-shrink:0; border-radius:10px;
@@ -351,14 +349,14 @@
       border-radius:12px; border:1px solid transparent; background:transparent; color:var(--text);
       font-weight:800; font-size:.91rem; cursor:pointer; text-align:right; transition:var(--transition); width:100%;
     }
-    .sidebar-link i{
-      width:32px; height:32px; flex-shrink:0; display:inline-flex; align-items:center; justify-content:center;
+    .sidebar-link .ic{
+      width:32px; height:32px; padding:7px; flex-shrink:0;
       border-radius:9px; background:rgba(3,60,84,.08); color:var(--primary-light); font-size:.95rem;
     }
     @media (hover:hover) and (pointer:fine){ .sidebar-link:hover{ background:rgba(3,60,84,.08); } }
     .sidebar-link:active{ background:rgba(3,60,84,.08); }
     .sidebar-link.is-current{ background:rgba(3,60,84,.08); border-color:rgba(3,60,84,.18); color:var(--primary); box-shadow:inset -4px 0 0 var(--primary); }
-    .sidebar-link.is-current i{ background:linear-gradient(145deg, var(--primary-light), var(--primary)); color:#fff; }
+    .sidebar-link.is-current .ic{ background:linear-gradient(145deg, var(--primary-light), var(--primary)); color:#fff; }
     .sidebar-logout{ justify-content:center; text-align:center; }
     .sidebar-classes{ display:flex; flex-direction:column; gap:6px; padding:2px 2px 4px; }
     .sidebar-class-btn{
@@ -370,7 +368,6 @@
       box-shadow:0 10px 22px rgba(3,60,84,.24); transition:var(--transition);
     }
     .sidebar-class-btn:hover{ transform:translateY(-2px); box-shadow:0 14px 28px rgba(3,60,84,.3); }
-    .sidebar .fas, .sidebar .fa-solid{ font-family:"Font Awesome 6 Free" !important; font-weight:900; }
     #btnSidebarToggle{ width:44px; padding:0; justify-content:center; font-size:1.05rem; }
   </style>
 
@@ -410,7 +407,7 @@
     <div class="header-container">
       <div class="header-side">
         <button id="btnSidebarToggle" class="btn" type="button" title="القائمة" aria-label="فتح القائمة" aria-controls="sidebar" aria-expanded="false">
-          <i class="fas fa-bars"></i>
+          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-menu"/></svg>
         </button>
       </div>
 
@@ -418,7 +415,7 @@
 
       <div class="header-side end">
         <button id="openAddTeacher" class="btn solid" type="button" aria-label="إضافة معلّم" hidden>
-          <i class="fas fa-user-plus"></i><span>إضافة معلّم</span>
+          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-user-plus"/></svg><span>إضافة معلّم</span>
         </button>
       </div>
     </div>
@@ -435,9 +432,9 @@
   <aside id="sidebar" class="sidebar" aria-hidden="true">
     <div class="sidebar-head">
       <img class="sidebar-school-logo" src="/images/WhiteLogo.png?v=2" alt="شعار المدرسة" width="1976" height="796">
-      <h2><i class="fas fa-school" aria-hidden="true"></i><span>ثانوية أحمد البشر الرومي</span></h2>
+      <h2><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-school"/></svg><span>ثانوية أحمد البشر الرومي</span></h2>
       <button id="sidebarClose" class="sidebar-close" type="button" aria-label="إغلاق القائمة">
-        <i class="fas fa-times" aria-hidden="true"></i>
+        <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-x"/></svg>
       </button>
     </div>
 
@@ -458,11 +455,11 @@
       <div class="sidebar-group">
         <div class="sidebar-section-label">القسم</div>
         <button class="sidebar-link" type="button" data-href="/Teachers/user.html#dept-notifications">
-          <i class="fas fa-bell" aria-hidden="true"></i>
+          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-bell"/></svg>
           <span>إشعارات القسم</span>
         </button>
         <button class="sidebar-link is-current" type="button" aria-current="page">
-          <i class="fas fa-users-gear" aria-hidden="true"></i>
+          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-user-cog"/></svg>
           <span>قسمي</span>
         </button>
       </div>
@@ -470,7 +467,7 @@
       <div class="sidebar-group">
         <div class="sidebar-section-label">الصفوف</div>
         <button class="sidebar-link" type="button" data-href="/Teachers/user.html#other-classes">
-          <i class="fas fa-users-rectangle" aria-hidden="true"></i>
+          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-class"/></svg>
           <span>صفوف أخرى</span>
         </button>
       </div>
@@ -478,27 +475,27 @@
       <div class="sidebar-group">
         <div class="sidebar-section-label">الجداول</div>
         <button class="sidebar-link" type="button" data-href="/Teachers/user.html">
-          <i class="fas fa-calendar-day" aria-hidden="true"></i>
+          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-calendar-day"/></svg>
           <span>جدولي</span>
         </button>
         <button class="sidebar-link" type="button" data-href="/Teachers/user.html#week">
-          <i class="fas fa-calendar-week" aria-hidden="true"></i>
+          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-calendar-week"/></svg>
           <span>جدولي الأسبوعي</span>
         </button>
         <button class="sidebar-link" type="button" data-href="/Teachers/user.html#dptschedual">
-          <i class="fas fa-users-rectangle" aria-hidden="true"></i>
+          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-class"/></svg>
           <span>جدول القسم</span>
         </button>
         <button class="sidebar-link" type="button" data-href="/Teachers/user.html#schoolschedule">
-          <i class="fas fa-table-cells" aria-hidden="true"></i>
+          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-grid"/></svg>
           <span>جدول المدرسة</span>
         </button>
         <button class="sidebar-link" type="button" data-href="/Teachers/user.html#class-schedules">
-          <i class="fas fa-chalkboard" aria-hidden="true"></i>
+          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-board"/></svg>
           <span>جداول الصفوف</span>
         </button>
         <button class="sidebar-link" type="button" data-href="/Teachers/user.html#teacherschedules">
-          <i class="fas fa-chalkboard-user" aria-hidden="true"></i>
+          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-teacher"/></svg>
           <span>جداول المعلمين</span>
         </button>
       </div>
@@ -506,15 +503,15 @@
       <div class="sidebar-group" data-show="extras" hidden>
         <div class="sidebar-section-label">صلاحيات إضافية</div>
         <button class="sidebar-link" type="button" data-href="/Teachers/user.html#supervisorstudents" data-show="supervisorStudents" hidden>
-          <i class="fas fa-user-graduate" aria-hidden="true"></i>
+          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-graduation"/></svg>
           <span>الطلاب</span>
         </button>
         <button class="sidebar-link" type="button" data-href="/teachers/morning.html" data-show="morningLate" hidden>
-          <i class="fas fa-clock" aria-hidden="true"></i>
+          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-clock"/></svg>
           <span>تسجيل تأخير الصباح</span>
         </button>
         <button class="sidebar-link" type="button" data-href="/admins/adminschedule.html" data-show="editSchedule" hidden>
-          <i class="fas fa-table-cells" aria-hidden="true"></i>
+          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-grid"/></svg>
           <span>تعديل جدول الإدارة</span>
         </button>
       </div>
@@ -522,26 +519,26 @@
       <div class="sidebar-group" data-show="manageAttendance" hidden>
         <div class="sidebar-section-label">الغياب</div>
         <button class="sidebar-link" type="button" data-href="/Teachers/user.html#today-absence">
-          <i class="fas fa-calendar-day" aria-hidden="true"></i>
+          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-calendar-day"/></svg>
           <span>غياب اليوم</span>
         </button>
         <button class="sidebar-link" type="button" data-href="/Teachers/user.html#overall-absence">
-          <i class="fas fa-list-check" aria-hidden="true"></i>
+          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-list-check"/></svg>
           <span>الغياب المختصر</span>
         </button>
         <button class="sidebar-link" type="button" data-href="/Teachers/user.html#detailed-absence">
-          <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
+          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-search"/></svg>
           <span>تدقيق في الغائب</span>
         </button>
         <button class="sidebar-link" type="button" data-href="/teachers/morning.html">
-          <i class="fas fa-clock" aria-hidden="true"></i>
+          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-clock"/></svg>
           <span>تسجيل التأخير الصباحي</span>
         </button>
       </div>
 
       <div class="sidebar-group sidebar-group-bottom">
         <button id="sidebarLogout" class="sidebar-link sidebar-logout" type="button">
-          <i class="fas fa-right-from-bracket" aria-hidden="true"></i>
+          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-logout"/></svg>
           <span>تسجيل الخروج</span>
         </button>
       </div>
@@ -580,7 +577,7 @@
               <div class="field"><label class="label" for="edTName">الاسم الكامل</label><div class="plain-value view-only"><span id="vEdTName" class="view-value">—</span></div><div class="input-wrap edit-only"><input id="edTName" class="input" type="text"></div></div>
               <div class="field"><label class="label">رقم البطاقة</label><div class="plain-value"><span id="vEdTEmail" class="view-value">—</span></div></div>
               <div class="field"><label class="label" for="edTPhone">رقم الهاتف</label><div class="plain-value view-only"><span id="vEdTPhone" class="view-value">—</span></div><div class="input-wrap edit-only"><input id="edTPhone" class="input" type="tel"></div></div>
-              <div class="field"><label class="label" for="edTDisplayedPassword">كلمة المرور الظاهرة</label><div class="plain-value view-only"><span id="vEdTDisplayedPassword" class="view-value">—</span></div><div class="input-wrap edit-only password-field"><input id="edTDisplayedPassword" class="input" type="password" autocomplete="off" dir="ltr"><button id="toggleDisplayedPasswordBtn" class="eye-toggle" type="button" aria-label="إظهار كلمة المرور الظاهرة" title="إظهار كلمة المرور الظاهرة"><span aria-hidden="true">👁</span></button></div></div>
+              <div class="field"><label class="label" for="edTDisplayedPassword">كلمة المرور الظاهرة</label><div class="plain-value view-only"><span id="vEdTDisplayedPassword" class="view-value">—</span></div><div class="input-wrap edit-only password-field"><input id="edTDisplayedPassword" class="input" type="password" autocomplete="off" dir="ltr"><button id="toggleDisplayedPasswordBtn" class="eye-toggle" type="button" aria-label="إظهار كلمة المرور الظاهرة" title="إظهار كلمة المرور الظاهرة"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-eye"/></svg></button></div></div>
             </div>
           </section>
 
@@ -602,7 +599,7 @@
               <button id="cancelTeacherEdit" class="btn ghost" type="button" hidden>إلغاء</button>
               <button id="saveTeacher" class="btn solid" type="button" hidden>حفظ</button>
             </div>
-            <button id="deleteTeacher" class="btn danger" type="button"><i class="fas fa-user-minus"></i>حذف المعلّم</button>
+            <button id="deleteTeacher" class="btn danger" type="button" aria-label="حذف المعلّم"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-user-minus"/></svg><span>حذف المعلّم</span></button>
           </div>
           <div id="edOk" class="ok"></div><div id="edErr" class="err"></div>
         </section>
@@ -687,8 +684,8 @@
       doc, getDoc, setDoc, updateDoc, deleteField, writeBatch, serverTimestamp
     } from "/shared/firebase.js";
     import { watchPresence, startPresenceHeartbeat } from "/shared/presence.js";
-    import { mountStudentNotesSheet } from "/shared/student-notes-sheet.js?v=2026-10-15";
-    import { mountTeacherClassSheet } from "/shared/teacher-class-sheet.js?v=2026-10-14d";
+    import { mountStudentNotesSheet } from "/shared/student-notes-sheet.js?v=2026-10-16";
+    import { mountTeacherClassSheet } from "/shared/teacher-class-sheet.js?v=2026-10-16d";
     import { fetchClassList, sortClassList, primeClassList } from "/shared/class-registry.js";
     import { resolveDepartmentName, getDepartmentSubjectFilters, isMergedDepartment, getMergedSubjectsForDepartment } from "/shared/departments.js";
     import { isTruthyFlag, canManageAttendance } from "/shared/auth-guard.js";
@@ -915,7 +912,7 @@
         const chip=document.createElement('button');
         chip.type='button';
         chip.className='class-chip';
-        chip.innerHTML=`<span class="class-chip-icon"><i class="fas fa-users" aria-hidden="true"></i></span><span class="class-chip-text"><span class="class-chip-name">${escapeHtml(toArabicDigits(c))}</span><span class="class-chip-sub">عرض الطلاب والملاحظات</span></span><i class="fas fa-chevron-left class-chip-chev" aria-hidden="true"></i>`;
+        chip.innerHTML=`<span class="class-chip-icon"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-users"/></svg></span><span class="class-chip-text"><span class="class-chip-name">${escapeHtml(toArabicDigits(c))}</span><span class="class-chip-sub">عرض الطلاب والملاحظات</span></span><svg class="ic class-chip-chev" aria-hidden="true"><use href="/shared/icons.svg#i-chevron-left"/></svg>`;
         chip.addEventListener('click',()=>{
           if(teacherEditMode || !currentTeacher?.uid) return;
           classSheet.open(c,{ teacherUid:currentTeacher.uid, teacherName:currentTeacher.data?.name||'' });

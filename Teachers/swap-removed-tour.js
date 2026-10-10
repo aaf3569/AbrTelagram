@@ -185,7 +185,7 @@ export async function maybeStartSwapRemovedTour({ db, uid, hooks }) {
   const steps = [
     {
       title: "افتح القائمة الجانبية",
-      text: "اضغط زر القائمة <b>☰</b> في أعلى الشاشة.",
+      text: 'اضغط زر القائمة <b><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-menu"/></svg></b> في أعلى الشاشة.',
       target: () => h.toggleBtn,
       allow: (el) => h.toggleBtn.contains(el),
       done: () => h.sidebar.classList.contains("open"),
@@ -304,7 +304,7 @@ export async function maybeStartSwapRemovedTour({ db, uid, hooks }) {
         const cx = Math.min(window.innerWidth - 26, Math.max(26, r.left + r.width / 2));
         arrow.style.left = `${cx}px`;
         arrow.style.top = below ? `${r.bottom + 10}px` : `${r.top - 54}px`;
-        arrow.innerHTML = below ? '<i class="fas fa-arrow-up"></i>' : '<i class="fas fa-arrow-down"></i>';
+        arrow.innerHTML = below ? '<svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-arrow-up"/></svg>' : '<svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-arrow-down"/></svg>';
         arrow.classList.toggle("up", below);
         arrow.classList.toggle("down", !below);
         arrow.classList.add("on");
@@ -346,17 +346,17 @@ export async function maybeStartSwapRemovedTour({ db, uid, hooks }) {
     [spot, arrow, bar, dim].forEach((x) => x.remove());
     try { if (h.sidebar.classList.contains("open")) h.closeSidebar(); } catch {}
     showCard({
-      hero: `<div class="swt-done-icon"><i class="fas fa-circle-check" aria-hidden="true"></i></div>
+      hero: `<div class="swt-done-icon"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-check-circle"/></svg></div>
              <h2 class="swt-title">هذه هي الطريقة</h2>`,
       body: `
         <p class="swt-lead">من هنا، عند دخولك حصة ليست في جدولك:</p>
         <div class="swt-steps">
           <div class="swt-step">
-            <span class="swt-step-icon"><i class="fas fa-users-rectangle" aria-hidden="true"></i></span>
+            <span class="swt-step-icon"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-class"/></svg></span>
             <span class="swt-step-text"><b>اختر الصف ثم الفصل</b><small>الذي أنت فيه الآن</small></span>
           </div>
           <div class="swt-step">
-            <span class="swt-step-icon"><i class="fas fa-clipboard-check" aria-hidden="true"></i></span>
+            <span class="swt-step-icon"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-clipboard-check"/></svg></span>
             <span class="swt-step-text"><b>اضغط «تسجيل الغياب»</b><small>واختر السبب: احتياط أو تبديل</small></span>
           </div>
         </div>`,
@@ -385,22 +385,22 @@ export async function maybeStartSwapRemovedTour({ db, uid, hooks }) {
 
   showCard({
     hero: `
-      <span class="swt-badge">🔔 تحديث جديد</span>
+      <span class="swt-badge"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-bell"/></svg> تحديث جديد</span>
       <div class="swt-hero-icons">
-        <span class="swt-hero-old"><i class="fas fa-right-left" aria-hidden="true"></i></span>
-        <span class="swt-hero-arrow"><i class="fas fa-arrow-left" aria-hidden="true"></i></span>
-        <span class="swt-hero-new"><i class="fas fa-users-rectangle" aria-hidden="true"></i></span>
+        <span class="swt-hero-old"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-swap"/></svg></span>
+        <span class="swt-hero-arrow"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-arrow-left"/></svg></span>
+        <span class="swt-hero-new"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-class"/></svg></span>
       </div>
       <h2 class="swt-title">أوقفنا آلية التبديل</h2>`,
     body: `
       <p class="swt-lead">لم تعد هناك طلبات تبديل أو تغطية.</p>
       <div class="swt-steps">
         <div class="swt-step">
-          <span class="swt-step-icon"><i class="fas fa-user-clock" aria-hidden="true"></i></span>
+          <span class="swt-step-icon"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-user-clock"/></svg></span>
           <span class="swt-step-text"><b>دخلت حصة ليست في جدولك؟</b><small>احتياط أو تبديل</small></span>
         </div>
         <div class="swt-step">
-          <span class="swt-step-icon"><i class="fas fa-users-rectangle" aria-hidden="true"></i></span>
+          <span class="swt-step-icon"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-class"/></svg></span>
           <span class="swt-step-text"><b>سجّل غيابها من «صفوف أخرى»</b><small>في القائمة الجانبية</small></span>
         </div>
       </div>`,

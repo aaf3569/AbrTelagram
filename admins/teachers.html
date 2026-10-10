@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; connect-src 'self' https://abrschool-bot.onrender.com http://127.0.0.1:3000 http://localhost:3000 https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.gstatic.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; manifest-src 'self'; upgrade-insecure-requests; block-all-mixed-content">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://abrschool-bot.onrender.com http://127.0.0.1:3000 http://localhost:3000 https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.gstatic.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; manifest-src 'self'; upgrade-insecure-requests; block-all-mixed-content">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -204,6 +204,7 @@
     .t-badge{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:999px;font-size:.72rem;font-weight:800;white-space:nowrap}
     .t-badge.head{background:#fffaf0;border:1px solid rgba(203,160,18,.38);color:#7a5a00}
     .t-badge.sup{background:#fff8e1;border:1px solid rgba(214,158,0,.3);color:#8a6100}
+    .pill .ic,.t-badge .ic{margin-inline-end:4px}
     .t-meta{font-size:.8rem;color:#6b7f9f;font-weight:700;overflow-wrap:anywhere}
     .t-presence{font-size:.78rem;font-weight:700;color:#8a9bb3}
     .t-presence.online{color:#15803d}
@@ -619,7 +620,7 @@
           </div>
           <div class="profile-badges">
             <span id="profileRolePill" class="pill">مدرس</span>
-            <span id="profileSupervisorPill" class="pill" hidden>⭐ مشرف</span>
+            <span id="profileSupervisorPill" class="pill" hidden><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-star"/></svg> مشرف</span>
           </div>
         </section>
 
@@ -630,7 +631,7 @@
               <div class="field"><label class="label" for="edTName">الاسم الكامل</label><div class="plain-value view-only"><span id="vEdTName" class="view-value">—</span></div><div class="input-wrap edit-only"><input id="edTName" class="input" type="text"></div></div>
               <div class="field"><label class="label" for="edTEmail">رقم البطاقة</label><div class="plain-value view-only"><span id="vEdTEmail" class="view-value">—</span></div><div class="input-wrap edit-only"><input id="edTEmail" class="input" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="مثال: 298040100633"></div></div>
               <div class="field"><label class="label" for="edTPhone">رقم الهاتف</label><div class="plain-value view-only"><span id="vEdTPhone" class="view-value">—</span></div><div class="input-wrap edit-only"><input id="edTPhone" class="input" type="tel"></div></div>
-              <div class="field"><label class="label" for="edTDisplayedPassword">كلمة المرور الظاهرة</label><div class="plain-value view-only"><span id="vEdTDisplayedPassword" class="view-value">—</span></div><div class="input-wrap edit-only password-field"><input id="edTDisplayedPassword" class="input" type="password" autocomplete="off" dir="ltr"><button id="toggleDisplayedPasswordBtn" class="eye-toggle" type="button" aria-label="إظهار كلمة المرور الظاهرة" title="إظهار كلمة المرور الظاهرة"><span aria-hidden="true">👁</span></button></div></div>
+              <div class="field"><label class="label" for="edTDisplayedPassword">كلمة المرور الظاهرة</label><div class="plain-value view-only"><span id="vEdTDisplayedPassword" class="view-value">—</span></div><div class="input-wrap edit-only password-field"><input id="edTDisplayedPassword" class="input" type="password" autocomplete="off" dir="ltr"><button id="toggleDisplayedPasswordBtn" class="eye-toggle" type="button" aria-label="إظهار كلمة المرور الظاهرة" title="إظهار كلمة المرور الظاهرة"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-eye"/></svg></button></div></div>
               <div class="field"><label class="label" for="edTRole">الدور</label><div class="plain-value view-only"><span id="vEdTRole" class="view-value">—</span></div><div class="input-wrap edit-only"><select id="edTRole" class="input"><option value="user">مدرس</option><option value="head">رئيس القسم</option></select></div></div>
               <div class="field" id="edTSpecializationField" hidden><label class="label" for="edTSpecialization">التخصص داخل القسم</label><div class="plain-value view-only"><span id="vEdTSpecialization" class="view-value">—</span></div><div class="input-wrap edit-only"><select id="edTSpecialization" class="input"></select></div></div>
               <div class="field" id="edTSpecialization2Field" hidden><label class="label" for="edTSpecialization2">مادة ثانية (اختياري)</label><div class="plain-value view-only"><span id="vEdTSpecialization2" class="view-value">—</span></div><div class="input-wrap edit-only"><select id="edTSpecialization2" class="input"></select></div></div>
@@ -903,8 +904,8 @@
     import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signOut, EmailAuthProvider, reauthenticateWithCredential } from "/shared/firebase.js";
     import { initializeFirestore, persistentSingleTabManager, collection, getDocs, query, where, doc, getDoc, setDoc, updateDoc, deleteField, serverTimestamp } from "/shared/firebase.js";
     import { startPresenceHeartbeat, watchPresence } from "/shared/presence.js";
-    import { mountStudentNotesSheet } from "/shared/student-notes-sheet.js?v=2026-10-15";
-    import { mountTeacherClassSheet } from "/shared/teacher-class-sheet.js?v=2026-10-14d";
+    import { mountStudentNotesSheet } from "/shared/student-notes-sheet.js?v=2026-10-16";
+    import { mountTeacherClassSheet } from "/shared/teacher-class-sheet.js?v=2026-10-16d";
     import { fetchClassList, sortClassList, primeClassList } from "/shared/class-registry.js";
     import {
       DEPARTMENTS,
@@ -1523,6 +1524,10 @@
     function escapeHtml(str){
       return (str||'').toString().replace(/[&<>"]/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
     }
+    // A line icon from /shared/icons.svg (styles: /shared/identity.css).
+    function iconSvg(name){
+      return `<svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-${name}"/></svg>`;
+    }
 
     // ==== Teachers export: an .xlsx (opens in Google Sheets / Excel) with
     // every teacher's name and UID, grouped by department — so the schedule CSVs can carry
@@ -1847,7 +1852,7 @@
     }
     function getSupervisorPillLabel(isSupervisor, grade){
       if(!isSupervisor) return '';
-      return `⭐ مشرف${formatSupervisorSuffix(grade)}`;
+      return `${iconSvg('star')} ${escapeHtml(`مشرف${formatSupervisorSuffix(grade)}`)}`;
     }
     function updateSupervisorCheckboxLabels(){
       if(edTIsSupervisorLabel){
@@ -2002,10 +2007,10 @@
       profileName.textContent=name;
       profileEmail.textContent=civilId;
       teacherAvatar.textContent=getInitials(name,civilId,currentTeacher?.uid);
-      profileRolePill.textContent=role==='head'?'👑 رئيس القسم':'مدرس';
+      profileRolePill.innerHTML=role==='head'?`${iconSvg('crown')} رئيس القسم`:'مدرس';
       profileRolePill.classList.toggle('role-head', role==='head');
       profileSupervisorPill.hidden=!isSupervisor;
-      profileSupervisorPill.textContent=getSupervisorPillLabel(isSupervisor, supervisorGrade);
+      profileSupervisorPill.innerHTML=getSupervisorPillLabel(isSupervisor, supervisorGrade);
       setViewValue(vEdTName,name);
       setViewValue(vEdTEmail,civilId);
       setViewValue(vEdTPhone,phone);
@@ -2462,7 +2467,7 @@
       el.className='teacher-item';
       el.setAttribute('role','button');
       el.tabIndex=0;
-      const badgeHtml=badges.map(b=>`<span class="t-badge ${b.cls}">${escapeHtml(b.label)}</span>`).join('');
+      const badgeHtml=badges.map(b=>`<span class="t-badge ${b.cls}">${b.icon?iconSvg(b.icon)+' ':''}${escapeHtml(b.label)}</span>`).join('');
       el.innerHTML=`<div class="t-row">
           <div class="t-avatar" aria-hidden="true">${escapeHtml(getInitials(name))}<span class="presence-dot"></span></div>
           <div class="t-main">
@@ -2518,8 +2523,8 @@
           const mergedSubjects=getMergedSubjectsForDepartment(subject);
           const showTeacherSubject=mergedSubjects.length>0 && !!teacherSubject && teacherSubject!==subject;
           const badges=[];
-          if(isHead) badges.push({ cls:'head', label:'👑 رئيس القسم' });
-          if(isSupervisor) badges.push({ cls:'sup', label:'⭐ '+(getSupervisorStatusLabel(true, supervisorGrade)||'مشرف') });
+          if(isHead) badges.push({ cls:'head', icon:'crown', label:'رئيس القسم' });
+          if(isSupervisor) badges.push({ cls:'sup', icon:'star', label:getSupervisorStatusLabel(true, supervisorGrade)||'مشرف' });
           const meta=[showTeacherSubject?teacherSubject:'', teacherCivilId||t.email||''].filter(Boolean).join(' · ');
           const row=buildPersonRow({ name: t.name||teacherCivilId||t.email||t.uid, badges, meta });
           row.el.addEventListener('click',()=>openTeacherEditor(t.uid,{ syncRoute:true }));

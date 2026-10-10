@@ -792,7 +792,7 @@ function addTeacherSelect(inTable) {
 
 function removeButton(i, short) {
   const t = S.edit.data.teachers[i];
-  const del = el("button", { className: "del", type: "button", textContent: "🗑️", title: "حذف المعلم من الميزانية", ariaLabel: "حذف المعلم من الميزانية" });
+  const del = el("button", { className: "del", type: "button", innerHTML: '<svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-trash"/></svg>', title: "حذف المعلم من الميزانية", ariaLabel: "حذف المعلم من الميزانية" });
   confirmFirst(del, "حذف " + ((t.name || "").split(" ").slice(0, short ? 1 : 2).join(" ") || "المعلم") + "؟", () => { S.edit.data.teachers.splice(i, 1); changed(); renderTeachers(); });
   return del;
 }

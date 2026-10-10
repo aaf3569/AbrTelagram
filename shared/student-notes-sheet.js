@@ -338,7 +338,7 @@ const TEMPLATE_HTML = `
     <div class="snp-modal-sheet" role="dialog" aria-modal="true">
       <div class="snp-modal-head">
         <div class="snp-dlg-title">إضافة ملاحظة</div>
-        <button class="snp-close-x" type="button" aria-label="إغلاق">✕</button>
+        <button class="snp-close-x" type="button" aria-label="إغلاق"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-x"/></svg></button>
       </div>
       <div class="snp-modal-body">
         <div class="snp-row">

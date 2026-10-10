@@ -60,6 +60,15 @@
   font-size: 14px;
   line-height: 1;
 }
+.fb-toast-icon svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
 .fb-toast-ok .fb-toast-icon { background: #1a7f37; }
 .fb-toast-err .fb-toast-icon { background: #b42318; }
 .fb-toast-info .fb-toast-icon { background: #033C54; }
@@ -87,7 +96,8 @@
   .is-busy::before { animation: none; border-inline-end-color: currentColor; opacity: .5; }
 }`;
 
-  const ICONS = { ok: "✓", err: "✕", info: "i" };
+  // Line icons from /shared/icons.svg, one per kind.
+  const ICONS = { ok: "check", err: "x", info: "info-mark" };
   let current = null;
   let hideTimer = 0;
 
@@ -119,7 +129,7 @@
     const icon = document.createElement("span");
     icon.className = "fb-toast-icon";
     icon.setAttribute("aria-hidden", "true");
-    icon.textContent = ICONS[kind];
+    icon.innerHTML = `<svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-${ICONS[kind]}"/></svg>`;
     const msg = document.createElement("span");
     msg.className = "fb-toast-text";
     msg.textContent = String(text);

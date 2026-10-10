@@ -584,8 +584,8 @@ async function mountTimetableSheet(host, hooks, { school }) {
         ? ssPopHead(`تنزيل ${what}`, "ملف PDF بصفحة واحدة بحجم A3 لكل المعلمين")
         : `<div class="sch-modal-head"><div><b>تنزيل ${what}</b></div><button class="sch-x" type="button" aria-label="إغلاق">×</button></div>`}
       <div class="${school ? "ss-pop-body" : "sch-modal-body"}">
-        <button class="sch-option" type="button" data-kind="day"><span class="ic">${ICON.day}</span><span><b>جدول اليوم</b><small>${fmtLong(dateISO)}</small></span></button>
-        <button class="sch-option" type="button" data-kind="week"><span class="ic">${ICON.week}</span><span><b>جدول الأسبوع</b><small>${rangeText(weekStartFor(dateISO))}</small></span></button>
+        <button class="sch-option" type="button" data-kind="day"><span class="opt-ic">${ICON.day}</span><span><b>جدول اليوم</b><small>${fmtLong(dateISO)}</small></span></button>
+        <button class="sch-option" type="button" data-kind="week"><span class="opt-ic">${ICON.week}</span><span><b>جدول الأسبوع</b><small>${rangeText(weekStartFor(dateISO))}</small></span></button>
         <div class="sch-dl-status" id="dlStatus" hidden></div>
       </div>`);
     modal.el.querySelectorAll(".sch-option").forEach((b) => b.addEventListener("click", () => downloadPdf(b.dataset.kind)));

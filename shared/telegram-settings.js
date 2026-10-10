@@ -258,7 +258,7 @@ function ensureStyles() {
       gap: 10px;
       transition: transform 0.14s ease, box-shadow 0.14s ease, background 0.14s ease, border-color 0.14s ease, opacity 0.14s ease;
     }
-    .tg-settings-btn i {
+    .tg-settings-btn .ic {
       font-size: 1rem;
     }
     .tg-settings-btn:hover:not(:disabled) {
@@ -317,18 +317,18 @@ function createModal() {
   overlay.innerHTML = `
     <section class="tg-settings-card" role="dialog" aria-modal="true" aria-label="إعدادات المستخدم">
       <header class="tg-settings-header">
-        <div class="tg-settings-header-icon"><i class="fas fa-user-gear"></i></div>
+        <div class="tg-settings-header-icon"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-user-cog"/></svg></div>
         <div class="tg-settings-header-text">
           <h3 class="tg-settings-title">إعدادات المستخدم</h3>
           <p class="tg-settings-subtitle">إدارة ربط حسابك بالتلجرام</p>
         </div>
         <button type="button" class="tg-settings-close" data-action="close" aria-label="إغلاق">
-          <i class="fas fa-xmark"></i>
+          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-x"/></svg>
         </button>
       </header>
       <div class="tg-settings-body">
         <div class="tg-settings-status-card" data-field="statusCard">
-          <div class="tg-settings-status-icon" data-field="statusIcon"><i class="fab fa-telegram-plane"></i></div>
+          <div class="tg-settings-status-icon" data-field="statusIcon"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-send"/></svg></div>
           <div class="tg-settings-status-content">
             <span class="tg-settings-status-label">حالة الاتصال بالتلجرام</span>
             <span class="tg-settings-status-value">
@@ -340,15 +340,15 @@ function createModal() {
         <div class="tg-settings-message" data-field="message"></div>
         <div class="tg-settings-actions">
           <button type="button" class="tg-settings-btn primary" data-action="connect" hidden>
-            <i class="fab fa-telegram-plane"></i>
+            <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-send"/></svg>
             <span data-field="connectLabel">ربط حساب التلجرام</span>
           </button>
           <a class="tg-settings-btn primary" data-field="openLink" href="#" target="_blank" rel="noopener noreferrer" hidden>
-            <i class="fab fa-telegram-plane"></i>
+            <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-send"/></svg>
             <span>افتح التلجرام</span>
           </a>
           <button type="button" class="tg-settings-btn danger" data-action="disconnect" hidden>
-            <i class="fas fa-link-slash"></i>
+            <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-unlink"/></svg>
             <span data-field="disconnectLabel">إلغاء ربط التلجرام</span>
           </button>
         </div>
@@ -719,7 +719,7 @@ function showTelegramPrompt({ onConnect, onDismiss }) {
   overlay.innerHTML = `
     <section class="tg-prompt-card" role="dialog" aria-modal="true" aria-labelledby="tgPromptTitle">
       <div class="tg-prompt-hero">
-        <span class="tg-prompt-badge">🔔 جديد</span>
+        <span class="tg-prompt-badge"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-bell"/></svg> جديد</span>
         <button type="button" class="tg-prompt-close" data-action="dismiss" aria-label="إغلاق">&times;</button>
         <div class="tg-prompt-logo">${TELEGRAM_ICON_SVG}</div>
       </div>
@@ -727,9 +727,9 @@ function showTelegramPrompt({ onConnect, onDismiss }) {
         <h3 id="tgPromptTitle" class="tg-prompt-title">لا تفوّت أي إشعار بعد اليوم!</h3>
         <p class="tg-prompt-text">اربط حسابك بالتلجرام لتصلك الإشعارات والتنبيهات المهمة فوراً على هاتفك.</p>
         <ul class="tg-prompt-perks">
-          <li>⚡ إشعارات فورية</li>
-          <li>📱 على هاتفك مباشرة</li>
-          <li>✅ بضغطة واحدة</li>
+          <li><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-zap"/></svg> إشعارات فورية</li>
+          <li><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-phone"/></svg> على هاتفك مباشرة</li>
+          <li><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-check-circle"/></svg> بضغطة واحدة</li>
         </ul>
         <button type="button" class="tg-prompt-connect" data-action="connect">
           ${TELEGRAM_ICON_SVG}
