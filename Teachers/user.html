@@ -135,16 +135,16 @@
         </button>
       </div>
 
-      <!-- ميزانية القسم (/shared/department-budgets.js): a teacher sees
-           ميزانيتي, a head their department's budget editor too, an admin
-           every department. Shown once the profile says which department. -->
+      <!-- ميزانية القسم (/shared/department-budgets.js): a head their own
+           department's budget, «السماح بكل الميزانيات» (and admins) every
+           department; other teachers neither. -->
       <div id="sidebarBudgetGroup" class="sidebar-group" hidden>
         <div class="sidebar-section-label">الميزانية</div>
         <button id="sidebarBudget" class="sidebar-link" type="button">
           <i class="fas fa-clipboard-list" aria-hidden="true"></i>
-          <span id="sidebarBudgetLabel">ميزانيتي</span>
+          <span>ميزانية القسم</span>
         </button>
-        <!-- «السماح بتعديل الجدول» (and admins): every department, as on the admin page. -->
+        <!-- «السماح بكل الميزانيات» (and admins): every department, as on the admin page. -->
         <button id="sidebarAllBudgets" class="sidebar-link" type="button" hidden>
           <i class="fas fa-table-list" aria-hidden="true"></i>
           <span>ميزانيات الأقسام</span>
@@ -5930,25 +5930,23 @@
     sidebarEditSchedule.addEventListener('click', () => { closeSidebar(); location.href = '/admins/adminschedule.html'; });
     sidebarHeadDept.addEventListener('click', () => { closeSidebar(); location.href = '/dephead/department.html'; });
 
-    /* ========= ميزانية القسم / ميزانيتي (budget*) =========
+    /* ========= ميزانية القسم / ميزانيات الأقسام (budget*) =========
        /shared/department-budgets.js decides what it shows from the signed-in
-       teacher's own record: a teacher gets ميزانيتي (read-only), a head
-       (role 'head') their department's budget editor plus ميزانيتي, an admin
-       every department. What anyone may save is firestore.rules'
-       departmentBudgets match. Built once; later opens re-read the budgets.
+       teacher's own record: a head (role 'head') their department's budget
+       editor, «السماح بكل الميزانيات» or an admin every department. What
+       anyone may read or save is firestore.rules' departmentBudgets match. Built once; later opens re-read the budgets.
        Same #hash/history-entry convention as the sheets above (#dept-budget). */
     const budgetSheetEl = document.getElementById('budgetSheet');
     const budgetHost = document.getElementById('budgetHost');
     const sidebarBudgetGroup = document.getElementById('sidebarBudgetGroup');
     const sidebarBudget = document.getElementById('sidebarBudget');
-    const sidebarBudgetLabel = document.getElementById('sidebarBudgetLabel');
     const sidebarAllBudgets = document.getElementById('sidebarAllBudgets');
     let budgetMounting = null;
     let budgetApi = null;
 
     function budgetMount(){
       if (!budgetMounting) {
-        budgetMounting = import('/shared/department-budgets.js?v=2026-10-11')
+        budgetMounting = import('/shared/department-budgets.js?v=2026-10-11b')
           .then((m) => m.mountDepartmentBudgetsSheet(budgetHost, {
             close: () => closeBudgetSheet(),
             openSidebar: () => openSidebar(),
@@ -5967,7 +5965,7 @@
       budgetSheetEl.setAttribute('aria-hidden', 'true');
     }
 
-    // mode: 'own' (ميزانيتي / ميزانية القسم, #dept-budget) or 'all'
+    // mode: 'own' (ميزانية القسم, #dept-budget) or 'all'
     // (ميزانيات الأقسام, #dept-budgets). One sheet; switching modes while
     // it's open swaps its view in place.
     let budgetMode = 'own';
@@ -6011,15 +6009,14 @@
       if (budgetSheetEl.classList.contains('open') && !history.state?.budgetSheetOpen) hideBudgetSheet();
     });
 
-    // ميزانيتي / ميزانية القسم: a head, or a teacher with a department.
-    // ميزانيات الأقسام: an admin, or «السماح بتعديل الجدول»
-    // (permissions.allowEditSchedule, strictly true like firestore.rules —
+    // ميزانية القسم: a head only (their own department).
+    // ميزانيات الأقسام: an admin, or «السماح بكل الميزانيات»
+    // (permissions.allowAllBudgets, strictly true like firestore.rules —
     // the sheet reads the same flag, canEditAllBudgets) on top of their own.
     function updateBudgetButton(){
       const isAdminRole = currentRole === 'admin';
-      const allBudgets = isAdminRole || currentTeacherProfile?.permissions?.allowEditSchedule === true;
-      sidebarBudgetLabel.textContent = currentRole === 'head' ? 'ميزانية القسم' : 'ميزانيتي';
-      sidebarBudget.hidden = isAdminRole || !(currentRole === 'head' || myDeptSchedDepartment);
+      const allBudgets = isAdminRole || currentTeacherProfile?.permissions?.allowAllBudgets === true;
+      sidebarBudget.hidden = currentRole !== 'head';
       sidebarAllBudgets.hidden = !allBudgets;
       sidebarBudgetGroup.hidden = sidebarBudget.hidden && sidebarAllBudgets.hidden;
       const openLink = budgetMode === 'all' ? sidebarAllBudgets : sidebarBudget;

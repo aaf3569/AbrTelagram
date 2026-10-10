@@ -1,14 +1,14 @@
 // ميزانيات الأقسام — who teaches which class, which subject, and how many
 // periods a week, one budget per department. Opened from the sidebar of
-// Teachers/user.html («ميزانيتي» / «ميزانية القسم») and admins/adminpage.html
-// («ميزانيات الأقسام»); what it shows depends on who is signed in:
-//   - a teacher: «ميزانيتي» — their own classes, subjects, periods and نصاب,
-//     read-only, from every department budget that lists them;
+// Teachers/user.html («ميزانية القسم» / «ميزانيات الأقسام») and
+// admins/adminpage.html («ميزانيات الأقسام»); what it shows depends on who is
+// signed in:
+//   - a teacher who is not a head: nothing (budgets are for heads);
 //   - a head (teachers/{uid}.role == 'head'): their department's budget
 //     editor (cards on phones, a table on wide screens; the official form as
-//     Excel / PDF / image, and a filled Excel form read back in), plus
-//     «ميزانيتي»;
-//   - an admin: every department (summary, preview, edit any of them),
+//     Excel / PDF / image, and a filled Excel form read back in);
+//   - an admin, or a teacher with «السماح بكل الميزانيات»
+//     (permissions.allowAllBudgets): every department (summary, preview, edit any of them),
 //     «كل الأقسام» (class × subject, one teacher per cell), and a CSV of
 //     every teacher × class × subject.
 //
@@ -22,15 +22,15 @@
 //                  subjects: [], subj: { [class]: subject },
 //                  split: { [class]: { [subject]: n } } }],
 //     updatedAt, updatedBy, updatedByUid }
-// Who may write is decided by firestore.rules (admins, or the head of that
-// department).
+// Who may read and write is decided by firestore.rules (admins and
+// «السماح بكل الميزانيات» every department, a head their own).
 //
 // Built like /admins/js/schedules.js: renders into a shadow root on the host
 // it's given, with its own header. hooks: close(), openSidebar(),
 // getSession() → { user, data, classList }, role (optional override).
 import {
   firebaseConfig, initializeApp, getApp, getApps, getFirestore,
-  collection, getDocs, doc, setDoc, serverTimestamp,
+  collection, getDocs, getDoc, doc, setDoc, serverTimestamp,
 } from "/shared/firebase.js";
 import { DEPARTMENT_LIST, DEPARTMENTS, SUBJECT_LIST, SUBJECT_TO_DEPARTMENT, resolveDepartmentName } from "/shared/departments.js";
 import { fetchClassList, parseClassKey, sortClassList } from "/shared/class-registry.js";
@@ -111,7 +111,6 @@ const clone = (v) => JSON.parse(JSON.stringify(v));
 const teacherName = (d) => String(d?.name || d?.fullName || d?.teacherName || d?.displayName || d?.username || d?.email || "معلم").trim();
 const teacherDept = (d) => resolveDepartmentName(d?.department || d?.dept || d?.subject || "");
 // 1 حصة واحدة · 2 حصتان · 3–10 حصص · 11+ حصة
-const periodsText = (n) => n === 1 ? "حصة واحدة" : n === 2 ? "حصتان" : n >= 3 && n <= 10 ? n + " حصص" : n + " حصة";
 const toDate = (t) => (t && typeof t.toDate === "function") ? t.toDate() : (t instanceof Date ? t : null);
 const fmtDate = (d) => d ? new Intl.DateTimeFormat("ar-KW", { year: "numeric", month: "numeric", day: "numeric" }).format(d) : "";
 const fmtTime = (d) => d ? new Intl.DateTimeFormat("ar-KW", { hour: "numeric", minute: "2-digit" }).format(d) : "";
@@ -329,7 +328,7 @@ function editable(d) {
 }
 
 // Strictly true, like firestore.rules' hasScheduleEditPermission().
-export const canEditAllBudgets = (data) => data?.permissions?.allowEditSchedule === true;
+export const canEditAllBudgets = (data) => data?.permissions?.allowAllBudgets === true;
 
 /* ---------------- mount ---------------- */
 function dbFor() {
@@ -406,19 +405,24 @@ async function load() {
     const data = ses.data || {};
     const role = String(S.hooks.role || data.role || "").toLowerCase();
     const own = role === "admin" ? "admin" : role === "head" ? "head" : "teacher";
-    // «السماح بتعديل الجدول» (admins/teachers.html → teachers/{uid}.permissions.allowEditSchedule)
-    // also gets the admin's view of every department (firestore.rules lets
-    // them save it). The host picks which one is showing (hooks.getMode):
-    // "all" → every department, "own" → their own ميزانية القسم / ميزانيتي.
+    // «السماح بكل الميزانيات» (admins/teachers.html → teachers/{uid}.permissions.allowAllBudgets)
+    // gets the admin's view of every department (firestore.rules lets them
+    // read and save it). The host picks which one is showing (hooks.getMode):
+    // "all" → every department, "own" → a head's own ميزانية القسم.
     S.mode = S.hooks.getMode?.() || "own";
     S.role = own === "admin" || (S.mode === "all" && canEditAllBudgets(data)) ? "admin" : own;
     S.realAdmin = own === "admin";
     S.me = { uid: ses.user?.uid || "", name: teacherName(data), department: teacherDept(data) };
     if (!S.view) S.body.replaceChildren(el("div", { className: "state", textContent: "جارٍ التحميل..." }));
     try {
-      const [tSnap, bSnap, classList] = await Promise.all([
+      // firestore.rules: every budget for the admin view, a head only their
+      // own department's, nobody else any.
+      const budgetDocs = S.role === "admin" ? getDocs(collection(S.db, COLLECTION)).then((q) => q.docs)
+        : S.role === "head" && S.me.department ? getDoc(doc(S.db, COLLECTION, S.me.department)).then((d) => d.exists() ? [d] : [])
+          : Promise.resolve([]);
+      const [tSnap, bDocs, classList] = await Promise.all([
         getDocs(collection(S.db, "teachers")),
-        getDocs(collection(S.db, COLLECTION)),
+        budgetDocs,
         Array.isArray(ses.classList) && ses.classList.length ? ses.classList : fetchClassList(S.db),
       ]);
       S.classes = buildClassModel(classList);
@@ -430,7 +434,7 @@ async function load() {
           civilId: String(x.civilId || "").replace(/\D+/g, ""),
         };
       }).filter((t) => DEPARTMENT_LIST.includes(t.department)).sort((a, b) => a.name.localeCompare(b.name, "ar"));
-      S.budgets = new Map(bSnap.docs.map((d) => {
+      S.budgets = new Map(bDocs.map((d) => {
         const x = d.data() || {};
         return [d.id, { dept: d.id, data: cleanBudget(x), updatedAt: toDate(x.updatedAt), updatedBy: x.updatedBy || "" }];
       }));
@@ -441,7 +445,7 @@ async function load() {
     }
     if (S.view === "import" && !S.realAdmin) S.view = null;
     if (!S.view || (S.role !== "admin" && ["school", "grid", "preview", "import"].includes(S.view))) {
-      S.view = S.role === "admin" ? "school" : S.role === "head" && S.me.department ? "dept" : "mine";
+      S.view = S.role === "admin" ? "school" : S.role === "head" && S.me.department ? "dept" : "none";
     }
     // A reload while editing re-opens the same department on fresh data.
     if (S.view === "dept") openEditor(S.edit?.dp || S.me.department);
@@ -457,20 +461,13 @@ function setView(v) {
   else render();
 }
 
-// Tabs only for a head (their department / ميزانيتي); the admin moves
-// between views with buttons, as on the original page.
+// The hero's title and subtitle. No tabs: a head has one view, and the
+// admin moves between views with buttons, as on the original page.
 function renderTabs() {
-  const tabs = S.role === "head" && S.me.department ? [["dept", "ميزانية القسم"], ["mine", "ميزانيتي"]] : [];
-  const title = S.role === "admin" ? "ميزانيات الأقسام" : S.role === "head" ? "ميزانية القسم" : "ميزانيتي";
-  S.title.textContent = title;
+  S.title.textContent = S.role === "head" ? "ميزانية القسم" : "ميزانيات الأقسام";
   S.subtitle.textContent = S.role === "admin" ? "ميزانية كل قسم: من يدرّس أي شعبة، وكم حصة"
-    : S.role === "head" ? "قسم " + S.me.department + ": من يدرّس أي شعبة، وكم حصة" : "فصولك وحصصك في ميزانية القسم";
-  S.tabs.hidden = !tabs.length;
-  S.tabs.replaceChildren(...tabs.map(([k, label]) => {
-    const b = el("button", { type: "button", textContent: label, className: k === S.view ? "on" : "" });
-    b.onclick = () => { if (k !== S.view) setView(k); };
-    return b;
-  }));
+    : S.role === "head" && S.me.department ? "قسم " + S.me.department + ": من يدرّس أي شعبة، وكم حصة" : "";
+  S.tabs.hidden = true;
 }
 function setWide(on) { S.main.classList.toggle("wide", !!on); }
 
@@ -483,52 +480,16 @@ function render() {
   else if (S.view === "grid") renderGrid(box);
   else if (S.view === "preview") renderPreview(box);
   else if (S.view === "import") renderImport(box);
-  else renderMine(box);
+  else renderNone(box);
   S.body.replaceChildren(...box.childNodes);
   S.scroller.scrollTop = 0;
 }
 
-/* =====================================================================
-   «ميزانيتي» — read-only
-   ===================================================================== */
-function renderMine(box) {
-  const me = S.me;
-  const rows = [];
-  for (const b of S.budgets.values()) for (const t of b.data.teachers) {
-    if ((t.uid && t.uid === me.uid) || (!t.uid && t.name === me.name)) rows.push({ b, t });
-  }
-  if (!rows.length) {
-    const own = me.department && S.budgets.get(me.department);
-    const text = !me.department ? "لا يوجد قسم مسجّل لحسابك، فلا ميزانية تظهر هنا."
-      : own ? `لست مدرجاً بعد في ميزانية قسم ${me.department}. راجع رئيس القسم.`
-        : `لم يُدخل رئيس قسم ${me.department} ميزانية القسم بعد.`;
-    box.append(el("div", { className: "card gold" }, el("h2", { textContent: "ميزانيتي" }), el("p", { className: "lead", textContent: text })));
-    return;
-  }
-  const total = sum(rows, (r) => nisab(r.t));
-  const classCount = new Set(rows.flatMap((r) => Object.keys(r.t.cells))).size;
-  const subjCount = new Set(rows.flatMap((r) => S.classes.classes.filter((c) => c in r.t.cells).flatMap((c) => partsOf(r.b.dept, r.t, c).map((p) => p.subj || r.b.dept)))).size;
-  box.append(el("div", { className: "card gold" },
-    el("h2", { textContent: me.name }),
-    el("p", { className: "lead", textContent: "نصابك: " + (total ? periodsText(total) : "لا حصص بعد") + " في الأسبوع" + (rows.length > 1 ? " من " + rows.length + " أقسام" : "") }),
-    el("div", { className: "sums" },
-      el("div", {}, el("b", { textContent: "النصاب" }), el("span", { textContent: total })),
-      el("div", {}, el("b", { textContent: "الفصول" }), el("span", { textContent: classCount })),
-      el("div", {}, el("b", { textContent: "المواد" }), el("span", { textContent: subjCount })))));
-  for (const { b, t } of rows) {
-    const dp = b.dept;
-    const bySubj = {};
-    for (const c of S.classes.classes) if (c in t.cells) for (const p of partsOf(dp, t, c)) {
-      const k = p.subj || dp; bySubj[k] = (bySubj[k] || 0) + p.h;
-    }
-    const card = el("div", { className: "card" },
-      el("div", { className: "row top between" }, el("h2", { textContent: "قسم " + dp, style: "margin:0" }), el("span", { className: "nisab", textContent: "النصاب: " + nisab(t) })),
-      el("div", { className: "chips" }, ...Object.entries(bySubj).map(([s, h]) => el("span", { className: "chip" }, s, el("small", { textContent: h })))),
-      classGrid(t, dp, b.data, null));
-    if (t.note) card.append(el("p", { className: "lead", style: "margin-top:10px", textContent: "ملاحظة: " + t.note }));
-    card.append(el("div", { className: "meta", style: "margin-top:8px", textContent: b.updatedAt ? "آخر تحديث للميزانية: " + fmtDate(b.updatedAt) + (b.updatedBy ? " — " + b.updatedBy : "") : "" }));
-    box.append(card);
-  }
+// Budgets are for heads (their own department) and for the admin view.
+function renderNone(box) {
+  const text = S.role === "head" ? "لا يوجد قسم مسجّل لحسابك، فلا ميزانية تظهر هنا."
+    : "ميزانيات الأقسام لرؤساء الأقسام ومن لديه صلاحية «السماح بكل الميزانيات».";
+  box.append(el("div", { className: "card gold" }, el("h2", { textContent: "ميزانية القسم" }), el("p", { className: "lead", textContent: text })));
 }
 
 // One row per grade group, the same spot for a class on every card.
@@ -570,7 +531,7 @@ function classGrid(t, dp, d, edit, dup) {
    The department editor
    ===================================================================== */
 function openEditor(dp) {
-  if (!dp) { S.view = S.role === "admin" ? "school" : "mine"; render(); return; }
+  if (!dp) { S.view = S.role === "admin" ? "school" : "none"; render(); return; }
   const b = S.budgets.get(dp);
   S.edit = { dp, data: editable(b ? b.data : emptyData(dp)), review: null, dirty: false, timer: null, ui: {} };
   S.view = "dept";

@@ -128,6 +128,21 @@ service cloud.firestore {
         );
     }
 
+    // «السماح بكل الميزانيات» (admins/teachers.html → صلاحيات المستخدم):
+    // every department's budget — read, edit, CSV for the timetable sheet.
+    // Mirrors canEditAllBudgets() in shared/department-budgets.js; only an
+    // admin can set it (teachers/{uid} update rules below).
+    function hasAllBudgetsPermission() {
+      let d = myTeacherDoc();
+      return signedIn()
+        && d != null
+        && ('permissions' in d)
+        && (d.permissions is map)
+        && ('allowAllBudgets' in d.permissions)
+        && (d.permissions.allowAllBudgets is bool)
+        && d.permissions.allowAllBudgets == true;
+    }
+
     function headDepartment() {
       let d = myTeacherDoc();
       let rawDept =
@@ -1251,13 +1266,13 @@ service cloud.firestore {
     /* ---------- departmentBudgets ---------- */
     // ميزانية القسم (/shared/department-budgets.js, opened from
     // Teachers/user.html and admins/adminpage.html): one doc per department,
-    // keyed by its canonical name (shared/departments.js). Every teacher may
-    // read them (ميزانيتي shows a teacher's own rows from any department);
-    // an admin or a teacher with «السماح بتعديل الجدول»
-    // (hasScheduleEditPermission) may write any of them, a head only their own.
+    // keyed by its canonical name (shared/departments.js). An admin or a
+    // teacher with «السماح بكل الميزانيات» (hasAllBudgetsPermission) may read
+    // and write all of them; a head only their own department's; other
+    // teachers none.
     match /departmentBudgets/{dept} {
-      allow read: if isTeacherOrAdmin();
-      allow create, update: if (hasScheduleEditPermission() || (isHead() && headDepartment() == dept))
+      allow read: if isAdmin() || hasAllBudgetsPermission() || (isHead() && headDepartment() == dept);
+      allow create, update: if (isAdmin() || hasAllBudgetsPermission() || (isHead() && headDepartment() == dept))
         && request.resource.data.keys().hasOnly(['periods', 'required', 'note', 'teachers', 'updatedAt', 'updatedBy', 'updatedByUid'])
         && (request.resource.data.periods is map)
         && (request.resource.data.teachers is list)
