@@ -30,7 +30,7 @@
 // getSession() → { user, data, classList }, role (optional override).
 import {
   firebaseConfig, initializeApp, getApp, getApps, getFirestore,
-  collection, getDocs, getDoc, doc, setDoc, serverTimestamp,
+  collection, getDocs, getDoc, doc, setDoc, deleteDoc, serverTimestamp,
 } from "/shared/firebase.js";
 import { DEPARTMENT_LIST, DEPARTMENTS, SUBJECT_LIST, SUBJECT_TO_DEPARTMENT, resolveDepartmentName } from "/shared/departments.js";
 import { fetchClassList, parseClassKey, sortClassList } from "/shared/class-registry.js";
@@ -964,7 +964,11 @@ function renderSchool(box) {
   // The one-time upload of the old site's data: admins only.
   const imp = S.realAdmin ? el("button", { className: "btn ghost", type: "button", textContent: "رفع بيانات الموقع القديم" }) : null;
   if (imp) imp.onclick = () => setView("import");
-  box.append(gridBtn, el("div", { className: "row", style: "margin:0 0 12px" }, refresh, detail, printButton(() => S.body, "ميزانية المدرسة"), imp, msg));
+  // Budgets still saved under الجغرافيا والتاريخ / العلوم الفلسفية: one move into الاجتماعيات.
+  const olds = OLD_SOCIAL.filter((dp) => S.budgets.has(dp));
+  const merge = olds.length && S.realAdmin ? el("button", { className: "btn", type: "button", textContent: "دمج ميزانيتي القسمين في الاجتماعيات" }) : null;
+  if (merge) confirmFirst(merge, "تُجمع ميزانية " + olds.join(" و") + " في ميزانية الاجتماعيات" + (S.budgets.has(SOCIAL) ? " مع الموجودة فيها" : "") + ".", () => mergeOldSocial(olds, msg));
+  box.append(gridBtn, el("div", { className: "row", style: "margin:0 0 12px" }, refresh, detail, printButton(() => S.body, "ميزانية المدرسة"), imp, merge, msg));
   const depts = schoolDepartments();
   const rows = depts.map((dp) => {
     const b = S.budgets.get(dp);
@@ -989,6 +993,36 @@ function renderSchool(box) {
     el("div", { className: "meta", textContent: rows.filter((r) => r.b).length + " من " + rows.length + " أقسام أدخلت ميزانيتها" }),
     el("div", { className: "wrap-x" }, table)));
   if (S.showDetail) rows.filter((r) => r.b).forEach((r) => box.append(deptTable(r)));
+}
+
+// الجغرافيا والتاريخ and العلوم الفلسفية became الاجتماعيات (shared/departments.js).
+const SOCIAL = "الاجتماعيات";
+const OLD_SOCIAL = ["الجغرافيا والتاريخ", "العلوم الفلسفية"];
+async function mergeOldSocial(olds, msg) {
+  const parts = [S.budgets.get(SOCIAL), ...olds.map((dp) => S.budgets.get(dp))].filter(Boolean).map((b) => b.data);
+  const teachers = [];
+  for (const d of parts) for (const t of d.teachers) {
+    const same = teachers.find((x) => sameTeacher(x, t));
+    if (!same) { teachers.push(clone(t)); continue; }
+    // The same teacher in both: their classes (and subjects) together.
+    Object.assign(same.cells, t.cells); Object.assign(same.subj, t.subj || {}); Object.assign(same.split, t.split || {});
+    same.subjects = [...new Set([...(same.subjects || []), ...(t.subjects || [])])];
+    if (t.note && t.note !== same.note) same.note = [same.note, t.note].filter(Boolean).join(" · ");
+  }
+  const periods = {};
+  for (const d of parts) for (const [k, row] of Object.entries(d.periods || {})) periods[k] = { ...(periods[k] || {}), ...row };
+  const reqs = parts.map((d) => d.required).filter((n) => n !== null && n !== undefined);
+  const data = cleanBudget({ periods, required: reqs.length ? reqs.reduce((a, n) => a + n, 0) : null,
+    note: parts.map((d) => d.note).filter(Boolean).join(" · "), teachers });
+  setMsg(msg, "جارٍ الحفظ...");
+  try {
+    await setDoc(doc(S.db, COLLECTION, SOCIAL), { ...data, updatedAt: serverTimestamp(), updatedBy: S.me.name || "", updatedByUid: S.me.uid });
+  } catch (e) { setMsg(msg, "لم يُحفظ: " + errText(e), "err"); return; }
+  // The old two now live in الاجتماعيات (firestore.rules: an admin may delete).
+  try { await Promise.all(olds.map((dp) => deleteDoc(doc(S.db, COLLECTION, dp)))); }
+  catch (e) { console.warn("[department-budgets] old budgets not deleted", e); }
+  await load();
+  toast("ميزانية الاجتماعيات: " + data.teachers.length + " معلماً من " + olds.join(" و") + ".");
 }
 
 // The department's budget in the layout of the paper form: teacher × classes, then نصاب and notes.
@@ -1113,7 +1147,7 @@ function convertOld(json) {
   };
   for (const b of json.budgets) {
     const oldDp = String(b.department || "").trim();
-    // The departments an old one became (الاجتماعيات → الجغرافيا والتاريخ + العلوم الفلسفية).
+    // The department(s) an old one became on this site.
     const targets = DEPARTMENT_LIST.includes(oldDp) ? [oldDp]
       : [...new Set([resolveDepartmentName(oldDp), ...(oldSubjects[oldDp] || []).map((s) => resolveDepartmentName(newSubject(s)))])].filter((d) => DEPARTMENT_LIST.includes(d));
     for (const t of b.data?.teachers || []) {
