@@ -11,7 +11,8 @@
   --r: 16px; --shadow: 0 1px 2px rgba(11, 58, 90, .06), 0 8px 24px rgba(11, 58, 90, .08);
   display: flex; flex-direction: column; height: 100%;
   overflow: hidden; background: var(--bg); color: var(--ink);
-  font: 16px/1.7 "IBM Plex Sans Arabic", "Tajawal", "Segoe UI", Tahoma, sans-serif;
+  /* Tajawal: the site's own font, loaded by both host pages. */
+  font: 16px/1.7 "Tajawal", system-ui, -apple-system, "Segoe UI", Tahoma, sans-serif;
   -webkit-tap-highlight-color: transparent;
 }
 *, *::before, *::after { box-sizing: border-box; }

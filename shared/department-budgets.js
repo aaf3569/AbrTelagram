@@ -54,15 +54,6 @@ const HEAD_NOTE = "رئيس القسم";
 
 // The original page's mark (a calendar with one gold slot), on the hero.
 const MARK_SVG = '<svg class="mark" viewBox="0 0 48 48" aria-hidden="true"><rect x="6" y="9" width="36" height="33" rx="6" fill="none" stroke="#fff" stroke-width="2.5"/><path d="M6 18h36M16 5v8M32 5v8" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/><rect x="12" y="23" width="7" height="6" rx="1.5" fill="#f3d48f"/><rect x="21" y="23" width="7" height="6" rx="1.5" fill="#fff" opacity=".55"/><rect x="30" y="23" width="7" height="6" rx="1.5" fill="#fff" opacity=".55"/><rect x="12" y="32" width="7" height="6" rx="1.5" fill="#fff" opacity=".55"/><rect x="21" y="32" width="7" height="6" rx="1.5" fill="#fff" opacity=".55"/></svg>';
-// The original page's typeface. A font face must be declared on the
-// document (not inside the shadow root) for the sheet to use it.
-function loadFont() {
-  if (document.getElementById("dept-budgets-font")) return;
-  document.head.append(Object.assign(document.createElement("link"), {
-    id: "dept-budgets-font", rel: "stylesheet",
-    href: "https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;700&display=swap",
-  }));
-}
 const ICON = {
   menu: '<svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>',
   back: '<svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>',
@@ -304,7 +295,6 @@ export async function mountDepartmentBudgetsSheet(host, hooks = {}) {
   const css = await res.text();
   const root = host.shadowRoot || host.attachShadow({ mode: "open" });
   root.replaceChildren();
-  loadFont();
   const style = el("style", { textContent: css + "\n" + FORM_CSS });
   const wrap = el("div", { style: "display:contents" });
   // The original page's hero, under a slim bar that stays put with the
@@ -1572,7 +1562,7 @@ function applyForm(parsed) {
 // Its styles travel with it (FORM_CSS): the page drawn for PDF / image lives
 // outside the sheet's shadow root, where html2canvas can read it.
 const FORM_CSS = `
-.dbf { width: 1400px; padding: 24px 28px; background: #fff; color: #000; font-family: "IBM Plex Sans Arabic", "Tajawal", Tahoma, sans-serif; direction: rtl; }
+.dbf { width: 1400px; padding: 24px 28px; background: #fff; color: #000; font-family: "Tajawal", Tahoma, sans-serif; direction: rtl; }
 .dbf.bare { width: auto; min-width: 820px; padding: 8px; }
 .dbf-head { display: flex; justify-content: space-between; align-items: flex-start; }
 .dbf-side { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 15px; min-width: 300px; }
