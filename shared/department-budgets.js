@@ -312,10 +312,7 @@ export async function mountDepartmentBudgetsSheet(host, hooks = {}) {
   wrap.innerHTML = `
     <header class="topbar">
       <button class="icon-btn menu" type="button" aria-label="فتح القائمة" title="القائمة">${ICON.menu}</button>
-      <div class="topbar-text">
-        <span class="topbar-school">${SCHOOL_NAME}</span>
-        <h2 class="topbar-title">ميزانيات الأقسام</h2>
-      </div>
+      <h2 class="topbar-school">${SCHOOL_NAME}</h2>
       <button class="icon-btn back" type="button" aria-label="رجوع" title="رجوع">${ICON.back}</button>
     </header>
     <div class="scroller">
@@ -332,7 +329,6 @@ export async function mountDepartmentBudgetsSheet(host, hooks = {}) {
   root.append(style, wrap);
   S = {
     root, hooks, db: dbFor(),
-    topbar: root.querySelector(".topbar"), topTitle: root.querySelector(".topbar-title"),
     title: root.querySelector(".hero h1"), subtitle: root.querySelector(".hero .school"),
     scroller: root.querySelector(".scroller"), main: root.querySelector(".main"),
     tabs: root.querySelector(".tabs"), body: root.querySelector(".content"),
@@ -340,7 +336,6 @@ export async function mountDepartmentBudgetsSheet(host, hooks = {}) {
     view: null, edit: null, gridBusy: Promise.resolve(), loading: null, showDetail: false,
   };
   S.scroller.append(creditsFooter());
-  S.scroller.addEventListener("scroll", () => S.topbar.classList.toggle("scrolled", S.scroller.scrollTop > 90), { passive: true });
   root.querySelector(".menu").addEventListener("click", () => hooks.openSidebar?.());
   root.querySelector(".back").addEventListener("click", async () => {
     if (S.edit?.dirty) await saveBudget();
@@ -427,7 +422,7 @@ function setView(v) {
 function renderTabs() {
   const tabs = S.role === "head" && S.me.department ? [["dept", "ميزانية القسم"], ["mine", "ميزانيتي"]] : [];
   const title = S.role === "admin" ? "ميزانيات الأقسام" : S.role === "head" ? "ميزانية القسم" : "ميزانيتي";
-  S.title.textContent = title; S.topTitle.textContent = title;
+  S.title.textContent = title;
   S.subtitle.textContent = S.role === "admin" ? "ميزانية كل قسم: من يدرّس أي شعبة، وكم حصة"
     : S.role === "head" ? "قسم " + S.me.department + ": من يدرّس أي شعبة، وكم حصة" : "فصولك وحصصك في ميزانية القسم";
   S.tabs.hidden = !tabs.length;
