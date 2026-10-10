@@ -289,6 +289,9 @@ function editable(d) {
   return x;
 }
 
+// Strictly true, like firestore.rules' hasScheduleEditPermission().
+export const canEditAllBudgets = (data) => data?.permissions?.allowEditSchedule === true;
+
 /* ---------------- mount ---------------- */
 function dbFor() {
   const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
@@ -347,7 +350,15 @@ export async function mountDepartmentBudgetsSheet(host, hooks = {}) {
   return {
     // Re-reads everything when the sheet opens again — unless a budget is
     // being edited with unsaved changes, which would be thrown away.
-    refresh: () => { if (!S.edit?.dirty && !S.edit?.review) load(); },
+    // Switching between the host's two buttons (mode) starts that view afresh.
+    refresh: async () => {
+      if ((S.hooks.getMode?.() || "own") !== S.mode) {
+        if (S.edit?.dirty && !S.edit.review) await saveBudget();
+        S.edit = null; S.view = null; S.preview = null;
+        return load();
+      }
+      if (!S.edit?.dirty && !S.edit?.review) return load();
+    },
   };
 }
 
@@ -357,7 +368,14 @@ async function load() {
     const ses = S.hooks.getSession?.() || {};
     const data = ses.data || {};
     const role = String(S.hooks.role || data.role || "").toLowerCase();
-    S.role = role === "admin" ? "admin" : role === "head" ? "head" : "teacher";
+    const own = role === "admin" ? "admin" : role === "head" ? "head" : "teacher";
+    // «السماح بتعديل الجدول» (admins/teachers.html → teachers/{uid}.permissions.allowEditSchedule)
+    // also gets the admin's view of every department (firestore.rules lets
+    // them save it). The host picks which one is showing (hooks.getMode):
+    // "all" → every department, "own" → their own ميزانية القسم / ميزانيتي.
+    S.mode = S.hooks.getMode?.() || "own";
+    S.role = own === "admin" || (S.mode === "all" && canEditAllBudgets(data)) ? "admin" : own;
+    S.realAdmin = own === "admin";
     S.me = { uid: ses.user?.uid || "", name: teacherName(data), department: teacherDept(data) };
     if (!S.view) S.body.replaceChildren(el("div", { className: "state", textContent: "جارٍ التحميل..." }));
     try {
@@ -383,6 +401,7 @@ async function load() {
       S.body.replaceChildren(el("div", { className: "state err", textContent: "تعذّر تحميل الميزانيات. تحقّق من الاتصال ثم أعد المحاولة." }));
       return;
     }
+    if (S.view === "import" && !S.realAdmin) S.view = null;
     if (!S.view || (S.role !== "admin" && ["school", "grid", "preview", "import"].includes(S.view))) {
       S.view = S.role === "admin" ? "school" : S.role === "head" && S.me.department ? "dept" : "mine";
     }
@@ -896,8 +915,9 @@ function renderSchool(box) {
   detail.onclick = () => { S.showDetail = !S.showDetail; render(); };
   const csv = el("button", { className: "btn ghost", type: "button", textContent: "تصدير CSV للجدول" });
   csv.onclick = () => exportCsv(msg);
-  const imp = el("button", { className: "btn ghost", type: "button", textContent: "رفع بيانات الموقع القديم" });
-  imp.onclick = () => setView("import");
+  // The one-time upload of the old site's data: admins only.
+  const imp = S.realAdmin ? el("button", { className: "btn ghost", type: "button", textContent: "رفع بيانات الموقع القديم" }) : null;
+  if (imp) imp.onclick = () => setView("import");
   box.append(gridBtn, el("div", { className: "row", style: "margin:0 0 12px" }, refresh, detail, csv, imp, msg));
   const depts = schoolDepartments();
   const rows = depts.map((dp) => {

@@ -108,6 +108,11 @@
           <i class="fas fa-clipboard-list" aria-hidden="true"></i>
           <span id="sidebarBudgetLabel">ميزانيتي</span>
         </button>
+        <!-- «السماح بتعديل الجدول» (and admins): every department, as on the admin page. -->
+        <button id="sidebarAllBudgets" class="sidebar-link" type="button" hidden>
+          <i class="fas fa-table-list" aria-hidden="true"></i>
+          <span>ميزانيات الأقسام</span>
+        </button>
       </div>
 
       <div class="sidebar-group">
@@ -4240,7 +4245,7 @@
         [document.getElementById('dwSheet'), () => sidebarDeptSchedule],
         [ssSheetEl, () => sidebarSchoolSchedule],
         [svsSheetEl, () => sidebarSupervisorStudents],
-        [budgetSheetEl, () => sidebarBudget],
+        [budgetSheetEl, () => budgetMode === 'all' ? sidebarAllBudgets : sidebarBudget],
         [document.getElementById('maTodaySheet'), () => document.getElementById('sidebarMaToday')],
         [document.getElementById('maOverallSheet'), () => document.getElementById('sidebarMaOverall')],
         [document.getElementById('maDetailedSheet'), () => document.getElementById('sidebarMaDetailed')],
@@ -5937,16 +5942,18 @@
     const sidebarBudgetGroup = document.getElementById('sidebarBudgetGroup');
     const sidebarBudget = document.getElementById('sidebarBudget');
     const sidebarBudgetLabel = document.getElementById('sidebarBudgetLabel');
+    const sidebarAllBudgets = document.getElementById('sidebarAllBudgets');
     let budgetMounting = null;
     let budgetApi = null;
 
     function budgetMount(){
       if (!budgetMounting) {
-        budgetMounting = import('/shared/department-budgets.js?v=2026-10-10')
+        budgetMounting = import('/shared/department-budgets.js?v=2026-10-10c')
           .then((m) => m.mountDepartmentBudgetsSheet(budgetHost, {
             close: () => closeBudgetSheet(),
             openSidebar: () => openSidebar(),
             getSession: () => ({ user: currentUser, data: currentTeacherProfile, classList: CLASS_OPTIONS }),
+            getMode: () => budgetMode,
           }))
           .then((api) => { budgetApi = api; return api; })
           .catch((e) => { budgetMounting = null; throw e; });
@@ -5960,11 +5967,25 @@
       budgetSheetEl.setAttribute('aria-hidden', 'true');
     }
 
-    function openBudgetSheet(){
-      if (sidebarBudgetGroup.hidden || budgetSheetEl.classList.contains('open')) return;
+    // mode: 'own' (ميزانيتي / ميزانية القسم, #dept-budget) or 'all'
+    // (ميزانيات الأقسام, #dept-budgets). One sheet; switching modes while
+    // it's open swaps its view in place.
+    let budgetMode = 'own';
+    const budgetHash = (mode) => mode === 'all' ? '#dept-budgets' : '#dept-budget';
+    function openBudgetSheet(mode = 'own'){
+      const link = mode === 'all' ? sidebarAllBudgets : sidebarBudget;
+      if (sidebarBudgetGroup.hidden || link.hidden) return;
+      if (budgetSheetEl.classList.contains('open')) {
+        if (budgetMode === mode) return;
+        budgetMode = mode;
+        try { history.replaceState({ budgetSheetOpen: true }, '', budgetHash(mode)); } catch {}
+        budgetApi?.refresh();
+        return;
+      }
+      budgetMode = mode;
       budgetSheetEl.classList.add('open');
       budgetSheetEl.setAttribute('aria-hidden', 'false');
-      try { history.pushState({ budgetSheetOpen: true }, '', '#dept-budget'); } catch {}
+      try { history.pushState({ budgetSheetOpen: true }, '', budgetHash(mode)); } catch {}
       budgetApi?.refresh();
       budgetMount().catch(async (e) => {
         console.error('[department-budgets] failed to load', e);
@@ -5976,7 +5997,7 @@
           cancelText: 'إغلاق',
           icon: '!'
         });
-        if (retry) openBudgetSheet();
+        if (retry) openBudgetSheet(mode);
       });
     }
 
@@ -5990,16 +6011,23 @@
       if (budgetSheetEl.classList.contains('open') && !history.state?.budgetSheetOpen) hideBudgetSheet();
     });
 
-    // A teacher with no department has no budget to see; heads and admins
-    // always get the button.
+    // ميزانيتي / ميزانية القسم: a head, or a teacher with a department.
+    // ميزانيات الأقسام: an admin, or «السماح بتعديل الجدول»
+    // (permissions.allowEditSchedule, strictly true like firestore.rules —
+    // the sheet reads the same flag, canEditAllBudgets) on top of their own.
     function updateBudgetButton(){
-      const role = currentRole === 'admin' ? 'admin' : currentRole === 'head' ? 'head' : 'teacher';
-      sidebarBudgetLabel.textContent = role === 'admin' ? 'ميزانيات الأقسام' : role === 'head' ? 'ميزانية القسم' : 'ميزانيتي';
-      sidebarBudgetGroup.hidden = !(role !== 'teacher' || myDeptSchedDepartment);
-      if (sidebarBudgetGroup.hidden) closeBudgetSheet();
+      const isAdminRole = currentRole === 'admin';
+      const allBudgets = isAdminRole || currentTeacherProfile?.permissions?.allowEditSchedule === true;
+      sidebarBudgetLabel.textContent = currentRole === 'head' ? 'ميزانية القسم' : 'ميزانيتي';
+      sidebarBudget.hidden = isAdminRole || !(currentRole === 'head' || myDeptSchedDepartment);
+      sidebarAllBudgets.hidden = !allBudgets;
+      sidebarBudgetGroup.hidden = sidebarBudget.hidden && sidebarAllBudgets.hidden;
+      const openLink = budgetMode === 'all' ? sidebarAllBudgets : sidebarBudget;
+      if (sidebarBudgetGroup.hidden || openLink.hidden) closeBudgetSheet();
     }
 
-    sidebarBudget.addEventListener('click', () => { closeSidebar(); openBudgetSheet(); });
+    sidebarBudget.addEventListener('click', () => { closeSidebar(); openBudgetSheet('own'); });
+    sidebarAllBudgets.addEventListener('click', () => { closeSidebar(); openBudgetSheet('all'); });
 
     /* ========= فصولي (mc*) =========
        An in-page copy of Teachers/user.html's own class buttons + student
@@ -7006,7 +7034,8 @@
         '#today-absence': () => openManageAttendanceSheet('today'),
         '#overall-absence': () => openManageAttendanceSheet('overall'),
         '#detailed-absence': () => openManageAttendanceSheet('detailed'),
-        '#dept-budget': openBudgetSheet,
+        '#dept-budget': () => openBudgetSheet('own'),
+        '#dept-budgets': () => openBudgetSheet('all'),
       };
       sections[hash]?.();
     }

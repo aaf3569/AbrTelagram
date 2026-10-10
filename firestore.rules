@@ -1253,10 +1253,11 @@ service cloud.firestore {
     // Teachers/user.html and admins/adminpage.html): one doc per department,
     // keyed by its canonical name (shared/departments.js). Every teacher may
     // read them (ميزانيتي shows a teacher's own rows from any department);
-    // only an admin, or the head of that same department, may write one.
+    // an admin or a teacher with «السماح بتعديل الجدول»
+    // (hasScheduleEditPermission) may write any of them, a head only their own.
     match /departmentBudgets/{dept} {
       allow read: if isTeacherOrAdmin();
-      allow create, update: if (isAdmin() || (isHead() && headDepartment() == dept))
+      allow create, update: if (hasScheduleEditPermission() || (isHead() && headDepartment() == dept))
         && request.resource.data.keys().hasOnly(['periods', 'required', 'note', 'teachers', 'updatedAt', 'updatedBy', 'updatedByUid'])
         && (request.resource.data.periods is map)
         && (request.resource.data.teachers is list)
