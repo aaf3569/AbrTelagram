@@ -69,7 +69,9 @@ const STYLES = `
   #attendanceSheet .att-lesson-dot.future{background:rgba(148,163,184,.10);color:#94a3b8;border-color:rgba(148,163,184,.25);opacity:.65;cursor:default}
   #attendanceSheet .att-lesson-dot.future:hover{transform:none}
   #attendanceSheet .special-case-icon{width:18px;height:18px;margin-inline-start:8px;flex-shrink:0}
-  #attendanceSheet .sheet-header .sheet-title{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);flex:none;text-align:center;max-width:calc(100% - 128px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #attendanceSheet .sheet-header .sheet-title{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);flex:none;text-align:center;max-width:calc(100% - 110px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #attendanceSheet .sheet-header .att-back-btn{width:38px;height:38px;padding:0;border-radius:10px;flex-shrink:0;gap:0;display:inline-flex;align-items:center;justify-content:center;line-height:0}
+  #attendanceSheet .sheet-header .att-back-btn svg{width:16px;height:16px;flex-shrink:0;display:block;margin:0}
   #attendanceSheet .lesson-picker{width:100%}
   #attendanceSheet .att-row{display:flex;gap:12px;flex-wrap:wrap}
   #attendanceSheet .seg{display:flex;align-items:center;border:1px solid var(--border);border-radius:14px;overflow:hidden;background:#fff;box-shadow:var(--shadow-1)}
@@ -145,8 +147,8 @@ const STYLES = `
   #attBlockedModal .blocked-close{position:absolute;top:8px;left:8px;width:32px;height:32px;border-radius:999px;border:1px solid rgba(185,28,28,.18);background:#fff;color:#7f1d1d;font-weight:900;cursor:pointer}
   #attBlockedModal .blocked-icon{width:96px;height:96px;display:grid;place-items:center}
   #attBlockedModal .blocked-icon svg{width:96px;height:96px;overflow:visible}
-  #attBlockedModal .blocked-icon circle{fill:none;stroke:#b42318;stroke-width:6;stroke-dasharray:220;stroke-dashoffset:220;animation:attBlockedRingDraw 1.2s ease-in-out infinite}
-  #attBlockedModal .blocked-icon path{fill:none;stroke:#b42318;stroke-width:7;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:56;stroke-dashoffset:56;animation:attBlockedXDraw 1.2s ease-in-out infinite}
+  #attBlockedModal .blocked-icon circle{fill:none;stroke:#dc2626;stroke-width:6;stroke-dasharray:220;stroke-dashoffset:220;animation:attBlockedRingDraw 1.2s ease-in-out infinite}
+  #attBlockedModal .blocked-icon path{fill:none;stroke:#dc2626;stroke-width:7;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:56;stroke-dashoffset:56;animation:attBlockedXDraw 1.2s ease-in-out infinite}
   #attBlockedModal .blocked-title{margin:0;color:#991b1b;font-weight:900;font-size:1.06rem}
   #attBlockedModal .blocked-msg{margin:0;color:#7f1d1d;font-weight:800;font-size:.95rem;line-height:1.7}
   #attBlockedModal .blocked-actions{width:100%;display:flex;justify-content:center;gap:10px;flex-wrap:wrap}
@@ -208,17 +210,17 @@ const STYLES = `
      failures (network/server errors), never for routine validation.
      Pulsing red frame around the whole viewport plus a loud modal, so a
      real failure can't be mistaken for an ordinary message. */
-  #attCriticalBorder{position:fixed;inset:0;z-index:1150;pointer-events:none;opacity:0;visibility:hidden;transition:opacity .18s ease,visibility .18s ease;box-shadow:inset 0 0 0 8px #b42318,inset 0 0 70px 12px rgba(180,35,24,.65)}
+  #attCriticalBorder{position:fixed;inset:0;z-index:1150;pointer-events:none;opacity:0;visibility:hidden;transition:opacity .18s ease,visibility .18s ease;box-shadow:inset 0 0 0 8px #dc2626,inset 0 0 70px 12px rgba(220,38,38,.65)}
   #attCriticalBorder.open{opacity:1;visibility:visible;animation:attCriticalPulse 1.4s ease-in-out infinite}
   #attCriticalErrorModal .overlay{background:rgba(127,29,29,.35);backdrop-filter:blur(4px)}
-  #attCriticalErrorModal .critical-error-card{position:relative;z-index:1;width:min(380px,92vw);background:linear-gradient(180deg,#ffffff 0%,#fff5f5 100%);border:2px solid #b42318;border-radius:20px;box-shadow:0 24px 70px rgba(185,28,28,.35);padding:26px 22px;display:grid;justify-items:center;gap:14px;text-align:center}
+  #attCriticalErrorModal .critical-error-card{position:relative;z-index:1;width:min(380px,92vw);background:linear-gradient(180deg,#ffffff 0%,#fff5f5 100%);border:2px solid #dc2626;border-radius:20px;box-shadow:0 24px 70px rgba(185,28,28,.35);padding:26px 22px;display:grid;justify-items:center;gap:14px;text-align:center}
   #attCriticalErrorModal.open .critical-error-card{animation:attBlockedCardIn .2s ease}
   #attCriticalErrorModal .critical-error-icon{width:72px;height:72px;display:grid;place-items:center}
   #attCriticalErrorModal .critical-error-icon svg{width:72px;height:72px;overflow:visible}
-  #attCriticalErrorModal .critical-error-icon circle{fill:none;stroke:#b42318;stroke-width:6}
-  #attCriticalErrorModal .critical-error-icon line{stroke:#b42318;stroke-width:8;stroke-linecap:round}
-  #attCriticalErrorModal .critical-error-icon .dot{fill:#b42318;stroke:none}
-  #attCriticalErrorModal .critical-error-title{margin:0;color:#b42318;font-weight:900;font-size:2rem;letter-spacing:.5px}
+  #attCriticalErrorModal .critical-error-icon circle{fill:none;stroke:#dc2626;stroke-width:6}
+  #attCriticalErrorModal .critical-error-icon line{stroke:#dc2626;stroke-width:8;stroke-linecap:round}
+  #attCriticalErrorModal .critical-error-icon .dot{fill:#dc2626;stroke:none}
+  #attCriticalErrorModal .critical-error-title{margin:0;color:#dc2626;font-weight:900;font-size:2rem;letter-spacing:.5px}
   #attCriticalErrorModal .critical-error-msg{margin:0;color:#7f1d1d;font-weight:800;font-size:1rem;line-height:1.8}
   #attCriticalErrorModal .critical-error-close{width:100%;min-height:52px;margin-top:4px}
   @keyframes attCriticalPulse{0%,100%{opacity:.65}50%{opacity:1}}
@@ -242,7 +244,9 @@ const STYLES = `
 const SHEET_HTML = `
   <section id="attendanceSheet" class="sheet" aria-hidden="true">
     <div class="sheet-header">
-      <button id="attCloseBtn" class="back-btn att-back-btn" type="button" aria-label="رجوع" title="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+      <button id="attCloseBtn" class="back-btn att-back-btn" type="button" aria-label="رجوع">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+      </button>
       <h3 id="attSheetTitle" class="sheet-title">تسجيل الغياب</h3>
     </div>
     <div class="sheet-body">

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://abrschool-bot.onrender.com http://127.0.0.1:3000 http://localhost:3000 https://cdn.jsdelivr.net https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.gstatic.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; manifest-src 'self'; upgrade-insecure-requests; block-all-mixed-content">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; connect-src 'self' https://abrschool-bot.onrender.com http://127.0.0.1:3000 http://localhost:3000 https://cdn.jsdelivr.net https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.gstatic.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; manifest-src 'self'; upgrade-insecure-requests; block-all-mixed-content">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -72,13 +72,12 @@ body{
   position:absolute;
   inset-inline-start:20px;
   top:50%;
-  margin-top:-20px;
+  transform:translateY(-50%);
   display:none;
 }
-body.student-profile-open #studentTopBack{ display:inline-grid; }
+body.student-profile-open #studentTopBack{ display:inline-flex; }
 .site-title{
-  /* Font, size and weight: /shared/identity.css. */
-  margin:0;
+  margin:0; font-weight:900; letter-spacing:.2px; font-size:clamp(1.2rem,2.4vw,1.6rem);
   text-shadow:0 1px 0 rgba(255,255,255,.6)
 }
 
@@ -97,20 +96,22 @@ main{ flex:1; padding:32px 20px 40px; display:flex }
 .muted{ color:var(--muted) }
 
 /* === Buttons + clickable rows === */
-/* Height, corners, font and the primary / ghost / danger colours: /shared/identity.css. */
 .btn{
-  border:none; cursor:pointer; font-size:1.02rem;
+  font-family:"Tajawal", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  height:56px; border:none; border-radius:16px; cursor:pointer; font-weight:800; font-size:1.02rem; letter-spacing:.2px;
   transition: var(--transition); display: inline-flex; align-items: center; justify-content: center; padding: 0 20px;
 }
 .btn:active{ transform:translateY(0) scale(.995) }
 .btn:focus-visible{ outline:3px solid var(--focus); outline-offset:2px }
 .btn:disabled{ opacity:.5; cursor:not-allowed; box-shadow:none !important; transform:none !important; }
-.btn.primary{ box-shadow: 0 12px 28px rgba(3,60,84,.26) }
+.btn.primary{
+  background: linear-gradient(180deg, #065372, #033C54); color:#fff; box-shadow: 0 12px 28px rgba(3,60,84,.26)
+}
 .btn.primary:hover{ transform:translateY(-2px); box-shadow: 0 16px 36px rgba(3,60,84,.34); filter:brightness(1.02) }
-.btn.ghost{ box-shadow: var(--shadow-1) }
-.btn.ghost:hover{ transform:translateY(-2px); box-shadow: 0 14px 34px rgba(3,60,84,.18) }
-.btn.danger{ box-shadow: var(--shadow-1) }
-.btn.danger:hover{ transform:translateY(-2px); box-shadow: 0 16px 32px rgba(180,35,24,.18) }
+.btn.ghost{ background:#fff; color:#033C54; border:1px solid rgba(3,60,84,.35); box-shadow: var(--shadow-1) }
+.btn.ghost:hover{ transform:translateY(-2px); box-shadow: 0 14px 34px rgba(3,60,84,.18); border-color:rgba(3,60,84,.55) }
+.btn.danger{ background:#fff; color:#cb2b2b; border:1px solid rgba(203,43,43,.4); box-shadow: var(--shadow-1) }
+.btn.danger:hover{ transform:translateY(-2px); box-shadow: 0 16px 32px rgba(203,43,43,.18); border-color:rgba(203,43,43,.55) }
 .btn.secondary{ background:#fff; color:#6b7f9f; border:1px solid rgba(107,127,159,.4); box-shadow: var(--shadow-1) }
 .btn.secondary:hover{ transform:translateY(-2px); box-shadow: 0 16px 32px rgba(107,127,159,.18); border-color:rgba(107,127,159,.55) }
 
@@ -129,10 +130,23 @@ main{ flex:1; padding:32px 20px 40px; display:flex }
   position:absolute;
   inset-inline-start:20px;
   top:50%;
-  margin-top:-20px;
+  transform:translateY(-50%);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  width:42px;
+  height:42px;
+  border-radius:12px;
+  color:#033C54;
+  background:#fff;
+  border:1px solid rgba(3,60,84,.2);
+  box-shadow:0 4px 12px rgba(3,60,84,.08);
+  transition:var(--transition);
 }
-/* The id outranks /shared/back-button.css's display. */
-#classesHeaderBack:not(.show){ display:none; }
+.classes-header-back svg{ width:22px; height:22px; }
+.classes-header-back.show{ display:inline-flex; }
+.classes-header-back:hover{ background:var(--primary-light); border-color:rgba(3,60,84,.4); }
+.classes-header-back:focus-visible{ outline:3px solid var(--focus); outline-offset:2px; }
 .grade-hero{
   background:linear-gradient(120deg, #033C54 0%, #0a5f81 100%);
   color:#fff;
@@ -527,8 +541,12 @@ mark.search-hit{ background:rgba(255,196,0,.45); color:inherit; border-radius:4p
   background:#ffffff; border-bottom:1px solid var(--border); padding:18px 16px; display:flex; align-items:center; gap:12px;
   position:sticky; top:0; z-index:10; box-shadow: 0 2px 10px rgba(0,0,0,0.03);
 }
-/* .back-btn: /shared/back-button.css */
-.sheet-title{ margin:0; color:#033C54 }
+.back-btn{
+  height:44px; padding:0 16px; border-radius:12px; border:1px solid rgba(3,60,84,.25); background:#fff; color:#033C54; font-weight:800; cursor:pointer;
+  box-shadow: var(--shadow-1); transition: var(--transition); display:inline-flex; align-items:center; justify-content:center; text-decoration:none;
+}
+.back-btn:hover { background: var(--primary-light); }
+.sheet-title{ margin:0; font-size:1.1rem; font-weight:900; color:#033C54 }
 /* Class page: the class name centered in the header, back button on the
    right, an empty column on the left balancing it. */
 #classSheet .sheet-header{ display:grid; grid-template-columns:1fr auto 1fr; }
@@ -601,7 +619,7 @@ body.student-route-active #studentSheet .sheet-header{
 .tab:hover{ transform:translateY(-1px); box-shadow:0 10px 26px rgba(3,60,84,.14); border-color:rgba(3,60,84,.4) } .tab.active{ background:linear-gradient(180deg, #065372, #033C54); color:#fff; border-color:transparent; box-shadow:0 14px 30px rgba(3,60,84,.26) }
 .tab-panels{ display:flex; flex-direction:column; gap:16px } .tab-panel{ display:none } .tab-panel.active{ display:flex; flex-direction:column; gap:16px }
 .card{ padding:16px; border:1px solid var(--border); border-radius:16px; background:#fff; box-shadow: var(--shadow-1); display:flex; gap:14px; justify-content:space-between; align-items:flex-start; }
-.card-title{ color:#033C54; margin-bottom: 4px; } .card-sub{ color:#6b7f9f; font-weight:700; font-size:.92rem; line-height: 1.5; }
+.card-title{ font-weight:800; color:#033C54; margin-bottom: 4px; } .card-sub{ color:#6b7f9f; font-weight:700; font-size:.92rem; line-height: 1.5; }
 .tag{ padding:5px 10px; border-radius:999px; background:var(--chip); border:1px solid var(--border); font-weight:800; font-size:.82rem }
 .mini{ height:38px; padding:0 14px; border-radius:10px; font-size:.92rem } .actions{ display:flex; gap:10px; flex-wrap:wrap } .divider{ height:1px; background:var(--border); width:100%; margin:6px 0 }
 .k-badge{ padding:5px 10px; border-radius:999px; font-weight:800; font-size:.82rem; border:1px solid rgba(3,60,84,.2) }
@@ -1008,6 +1026,7 @@ html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%;
 #attConfirmModal h3, #attErrorModal h3, #attLessonDetailModal h3 { margin: 0 0 8px; font-size: 1.15rem; color: var(--primary); font-weight: 900; }
 #attConfirmModal p, #attErrorModal p, #attLessonDetailModal p { margin: 0 0 12px; color: var(--muted); font-weight: 800; }
 #attConfirmModal .row, #attErrorModal .row, #attLessonDetailModal .row { display: flex; gap: 10px; justify-content: flex-start; margin-top: 16px; flex-wrap: wrap; }
+.btn.cancel { background: #fff; color: var(--primary); border: 1px solid rgba(3,60,84,.25); }
 
 .modal-header {
   padding: 20px 24px;
@@ -1115,13 +1134,14 @@ html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%;
   .reorder-modal-overlay, .modal-overlay { padding: 0; align-items: flex-end; }
   .reorder-modal-overlay.active .reorder-modal, .modal-overlay.active .modal { transform: translateY(0); }
   .reorder-item { padding: 14px 16px; }
-  #studentTopBack, .classes-header-back{ inset-inline-start:12px; }
+  #studentTopBack{ inset-inline-start:12px; height:38px; padding:0 12px; font-size:.85rem; }
+  .classes-header-back{ inset-inline-start:12px; width:38px; height:38px; }
   /* Phones: the student cards sit straight under قائمة الطلاب, not inside
      another card. */
   .students-section{ background:transparent; border:0; box-shadow:none; padding:0; border-radius:0; }
 }
 @media (max-width: 480px) {
-  .btn { font-size: 0.95rem; } .subject { padding: 14px 16px; } .item { padding: 14px 16px; }
+  .btn { height: 50px; font-size: 0.95rem; } .subject { padding: 14px 16px; } .item { padding: 14px 16px; }
   .school-total-value { font-size: 1.8rem; }
   .school-grade { padding: 7px 8px; }
   .school-grade-value { font-size: 1.08rem; }
@@ -1261,7 +1281,7 @@ html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%;
     padding:20px;
     box-shadow:0 16px 34px rgba(3,60,84,.22);
   }
-  .btn.btn.primary.student-request-toggle{ background:#fff; color:var(--primary); }
+  .btn.primary.student-request-toggle{ background:#fff; color:var(--primary); }
   .class-settings-shell{ margin-top:14px; }
 
   /* ---- Class roster + secondary sheets: more room, card grid ---- */
@@ -1280,6 +1300,8 @@ html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%;
 
   /* ---- Sheet chrome + modals: a bit more room on wide screens ---- */
   .sheet-header{ padding:20px 28px; }
+  .back-btn{ height:48px; padding:0 20px; }
+  .sheet-title{ font-size:1.15rem; }
   .modal, .reorder-modal{ max-width:640px; }
 }
 
@@ -1295,9 +1317,6 @@ html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%;
 #attDetailBody .row[hidden], #lateDetailActions[hidden], .late-rule-note[hidden]{ display:none !important }
 #lateDetailActions{ display:flex; margin-top:6px }
 #lateDetailActions .btn{ flex:1; height:48px }
-/* Line icons (/shared/icons.svg) next to a label. */
-#openClassSettings{ gap:8px; }
-.head-crown{ color:#b7791f; }
 </style>
 
   <!-- iOS home screen icon -->
@@ -1323,17 +1342,17 @@ html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%;
   <meta name="twitter:title" content="الفصول - ثانوية أحمد البشر الرومي">
   <meta name="twitter:description" content="???? ?????? ???? ????? ??????.">
   <meta name="twitter:image" content="https://framerusercontent.com/images/jRnZLlPr90qwKsuUwfIlvDS9E.png?width=1200&height=630">
-  <!-- After the page's own styles, so the site's identity (titles, buttons) and the one back button win. -->
-  <link rel="stylesheet" href="/shared/identity.css" />
-  <link rel="stylesheet" href="/shared/back-button.css" />
+    <link rel="stylesheet" href="/shared/identity.css" />
   <link rel="stylesheet" href="/shared/actions.css" />
   <script src="/shared/feedback.js" defer></script>
   <script src="/shared/dialog.js" defer></script>
 </head>
 <body>
 <header class="site-header">
-  <button id="studentTopBack" class="back-btn" type="button" aria-label="رجوع" title="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
-  <a id="classesHeaderBack" class="classes-header-back back-btn" href="adminpage.html" aria-label="رجوع" title="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></a>
+  <button id="studentTopBack" class="back-btn" type="button">رجوع</button>
+  <a id="classesHeaderBack" class="classes-header-back" href="adminpage.html" aria-label="رجوع" title="رجوع">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+  </a>
   <h1 id="siteTitle" class="site-title">ثانوية أحمد البشر الرومي</h1>
 </header>
 <main>
@@ -1387,7 +1406,7 @@ html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%;
       </div>
       <div id="gradesMain">
         <div class="section" id="globalStudentSearchShell">
-          <div class="label" style="margin:0 0 8px;"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-search"/></svg> ابحث عن طالب في كل المدرسة</div>
+          <div class="label" style="margin:0 0 8px;">🔍 ابحث عن طالب في كل المدرسة</div>
           <div class="input-wrap">
             <input id="globalStudentSearchInput" class="input" type="text" placeholder="اكتب اسم الطالب…" autocomplete="off">
           </div>
@@ -1414,7 +1433,7 @@ html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%;
         </div>
 
         <div class="class-settings-shell" aria-label="إعدادات الفصول">
-          <button id="openClassSettings" class="btn ghost" type="button"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-settings"/></svg> إعدادات الفصول</button>
+          <button id="openClassSettings" class="btn ghost" type="button">⚙️ إعدادات الفصول</button>
         </div>
       </div>
     </section>
@@ -1424,7 +1443,7 @@ html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%;
 <!-- STUDENT REQUEST SHEET -->
 <section id="studentRequestSheet" class="sheet" aria-hidden="true">
   <div class="sheet-header">
-    <button id="closeStudentRequestSheet" class="back-btn" aria-label="رجوع" title="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+    <button id="closeStudentRequestSheet" class="back-btn" aria-label="رجوع">رجوع</button>
     <h3 class="sheet-title">طلب طالب</h3>
   </div>
   <div class="sheet-body">
@@ -1514,7 +1533,7 @@ html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%;
 <!-- CLASS SETTINGS SHEET -->
 <section id="classSettingsSheet" class="sheet" aria-hidden="true">
   <div class="sheet-header">
-    <button id="closeClassSettings" class="back-btn" aria-label="رجوع" title="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+    <button id="closeClassSettings" class="back-btn" aria-label="رجوع">رجوع</button>
     <h3 class="sheet-title">إعدادات الفصول</h3>
   </div>
   <div class="sheet-body">
@@ -1783,7 +1802,7 @@ html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%;
 <!-- CLASS PAGE -->
 <section id="classSheet" class="sheet" aria-hidden="true">
   <div class="sheet-header">
-    <button id="closeClass" class="back-btn" aria-label="رجوع" title="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+    <button id="closeClass" class="back-btn" aria-label="رجوع">رجوع</button>
     <h3 id="classTitle" class="sheet-title">—</h3>
   </div>
   <div class="sheet-body">
@@ -1839,7 +1858,7 @@ html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%;
 <!-- CLASS TEACHERS SHEET -->
 <section id="classTeachersSheet" class="sheet small" aria-hidden="true">
   <div class="sheet-header">
-    <button id="closeClassTeachers" class="back-btn" aria-label="رجوع" title="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+    <button id="closeClassTeachers" class="back-btn" aria-label="رجوع">رجوع</button>
     <h3 id="classTeachersTitle" class="sheet-title">معلمو الفصل</h3>
   </div>
   <div class="sheet-body">
@@ -1853,7 +1872,7 @@ html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%;
 <!-- STUDENT EDIT SHEET -->
 <section id="studentSheet" class="sheet small" aria-hidden="true">
   <div class="sheet-header">
-    <button id="closeStudent" class="back-btn" aria-label="رجوع" title="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+    <button id="closeStudent" class="back-btn" aria-label="رجوع">رجوع</button>
     <h3 id="studentTitle" class="sheet-title"></h3>
   </div>
   <div class="sheet-body">
@@ -2040,7 +2059,7 @@ html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%;
 <!-- ABSENCE DAY DETAIL SHEET -->
 <section id="absenceDaySheet" class="sheet small" aria-hidden="true">
   <div class="sheet-header">
-    <button id="closeAbsenceDay" class="back-btn" type="button" aria-label="رجوع" title="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+    <button id="closeAbsenceDay" class="back-btn" type="button">رجوع</button>
     <h3 class="sheet-title">تفاصيل يوم الغياب</h3>
   </div>
   <div class="sheet-body">
@@ -2059,7 +2078,7 @@ html.no-scroll, body.no-scroll { position: fixed; overflow: hidden; width: 100%;
 <!-- ATTENDANCE DETAIL SHEET -->
 <section id="attDetailSheet" class="sheet small" aria-hidden="true">
   <div class="sheet-header">
-    <button id="closeAttDetail" class="back-btn" aria-label="رجوع" title="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+    <button id="closeAttDetail" class="back-btn" aria-label="رجوع">رجوع</button>
     <h3 id="attDetailTitle" class="sheet-title">تفاصيل الحالة</h3>
     <div style="margin-right: auto; display: flex; gap: 8px;">
       <!-- NEW: Excused Absence Button -->
@@ -2266,8 +2285,8 @@ import { initializeApp, getApp, getApps } from "/shared/firebase.js";
 import { getAuth, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from "/shared/firebase.js";
 import { initializeFirestore, persistentSingleTabManager, collection, collectionGroup, getDocs, query, where, orderBy, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp, writeBatch, arrayUnion, arrayRemove } from "/shared/firebase.js";
 import { mountAttendanceSheet } from "/shared/attendance.js";
-import { mountStudentNotesSheet } from "/shared/student-notes-sheet.js?v=2026-10-16";
-import { mountClassNotesOverview } from "/shared/teacher-class-sheet.js?v=2026-10-16d";
+import { mountStudentNotesSheet } from "/shared/student-notes-sheet.js?v=2026-10-15";
+import { mountClassNotesOverview } from "/shared/teacher-class-sheet.js?v=2026-10-14d";
 import { fetchStudentAttendanceData, makeAttTile, makeMorningLateTile, makeAbsenceDayTile, makeLateAbsenceTile, LATES_PER_ABSENCE_DAY } from "/shared/attendance-tiles.js?v=2026-10-04";
 import { renderWarningState, renderExcusedWarningState } from "/shared/warning-system.js";
 import { DEFAULT_CLASS_LIST, fetchClassList, groupByGrade, availableNumbersToAdd, buildClassKey, primeClassList, parseClassKey } from "/shared/class-registry.js";
@@ -4453,7 +4472,7 @@ function renderClassTeachersList(){
     el.className='item will-change';
     el.innerHTML = `
       <div>
-        <div>${isHead ? '<span class="head-crown" title="رئيس القسم"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-crown"/></svg></span> ' : ''}${t.name || t.email || t.uid}</div>
+        <div>${isHead ? '<span aria-hidden="true" title="رئيس القسم">👑</span> ' : ''}${t.name || t.email || t.uid}</div>
         <div class="sub">${subject}</div>
       </div>
       <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>

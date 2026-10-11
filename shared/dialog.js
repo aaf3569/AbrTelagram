@@ -64,15 +64,38 @@
   transition: transform .22s cubic-bezier(.22, .7, .25, 1);
 }
 .abr-dlg-host.is-open .abr-dlg-card { transform: none; }
-.abr-dlg-card.has-icon { text-align: center; }
+.abr-dlg-card.has-icon {
+  width: min(360px, calc(100vw - 32px));
+  border-radius: 24px;
+  border: 1px solid #dbe7f2;
+  padding: 30px 22px 20px;
+  text-align: center;
+}
+.abr-dlg-card.has-icon .abr-dlg-title {
+  color: #0a2f47;
+  font-size: 1.2rem;
+  font-weight: 900;
+  line-height: 1.5;
+}
+.abr-dlg-card.has-icon .abr-dlg-text {
+  color: #4a6478;
+  line-height: 1.85;
+}
+.abr-dlg-card.has-icon .abr-dlg-btn {
+  min-height: 50px;
+  font-weight: 800;
+}
+.abr-dlg-card.has-icon .abr-dlg-ok:not(.is-danger) {
+  background: linear-gradient(145deg, #0b5f88, #0f7cb0);
+}
 .abr-dlg-icon {
-  width: 60px;
-  height: 60px;
+  width: 68px;
+  height: 68px;
   border-radius: 50%;
   display: grid;
   place-items: center;
-  margin: 0 auto 14px;
-  background: linear-gradient(145deg, #033C54, #065372);
+  margin: 0 auto 16px;
+  background: linear-gradient(145deg, #0b5f88, #0f7cb0);
   color: #fff;
   font-size: 24px;
   font-weight: 900;

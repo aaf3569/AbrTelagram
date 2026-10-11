@@ -20,24 +20,22 @@ import { fetchClassList, sortClassList } from "/shared/class-registry.js";
 import { canManageAttendance } from "/shared/auth-guard.js";
 
 const CSS_URL = new URL("../css/overallabsence.css", import.meta.url).href;
+const FONT_AWESOME_URL = "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css";
 
 const MARKUP = `
   <header class="site-header" id="siteHeader">
     <div class="header-inner">
-      <button class="back-btn" id="backBtn" type="button" title="رجوع" aria-label="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+      <button class="icon-btn" id="menuBtn" title="القائمة" aria-label="فتح القائمة">
+        <i class="fas fa-bars"></i>
+      </button>
 
       <div class="header-center">
         <h1 class="site-title" id="navbarTitle">ثانوية أحمد البشر الرومي</h1>
       </div>
 
-      <div class="header-end">
-        <button class="icon-btn" id="menuBtn" title="القائمة" aria-label="فتح القائمة">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-menu"/></svg>
-        </button>
-        <button class="icon-btn" id="downloadBtn" title="تنزيل تقرير الغياب" aria-label="تنزيل تقرير الغياب">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-download"/></svg>
-        </button>
-      </div>
+      <button class="icon-btn" id="downloadBtn" title="تنزيل تقرير الغياب" aria-label="تنزيل تقرير الغياب">
+        <i class="fas fa-download"></i>
+      </button>
     </div>
 
     <div class="date-chip">
@@ -165,10 +163,10 @@ const MARKUP = `
       </div>
       <div class="modal-footer">
         <button class="modal-btn warning" id="confirmSaveBtn">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-save"/></svg> حفظ
+          <i class="fas fa-save"></i> حفظ
         </button>
         <button class="modal-btn" id="confirmCancelBtn">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-x"/></svg> إلغاء
+          <i class="fas fa-times"></i> إلغاء
         </button>
       </div>
     </div>
@@ -187,13 +185,13 @@ const MARKUP = `
       </div>
       <div class="modal-body">
         <div class="dl-section">
-          <div class="dl-section-title"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-calendar-days"/></svg> الفترة الزمنية</div>
+          <div class="dl-section-title"><i class="fas fa-calendar-days"></i> الفترة الزمنية</div>
           <div class="dl-seg" id="dlPeriodSeg">
             <button type="button" class="dl-seg-btn active" data-period="single">اليوم المحدد</button>
             <button type="button" class="dl-seg-btn" data-period="range">نطاق تواريخ</button>
           </div>
           <div class="dl-single-info" id="dlSingleInfo">
-            <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-info"/></svg>
+            <i class="fas fa-circle-info"></i>
             <span id="dlSingleDateText">—</span>
           </div>
           <div class="dl-range-row" id="dlRangeRow" hidden>
@@ -209,7 +207,7 @@ const MARKUP = `
         </div>
 
         <div class="dl-section">
-          <div class="dl-section-title"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-class"/></svg> الصفوف</div>
+          <div class="dl-section-title"><i class="fas fa-users-rectangle"></i> الصفوف</div>
           <div class="dl-seg" id="dlClassSeg">
             <button type="button" class="dl-seg-btn active" data-scope="all">كل الصفوف</button>
             <button type="button" class="dl-seg-btn" data-scope="one">صف محدد</button>
@@ -226,10 +224,10 @@ const MARKUP = `
       </div>
       <div class="modal-footer">
         <button class="modal-btn primary" id="dlDownloadBtn" type="button">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-file-pdf"/></svg> <span>تنزيل PDF</span>
+          <i class="fas fa-file-pdf"></i> <span>تنزيل PDF</span>
         </button>
         <button class="modal-btn" id="dlCancelBtn" type="button">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-x"/></svg> إلغاء
+          <i class="fas fa-times"></i> إلغاء
         </button>
       </div>
     </div>
@@ -240,7 +238,7 @@ const MARKUP = `
  * Renders the sheet into `host` and starts loading today's class-by-lesson grid.
  *
  * hooks:
- *   close()                 — title / رجوع: close the sheet
+ *   close()                 — title: close the sheet
  *   openSidebar()           — menu button: open adminpage.html's sidebar
  *   attendance              — the page's single mountAttendanceSheet() instance
  *   onAttendanceSaved(fn)   — subscribe to that instance's saves
@@ -255,13 +253,16 @@ export async function mountOverallAbsenceSheet(host, hooks) {
   const cssText = await res.text();
   const sheetDoc = host.attachShadow({ mode: "open" });
 
-  // Icons are <use> references to /shared/icons.svg, styled by the .ic
-  // rules at the end of this sheet's CSS.
+  // Font Awesome's class rules don't reach into a shadow root, so it's
+  // loaded here too (already cached from adminpage.html's own copy).
+  const fa = document.createElement("link");
+  fa.rel = "stylesheet";
+  fa.href = FONT_AWESOME_URL;
   const style = document.createElement("style");
   style.textContent = cssText;
   const tpl = document.createElement("template");
   tpl.innerHTML = MARKUP;
-  sheetDoc.append(style, tpl.content);
+  sheetDoc.append(fa, style, tpl.content);
 
       // adminpage.html has already initialized Firestore for this app, and
       // Firestore allows initializeFirestore() only once per app — a second
@@ -347,10 +348,6 @@ export async function mountOverallAbsenceSheet(host, hooks) {
 
       // Make navbar title clickable
       navbarTitle.addEventListener('click', () => {
-        hooks.close();
-      });
-      // رجوع closes the sheet the same way.
-      sheetDoc.getElementById('backBtn').addEventListener('click', () => {
         hooks.close();
       });
 
@@ -1064,7 +1061,10 @@ export async function mountOverallAbsenceSheet(host, hooks) {
             </div>
 
             <div class="late-details-view" id="lateDetailsView">
-              <button class="back-button back-btn" id="backFromLateDetails" type="button" aria-label="رجوع" title="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+              <button class="back-button" id="backFromLateDetails">
+                <i class="fas fa-arrow-right"></i>
+                العودة
+              </button>
               <div class="late-header">
                 <h4>تفاصيل المتأخرين</h4>
                 <span class="muted">الحصة ${niceLesson}</span>
@@ -1139,7 +1139,7 @@ export async function mountOverallAbsenceSheet(host, hooks) {
             const lateBtn = document.createElement('button');
             lateBtn.className = `modal-btn ${cell.missed ? 'warning' : ''}`;
             lateBtn.id = 'lateDetailsBtn';
-            lateBtn.innerHTML = '<svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-user-clock"/></svg> عرض المتأخرين';
+            lateBtn.innerHTML = '<i class="fas fa-user-clock"></i> عرض المتأخرين';
           
             // Check if lesson is currently running or in future
             const currentMinutes = getCurrentKuwaitMinutes();
@@ -1169,7 +1169,7 @@ export async function mountOverallAbsenceSheet(host, hooks) {
               const takeBtn = document.createElement('button');
               takeBtn.className = 'modal-btn primary';
               takeBtn.type = 'button';
-              takeBtn.innerHTML = '<svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-clipboard-check"/></svg> تسجيل الغياب';
+              takeBtn.innerHTML = '<i class="fas fa-clipboard-check"></i> تسجيل الغياب';
               takeBtn.addEventListener('click', () => {
                 const teacherUid = expectedUids[0];
                 const teacherName = [...cell.expectedTeacherNames].filter(Boolean)[0] || '';
@@ -1197,7 +1197,7 @@ export async function mountOverallAbsenceSheet(host, hooks) {
 
           modalBody.innerHTML = `
             <div class="teacher-line" id="teacherLine">
-              <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-teacher"/></svg>
+              <i class="fas fa-chalkboard-teacher"></i>
               <span class="teacher-label">المعلّم:</span>
               <span class="teacher-name" id="teacherChips">جاري التحميل…</span>
             </div>
@@ -1318,7 +1318,7 @@ export async function mountOverallAbsenceSheet(host, hooks) {
             const editBtn = document.createElement('button');
             editBtn.className = 'modal-btn primary';
             editBtn.type = 'button';
-            editBtn.innerHTML = '<svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-edit"/></svg> تعديل';
+            editBtn.innerHTML = '<i class="fas fa-pen"></i> تعديل';
             editBtn.addEventListener('click', () => {
               const sessionId = cell.sessionId;
               closeModal();
@@ -2360,11 +2360,11 @@ export async function mountOverallAbsenceSheet(host, hooks) {
 
       async function generateAbsenceReportPdf(){
         if (!window.html2canvas || !window.jspdf?.jsPDF) {
-          setDlStatus('info', '<svg class="ic ic-spin" aria-hidden="true"><use href="/shared/icons.svg#i-loader"/></svg> جاري تحميل أدوات التصدير…');
+          setDlStatus('info', '<i class="fas fa-spinner fa-spin"></i> جاري تحميل أدوات التصدير…');
           try {
             await loadPdfLibraries();
           } catch {
-            setDlStatus('error', '<svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-alert-triangle"/></svg> تعذّر تحميل مكتبة إنشاء PDF. تحقّق من الاتصال وحاول مرة أخرى.');
+            setDlStatus('error', '<i class="fas fa-triangle-exclamation"></i> تعذّر تحميل مكتبة إنشاء PDF. تحقّق من الاتصال وحاول مرة أخرى.');
             return;
           }
         }
@@ -2376,30 +2376,30 @@ export async function mountOverallAbsenceSheet(host, hooks) {
           fromISO = dlFromDate.value;
           toISO = dlToDate.value;
           if (!fromISO || !toISO) {
-            setDlStatus('error', '<svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-alert-triangle"/></svg> اختر تاريخي البداية والنهاية.');
+            setDlStatus('error', '<i class="fas fa-triangle-exclamation"></i> اختر تاريخي البداية والنهاية.');
             return;
           }
           if (fromISO > toISO) {
-            setDlStatus('error', '<svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-alert-triangle"/></svg> تاريخ البداية يجب أن يسبق تاريخ النهاية.');
+            setDlStatus('error', '<i class="fas fa-triangle-exclamation"></i> تاريخ البداية يجب أن يسبق تاريخ النهاية.');
             return;
           }
         }
 
         const classFilter = dlClassMode === 'one' ? dlClassSelect.value : null;
         if (dlClassMode === 'one' && !classFilter) {
-          setDlStatus('error', '<svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-alert-triangle"/></svg> اختر الصف والفصل.');
+          setDlStatus('error', '<i class="fas fa-triangle-exclamation"></i> اختر الصف والفصل.');
           return;
         }
 
         dlDownloadBtn.classList.add('loading');
         dlCancelBtn.disabled = true;
-        setDlStatus('info', '<svg class="ic ic-spin" aria-hidden="true"><use href="/shared/icons.svg#i-loader"/></svg> جاري جلب بيانات الغياب...');
+        setDlStatus('info', '<i class="fas fa-spinner fa-spin"></i> جاري جلب بيانات الغياب...');
 
         try {
           const rows = await fetchAbsenceRows({ fromISO, toISO, classFilter });
 
           if (!rows.length) {
-            setDlStatus('info', '<svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-info"/></svg> لا توجد أي حالات غياب أو تأخير ضمن هذا النطاق.');
+            setDlStatus('info', '<i class="fas fa-circle-info"></i> لا توجد أي حالات غياب أو تأخير ضمن هذا النطاق.');
             return;
           }
 
@@ -2421,7 +2421,7 @@ export async function mountOverallAbsenceSheet(host, hooks) {
           const docPdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4', compress: true });
 
           for (let i = 0; i < pages.length; i++) {
-            setDlStatus('info', `<svg class="ic ic-spin" aria-hidden="true"><use href="/shared/icons.svg#i-loader"/></svg> جاري إنشاء الصفحة ${toArabicDigits(String(i + 1))} من ${toArabicDigits(String(totalPages))}...`);
+            setDlStatus('info', `<i class="fas fa-spinner fa-spin"></i> جاري إنشاء الصفحة ${toArabicDigits(String(i + 1))} من ${toArabicDigits(String(totalPages))}...`);
             const canvas = await renderReportPageCanvas(pages[i], { ...meta, startIndex: i * ROWS_PER_PAGE }, i + 1, totalPages);
             if (i > 0) docPdf.addPage('a4', 'portrait');
             addCanvasToA4Page(docPdf, canvas, 16);
@@ -2431,10 +2431,10 @@ export async function mountOverallAbsenceSheet(host, hooks) {
           const periodName = multiDay ? `${filenameSafe(fromISO)}_${filenameSafe(toISO)}` : filenameSafe(fromISO);
           docPdf.save(`تقرير-الغياب-${scopeName}-${periodName}.pdf`);
 
-          setDlStatus('ok', '<svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-check-circle"/></svg> تم تنزيل التقرير بنجاح.');
+          setDlStatus('ok', '<i class="fas fa-circle-check"></i> تم تنزيل التقرير بنجاح.');
         } catch (e) {
           console.error('[generateAbsenceReportPdf]', e);
-          setDlStatus('error', '<svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-alert-triangle"/></svg> تعذّر إنشاء التقرير. حاول مرة أخرى.');
+          setDlStatus('error', '<i class="fas fa-triangle-exclamation"></i> تعذّر إنشاء التقرير. حاول مرة أخرى.');
         } finally {
           dlDownloadBtn.classList.remove('loading');
           dlCancelBtn.disabled = false;

@@ -117,21 +117,21 @@ function ensureStyles() {
     }
     /* Important variant — red glow */
     #${HOST_ID}.anp-important .anp-dialog {
-      border-color: rgba(180, 35, 24, 0.30);
+      border-color: rgba(220, 38, 38, 0.30);
       background: linear-gradient(180deg, #fff8f8 0%, #fff 100%);
       box-shadow:
         0 28px 60px rgba(185, 28, 28, .22),
-        0 0 0 1px rgba(180, 35, 24, .10),
-        0 0 55px rgba(180, 35, 24, .14);
+        0 0 0 1px rgba(220, 38, 38, .10),
+        0 0 55px rgba(220, 38, 38, .14);
     }
     #${HOST_ID}.anp-important .anp-badge {
       background: rgba(185, 28, 28, .10);
-      color: #b42318;
+      color: #b91c1c;
     }
     #${HOST_ID}.anp-important .anp-title { color: #7f1d1d; }
     #${HOST_ID}.anp-important .anp-text  { color: #7c2828; }
     #${HOST_ID}.anp-important .anp-close {
-      background: linear-gradient(145deg, #b42318, #b42318);
+      background: linear-gradient(145deg, #b91c1c, #dc2626);
       box-shadow: 0 14px 32px rgba(185, 28, 28, .35);
     }
     #${HOST_ID}.anp-important .anp-close:hover {
@@ -170,7 +170,7 @@ function showPopup(notif, db, uid, name) {
   host.innerHTML = `
     <div class="anp-backdrop"></div>
     <div class="anp-dialog" role="alertdialog" aria-modal="true" aria-labelledby="anpDialogTitle">
-      <div class="anp-badge">${isImportant ? '<svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-alert-circle"/></svg>إشعار مهم' : '<svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-megaphone"/></svg>إشعار'}</div>
+      <div class="anp-badge">${isImportant ? '🔴&nbsp;إشعار مهم' : '📢&nbsp;إشعار'}</div>
       ${notif.title ? `<h3 id="anpDialogTitle" class="anp-title">${escHtml(notif.title)}</h3>` : ''}
       <p class="anp-text">${escHtml(notif.text)}</p>
       <button type="button" class="anp-close">إغلاق</button>

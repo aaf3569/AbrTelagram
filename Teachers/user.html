@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://abrschool-bot.onrender.com https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; manifest-src 'self'; upgrade-insecure-requests; block-all-mixed-content">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; connect-src 'self' https://abrschool-bot.onrender.com https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; manifest-src 'self'; upgrade-insecure-requests; block-all-mixed-content">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -48,19 +48,18 @@
   <meta name="twitter:title" content="جدول المعلّم - ثانوية أحمد البشر الرومي">
   <meta name="twitter:description" content="???? ?????? ???? ????? ??????.">
   <meta name="twitter:image" content="https://framerusercontent.com/images/jRnZLlPr90qwKsuUwfIlvDS9E.png?width=1200&height=630">
-  <!-- After the page's own styles, so the site's identity (titles, buttons) and the one back button win. -->
-  <link rel="stylesheet" href="/shared/identity.css" />
-  <link rel="stylesheet" href="/shared/back-button.css" />
+    <link rel="stylesheet" href="/shared/identity.css" />
   <link rel="stylesheet" href="/shared/actions.css" />
   <script src="/shared/feedback.js" defer></script>
   <script src="/shared/dialog.js" defer></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 
 <body>
   <header class="site-header">
     <div class="header-container">
       <button id="btnSidebarToggle" class="sidebar-toggle-btn" type="button" aria-label="فتح القائمة" aria-controls="sidebar" aria-expanded="false">
-        <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-menu"/></svg>
+        <i class="fas fa-bars"></i>
         <span id="sidebarToggleDot" class="toggle-dot" hidden></span>
       </button>
       <h1 class="site-title">ثانوية أحمد البشر الرومي</h1>
@@ -72,9 +71,9 @@
   <aside id="sidebar" class="sidebar" aria-hidden="true">
     <div class="sidebar-head">
       <img class="sidebar-school-logo" src="/images/WhiteLogo.png?v=2" alt="شعار المدرسة" width="1976" height="796">
-      <h2><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-school"/></svg><span>ثانوية أحمد البشر الرومي</span></h2>
+      <h2><i class="fas fa-school"></i><span>ثانوية أحمد البشر الرومي</span></h2>
       <button id="sidebarClose" class="sidebar-close" type="button" aria-label="إغلاق القائمة">
-        <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-x"/></svg>
+        <i class="fas fa-times"></i>
       </button>
     </div>
     <div id="sidebarUser" class="sidebar-user" hidden>
@@ -94,12 +93,12 @@
       <div id="sidebarDeptGroup" class="sidebar-group" hidden>
         <div class="sidebar-section-label">القسم</div>
         <button id="sidebarDeptNotifs" class="sidebar-link" type="button" hidden>
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-bell"/></svg>
+          <i class="fas fa-bell" aria-hidden="true"></i>
           <span>إشعارات القسم</span>
           <span id="deptNotifBadge" class="sidebar-count" hidden></span>
         </button>
         <button id="sidebarHeadDept" class="sidebar-link" type="button" hidden>
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-user-cog"/></svg>
+          <i class="fas fa-users-gear"></i>
           <span>قسمي</span>
         </button>
       </div>
@@ -107,7 +106,7 @@
       <div class="sidebar-group">
         <div class="sidebar-section-label">الصفوف</div>
         <button id="sidebarOtherClasses" class="sidebar-link" type="button">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-class"/></svg>
+          <i class="fas fa-users-rectangle" aria-hidden="true"></i>
           <span>صفوف أخرى</span>
         </button>
       </div>
@@ -115,27 +114,27 @@
       <div class="sidebar-group">
         <div class="sidebar-section-label">الجداول</div>
         <button id="sidebarHome" class="sidebar-link" type="button">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-calendar-day"/></svg>
+          <i class="fas fa-calendar-day"></i>
           <span>جدولي</span>
         </button>
         <button id="btnWeek" class="sidebar-link" type="button">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-calendar-week"/></svg>
+          <i class="fas fa-calendar-week"></i>
           <span>جدولي الأسبوعي</span>
         </button>
         <button id="sidebarDeptSchedule" class="sidebar-link" type="button" hidden>
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-class"/></svg>
+          <i class="fas fa-users-rectangle"></i>
           <span>جدول القسم</span>
         </button>
         <button id="sidebarSchoolSchedule" class="sidebar-link" type="button">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-grid"/></svg>
+          <i class="fas fa-table-cells" aria-hidden="true"></i>
           <span>جدول المدرسة</span>
         </button>
         <button id="btnMore" class="sidebar-link" type="button">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-board"/></svg>
+          <i class="fas fa-chalkboard"></i>
           <span>جداول الصفوف</span>
         </button>
         <button id="sidebarTeacherSchedules" class="sidebar-link" type="button">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-teacher"/></svg>
+          <i class="fas fa-chalkboard-user" aria-hidden="true"></i>
           <span>جداول المعلمين</span>
         </button>
       </div>
@@ -146,12 +145,12 @@
       <div id="sidebarBudgetGroup" class="sidebar-group" hidden>
         <div class="sidebar-section-label">الميزانية</div>
         <button id="sidebarBudget" class="sidebar-link" type="button">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-clipboard-list"/></svg>
+          <i class="fas fa-clipboard-list" aria-hidden="true"></i>
           <span>ميزانية القسم</span>
         </button>
         <!-- «السماح بكل الميزانيات» (and admins): every department, as on the admin page. -->
         <button id="sidebarAllBudgets" class="sidebar-link" type="button" hidden>
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-list"/></svg>
+          <i class="fas fa-table-list" aria-hidden="true"></i>
           <span>ميزانيات الأقسام</span>
         </button>
       </div>
@@ -159,15 +158,15 @@
       <div id="sidebarSupervisorGroup" class="sidebar-group" hidden>
         <div class="sidebar-section-label">صلاحيات إضافية</div>
         <button id="sidebarSupervisorStudents" class="sidebar-link" type="button" hidden>
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-graduation"/></svg>
+          <i class="fas fa-user-graduate"></i>
           <span>الطلاب</span>
         </button>
         <button id="sidebarMorningLate" class="sidebar-link" type="button" hidden>
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-clock"/></svg>
+          <i class="fas fa-clock"></i>
           <span>تسجيل تأخير الصباح</span>
         </button>
         <button id="sidebarEditSchedule" class="sidebar-link" type="button" hidden>
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-grid"/></svg>
+          <i class="fas fa-table-cells"></i>
           <span>تعديل جدول الإدارة</span>
         </button>
       </div>
@@ -178,19 +177,19 @@
       <div id="sidebarAttendanceGroup" class="sidebar-group" hidden>
         <div class="sidebar-section-label">الغياب</div>
         <button id="sidebarMaToday" class="sidebar-link" type="button">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-calendar-day"/></svg>
+          <i class="fas fa-calendar-day" aria-hidden="true"></i>
           <span>غياب اليوم</span>
         </button>
         <button id="sidebarMaOverall" class="sidebar-link" type="button">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-list-check"/></svg>
+          <i class="fas fa-list-check" aria-hidden="true"></i>
           <span>الغياب المختصر</span>
         </button>
         <button id="sidebarMaDetailed" class="sidebar-link" type="button">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-search"/></svg>
+          <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
           <span>تدقيق في الغائب</span>
         </button>
         <button id="sidebarMaMorningLate" class="sidebar-link" type="button">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-clock"/></svg>
+          <i class="fas fa-clock" aria-hidden="true"></i>
           <span>تسجيل التأخير الصباحي</span>
         </button>
       </div>
@@ -198,7 +197,7 @@
       <div class="sidebar-group sidebar-group-bottom">
         <div id="telegramSettingsSlot"></div>
         <button id="sidebarLogout" class="sidebar-link" type="button">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-logout"/></svg>
+          <i class="fas fa-right-from-bracket" aria-hidden="true"></i>
           <span>تسجيل الخروج</span>
         </button>
       </div>
@@ -209,7 +208,7 @@
     <div class="board">
       <div class="card">
         <button id="btnDownloadPdf" class="filter-btn btn-solid weekly-download-btn" type="button" hidden>
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-file-pdf"/></svg>
+          <i class="fas fa-file-pdf" aria-hidden="true"></i>
           <span>تنزيل PDF للجدول الأسبوعي</span>
         </button>
         <div id="containerMain"></div>
@@ -235,25 +234,28 @@
        الأسبوعي (read-only here). #teacherschedules. -->
   <section id="tsSheet" class="sheet" aria-hidden="true">
     <div class="sheet-header">
-      <button id="tsClose" class="back-btn" type="button" aria-label="رجوع" title="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+      <button id="tsClose" class="back-btn" type="button">
+        <i class="fas fa-arrow-right"></i>
+        <span>رجوع</span>
+      </button>
       <h3 class="sheet-title">جداول المعلمين</h3>
     </div>
     <div class="sheet-body">
       <div class="card ts-picker-card">
         <div class="ts-pickers">
           <div class="ts-picker">
-            <label class="field-label" for="tsDeptPicker"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-layers"/></svg> القسم</label>
+            <label class="field-label" for="tsDeptPicker"><i class="fas fa-layer-group"></i> القسم</label>
             <div class="input-wrap">
-              <svg class="ic input-icon" aria-hidden="true"><use href="/shared/icons.svg#i-building"/></svg>
+              <i class="fas fa-building input-icon"></i>
               <select id="tsDeptPicker" class="select">
                 <option value="">اختر القسم...</option>
               </select>
             </div>
           </div>
           <div class="ts-picker">
-            <label class="field-label" for="tsTeacherPicker"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-user"/></svg> المعلم</label>
+            <label class="field-label" for="tsTeacherPicker"><i class="fas fa-user"></i> المعلم</label>
             <div class="input-wrap">
-              <svg class="ic input-icon" aria-hidden="true"><use href="/shared/icons.svg#i-teacher"/></svg>
+              <i class="fas fa-chalkboard-user input-icon"></i>
               <select id="tsTeacherPicker" class="select" disabled>
                 <option value="">اختر القسم أولاً...</option>
               </select>
@@ -277,14 +279,17 @@
   <!-- MORE -->
   <section id="moreSheet" class="sheet" aria-hidden="true">
     <div class="sheet-header">
-      <button id="closeMore" class="back-btn" type="button" aria-label="رجوع" title="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+      <button id="closeMore" class="back-btn" type="button">
+        <i class="fas fa-arrow-right"></i>
+        <span>رجوع</span>
+      </button>
       <h3 class="sheet-title">عرض جدول فصل آخر</h3>
     </div>
     <div class="sheet-body">
       <div class="card">
-        <label class="field-label" for="classPicker"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-board"/></svg> اختر الفصل</label>
+        <label class="field-label" for="classPicker"><i class="fas fa-chalkboard"></i> اختر الفصل</label>
         <div class="input-wrap">
-          <svg class="ic input-icon" aria-hidden="true"><use href="/shared/icons.svg#i-users"/></svg>
+          <i class="fas fa-users input-icon"></i>
           <select id="classPicker" class="select">
             <option value="">اختر الفصل...</option>
           </select>
@@ -292,15 +297,15 @@
         <div class="more-actions">
           <div class="all-schedules-actions">
             <button id="btnDownloadAllClassesPng" class="filter-btn btn-instagram" type="button" aria-label="تنزيل كل الجداول كصور PNG لإنستغرام في ملف ZIP" title="تنزيل كل الجداول كصور إنستغرام (PNG)">
-              <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-instagram"/></svg>
+              <i class="fab fa-instagram" aria-hidden="true"></i>
             </button>
             <button id="btnDownloadAllClassesPdf" class="filter-btn btn-solid" type="button">
-              <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-file-down"/></svg>
+              <i class="fas fa-file-arrow-down"></i>
               <span>تنزيل كل الجداول</span>
             </button>
           </div>
           <button id="btnDownloadSelectedClassPdf" class="filter-btn btn-ghost" type="button" hidden>
-            <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-download"/></svg>
+            <i class="fas fa-download"></i>
             <span>تنزيل هذا الفصل</span>
           </button>
         </div>
@@ -317,7 +322,10 @@
   <!-- OTHER CLASSES: pick a grade, then a class -->
   <section id="ocSheet" class="sheet" aria-hidden="true">
     <div class="sheet-header">
-      <button id="ocClose" class="back-btn" type="button" aria-label="رجوع" title="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+      <button id="ocClose" class="back-btn" type="button">
+        <i class="fas fa-arrow-right"></i>
+        <span>رجوع</span>
+      </button>
       <h3 class="sheet-title">صفوف أخرى</h3>
     </div>
     <div class="sheet-body">
@@ -330,7 +338,10 @@
        took attendance for a lesson that isn't theirs (صفوف أخرى). -->
   <section id="dnSheet" class="sheet" aria-hidden="true">
     <div class="sheet-header">
-      <button id="dnClose" class="back-btn" type="button" aria-label="رجوع" title="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+      <button id="dnClose" class="back-btn" type="button">
+        <i class="fas fa-arrow-right"></i>
+        <span>رجوع</span>
+      </button>
       <h3 class="sheet-title">إشعارات القسم</h3>
     </div>
     <div class="sheet-body">
@@ -346,7 +357,10 @@
        the browser's own back gesture/button closes it like a real page. -->
   <section id="dsSheet" class="sheet" aria-hidden="true">
     <div class="sheet-header">
-      <button id="dsClose" class="back-btn" type="button" aria-label="رجوع" title="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+      <button id="dsClose" class="back-btn" type="button">
+        <i class="fas fa-arrow-right"></i>
+        <span>رجوع</span>
+      </button>
       <h3 class="sheet-title">جدول القسم</h3>
     </div>
     <div class="sheet-body ds-sheet-body">
@@ -365,10 +379,10 @@
         </button>
         <!-- The whole week (opens its own sheet in place of this one). -->
         <button class="ds-tool-btn" id="dsWeekBtn" type="button">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-calendar-week"/></svg><span>هالاسبوع</span>
+          <i class="fas fa-calendar-week" aria-hidden="true"></i><span>هالاسبوع</span>
         </button>
         <button class="ds-tool-btn icon" id="dsDownloadBtn" type="button" aria-label="تنزيل جدول القسم" title="تنزيل جدول القسم">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-download"/></svg>
+          <i class="fas fa-download" aria-hidden="true"></i>
         </button>
       </div>
 
@@ -412,7 +426,10 @@
        the day sheet, and اليوم swaps back); #dptschedual-week. -->
   <section id="dwSheet" class="sheet" aria-hidden="true">
     <div class="sheet-header">
-      <button id="dwClose" class="back-btn" type="button" aria-label="رجوع" title="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+      <button id="dwClose" class="back-btn" type="button">
+        <i class="fas fa-arrow-right"></i>
+        <span>رجوع</span>
+      </button>
       <h3 class="sheet-title">جدول القسم — الأسبوع</h3>
     </div>
     <div class="sheet-body ds-sheet-body">
@@ -422,10 +439,10 @@
           <small id="dwRangeSub"></small>
         </div>
         <button class="ds-tool-btn" id="dwDayBtn" type="button">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-calendar-day"/></svg><span>اليوم</span>
+          <i class="fas fa-calendar-day" aria-hidden="true"></i><span>اليوم</span>
         </button>
         <button class="ds-tool-btn icon" id="dwDownloadBtn" type="button" aria-label="تنزيل جدول القسم" title="تنزيل جدول القسم">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-download"/></svg>
+          <i class="fas fa-download" aria-hidden="true"></i>
         </button>
       </div>
 
@@ -452,9 +469,9 @@
           <div class="dw-paper-canvas" id="dwPaperCanvas"></div>
         </div>
         <div class="dw-zoom-bar" id="dwZoomBar">
-          <button class="dw-zoom-btn" id="dwZoomOut" type="button" aria-label="تصغير"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-minus"/></svg></button>
-          <button class="dw-zoom-btn fit" id="dwZoomFit" type="button" aria-label="ملاءمة الشاشة"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-minimize"/></svg></button>
-          <button class="dw-zoom-btn" id="dwZoomIn" type="button" aria-label="تكبير"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-plus"/></svg></button>
+          <button class="dw-zoom-btn" id="dwZoomOut" type="button" aria-label="تصغير"><i class="fas fa-minus" aria-hidden="true"></i></button>
+          <button class="dw-zoom-btn fit" id="dwZoomFit" type="button" aria-label="ملاءمة الشاشة"><i class="fas fa-compress" aria-hidden="true"></i></button>
+          <button class="dw-zoom-btn" id="dwZoomIn" type="button" aria-label="تكبير"><i class="fas fa-plus" aria-hidden="true"></i></button>
         </div>
       </div>
     </div>
@@ -469,11 +486,11 @@
     </div>
     <div class="ds-dl-body">
       <button class="ds-dl-option" id="dsDlDay" type="button">
-        <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-calendar-day"/></svg>
+        <i class="fas fa-calendar-day" aria-hidden="true"></i>
         <span class="ds-dl-text"><b>جدول اليوم</b><small id="dsDlDaySub">—</small></span>
       </button>
       <button class="ds-dl-option" id="dsDlWeek" type="button">
-        <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-calendar-week"/></svg>
+        <i class="fas fa-calendar-week" aria-hidden="true"></i>
         <span class="ds-dl-text"><b>جدول الأسبوع</b><small id="dsDlWeekSub">—</small></span>
       </button>
       <div class="ds-dl-status" id="dsDlStatus" hidden></div>
@@ -501,7 +518,10 @@
        gesture/button closes it like a real page. -->
   <section id="ssSheet" class="sheet" aria-hidden="true">
     <div class="sheet-header">
-      <button id="ssClose" class="back-btn" type="button" aria-label="رجوع" title="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+      <button id="ssClose" class="back-btn" type="button">
+        <i class="fas fa-arrow-right"></i>
+        <span>رجوع</span>
+      </button>
       <h3 class="sheet-title">جدول المدرسة</h3>
     </div>
     <div class="sheet-body ss-sheet-body">
@@ -563,7 +583,10 @@
        convention as the other sheets. -->
   <section id="supervisorStudentsSheet" class="sheet" aria-hidden="true">
     <div class="sheet-header">
-      <button id="svsClose" class="back-btn" type="button" aria-label="رجوع" title="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+      <button id="svsClose" class="back-btn" type="button">
+        <i class="fas fa-arrow-right"></i>
+        <span>رجوع</span>
+      </button>
       <h3 class="sheet-title">الطلاب</h3>
     </div>
     <div class="sheet-body svs-sheet-body">
@@ -605,7 +628,7 @@
       <!-- CLASS PAGE -->
       <section id="classSheet" class="sheet" aria-hidden="true">
         <div class="sheet-header">
-          <button id="closeClass" class="back-btn" aria-label="رجوع" title="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+          <button id="closeClass" class="back-btn" aria-label="رجوع">رجوع</button>
           <h3 id="classTitle" class="sheet-title">—</h3>
         </div>
         <div class="sheet-body">
@@ -702,7 +725,7 @@
       <!-- STUDENT EDIT SHEET -->
       <section id="studentSheet" class="sheet small" aria-hidden="true">
         <div class="sheet-header">
-          <button id="closeStudent" class="back-btn" aria-label="رجوع" title="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+          <button id="closeStudent" class="back-btn" aria-label="رجوع">رجوع</button>
           <h3 id="studentTitle" class="sheet-title">بيانات الطالب</h3>
         </div>
         <div class="sheet-body">
@@ -878,7 +901,7 @@
       <!-- ATTENDANCE DETAIL SHEET -->
       <section id="attDetailSheet" class="sheet small" aria-hidden="true">
         <div class="sheet-header">
-          <button id="closeAttDetail" class="back-btn" aria-label="رجوع" title="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+          <button id="closeAttDetail" class="back-btn" aria-label="رجوع">رجوع</button>
           <h3 id="attDetailTitle" class="sheet-title">تفاصيل الحالة</h3>
           <button id="editAttBtn" class="btn secondary" type="button" style="margin-right: auto; display:none;">تعديل</button>
         </div>
@@ -910,7 +933,7 @@
       </section>
       <section id="recordDetailSheet" class="sheet small" aria-hidden="true">
         <div class="sheet-header">
-          <button id="closeRecordDetail" class="back-btn" aria-label="رجوع" title="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+          <button id="closeRecordDetail" class="back-btn" aria-label="رجوع">رجوع</button>
           <h3 id="recordDetailTitle" class="sheet-title">التفاصيل</h3>
         </div>
         <div class="sheet-body">
@@ -967,7 +990,9 @@
   <div class="ss-popover-backdrop" id="ssPopBackdrop" aria-hidden="true"></div>
   <div class="ss-popover" id="ssPopover" role="dialog" aria-modal="true" aria-labelledby="ssPopTitleText" aria-hidden="true">
     <div class="ss-pop-head">
-      <button class="ss-pop-back back-btn ss-pop-back-hidden" id="ssPopBack" aria-label="رجوع" title="رجوع" type="button"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+      <button class="ss-pop-back ss-pop-back-hidden" id="ssPopBack" aria-label="رجوع" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+      </button>
       <div class="ss-pop-title">
         <b id="ssPopTitleText">—</b>
         <span id="ssPopSub">—</span>
@@ -987,7 +1012,10 @@
        edited, this is a parallel implementation living inside this page. -->
   <section id="mcSheet" class="sheet" aria-hidden="true">
     <div class="sheet-header">
-      <button id="mcClose" class="back-btn" type="button" aria-label="رجوع" title="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+      <button id="mcClose" class="back-btn" type="button">
+        <i class="fas fa-arrow-right"></i>
+        <span>رجوع</span>
+      </button>
       <h3 id="mcSheetTitle" class="sheet-title">الطلاب</h3>
     </div>
     <div class="sheet-body mc-sheet-body">
@@ -997,7 +1025,7 @@
           <!-- First in the DOM = on the right in RTL, beside تسجيل الغياب;
                icon-only on phones (see .mc-btn-download in user.css). -->
           <button id="mcDownloadBtn" class="mc-btn-download" type="button" aria-label="تنزيل القائمة" title="تنزيل القائمة">
-            <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-file-down"/></svg>
+            <i class="fas fa-file-arrow-down" aria-hidden="true"></i>
             <span>تنزيل القائمة</span>
           </button>
           <button id="mcAttendBtn" class="mc-btn-attend" type="button">تسجيل الغياب</button>
@@ -1011,10 +1039,10 @@
           <b>ملاحظات مسجّلة</b>
           <small id="mcNotesSub">جاري التحميل…</small>
         </span>
-        <svg class="ic mc-notes-chev" aria-hidden="true"><use href="/shared/icons.svg#i-chevron-left"/></svg>
+        <i class="fas fa-chevron-left mc-notes-chev" aria-hidden="true"></i>
       </button>
       <div class="mc-input-wrap">
-        <svg class="ic mc-input-icon" aria-hidden="true"><use href="/shared/icons.svg#i-search"/></svg>
+        <i class="fas fa-magnifying-glass mc-input-icon"></i>
         <input id="mcStudentSearch" class="mc-input" type="text" placeholder="ابحث بالاسم…">
       </div>
       <div id="mcStudentsList" class="mc-student-grid"></div>
@@ -1027,7 +1055,10 @@
        so it stacks on top of it. -->
   <section id="mcNotesSheet" class="sheet" aria-hidden="true">
     <div class="sheet-header">
-      <button id="mcNotesClose" class="back-btn" type="button" aria-label="رجوع" title="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+      <button id="mcNotesClose" class="back-btn" type="button">
+        <i class="fas fa-arrow-right"></i>
+        <span>رجوع</span>
+      </button>
       <h3 id="mcNotesSheetTitle" class="sheet-title">الملاحظات</h3>
     </div>
     <div class="sheet-body mc-sheet-body">
@@ -1041,7 +1072,7 @@
   <div id="subModal" class="sub-modal" aria-hidden="true">
     <div class="sub-modal-backdrop"></div>
     <div class="sub-modal-card" role="dialog" aria-modal="true" aria-labelledby="subModalTitle">
-      <span class="sub-modal-icon"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-user-clock"/></svg></span>
+      <span class="sub-modal-icon"><i class="fas fa-user-clock" aria-hidden="true"></i></span>
       <h3 id="subModalTitle" class="sub-modal-title">تسجيل الغياب لفصل آخر</h3>
       <p class="sub-modal-text">أنت على وشك تسجيل الغياب للفصل</p>
       <div id="subModalClass" class="sub-modal-class">—</div>
@@ -1055,19 +1086,19 @@
             <option value="تبديل">تبديل</option>
             <option value="__custom">سبب آخر…</option>
           </select>
-          <svg class="ic sub-select-chev" aria-hidden="true"><use href="/shared/icons.svg#i-chevron-down"/></svg>
+          <i class="fas fa-chevron-down sub-select-chev" aria-hidden="true"></i>
         </div>
         <div id="subCustomWrap" class="sub-custom-wrap" hidden>
           <input id="subReasonCustom" class="sub-custom-input" type="text" maxlength="60"
                  placeholder="اكتب السبب…" aria-label="اكتب السبب" aria-describedby="subReasonError" autocomplete="off">
         </div>
         <div id="subReasonError" class="sub-reason-error" role="alert" hidden>
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-alert-circle"/></svg>
+          <i class="fas fa-circle-exclamation" aria-hidden="true"></i>
           <span id="subReasonErrorText">يرجى اختيار السبب أولاً</span>
         </div>
       </div>
       <button id="subModalConfirm" class="sub-modal-confirm" type="button">
-        <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-clipboard-check"/></svg>
+        <i class="fas fa-clipboard-check" aria-hidden="true"></i>
         <span>تسجيل الغياب</span>
       </button>
       <button id="subModalCancel" class="sub-modal-cancel" type="button">إلغاء</button>
@@ -1081,14 +1112,14 @@
       <h3 id="dlChoiceTitle" class="dl-choice-title">تنزيل القائمة</h3>
       <p id="dlChoiceSub" class="dl-choice-sub">—</p>
       <button id="dlChoicePdf" class="dl-opt" type="button">
-        <span class="dl-opt-icon pdf"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-file-pdf"/></svg></span>
+        <span class="dl-opt-icon pdf"><i class="fas fa-file-pdf" aria-hidden="true"></i></span>
         <span class="dl-opt-text"><b>تنزيل PDF</b><small>جاهز للطباعة</small></span>
-        <svg class="ic dl-opt-chev" aria-hidden="true"><use href="/shared/icons.svg#i-chevron-left"/></svg>
+        <i class="fas fa-chevron-left dl-opt-chev" aria-hidden="true"></i>
       </button>
       <button id="dlChoiceExcel" class="dl-opt" type="button">
-        <span class="dl-opt-icon excel"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-file-excel"/></svg></span>
+        <span class="dl-opt-icon excel"><i class="fas fa-file-excel" aria-hidden="true"></i></span>
         <span class="dl-opt-text"><b>تنزيل Excel</b><small>قابل للتعديل</small></span>
-        <svg class="ic dl-opt-chev" aria-hidden="true"><use href="/shared/icons.svg#i-chevron-left"/></svg>
+        <i class="fas fa-chevron-left dl-opt-chev" aria-hidden="true"></i>
       </button>
       <button id="dlChoiceClose" class="dl-choice-close" type="button">إغلاق</button>
     </div>
@@ -1100,11 +1131,11 @@
     <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
       <div class="modal-head">
         <div class="modal-title" id="modalTitle">
-          <span class="icon-circle"><svg class="ic" id="modalTitleIcon" aria-hidden="true"><use href="/shared/icons.svg#i-swap"/></svg></span>
+          <span class="icon-circle"><i id="modalTitleIcon" class="fas fa-exchange-alt"></i></span>
           <span id="modalTitleText">—</span>
         </div>
         <button class="modal-close" id="modalClose" type="button" aria-label="إغلاق">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-x"/></svg>
+          <i class="fas fa-times"></i>
         </button>
       </div>
 
@@ -1152,7 +1183,7 @@
     // a deploy the page could otherwise run against the previous module —
     // bump it whenever this page starts relying on something new in there.
     import { mountAttendanceSheet, LESSON_END_GRACE_MINUTES } from "/shared/attendance.js?v=2026-10-14d";
-    import { mountStudentNotesSheet } from "/shared/student-notes-sheet.js?v=2026-10-16";
+    import { mountStudentNotesSheet } from "/shared/student-notes-sheet.js?v=2026-10-15";
     import { parseTimeToMinutes } from "/shared/kuwait-time.js";
     import { isTruthyFlag, canManageAttendance } from "/shared/auth-guard.js";
     import { startPresenceHeartbeat, stopPresenceHeartbeat } from "/shared/presence.js";
@@ -1596,17 +1627,17 @@
       return (s ?? '').toString();
     }
 
-    function toast({title, text, icon='info', ms=3500}){
+    function toast({title, text, icon='fa-info-circle', ms=3500}){
       const el = document.createElement('div');
       el.className = 'toast';
       el.innerHTML = `
-        <div class="ticon"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-${icon}"/></svg></div>
+        <div class="ticon"><i class="fas ${icon}"></i></div>
         <div class="tmain">
           <div class="ttitle">${escapeHtml(title)}</div>
           <div class="ttext">${escapeHtml(text)}</div>
         </div>
         <button class="tclose" type="button" aria-label="إغلاق">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-x"/></svg>
+          <i class="fas fa-times"></i>
         </button>
       `;
       const close = ()=> {
@@ -1635,7 +1666,7 @@
       const footer = `
         <button id="blockedPopupOk" class="filter-btn btn-solid" type="button">حسناً</button>
       `;
-      openModal({ title, bodyHtml: body, footerHtml: footer, icon: 'ban' });
+      openModal({ title, bodyHtml: body, footerHtml: footer, icon: 'fa-ban' });
       document.getElementById('blockedPopupOk').addEventListener('click', closeModal);
     }
 
@@ -1881,7 +1912,7 @@
     /* ========= Modal helpers ========= */
     function openModal({ title, bodyHtml, footerHtml, icon }){
       modalTitleText.textContent = title || '';
-      modalTitleIcon.firstElementChild.setAttribute('href', `/shared/icons.svg#i-${icon || 'swap'}`);
+      modalTitleIcon.className = `fas ${icon || 'fa-exchange-alt'}`;
       modalBody.innerHTML = bodyHtml || '';
       modalFooter.innerHTML = footerHtml || '';
       // Popups with nothing but an "إغلاق" button (which just duplicated the
@@ -2160,10 +2191,10 @@
 
       const thR = document.createElement('div');
       thR.className='th';
-      thR.innerHTML = '<svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-clock"/></svg> الحصة';
+      thR.innerHTML = '<i class="far fa-clock"></i> الحصة';
       const thL = document.createElement('div');
       thL.className='th';
-      thL.innerHTML = '<svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-users"/></svg> الصف';
+      thL.innerHTML = '<i class="fas fa-users"></i> الصف';
       wrap.appendChild(thR);
       wrap.appendChild(thL);
 
@@ -2186,7 +2217,7 @@
         if (hit && hit._coveredAway){
           cClass.innerHTML = `
             <div style="font-weight:900">—</div>
-            <div class="pill warn"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-user-clock"/></svg> تم تغطيتها</div>
+            <div class="pill warn"><i class="fas fa-user-clock"></i> تم تغطيتها</div>
           `;
         } else {
           const txt = hit
@@ -2241,12 +2272,12 @@
 
       const compactThLesson = document.createElement('div');
       compactThLesson.className = 'compact-th';
-      compactThLesson.innerHTML = '<svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-clock"/></svg> الحصة';
+      compactThLesson.innerHTML = '<i class="far fa-clock"></i> الحصة';
       compactWrap.appendChild(compactThLesson);
 
       const compactThClass = document.createElement('div');
       compactThClass.className = 'compact-th';
-      compactThClass.innerHTML = '<svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-users"/></svg> الصف';
+      compactThClass.innerHTML = '<i class="fas fa-users"></i> الصف';
       compactWrap.appendChild(compactThClass);
 
       for(let i=1;i<=lessonTotal;i++){
@@ -2267,7 +2298,7 @@
         if (hit && hit._coveredAway){
           compactClass.innerHTML = `
             <div style="font-weight:900">—</div>
-            <div class="pill warn"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-user-clock"/></svg> تم تغطيتها</div>
+            <div class="pill warn"><i class="fas fa-user-clock"></i> تم تغطيتها</div>
           `;
         } else {
           const txt = hit
@@ -2311,7 +2342,7 @@
     function renderWeekHeaders(gridEl){
       const dayH = document.createElement('div');
       dayH.className='gth';
-      dayH.innerHTML = '<svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-calendar"/></svg> اليوم';
+      dayH.innerHTML = '<i class="far fa-calendar"></i> اليوم';
       gridEl.appendChild(dayH);
       for(let i=1;i<=FIXED_LESSON_COUNT;i++){
         const h = document.createElement('div');
@@ -2959,7 +2990,7 @@
             table-layout: fixed;
           }
           #pdfScheduleCard thead th {
-            background: linear-gradient(135deg, #033C54, #065372);
+            background: linear-gradient(135deg, #0e3a5c, #1c5b88);
             color: #ffffff;
             border-left: 1px solid rgba(255, 255, 255, 0.20);
             padding: 12px 6px;
@@ -3061,12 +3092,12 @@
 
     async function downloadWeeklySchedulePdf(){
       if (!currentUser?.uid) {
-        toast({ title: 'خطأ', text: 'الرجاء تسجيل الدخول أولاً.', icon: 'alert-circle' });
+        toast({ title: 'خطأ', text: 'الرجاء تسجيل الدخول أولاً.', icon: 'fa-circle-exclamation' });
         return;
       }
 
       if (!window.html2canvas || !window.jspdf?.jsPDF) {
-        toast({ title: 'خطأ', text: 'مكتبة إنشاء PDF غير متاحة حالياً.', icon: 'alert-circle' });
+        toast({ title: 'خطأ', text: 'مكتبة إنشاء PDF غير متاحة حالياً.', icon: 'fa-exclamation-circle' });
         return;
       }
 
@@ -3110,10 +3141,10 @@
           host.remove();
         }
 
-        toast({ title: 'تم', text: 'تم تنزيل ملف PDF للجدول الأسبوعي.', icon: 'check-circle' });
+        toast({ title: 'تم', text: 'تم تنزيل ملف PDF للجدول الأسبوعي.', icon: 'fa-check-circle' });
       } catch (e) {
         console.error(e);
-        toast({ title: 'خطأ', text: 'تعذّر إنشاء ملف PDF.', icon: 'alert-circle' });
+        toast({ title: 'خطأ', text: 'تعذّر إنشاء ملف PDF.', icon: 'fa-exclamation-circle' });
       } finally {
         setLoading(btnDownloadPdf, false);
       }
@@ -3761,11 +3792,11 @@
       if (classScheduleExportInProgress) return;
       const classKey = classPicker.value;
       if (!classKey) {
-        toast({ title: 'ناقص', text: 'اختر الفصل أولاً.', icon: 'alert-circle' });
+        toast({ title: 'ناقص', text: 'اختر الفصل أولاً.', icon: 'fa-circle-exclamation' });
         return;
       }
       if (!window.html2canvas || !window.jspdf?.jsPDF) {
-        toast({ title: 'خطأ', text: 'مكتبة إنشاء PDF غير متاحة حالياً.', icon: 'alert-circle' });
+        toast({ title: 'خطأ', text: 'مكتبة إنشاء PDF غير متاحة حالياً.', icon: 'fa-exclamation-circle' });
         return;
       }
 
@@ -3788,10 +3819,10 @@
         const to = formatDateArabicCompact(weekDates[weekDates.length - 1] || '');
         const className = filenameSafe(formatClassKeyLabel(classKey));
         docPdf.save(filenameSafe(`جدول-الفصل-${className}-من-${from}-إلى-${to}`) + '.pdf');
-        toast({ title: 'تم', text: 'تم تنزيل جدول الفصل PDF.', icon: 'check-circle' });
+        toast({ title: 'تم', text: 'تم تنزيل جدول الفصل PDF.', icon: 'fa-check-circle' });
       } catch(e){
         console.error(e);
-        toast({ title: 'خطأ', text: 'تعذّر تنزيل جدول الفصل.', icon: 'alert-circle' });
+        toast({ title: 'خطأ', text: 'تعذّر تنزيل جدول الفصل.', icon: 'fa-exclamation-circle' });
       } finally {
         setClassExportLoading(btnDownloadSelectedClassPdf, false);
       }
@@ -3800,11 +3831,11 @@
     async function downloadAllClassSchedulesPdf(){
       if (classScheduleExportInProgress) return;
       if (!window.html2canvas || !window.jspdf?.jsPDF) {
-        toast({ title: 'خطأ', text: 'مكتبة إنشاء PDF غير متاحة حالياً.', icon: 'alert-circle' });
+        toast({ title: 'خطأ', text: 'مكتبة إنشاء PDF غير متاحة حالياً.', icon: 'fa-exclamation-circle' });
         return;
       }
       if (!CLASS_OPTIONS.length) {
-        toast({ title: 'تنبيه', text: 'لا توجد فصول للتنزيل.', icon: 'info' });
+        toast({ title: 'تنبيه', text: 'لا توجد فصول للتنزيل.', icon: 'fa-info-circle' });
         return;
       }
 
@@ -3835,10 +3866,10 @@
         const from = formatDateArabicCompact(weekDates[0] || '');
         const to = formatDateArabicCompact(weekDates[weekDates.length - 1] || '');
         docPdf.save(filenameSafe(`جميع-جداول-الفصول-من-${from}-إلى-${to}`) + '.pdf');
-        toast({ title: 'تم', text: 'تم تنزيل جميع جداول الفصول في ملف واحد.', icon: 'check-circle' });
+        toast({ title: 'تم', text: 'تم تنزيل جميع جداول الفصول في ملف واحد.', icon: 'fa-check-circle' });
       } catch(e){
         console.error(e);
-        toast({ title: 'خطأ', text: 'تعذّر تنزيل جميع الجداول.', icon: 'alert-circle' });
+        toast({ title: 'خطأ', text: 'تعذّر تنزيل جميع الجداول.', icon: 'fa-exclamation-circle' });
       } finally {
         if (labelEl) labelEl.textContent = originalLabel;
         setClassExportLoading(btnDownloadAllClassesPdf, false);
@@ -3848,11 +3879,11 @@
     async function downloadAllClassSchedulesPng(){
       if (classScheduleExportInProgress) return;
       if (!window.html2canvas || !window.JSZip) {
-        toast({ title: 'خطأ', text: 'مكتبة إنشاء الصور غير متاحة حالياً. أعد تحميل الصفحة وحاول مجدداً.', icon: 'alert-circle' });
+        toast({ title: 'خطأ', text: 'مكتبة إنشاء الصور غير متاحة حالياً. أعد تحميل الصفحة وحاول مجدداً.', icon: 'fa-exclamation-circle' });
         return;
       }
       if (!CLASS_OPTIONS.length) {
-        toast({ title: 'تنبيه', text: 'لا توجد فصول للتنزيل.', icon: 'info' });
+        toast({ title: 'تنبيه', text: 'لا توجد فصول للتنزيل.', icon: 'fa-info-circle' });
         return;
       }
 
@@ -3895,10 +3926,10 @@
           link.remove();
           setTimeout(() => URL.revokeObjectURL(url), 60000);
         }
-        toast({ title: 'تم', text: 'تم تجهيز جميع الجداول كصور PNG لإنستغرام داخل ملف ZIP.', icon: 'check-circle' });
+        toast({ title: 'تم', text: 'تم تجهيز جميع الجداول كصور PNG لإنستغرام داخل ملف ZIP.', icon: 'fa-check-circle' });
       } catch(e){
         console.error(e);
-        toast({ title: 'خطأ', text: 'تعذّر تنزيل صور الجداول. حاول مجدداً.', icon: 'alert-circle' });
+        toast({ title: 'خطأ', text: 'تعذّر تنزيل صور الجداول. حاول مجدداً.', icon: 'fa-exclamation-circle' });
       } finally {
         classExportStatus.textContent = '';
         setClassExportLoading(btnDownloadAllClassesPng, false);
@@ -3969,26 +4000,26 @@
           const body = `
             <div class="info-grid">
               <div class="info-box">
-                <div class="info-k"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-book"/></svg> المادة</div>
+                <div class="info-k"><i class="fas fa-book"></i> المادة</div>
                 <div class="info-v">${escapeHtml(cellData.subject)}</div>
               </div>
               <div class="info-box">
-                <div class="info-k"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-user"/></svg> اسم المعلم</div>
+                <div class="info-k"><i class="fas fa-user"></i> اسم المعلم</div>
                 <div class="info-v">${escapeHtml(teacherName)}</div>
               </div>
             </div>
 
             <div class="info-grid">
               <div class="info-box">
-                <div class="info-k"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-users"/></svg> الصف</div>
+                <div class="info-k"><i class="fas fa-users"></i> الصف</div>
                 <div class="info-v">${escapeHtml(cellData.classKey)}</div>
               </div>
               <div class="info-box">
-                <div class="info-k"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-calendar"/></svg> اليوم + التاريخ</div>
+                <div class="info-k"><i class="far fa-calendar"></i> اليوم + التاريخ</div>
                 <div class="info-v">${escapeHtml(dayName)} | ${escapeHtml(date)}</div>
               </div>
               <div class="info-box" style="grid-column: 1 / -1;">
-                <div class="info-k"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-clock"/></svg> الحصة + وقتها</div>
+                <div class="info-k"><i class="far fa-clock"></i> الحصة + وقتها</div>
                 <div class="info-v">${escapeHtml(LESSONS_AR[lesson-1] || `الحصة #${lesson}`)} • ${escapeHtml(timeLabel)}</div>
               </div>
             </div>
@@ -4011,20 +4042,20 @@
         <div class="la-hero">
           <div class="la-hero-main">
             <div class="la-hero-class">${escapeHtml(toArabicDigits(meta.classKey || '—'))}</div>
-            <div class="la-hero-lesson"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-hash"/></svg> ${escapeHtml(lessonName)}</div>
+            <div class="la-hero-lesson"><i class="fas fa-hashtag"></i> ${escapeHtml(lessonName)}</div>
           </div>
-          <div class="la-hero-badge"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-teacher"/></svg></div>
+          <div class="la-hero-badge"><i class="fas fa-chalkboard-user"></i></div>
         </div>
         <div class="la-chips">
           <div class="la-chip">
-            <span class="la-chip-icon"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-calendar"/></svg></span>
+            <span class="la-chip-icon"><i class="far fa-calendar"></i></span>
             <div class="la-chip-text">
               <div class="la-chip-label">التاريخ</div>
               <div class="la-chip-value">${escapeHtml(dayName)} | ${escapeHtml(meta.date)}</div>
             </div>
           </div>
           <div class="la-chip">
-            <span class="la-chip-icon"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-clock"/></svg></span>
+            <span class="la-chip-icon"><i class="far fa-clock"></i></span>
             <div class="la-chip-text">
               <div class="la-chip-label">الوقت</div>
               <div class="la-chip-value">${escapeHtml(lessonTimeLabel(meta.lesson, meta.customTimes))}</div>
@@ -4053,7 +4084,7 @@
       }
 
       if(!meta || !meta.date || !meta.lesson || meta._coveredAway){
-        toast({ title: 'الحصة غير متاحة', text: 'لا يمكن فتح هذه الحصة.', icon: 'alert-circle' });
+        toast({ title: 'الحصة غير متاحة', text: 'لا يمكن فتح هذه الحصة.', icon: 'fa-circle-exclamation' });
         return;
       }
 
@@ -4062,13 +4093,13 @@
       const footer = `
         <div class="la-actions">
           <button id="actAttendance" class="la-btn-attendance" type="button">
-            <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-clipboard-check"/></svg>
+            <i class="fas fa-clipboard-check"></i>
             <span>تسجيل الغياب</span>
           </button>
         </div>
       `;
 
-      openModal({ title: 'إدارة الحصة', bodyHtml: body, footerHtml: footer, icon: 'teacher' });
+      openModal({ title: 'إدارة الحصة', bodyHtml: body, footerHtml: footer, icon: 'fa-chalkboard-user' });
 
       const attendanceButton = document.getElementById('actAttendance');
       // Refresh for this exact date, lesson and class each time the popup opens.
@@ -4108,7 +4139,7 @@
           await dsAttendance.start();
         } catch (error) {
           console.error('Could not open attendance from schedule:', error);
-          toast({ title: 'تعذّر فتح تسجيل الغياب', text: 'حاول مرة أخرى.', icon: 'alert-circle' });
+          toast({ title: 'تعذّر فتح تسجيل الغياب', text: 'حاول مرة أخرى.', icon: 'fa-circle-exclamation' });
         } finally {
           button.disabled = false;
         }
@@ -4126,7 +4157,7 @@
       const badge = document.createElement('span');
       badge.className = 'attendance-ready-badge';
       badge.title = 'يمكن تسجيل الحضور الآن';
-      badge.innerHTML = '<svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-clipboard-check"/></svg>';
+      badge.innerHTML = '<i class="fas fa-clipboard-check"></i>';
       cell.appendChild(badge);
     }
 
@@ -5285,7 +5316,7 @@
           #dsPdfCard .sub { font-size:13px; font-weight:800; color:#355f81; }
           #dsPdfCard .sep { border-top:2px solid #dbe7f2; margin:14px 0 12px; }
           #dsPdfCard table { width:100%; border-collapse:collapse; table-layout:fixed; border:1px solid #cddff0; }
-          #dsPdfCard thead th { background:linear-gradient(135deg,#033C54,#065372); color:#fff; font-size:10.5px; font-weight:900; padding:10px 4px; border-left:1px solid rgba(255,255,255,.2); }
+          #dsPdfCard thead th { background:linear-gradient(135deg,#0e3a5c,#1c5b88); color:#fff; font-size:10.5px; font-weight:900; padding:10px 4px; border-left:1px solid rgba(255,255,255,.2); }
           #dsPdfCard thead th.corner { width:150px; }
           #dsPdfCard tbody th.name { background:#f4f8fc; font-size:11px; font-weight:900; color:#163e63; padding:9px 8px; text-align:right; border-top:1px solid #d9e6f3; }
           #dsPdfCard tbody td { text-align:center; font-size:11px; font-weight:800; color:#94a3b8; padding:9px 4px; border-top:1px solid #e1ebf5; border-left:1px solid #e1ebf5; }
@@ -5421,7 +5452,7 @@
         docPdf.save(filenameSafe(fileName) + '.pdf');
         dsDlBusy = false;
         dsCloseDownloadModal();
-        toast({ title: 'تم', text: 'تم تنزيل جدول القسم.', icon: 'check-circle' });
+        toast({ title: 'تم', text: 'تم تنزيل جدول القسم.', icon: 'fa-check-circle' });
       } catch (e) {
         console.error('[dsSheet] PDF failed:', e);
         dsSetDlStatus('error', 'تعذّر إنشاء ملف PDF. حاول مرة أخرى.');
@@ -5472,7 +5503,7 @@
     let ssCurrentLessonMeta = null;
 
     function ssToast(text, isError){
-      toast({ title: isError ? 'خطأ' : 'تم', text, icon: isError ? 'alert-triangle' : 'check-circle', ms: isError ? 4500 : 3200 });
+      toast({ title: isError ? 'خطأ' : 'تم', text, icon: isError ? 'fa-triangle-exclamation' : 'fa-check-circle', ms: isError ? 4500 : 3200 });
     }
 
     function ssFmtDateLong(d){
@@ -6567,7 +6598,7 @@
           #slPdfCard .sl-sep { border-top: 2px solid #dbe7f2; margin: 14px 0 16px; }
           #slPdfCard table { width: 100%; border-collapse: collapse; table-layout: fixed; border: 1px solid #b9cfe3; }
           #slPdfCard thead th {
-            background: linear-gradient(135deg, #033C54, #065372); color: #fff;
+            background: linear-gradient(135deg, #0e3a5c, #1c5b88); color: #fff;
             font-size: 14px; font-weight: 800; height: 38px; padding: 0 8px; text-align: center;
             border-left: 1px solid rgba(255,255,255,.22);
           }
@@ -6616,7 +6647,7 @@
       const cls = mcCurrentClass;
       if (!cls || !students.length) return;
       if (!window.html2canvas || !window.jspdf?.jsPDF) {
-        toast({ title: 'خطأ', text: 'مكتبة إنشاء PDF غير متاحة حالياً.', icon: 'alert-circle' });
+        toast({ title: 'خطأ', text: 'مكتبة إنشاء PDF غير متاحة حالياً.', icon: 'fa-exclamation-circle' });
         return;
       }
 
@@ -6647,10 +6678,10 @@
         }
 
         docPdf.save(filenameSafe(`قائمة-طلاب-${toArabicDigits(cls)}`) + '.pdf');
-        toast({ title: 'تم', text: 'تم تنزيل قائمة الطلاب.', icon: 'check-circle' });
+        toast({ title: 'تم', text: 'تم تنزيل قائمة الطلاب.', icon: 'fa-check-circle' });
       } catch (e) {
         console.error(e);
-        toast({ title: 'خطأ', text: 'تعذّر إنشاء ملف PDF.', icon: 'alert-circle' });
+        toast({ title: 'خطأ', text: 'تعذّر إنشاء ملف PDF.', icon: 'fa-exclamation-circle' });
       } finally {
         label.textContent = original;
         mcDownloadBtn.disabled = false;
@@ -6662,7 +6693,7 @@
 
     function openDlChoice(){
       if (!mcCurrentClass || !mcCachedStudents.length) {
-        toast({ title: 'تنبيه', text: 'لا يوجد طلاب لتنزيل القائمة.', icon: 'info' });
+        toast({ title: 'تنبيه', text: 'لا يوجد طلاب لتنزيل القائمة.', icon: 'fa-circle-info' });
         return;
       }
       dlChoiceSub.textContent = `الصف ${toArabicDigits(mcCurrentClass)} · ${toArabicDigits(mcCachedStudents.length)} طالب`;
@@ -6775,10 +6806,10 @@
         a.remove();
         setTimeout(() => URL.revokeObjectURL(url), 4000);
 
-        toast({ title: 'تم', text: 'تم تنزيل ملف Excel.', icon: 'check-circle' });
+        toast({ title: 'تم', text: 'تم تنزيل ملف Excel.', icon: 'fa-check-circle' });
       } catch (e) {
         console.error(e);
-        toast({ title: 'خطأ', text: 'تعذّر إنشاء ملف Excel.', icon: 'alert-circle' });
+        toast({ title: 'خطأ', text: 'تعذّر إنشاء ملف Excel.', icon: 'fa-exclamation-circle' });
       } finally {
         label.textContent = original;
         mcDownloadBtn.disabled = false;
@@ -6877,7 +6908,7 @@
         teacherName: currentTeacherProfile?.name || currentUser?.displayName || '',
       }).catch((e) => {
         console.error('[mcClasses] openForSubstitute:', e);
-        toast({ title: 'تعذّر فتح تسجيل الغياب', text: 'حاول مرة أخرى.', icon: 'alert-circle' });
+        toast({ title: 'تعذّر فتح تسجيل الغياب', text: 'حاول مرة أخرى.', icon: 'fa-circle-exclamation' });
       });
     });
     [subSelectWrap, subCustomWrap].forEach((el) =>
@@ -6947,7 +6978,7 @@
         openSubModal(live);
       } catch (e) {
         console.error('[mcClasses] attend:', e);
-        toast({ title: 'تعذّر فتح تسجيل الغياب', text: 'حاول مرة أخرى.', icon: 'alert-circle' });
+        toast({ title: 'تعذّر فتح تسجيل الغياب', text: 'حاول مرة أخرى.', icon: 'fa-circle-exclamation' });
       } finally {
         mcAttendOpening = false;
         mcSetAttendLoading(false);
@@ -7044,7 +7075,7 @@
           <span class="oc-grade-badge">${escapeHtml(toArabicDigits(grade))}</span>
           <span class="oc-grade-label">${escapeHtml(label)}</span>
           <span class="oc-count">${escapeHtml(toArabicDigits(classes.length))}</span>
-          <svg class="ic oc-chev" aria-hidden="true"><use href="/shared/icons.svg#i-chevron-down"/></svg>`;
+          <i class="fas fa-chevron-down oc-chev" aria-hidden="true"></i>`;
         details.appendChild(summary);
 
         const grid = document.createElement('div');
@@ -7128,7 +7159,7 @@
       if (!dnItems.length) {
         dnList.innerHTML = `
           <div class="dn-empty">
-            <span class="dn-empty-icon"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-bell-off"/></svg></span>
+            <span class="dn-empty-icon"><i class="fas fa-bell-slash" aria-hidden="true"></i></span>
             <b>لا توجد إشعارات</b>
             <span>عندما يسجّل أحد معلمي قسمك الغياب لحصة ليست في جدوله ستظهر هنا.</span>
           </div>`;
@@ -7267,11 +7298,6 @@
     sidebarSchoolSchedule.addEventListener('click', () => { closeSidebar(); openSchoolSchedSheet(); });
 
     mountTelegramSettings({ auth, slotId: 'telegramSettingsSlot', extraClass: 'sidebar-link sidebar-settings-link' });
-    // The shared module gives its button plain text; add the sidebar's icon.
-    {
-      const tgBtn = document.getElementById('telegramSettingsBtn');
-      if (tgBtn) tgBtn.innerHTML = '<svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-settings"/></svg><span>إعدادات المستخدم</span>';
-    }
 
     const sidebarLogout = document.getElementById('sidebarLogout');
     sidebarLogout.addEventListener('click', async () => {
@@ -7291,7 +7317,7 @@
         location.href = '/index.html';
       } catch (error) {
         console.error('Sign out failed:', error);
-        toast({ title: 'خطأ', text: 'تعذّر تسجيل الخروج. حاول مرة أخرى.', icon: 'alert-circle' });
+        toast({ title: 'خطأ', text: 'تعذّر تسجيل الخروج. حاول مرة أخرى.', icon: 'fa-circle-exclamation' });
       } finally {
         sidebarLogout.disabled = false;
       }

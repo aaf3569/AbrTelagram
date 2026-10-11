@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.gstatic.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; manifest-src 'self'; upgrade-insecure-requests; block-all-mixed-content">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.gstatic.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; manifest-src 'self'; upgrade-insecure-requests; block-all-mixed-content">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -25,23 +25,23 @@
   <link rel="stylesheet" href="/shared/base.css" />
   <style>
     :root{
-      --primary:#033C54;
-      --primary-2:#065372;
+      --primary:#0b4f6c;
+      --primary-2:#166088;
       --primary-3:#1f7ea9;
 
-      --page:#f6f8fb;
+      --page:#f6fafc;
       --card:#ffffff;
-      --text:#0f172a;
-      --muted:#6b7f9f;
+      --text:#0e2233;
+      --muted:#5d7387;
 
-      --border:#e6edf7;
+      --border:#dce8f1;
       --radius:16px;
-      --shadow: 0 6px 18px rgba(3,60,84,.08);
+      --shadow: 0 6px 18px rgba(11,79,108,.08);
       --shadow-strong: 0 16px 36px rgba(6,27,40,.16);
 
       --focus:#79b3c8;
       --danger:#b42318;
-      --ok:#1a7f37;
+      --ok:#126a2e;
 
       --colW: 148px;
       --headerText:#ffffff;
@@ -51,11 +51,8 @@
       --stickyTop: 80px;
     }
 
-    *{ box-sizing:border-box; }
-    /* Tajawal everywhere except titles and button labels, which take the
-       heading font from /shared/identity.css. */
-    *:not(h1, h2, h3, h4, .site-title, .sheet-title, .modal-title, .pop-title, .btn,
-          h1 *, h2 *, h3 *, h4 *, .site-title *, .sheet-title *, .modal-title *, .pop-title *, .btn *){
+    *{ 
+      box-sizing:border-box;
       font-family:"Tajawal", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif !important;
     }
     html,body{ height:100%; margin:0; padding:0; }
@@ -70,12 +67,11 @@
       -webkit-tap-highlight-color: transparent;
     }
 
-    /* Font enforcement for all text elements (titles and .btn labels take
-       the heading font from /shared/identity.css). */
-    input, select, textarea, option,
-    .modal, .modal-card, .pop-desc,
-    .th, .td, .cell-btn, .badge, .chip,
-    label, .hint, .status, .muted {
+    /* Font enforcement for all text elements */
+    button, input, select, textarea, option,
+    .modal, .modal-card, .pop-title, .pop-desc,
+    .th, .td, .cell-btn, .btn, .badge, .chip,
+    .site-title, label, .hint, .status, .muted {
       font-family:"Tajawal", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif !important;
     }
 
@@ -86,8 +82,8 @@
       z-index:30;
       background: var(--glass);
       backdrop-filter: blur(8px);
-      border-bottom:1px solid rgba(3,60,84,.10);
-      box-shadow: 0 2px 12px rgba(3,60,84,.06);
+      border-bottom:1px solid rgba(11,79,108,.10);
+      box-shadow: 0 2px 12px rgba(11,79,108,.06);
       padding:12px 16px;
     }
     .titlebar{
@@ -99,9 +95,11 @@
       gap:12px;
       flex-wrap:wrap;
     }
-    /* Font, size and weight: /shared/identity.css. */
     .site-title{
       margin:0;
+      font-weight:950;
+      letter-spacing:.1px;
+      font-size:clamp(1.05rem, 2.1vw, 1.28rem);
       color:var(--primary);
       display:flex;
       align-items:center;
@@ -156,9 +154,9 @@
       transition: background .12s ease, border-color .12s ease, box-shadow .12s ease, transform .08s ease;
     }
     .icon-btn .ico{ width:20px; height:20px; }
-    .icon-btn:hover{ background:#f1f7fb; border-color:rgba(3,60,84,.28); }
+    .icon-btn:hover{ background:#f1f7fb; border-color:rgba(11,79,108,.28); }
     .icon-btn:active{ transform:scale(.97); }
-    .icon-btn[aria-expanded="true"]{ background:#eaf3f8; border-color:rgba(3,60,84,.35); }
+    .icon-btn[aria-expanded="true"]{ background:#eaf3f8; border-color:rgba(11,79,108,.35); }
 
     .primary-btn{
       height:42px;
@@ -171,11 +169,11 @@
       font-weight:900;
       font-size:14px;
       cursor:pointer;
-      box-shadow: 0 6px 14px rgba(3,60,84,.18);
+      box-shadow: 0 6px 14px rgba(11,79,108,.18);
       transition: box-shadow .12s ease, transform .08s ease;
       white-space:nowrap;
     }
-    .primary-btn:hover{ box-shadow: 0 10px 22px rgba(3,60,84,.24); }
+    .primary-btn:hover{ box-shadow: 0 10px 22px rgba(11,79,108,.24); }
     .primary-btn:active{ transform:scale(.98); }
 
     /* Overflow menu for the bulk, school-wide actions — kept out of the bar
@@ -220,6 +218,7 @@
     @media (max-width: 640px){
       .site-header{ padding:10px 12px; }
       .titlebar{ flex-wrap:nowrap; }
+      .site-title{ font-size:1rem; }
       .primary-btn .btn-label{ display:none; }
       .primary-btn{ width:42px; padding:0; justify-content:center; }
       .toolbar{ gap:6px; }
@@ -245,15 +244,15 @@
       height:44px;
       padding:0 16px;
       border-radius:12px;
-      border:1px solid rgba(3,60,84,.22);
+      border:1px solid rgba(11,79,108,.22);
       background: linear-gradient(180deg, var(--primary-2), var(--primary));
       color:#fff;
       font-weight:950;
       cursor:pointer;
-      box-shadow: 0 8px 18px rgba(3,60,84,.20);
+      box-shadow: 0 8px 18px rgba(11,79,108,.20);
       transition: transform .08s ease, box-shadow .12s ease, opacity .12s ease;
     }
-    .save:hover{ box-shadow: 0 10px 24px rgba(3,60,84,.22); }
+    .save:hover{ box-shadow: 0 10px 24px rgba(11,79,108,.22); }
     .save:active{ transform: scale(.99); }
     .save[disabled]{ opacity:.55; cursor:not-allowed; box-shadow:none; transform:none; }
 
@@ -326,8 +325,8 @@
       display:none;
     }
     .custom-head{
-      background: linear-gradient(180deg, rgba(31,126,169,.14), rgba(3,60,84,.07));
-      border:1px solid rgba(3,60,84,.14);
+      background: linear-gradient(180deg, rgba(31,126,169,.14), rgba(11,79,108,.07));
+      border:1px solid rgba(11,79,108,.14);
       border-radius:14px;
       padding:12px;
       display:flex;
@@ -359,7 +358,7 @@
       width:100%;
       appearance:none;
       height:42px;
-      border:1px solid rgba(3,60,84,.20);
+      border:1px solid rgba(11,79,108,.20);
       border-radius:10px;
       background:#fff;
       color:var(--text);
@@ -456,7 +455,7 @@
       font-weight:950;
       border-radius:14px;
       border-width:1.5px;
-      box-shadow: 0 4px 12px rgba(3,60,84,.06);
+      box-shadow: 0 4px 12px rgba(11,79,108,.06);
     }
     .tc-divider{
       height:1px;
@@ -526,13 +525,13 @@
       align-items:center;
       justify-content:center;
       background: linear-gradient(165deg, var(--primary-3), var(--primary-2) 60%, var(--primary));
-      border:1px solid rgba(3,60,84,.22);
+      border:1px solid rgba(11,79,108,.22);
       border-radius:14px;
       padding:10px 9px;
       text-align:center;
       font-weight:950;
       color:var(--headerText);
-      box-shadow: 0 6px 16px rgba(3,60,84,.20);
+      box-shadow: 0 6px 16px rgba(11,79,108,.20);
       position:relative;
       top:auto;
       z-index:2;
@@ -566,7 +565,7 @@
     }
     .th:hover{
       transform:translateY(-2px);
-      box-shadow: 0 10px 22px rgba(3,60,84,.26);
+      box-shadow: 0 10px 22px rgba(11,79,108,.26);
     }
     .th:active{
       transform:translateY(0);
@@ -594,12 +593,12 @@
       text-align:center;
       min-height:64px;
       position:relative;
-      box-shadow: 0 4px 10px rgba(3,60,84,.06);
+      box-shadow: 0 4px 10px rgba(11,79,108,.06);
     }
     .td.day-col{
       background: linear-gradient(180deg, rgba(238,245,251,.9), #fff);
       border-style:solid;
-      border-color: rgba(3,60,84,.14);
+      border-color: rgba(11,79,108,.14);
     }
 
     .cell-btn{
@@ -621,7 +620,7 @@
     }
     .cell-btn:hover{
       border-color:#8eb0cf;
-      box-shadow:0 8px 16px rgba(3,60,84,.10);
+      box-shadow:0 8px 16px rgba(11,79,108,.10);
       color:var(--primary);
     }
     .cell-btn:active{ transform:scale(.99); }
@@ -633,13 +632,13 @@
     .cell-btn.filled{
       border-style:solid;
       border-width:1px;
-      border-color: rgba(3,60,84,.22);
+      border-color: rgba(11,79,108,.22);
       color:#0f172a;
       background: linear-gradient(180deg, rgba(238,245,251,.75), #fff);
-      box-shadow: inset 3px 0 0 var(--primary-3), 0 4px 10px rgba(3,60,84,.08);
+      box-shadow: inset 3px 0 0 var(--primary-3), 0 4px 10px rgba(11,79,108,.08);
     }
     .cell-btn.filled:hover{
-      box-shadow: inset 3px 0 0 var(--primary-3), 0 8px 16px rgba(3,60,84,.14);
+      box-shadow: inset 3px 0 0 var(--primary-3), 0 8px 16px rgba(11,79,108,.14);
     }
     .cell-btn.loading{
       opacity:.75;
@@ -701,7 +700,7 @@
       width:44px;
       height:44px;
       border-radius:50%;
-      border:4px solid rgba(3,60,84,.16);
+      border:4px solid rgba(11,79,108,.16);
       border-top-color:var(--primary);
       animation: spin 1s linear infinite;
     }
@@ -1059,7 +1058,7 @@
       transition: background .12s ease, color .12s ease, border-color .12s ease;
     }
     .pop-close svg{ width:16px; height:16px; }
-    .pop-close:hover{ background:var(--page); color:var(--primary); border-color:rgba(3,60,84,.3); }
+    .pop-close:hover{ background:var(--page); color:var(--primary); border-color:rgba(11,79,108,.3); }
 
     .row{ display:grid; grid-template-columns: 1fr; gap:16px; }
 
@@ -1133,19 +1132,31 @@
       margin-top:18px;
       flex-wrap:wrap;
     }
-    /* Height, corners, font and the primary / danger colours: /shared/identity.css. */
     .btn{
+      height:46px;
       padding:0 16px;
+      border-radius:12px;
       border:1px solid var(--border);
       background:#fff;
-      color:var(--primary);
+      font-weight:950;
       cursor:pointer;
       transition: transform .08s ease, box-shadow .12s ease, opacity .12s ease;
+      font-family:"Tajawal", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
     }
-    .btn:hover{ box-shadow:0 8px 16px rgba(3,60,84,.10); }
+    .btn:hover{ box-shadow:0 8px 16px rgba(11,79,108,.10); }
     .btn:active{ transform:scale(.99); }
     .btn[disabled]{ opacity:.6; cursor:not-allowed; box-shadow:none; transform:none; }
 
+    .btn.primary{
+      background: linear-gradient(180deg, var(--primary-2), var(--primary));
+      color:#fff;
+      border-color: rgba(3,60,84,.20);
+    }
+    .btn.danger{
+      border-color: rgba(180,35,24,.25);
+      color: var(--danger);
+      background:#fff;
+    }
 
     /* إضافة حصة popup (custom schedules) + the time editor's name field. */
     .al-card{ width:min(520px, 100%); }
@@ -1279,11 +1290,11 @@
     .sidebar.open{ transform:translateX(0); visibility:visible; }
     .sidebar-head{
       position:relative; padding:16px; display:flex; flex-direction:column; align-items:center; gap:12px; text-align:center;
-      background:linear-gradient(135deg, #065372, #033C54); color:#fff; flex-shrink:0;
+      background:linear-gradient(135deg, #044563, #022b42); color:#fff; flex-shrink:0;
     }
     .sidebar-school-logo{ display:block; width:120px; max-width:calc(100% - 80px); height:auto; object-fit:contain; }
     .sidebar-head h2{ margin:0; font-size:clamp(.74rem,4.3vw,.98rem); font-weight:900; display:flex; align-items:baseline; gap:7px; min-width:0; overflow:hidden; }
-    .sidebar-head h2 .ic{ flex-shrink:0; font-size:.9em; opacity:.85; }
+    .sidebar-head h2 i{ flex-shrink:0; font-size:.9em; opacity:.85; }
     .sidebar-head h2 span{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .sidebar-close{
       position:absolute; top:16px; left:16px; width:32px; height:32px; flex-shrink:0; border-radius:10px;
@@ -1318,22 +1329,22 @@
       border-radius:12px; border:1px solid transparent; background:transparent; color:var(--text);
       font-weight:800; font-size:.91rem; cursor:pointer; text-align:right; transition:var(--transition); width:100%;
     }
-    .sidebar-link .ic{
-      width:32px; height:32px; padding:7px; flex-shrink:0;
+    .sidebar-link i{
+      width:32px; height:32px; flex-shrink:0; display:inline-flex; align-items:center; justify-content:center;
       border-radius:9px; background:rgba(3,60,84,.08); color:var(--primary-light); font-size:.95rem;
     }
     @media (hover:hover) and (pointer:fine){ .sidebar-link:hover{ background:rgba(3,60,84,.08); } }
     .sidebar-link:active{ background:rgba(3,60,84,.08); }
     .sidebar-link[hidden]{ display:none; }
     .sidebar-link.is-current{ background:rgba(3,60,84,.08); border-color:rgba(3,60,84,.18); color:var(--primary); box-shadow:inset -4px 0 0 var(--primary); }
-    .sidebar-link.is-current .ic{ background:linear-gradient(145deg, var(--primary-light), var(--primary)); color:#fff; }
+    .sidebar-link.is-current i{ background:linear-gradient(145deg, var(--primary-light), var(--primary)); color:#fff; }
     .sidebar-logout{ justify-content:center; text-align:center; }
     .sidebar-nav[hidden]{ display:none; }
     .sidebar-user-role:empty{ display:none; }
 
     /* Teacher version — Teachers/user.html's (teachers/user.css) slightly
        darker palette. The rules above read these same variables. */
-    .sidebar.is-teacher{ --primary:#033C54; --primary-light:#065372; --muted:#6b7f9f; --border:#e6edf7; }
+    .sidebar.is-teacher{ --primary:#022b42; --primary-light:#044563; --muted:#64748b; --border:#e2e8f0; }
     .sidebar.is-teacher .sidebar-user-avatar{ font-size:1rem; }
     .sidebar-classes{ display:flex; flex-direction:column; gap:6px; padding:2px 2px 4px; }
     .sidebar-class-btn{
@@ -1342,9 +1353,12 @@
       border-radius:12px; border:none; cursor:pointer;
       background:linear-gradient(145deg, var(--primary-light), var(--primary));
       color:#fff; font-weight:900; font-size:.92rem;
-      box-shadow:0 10px 22px rgba(3,60,84,.24); transition:var(--transition);
+      box-shadow:0 10px 22px rgba(2,43,66,.24); transition:var(--transition);
     }
-    .sidebar-class-btn:hover{ transform:translateY(-2px); box-shadow:0 14px 28px rgba(3,60,84,.3); }
+    .sidebar-class-btn:hover{ transform:translateY(-2px); box-shadow:0 14px 28px rgba(2,43,66,.3); }
+    /* The page-wide `* { font-family: Tajawal !important }` would otherwise
+       swap Font Awesome's glyph font out and show empty boxes. */
+    .sidebar .fas, .sidebar .fa-solid{ font-family:"Font Awesome 6 Free" !important; font-weight:900; }
 
     /* ===== سجل التعديلات drawer ===== */
     .logs-backdrop{
@@ -1457,12 +1471,11 @@
   <meta name="twitter:title" content="إدارة الجدول الأسبوعي - ثانوية أحمد البشر الرومي">
   <meta name="twitter:description" content="???? ?????? ???? ????? ??????.">
   <meta name="twitter:image" content="https://framerusercontent.com/images/jRnZLlPr90qwKsuUwfIlvDS9E.png?width=1200&height=630">
-  <!-- After the page's own styles, so the site's identity (titles, buttons) and the one back button win. -->
-  <link rel="stylesheet" href="/shared/identity.css" />
-  <link rel="stylesheet" href="/shared/back-button.css" />
+    <link rel="stylesheet" href="/shared/identity.css" />
   <link rel="stylesheet" href="/shared/actions.css" />
   <script src="/shared/feedback.js" defer></script>
   <script src="/shared/dialog.js" defer></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
   <header class="site-header">
@@ -1526,14 +1539,14 @@
   <aside id="sidebar" class="sidebar" aria-hidden="true">
     <div class="sidebar-head">
       <img class="sidebar-school-logo" src="/images/WhiteLogo.png?v=2" alt="شعار المدرسة" width="1976" height="796">
-      <h2><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-school"/></svg><span>ثانوية أحمد البشر الرومي</span></h2>
+      <h2><i class="fas fa-school" aria-hidden="true"></i><span>ثانوية أحمد البشر الرومي</span></h2>
       <button id="sidebarClose" class="sidebar-close" type="button" aria-label="إغلاق القائمة">
-        <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-x"/></svg>
+        <i class="fas fa-times" aria-hidden="true"></i>
       </button>
     </div>
 
     <div id="sidebarUser" class="sidebar-user" hidden>
-      <div id="sidebarAvatar" class="sidebar-user-avatar"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-user-shield"/></svg></div>
+      <div id="sidebarAvatar" class="sidebar-user-avatar"><i class="fas fa-user-shield" aria-hidden="true"></i></div>
       <div class="sidebar-user-info">
         <span id="sidebarUserName" class="sidebar-user-name"></span>
         <span id="sidebarUserRole" class="sidebar-user-role"></span>
@@ -1544,7 +1557,7 @@
     <nav id="sidebarNavAdmin" class="sidebar-nav" hidden>
       <div class="sidebar-group">
         <button class="sidebar-link" type="button" data-href="/admins/adminpage.html">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-home"/></svg>
+          <i class="fas fa-house" aria-hidden="true"></i>
           <span>الرئيسية</span>
         </button>
       </div>
@@ -1552,19 +1565,19 @@
       <div class="sidebar-group">
         <div class="sidebar-section-label">الغياب</div>
         <button class="sidebar-link" type="button" data-href="/admins/adminpage.html#today-absence">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-calendar-day"/></svg>
+          <i class="fas fa-calendar-day" aria-hidden="true"></i>
           <span>غياب اليوم</span>
         </button>
         <button class="sidebar-link" type="button" data-href="/admins/adminpage.html#overall-absence">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-list-check"/></svg>
+          <i class="fas fa-list-check" aria-hidden="true"></i>
           <span>الغياب المختصر</span>
         </button>
         <button class="sidebar-link" type="button" data-href="/admins/adminpage.html#detailed-absence">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-search"/></svg>
+          <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
           <span>تدقيق في الغائب</span>
         </button>
         <button class="sidebar-link" type="button" data-href="/teachers/morning.html">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-clock"/></svg>
+          <i class="fas fa-clock" aria-hidden="true"></i>
           <span>تسجيل التأخير الصباحي</span>
         </button>
       </div>
@@ -1572,15 +1585,15 @@
       <div class="sidebar-group">
         <div class="sidebar-section-label">الإجراءات السريعة</div>
         <button class="sidebar-link" type="button" data-href="/admins/teachers.html">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-teacher"/></svg>
+          <i class="fas fa-chalkboard-user" aria-hidden="true"></i>
           <span>المعلمون</span>
         </button>
         <button class="sidebar-link" type="button" data-href="/admins/students.html">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-school"/></svg>
+          <i class="fas fa-school" aria-hidden="true"></i>
           <span>الطلاب</span>
         </button>
         <button class="sidebar-link" type="button" data-href="/admins/adminpage.html#notifications">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-bell"/></svg>
+          <i class="fas fa-bell" aria-hidden="true"></i>
           <span>الإشعارات</span>
         </button>
       </div>
@@ -1588,26 +1601,26 @@
       <div class="sidebar-group">
         <div class="sidebar-section-label">الجداول</div>
         <button class="sidebar-link" type="button" data-href="/admins/adminpage.html#dept-schedules">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-class"/></svg>
+          <i class="fas fa-users-rectangle" aria-hidden="true"></i>
           <span>جداول الأقسام</span>
         </button>
         <button class="sidebar-link" type="button" data-href="/admins/adminpage.html#teacher-schedules">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-teacher"/></svg>
+          <i class="fas fa-chalkboard-user" aria-hidden="true"></i>
           <span>جداول المعلمين</span>
         </button>
         <button class="sidebar-link" type="button" data-href="/no-longer-in-use/Teachers/schoolschedule.html">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-grid"/></svg>
+          <i class="fas fa-table-cells" aria-hidden="true"></i>
           <span>جدول المدرسة</span>
         </button>
         <button class="sidebar-link is-current" type="button" aria-current="page">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-calendar-days"/></svg>
+          <i class="fas fa-calendar-days" aria-hidden="true"></i>
           <span>تعديل الجداول</span>
         </button>
       </div>
 
       <div class="sidebar-group sidebar-group-bottom">
         <button class="sidebar-link sidebar-logout" type="button">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-logout"/></svg>
+          <i class="fas fa-right-from-bracket" aria-hidden="true"></i>
           <span>تسجيل الخروج</span>
         </button>
       </div>
@@ -1628,11 +1641,11 @@
       <div class="sidebar-group" data-show="head" hidden>
         <div class="sidebar-section-label">القسم</div>
         <button class="sidebar-link" type="button" data-href="/Teachers/user.html#dept-notifications" data-show="deptNotifs" hidden>
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-bell"/></svg>
+          <i class="fas fa-bell" aria-hidden="true"></i>
           <span>إشعارات القسم</span>
         </button>
         <button class="sidebar-link" type="button" data-href="/dephead/department.html">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-user-cog"/></svg>
+          <i class="fas fa-users-gear" aria-hidden="true"></i>
           <span>قسمي</span>
         </button>
       </div>
@@ -1640,7 +1653,7 @@
       <div class="sidebar-group">
         <div class="sidebar-section-label">الصفوف</div>
         <button class="sidebar-link" type="button" data-href="/Teachers/user.html#other-classes">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-class"/></svg>
+          <i class="fas fa-users-rectangle" aria-hidden="true"></i>
           <span>صفوف أخرى</span>
         </button>
       </div>
@@ -1648,27 +1661,27 @@
       <div class="sidebar-group">
         <div class="sidebar-section-label">الجداول</div>
         <button class="sidebar-link" type="button" data-href="/Teachers/user.html">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-calendar-day"/></svg>
+          <i class="fas fa-calendar-day" aria-hidden="true"></i>
           <span>جدولي</span>
         </button>
         <button class="sidebar-link" type="button" data-href="/Teachers/user.html#week">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-calendar-week"/></svg>
+          <i class="fas fa-calendar-week" aria-hidden="true"></i>
           <span>جدولي الأسبوعي</span>
         </button>
         <button class="sidebar-link" type="button" data-href="/Teachers/user.html#dptschedual" data-show="department" hidden>
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-class"/></svg>
+          <i class="fas fa-users-rectangle" aria-hidden="true"></i>
           <span>جدول القسم</span>
         </button>
         <button class="sidebar-link" type="button" data-href="/Teachers/user.html#schoolschedule">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-grid"/></svg>
+          <i class="fas fa-table-cells" aria-hidden="true"></i>
           <span>جدول المدرسة</span>
         </button>
         <button class="sidebar-link" type="button" data-href="/Teachers/user.html#class-schedules">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-board"/></svg>
+          <i class="fas fa-chalkboard" aria-hidden="true"></i>
           <span>جداول الصفوف</span>
         </button>
         <button class="sidebar-link" type="button" data-href="/Teachers/user.html#teacherschedules">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-teacher"/></svg>
+          <i class="fas fa-chalkboard-user" aria-hidden="true"></i>
           <span>جداول المعلمين</span>
         </button>
       </div>
@@ -1676,15 +1689,15 @@
       <div class="sidebar-group">
         <div class="sidebar-section-label">صلاحيات إضافية</div>
         <button class="sidebar-link" type="button" data-href="/Teachers/user.html#supervisorstudents" data-show="supervisorStudents" hidden>
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-graduation"/></svg>
+          <i class="fas fa-user-graduate" aria-hidden="true"></i>
           <span>الطلاب</span>
         </button>
         <button class="sidebar-link" type="button" data-href="/teachers/morning.html" data-show="morningLate" hidden>
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-clock"/></svg>
+          <i class="fas fa-clock" aria-hidden="true"></i>
           <span>تسجيل تأخير الصباح</span>
         </button>
         <button class="sidebar-link is-current" type="button" aria-current="page">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-grid"/></svg>
+          <i class="fas fa-table-cells" aria-hidden="true"></i>
           <span>تعديل جدول الإدارة</span>
         </button>
       </div>
@@ -1692,26 +1705,26 @@
       <div class="sidebar-group" data-show="manageAttendance" hidden>
         <div class="sidebar-section-label">الغياب</div>
         <button class="sidebar-link" type="button" data-href="/Teachers/user.html#today-absence">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-calendar-day"/></svg>
+          <i class="fas fa-calendar-day" aria-hidden="true"></i>
           <span>غياب اليوم</span>
         </button>
         <button class="sidebar-link" type="button" data-href="/Teachers/user.html#overall-absence">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-list-check"/></svg>
+          <i class="fas fa-list-check" aria-hidden="true"></i>
           <span>الغياب المختصر</span>
         </button>
         <button class="sidebar-link" type="button" data-href="/Teachers/user.html#detailed-absence">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-search"/></svg>
+          <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
           <span>تدقيق في الغائب</span>
         </button>
         <button class="sidebar-link" type="button" data-href="/teachers/morning.html">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-clock"/></svg>
+          <i class="fas fa-clock" aria-hidden="true"></i>
           <span>تسجيل التأخير الصباحي</span>
         </button>
       </div>
 
       <div class="sidebar-group sidebar-group-bottom">
         <button class="sidebar-link sidebar-logout" type="button">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-logout"/></svg>
+          <i class="fas fa-right-from-bracket" aria-hidden="true"></i>
           <span>تسجيل الخروج</span>
         </button>
       </div>

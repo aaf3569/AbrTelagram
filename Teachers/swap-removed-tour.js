@@ -83,7 +83,7 @@ function ensureStyles() {
     transform: translateY(16px) scale(.95); transition: transform .3s cubic-bezier(.2,.8,.25,1); }
   .swt-intro.open .swt-card { transform: none; }
   .swt-hero { position: relative; padding: 26px 20px 20px; text-align: center; color: #fff; border-radius: 26px 26px 0 0;
-    background: linear-gradient(150deg, #065372, #033C54); overflow: hidden; }
+    background: linear-gradient(150deg, #065372, #022b42); overflow: hidden; }
   .swt-hero::before, .swt-hero::after { content: ""; position: absolute; border-radius: 50%; background: rgba(255,255,255,.07); }
   .swt-hero::before { width: 180px; height: 180px; top: -70px; left: -60px; }
   .swt-hero::after { width: 120px; height: 120px; bottom: -50px; right: -30px; }
@@ -94,26 +94,26 @@ function ensureStyles() {
     background: rgba(255,255,255,.1); color: rgba(255,255,255,.55); }
   .swt-hero-old::after { content: ""; position: absolute; width: 70%; height: 3px; background: #f87171; border-radius: 3px; transform: rotate(-35deg); }
   .swt-hero-new { width: 64px; height: 64px; border-radius: 18px; display: grid; place-items: center;
-    background: #fff; color: #033C54; box-shadow: 0 10px 26px rgba(0,0,0,.25); animation: swtFloat 2.6s ease-in-out infinite; }
+    background: #fff; color: #022b42; box-shadow: 0 10px 26px rgba(0,0,0,.25); animation: swtFloat 2.6s ease-in-out infinite; }
   .swt-hero-arrow { font-size: 1rem; opacity: .7; }
   .swt-title { position: relative; margin: 10px 0 0; font-size: 1.3rem; font-weight: 900; }
   .swt-body { padding: 18px 20px 20px; display: grid; gap: 14px; }
   .swt-text { margin: 0; color: #334155; font-weight: 700; font-size: .95rem; line-height: 1.75; text-align: center; }
-  .swt-text b { color: #033C54; font-weight: 900; }
+  .swt-text b { color: #022b42; font-weight: 900; }
   .swt-intro .swt-body { gap: 16px; padding: 22px 20px 18px; }
   .swt-lead { margin: 0; text-align: center; color: #64748b; font-weight: 700; font-size: .92rem; }
   .swt-steps { display: grid; gap: 10px; }
   .swt-step { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 16px;
     background: #f5f8fb; border: 1px solid #e6edf4; }
   .swt-step-icon { flex-shrink: 0; width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center;
-    background: #fff; color: #065372; font-size: 1.05rem; box-shadow: 0 2px 8px rgba(3,60,84,.08); }
+    background: #fff; color: #065372; font-size: 1.05rem; box-shadow: 0 2px 8px rgba(2,43,66,.08); }
   .swt-step-text { display: grid; gap: 2px; text-align: right; }
-  .swt-step-text b { color: #033C54; font-weight: 900; font-size: .95rem; }
+  .swt-step-text b { color: #022b42; font-weight: 900; font-size: .95rem; }
   .swt-step-text small { color: #64748b; font-weight: 700; font-size: .8rem; }
   .swt-foot { margin: -4px 0 0; text-align: center; color: #94a3b8; font-weight: 700; font-size: .76rem; }
   .swt-btn { min-height: 54px; border: none; border-radius: 16px; cursor: pointer; font-family: inherit;
     font-weight: 900; font-size: 1.05rem; display: inline-flex; align-items: center; justify-content: center; gap: 10px;
-    background: linear-gradient(145deg, #065372, #033C54); color: #fff; box-shadow: 0 14px 30px rgba(3,60,84,.3);
+    background: linear-gradient(145deg, #065372, #022b42); color: #fff; box-shadow: 0 14px 30px rgba(2,43,66,.3);
     transition: transform .15s ease; }
   .swt-btn:hover { transform: translateY(-2px); }
 
@@ -140,10 +140,10 @@ function ensureStyles() {
   .swt-bar.top { top: max(12px, env(safe-area-inset-top)); }
   .swt-bar-head { display: flex; align-items: center; gap: 10px; }
   .swt-step-num { flex-shrink: 0; width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center;
-    background: linear-gradient(145deg, #065372, #033C54); color: #fff; font-weight: 900; font-size: 1rem; }
+    background: linear-gradient(145deg, #065372, #022b42); color: #fff; font-weight: 900; font-size: 1rem; }
   .swt-bar-title { flex: 1; min-width: 0; }
   .swt-bar-title small { display: block; color: #64748b; font-weight: 800; font-size: .72rem; }
-  .swt-bar-title b { display: block; color: #033C54; font-weight: 900; font-size: 1.02rem; }
+  .swt-bar-title b { display: block; color: #022b42; font-weight: 900; font-size: 1.02rem; }
   .swt-progress { height: 6px; border-radius: 99px; background: #e2e8f0; overflow: hidden; }
   .swt-progress i { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, #fbbf24, #f59e0b);
     transition: width .4s ease; }
@@ -185,7 +185,7 @@ export async function maybeStartSwapRemovedTour({ db, uid, hooks }) {
   const steps = [
     {
       title: "افتح القائمة الجانبية",
-      text: 'اضغط زر القائمة <b><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-menu"/></svg></b> في أعلى الشاشة.',
+      text: "اضغط زر القائمة <b>☰</b> في أعلى الشاشة.",
       target: () => h.toggleBtn,
       allow: (el) => h.toggleBtn.contains(el),
       done: () => h.sidebar.classList.contains("open"),
@@ -304,7 +304,7 @@ export async function maybeStartSwapRemovedTour({ db, uid, hooks }) {
         const cx = Math.min(window.innerWidth - 26, Math.max(26, r.left + r.width / 2));
         arrow.style.left = `${cx}px`;
         arrow.style.top = below ? `${r.bottom + 10}px` : `${r.top - 54}px`;
-        arrow.innerHTML = below ? '<svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-arrow-up"/></svg>' : '<svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-arrow-down"/></svg>';
+        arrow.innerHTML = below ? '<i class="fas fa-arrow-up"></i>' : '<i class="fas fa-arrow-down"></i>';
         arrow.classList.toggle("up", below);
         arrow.classList.toggle("down", !below);
         arrow.classList.add("on");
@@ -346,17 +346,17 @@ export async function maybeStartSwapRemovedTour({ db, uid, hooks }) {
     [spot, arrow, bar, dim].forEach((x) => x.remove());
     try { if (h.sidebar.classList.contains("open")) h.closeSidebar(); } catch {}
     showCard({
-      hero: `<div class="swt-done-icon"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-check-circle"/></svg></div>
+      hero: `<div class="swt-done-icon"><i class="fas fa-circle-check" aria-hidden="true"></i></div>
              <h2 class="swt-title">هذه هي الطريقة</h2>`,
       body: `
         <p class="swt-lead">من هنا، عند دخولك حصة ليست في جدولك:</p>
         <div class="swt-steps">
           <div class="swt-step">
-            <span class="swt-step-icon"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-class"/></svg></span>
+            <span class="swt-step-icon"><i class="fas fa-users-rectangle" aria-hidden="true"></i></span>
             <span class="swt-step-text"><b>اختر الصف ثم الفصل</b><small>الذي أنت فيه الآن</small></span>
           </div>
           <div class="swt-step">
-            <span class="swt-step-icon"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-clipboard-check"/></svg></span>
+            <span class="swt-step-icon"><i class="fas fa-clipboard-check" aria-hidden="true"></i></span>
             <span class="swt-step-text"><b>اضغط «تسجيل الغياب»</b><small>واختر السبب: احتياط أو تبديل</small></span>
           </div>
         </div>`,
@@ -385,22 +385,22 @@ export async function maybeStartSwapRemovedTour({ db, uid, hooks }) {
 
   showCard({
     hero: `
-      <span class="swt-badge"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-bell"/></svg> تحديث جديد</span>
+      <span class="swt-badge">🔔 تحديث جديد</span>
       <div class="swt-hero-icons">
-        <span class="swt-hero-old"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-swap"/></svg></span>
-        <span class="swt-hero-arrow"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-arrow-left"/></svg></span>
-        <span class="swt-hero-new"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-class"/></svg></span>
+        <span class="swt-hero-old"><i class="fas fa-right-left" aria-hidden="true"></i></span>
+        <span class="swt-hero-arrow"><i class="fas fa-arrow-left" aria-hidden="true"></i></span>
+        <span class="swt-hero-new"><i class="fas fa-users-rectangle" aria-hidden="true"></i></span>
       </div>
       <h2 class="swt-title">أوقفنا آلية التبديل</h2>`,
     body: `
       <p class="swt-lead">لم تعد هناك طلبات تبديل أو تغطية.</p>
       <div class="swt-steps">
         <div class="swt-step">
-          <span class="swt-step-icon"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-user-clock"/></svg></span>
+          <span class="swt-step-icon"><i class="fas fa-user-clock" aria-hidden="true"></i></span>
           <span class="swt-step-text"><b>دخلت حصة ليست في جدولك؟</b><small>احتياط أو تبديل</small></span>
         </div>
         <div class="swt-step">
-          <span class="swt-step-icon"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-class"/></svg></span>
+          <span class="swt-step-icon"><i class="fas fa-users-rectangle" aria-hidden="true"></i></span>
           <span class="swt-step-text"><b>سجّل غيابها من «صفوف أخرى»</b><small>في القائمة الجانبية</small></span>
         </div>
       </div>`,

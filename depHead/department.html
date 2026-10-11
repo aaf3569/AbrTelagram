@@ -3,13 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://abrschool-bot.onrender.com http://127.0.0.1:3000 http://localhost:3000 https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.gstatic.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; manifest-src 'self'; upgrade-insecure-requests; block-all-mixed-content">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; connect-src 'self' https://abrschool-bot.onrender.com http://127.0.0.1:3000 http://localhost:3000 https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.gstatic.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; manifest-src 'self'; upgrade-insecure-requests; block-all-mixed-content">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
 <!-- perf: start the module graph downloading immediately -->
+<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
 <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js" crossorigin>
 <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js" crossorigin>
 <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js" crossorigin>
@@ -25,28 +26,28 @@
   <link rel="stylesheet" href="/shared/base.css" />
   <style>
     :root{
-      --primary:#033C54;
-      --primary-2:#065372;
-      --primary-light: rgba(3, 60, 84, 0.08);
+      --primary:#022b42;
+      --primary-2:#044563;
+      --primary-light: rgba(2, 43, 66, 0.08);
 
-      --page:#f6f8fb;
+      --page:#f8fafc;
       --card-bg:#ffffff;
 
       --text:#0f172a;
-      --muted:#6b7f9f;
+      --muted:#64748b;
 
-      --border:#e6edf7;
+      --border:#e2e8f0;
       --border-light:#f1f5f9;
 
       --radius:16px;
       --radius-sm:12px;
 
-      --shadow-1:0 4px 12px rgba(3,60,84,.08);
-      --shadow-2:0 12px 28px rgba(3,60,84,.12);
+      --shadow-1:0 4px 12px rgba(2,43,66,.08);
+      --shadow-2:0 12px 28px rgba(2,43,66,.12);
 
-      --success:#1a7f37;
-      --danger:#b42318;
-      --warning:#a06d00;
+      --success:#10b981;
+      --danger:#ef4444;
+      --warning:#f59e0b;
 
       --transition: transform .12s ease, box-shadow .12s ease, background-color .12s ease, border-color .12s ease, color .12s ease, opacity .12s ease;
     }
@@ -55,8 +56,7 @@
     html, body{ height:100%; }
 
     /* Force Tajawal everywhere */
-    /* Buttons (.btn) and titles take the heading font from /shared/identity.css. */
-    body, input, textarea, select, .chip, .tbtn, .cbtn, .stat, .card, .muted {
+    body, button, input, textarea, select, .btn, .chip, .tbtn, .cbtn, .stat, .card, .muted {
       font-family:"Tajawal", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif !important;
     }
 
@@ -76,8 +76,8 @@
       background: rgba(255,255,255,0.85);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
-      border-bottom:1px solid rgba(3,60,84,0.10);
-      box-shadow: 0 2px 10px rgba(3,60,84,0.06);
+      border-bottom:1px solid rgba(2,43,66,0.10);
+      box-shadow: 0 2px 10px rgba(2,43,66,0.06);
       padding: 14px 18px;
     }
     .header-container{
@@ -89,26 +89,25 @@
     }
     .header-side{ display:flex; align-items:center; }
     .header-side.end{ justify-content:flex-end; }
-    /* The page title: /shared/identity.css's scale. */
     .dept-label{
       justify-self:center;
-      font-family:var(--font-heading);
-      font-weight:700;
+      font-weight:900;
       color:var(--primary);
-      font-size:clamp(1.15rem, 2.6vw, 1.45rem);
+      font-size:1.15rem;
       text-align:center;
       white-space:nowrap;
       overflow:hidden;
       text-overflow:ellipsis;
     }
 
-    /* Height, corners, font and the solid / ghost / danger colours:
-       /shared/identity.css. */
     .btn{
+      height:44px;
       padding:0 16px;
-      border:1px solid rgba(3,60,84,0.20);
+      border-radius: var(--radius-sm);
+      border:1px solid rgba(2,43,66,0.20);
       background: var(--card-bg);
       color: var(--primary);
+      font-weight:900;
       cursor:pointer;
       box-shadow: var(--shadow-1);
       transition: var(--transition);
@@ -118,9 +117,18 @@
       font-size: 0.9rem;
       position:relative;
     }
-    .btn:hover{ transform: translateY(-2px); box-shadow: var(--shadow-2); border-color: rgba(3,60,84,0.35); }
+    .btn:hover{ transform: translateY(-2px); box-shadow: var(--shadow-2); border-color: rgba(2,43,66,0.35); }
     .btn:active{ transform: translateY(0); }
     .btn[disabled]{ opacity:.6; cursor:not-allowed; transform:none; }
+    .btn.solid{
+      background: linear-gradient(135deg, var(--primary-2), var(--primary));
+      border-color: rgba(2,43,66,0.15);
+      color: #fff;
+    }
+    .btn.ghost{
+      background: rgba(2,43,66,0.04);
+      border-color: rgba(2,43,66,0.14);
+    }
     .btn.loading::after{
       content:"";
       width:10px; height:10px;
@@ -157,10 +165,9 @@
       main{ padding: 14px; }
     }
     @media (max-width: 420px){
-      /* Only icon + label buttons shrink to their icon; plain-text buttons
-         (تعديل، حفظ، the delete modal's) keep their width. */
-      .btn:has(> .ic + span) > span{ display:none; }
-      .btn:has(> .ic + span){ width:48px; padding:0; justify-content:center; }
+      /* Keep text-only actions usable on narrow phones. */
+      .btn:has(> i + span) > span{ display:none; }
+      .btn:has(> i + span){ width:44px; padding:0; justify-content:center; }
     }
 
     /* ===== Teacher management (ported from admins/teachers.html, remapped
@@ -175,7 +182,7 @@
       display:flex; align-items:center; justify-content:space-between;
       cursor:pointer; transition:var(--transition);
     }
-    .teacher-item:hover{ transform:translateY(-2px); box-shadow:var(--shadow-2); border-color:rgba(3,60,84,.3); }
+    .teacher-item:hover{ transform:translateY(-2px); box-shadow:var(--shadow-2); border-color:rgba(2,43,66,.3); }
     .teacher-sub{ font-size:.86rem; color:var(--muted); font-weight:700; }
     .presence-dot{ width:9px; height:9px; border-radius:50%; background:#c3ccd6; flex-shrink:0; box-shadow:0 0 0 2px var(--card-bg); }
     .presence-dot.online{ background:#22c55e; }
@@ -187,8 +194,8 @@
     .sheet{ position:fixed; inset:0; z-index:60; background:var(--page); display:flex; flex-direction:column; transform:translateX(100%); transition:transform .28s cubic-bezier(.22,.7,.25,1); }
     .sheet.open{ transform:translateX(0); }
     .sheet-header{ background:var(--card-bg); border-bottom:1px solid var(--border); padding:14px 12px; display:flex; align-items:center; gap:10px; position:sticky; top:0; z-index:10; }
-    /* .back-btn: /shared/back-button.css */
-    .sheet-title{ margin:0; color:var(--primary); }
+    .back-btn{ height:40px; padding:0 14px; border-radius:12px; border:1px solid rgba(2,43,66,.2); background:var(--card-bg); color:var(--primary); font-weight:900; cursor:pointer; box-shadow:var(--shadow-1); display:inline-flex; align-items:center; gap:8px; }
+    .sheet-title{ margin:0; font-size:1.05rem; font-weight:900; color:var(--primary); }
     .sheet-body{ flex:1 1 auto; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:16px; width:min(760px,94vw); margin:0 auto; display:flex; flex-direction:column; gap:12px; }
 
     /* Form primitives */
@@ -197,8 +204,8 @@
     .input{ flex:1; height:48px; border:none; outline:none; background:transparent; font-size:16px; color:var(--text); min-width:0; }
     .input:disabled{ color:var(--text); opacity:1; cursor:default; }
     .input-wrap.password-field{ padding-inline-end:8px; }
-    .eye-toggle{ width:38px; height:38px; border-radius:10px; border:1px solid rgba(3,60,84,.2); background:var(--card-bg); color:var(--muted); display:inline-flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; font-weight:900; }
-    .eye-toggle:hover{ border-color:rgba(3,60,84,.4); color:var(--primary); }
+    .eye-toggle{ width:38px; height:38px; border-radius:10px; border:1px solid rgba(2,43,66,.2); background:var(--card-bg); color:var(--muted); display:inline-flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; font-weight:900; }
+    .eye-toggle:hover{ border-color:rgba(2,43,66,.4); color:var(--primary); }
     .eye-toggle:disabled{ opacity:.5; cursor:not-allowed; }
     .eye-toggle.is-revealed{ color:#0f766e; border-color:rgba(15,118,110,.45); }
     .plain-value{ padding:2px 0 8px; color:var(--text); font-weight:900; min-height:30px; font-size:.95rem; line-height:1.8; overflow-wrap:anywhere; word-break:break-word; }
@@ -210,9 +217,9 @@
     .classes-list{ display:flex; flex-direction:column; gap:10px; }
     .class-row{ display:flex; flex-direction:column; gap:8px; border:1px dashed var(--border); border-radius:14px; padding:10px; background:var(--page); }
     .class-row .top{ display:flex; gap:10px; align-items:center; }
-    .class-row .remove{ height:40px; padding:0 12px; border-radius:10px; border:1px solid rgba(180,35,24,.35); color:var(--danger); background:var(--card-bg); font-weight:800; cursor:pointer; }
+    .class-row .remove{ height:40px; padding:0 12px; border-radius:10px; border:1px solid rgba(239,68,68,.35); color:var(--danger); background:var(--card-bg); font-weight:800; cursor:pointer; }
     .inline-add{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
-    .inline-add .add{ height:44px; padding:0 16px; border-radius:12px; border:1px solid rgba(3,60,84,.3); background:var(--card-bg); color:var(--primary); font-weight:900; cursor:pointer; box-shadow:var(--shadow-1); }
+    .inline-add .add{ height:44px; padding:0 16px; border-radius:12px; border:1px solid rgba(2,43,66,.3); background:var(--card-bg); color:var(--primary); font-weight:900; cursor:pointer; box-shadow:var(--shadow-1); }
     /* View mode: one big tappable row per class (opens its students and
        this teacher's notes). The edit mode has its own editor instead. */
     .class-chips{ display:grid; gap:10px; }
@@ -222,8 +229,8 @@
       border:1px solid var(--border); border-radius:14px; background:var(--card-bg); box-shadow:var(--shadow-1);
       color:var(--text); font-family:inherit; text-align:start; cursor:pointer; transition:var(--transition);
     }
-    .class-chip:hover{ transform:translateY(-2px); border-color:rgba(3,60,84,.35); box-shadow:var(--shadow-2); }
-    .class-chip-icon{ width:44px; height:44px; flex-shrink:0; border-radius:12px; display:grid; place-items:center; background:linear-gradient(145deg,var(--primary-2),var(--primary)); color:#fff; font-size:1.05rem; box-shadow:0 8px 18px rgba(3,60,84,.22); }
+    .class-chip:hover{ transform:translateY(-2px); border-color:rgba(2,43,66,.35); box-shadow:var(--shadow-2); }
+    .class-chip-icon{ width:44px; height:44px; flex-shrink:0; border-radius:12px; display:grid; place-items:center; background:linear-gradient(145deg,var(--primary-2),var(--primary)); color:#fff; font-size:1.05rem; box-shadow:0 8px 18px rgba(2,43,66,.22); }
     .class-chip-text{ display:grid; gap:2px; flex:1; min-width:0; }
     .class-chip-name{ font-size:1.25rem; font-weight:900; color:var(--primary); line-height:1.2; }
     .class-chip-sub{ font-size:.82rem; font-weight:700; color:var(--muted); }
@@ -239,7 +246,7 @@
     .profile-shell{ display:flex; flex-direction:column; gap:12px; }
     .profile-hero{ display:flex; align-items:center; justify-content:space-between; gap:14px; padding:14px; border:1px solid var(--border); border-radius:16px; background:linear-gradient(180deg,var(--card-bg),var(--page)); box-shadow:var(--shadow-1); }
     .profile-head{ display:flex; align-items:center; gap:12px; min-width:0; }
-    .avatar{ width:56px; height:56px; border-radius:50%; display:grid; place-items:center; background:linear-gradient(180deg,var(--primary-2),var(--primary)); color:#fff; font-weight:900; font-size:1.08rem; box-shadow:0 10px 24px rgba(3,60,84,.28); flex-shrink:0; }
+    .avatar{ width:56px; height:56px; border-radius:50%; display:grid; place-items:center; background:linear-gradient(180deg,var(--primary-2),var(--primary)); color:#fff; font-weight:900; font-size:1.08rem; box-shadow:0 10px 24px rgba(2,43,66,.28); flex-shrink:0; }
     .profile-name-wrap{ min-width:0; }
     .profile-name{ font-weight:900; font-size:1.02rem; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .profile-email{ font-size:.88rem; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -250,7 +257,7 @@
     .info-grid{ display:grid; grid-template-columns:1fr; gap:10px; }
     .profile-actions{ display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; }
     .profile-actions-group{ display:flex; gap:10px; flex-wrap:wrap; }
-    .btn.danger{ box-shadow:var(--shadow-1); }
+    .btn.danger{ background:var(--card-bg); color:var(--danger); border:1px solid rgba(239,68,68,.4); box-shadow:var(--shadow-1); }
     /* Several elements on this page (.field, .btn, ...) set their own
        display:flex/inline-flex, which — being an author rule — outranks the
        browser's default [hidden]{display:none} (a UA-stylesheet rule, the
@@ -302,7 +309,7 @@
     }
     .sidebar-backdrop.open{ opacity:1; pointer-events:auto; }
     .sidebar{
-      --primary:#033C54; --primary-light:#065372; --text:#0f172a; --muted:#6b7f9f; --border:#e6edf7;
+      --primary:#022b42; --primary-light:#044563; --text:#0f172a; --muted:#64748b; --border:#e2e8f0;
       --shadow-1:0 8px 22px rgba(3,60,84,.14);
       position:fixed; top:0; right:0; bottom:0; z-index:96;
       width:min(320px, 86vw); background:#fff;
@@ -314,11 +321,11 @@
     .sidebar.open{ transform:translateX(0); visibility:visible; }
     .sidebar-head{
       position:relative; padding:16px; display:flex; flex-direction:column; align-items:center; gap:12px; text-align:center;
-      background:linear-gradient(135deg, #065372, #033C54); color:#fff; flex-shrink:0;
+      background:linear-gradient(135deg, #044563, #022b42); color:#fff; flex-shrink:0;
     }
     .sidebar-school-logo{ display:block; width:120px; max-width:calc(100% - 80px); height:auto; object-fit:contain; }
     .sidebar-head h2{ margin:0; font-size:clamp(.74rem,4.3vw,.98rem); font-weight:900; display:flex; align-items:baseline; gap:7px; min-width:0; overflow:hidden; }
-    .sidebar-head h2 .ic{ flex-shrink:0; font-size:.9em; opacity:.85; }
+    .sidebar-head h2 i{ flex-shrink:0; font-size:.9em; opacity:.85; }
     .sidebar-head h2 span{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .sidebar-close{
       position:absolute; top:16px; left:16px; width:32px; height:32px; flex-shrink:0; border-radius:10px;
@@ -351,14 +358,14 @@
       border-radius:12px; border:1px solid transparent; background:transparent; color:var(--text);
       font-weight:800; font-size:.91rem; cursor:pointer; text-align:right; transition:var(--transition); width:100%;
     }
-    .sidebar-link .ic{
-      width:32px; height:32px; padding:7px; flex-shrink:0;
+    .sidebar-link i{
+      width:32px; height:32px; flex-shrink:0; display:inline-flex; align-items:center; justify-content:center;
       border-radius:9px; background:rgba(3,60,84,.08); color:var(--primary-light); font-size:.95rem;
     }
     @media (hover:hover) and (pointer:fine){ .sidebar-link:hover{ background:rgba(3,60,84,.08); } }
     .sidebar-link:active{ background:rgba(3,60,84,.08); }
     .sidebar-link.is-current{ background:rgba(3,60,84,.08); border-color:rgba(3,60,84,.18); color:var(--primary); box-shadow:inset -4px 0 0 var(--primary); }
-    .sidebar-link.is-current .ic{ background:linear-gradient(145deg, var(--primary-light), var(--primary)); color:#fff; }
+    .sidebar-link.is-current i{ background:linear-gradient(145deg, var(--primary-light), var(--primary)); color:#fff; }
     .sidebar-logout{ justify-content:center; text-align:center; }
     .sidebar-classes{ display:flex; flex-direction:column; gap:6px; padding:2px 2px 4px; }
     .sidebar-class-btn{
@@ -367,9 +374,10 @@
       border-radius:12px; border:none; cursor:pointer;
       background:linear-gradient(145deg, var(--primary-light), var(--primary));
       color:#fff; font-weight:900; font-size:.92rem;
-      box-shadow:0 10px 22px rgba(3,60,84,.24); transition:var(--transition);
+      box-shadow:0 10px 22px rgba(2,43,66,.24); transition:var(--transition);
     }
-    .sidebar-class-btn:hover{ transform:translateY(-2px); box-shadow:0 14px 28px rgba(3,60,84,.3); }
+    .sidebar-class-btn:hover{ transform:translateY(-2px); box-shadow:0 14px 28px rgba(2,43,66,.3); }
+    .sidebar .fas, .sidebar .fa-solid{ font-family:"Font Awesome 6 Free" !important; font-weight:900; }
     #btnSidebarToggle{ width:44px; padding:0; justify-content:center; font-size:1.05rem; }
   </style>
 
@@ -396,12 +404,11 @@
   <meta name="twitter:title" content="القسم - ثانوية أحمد البشر الرومي">
   <meta name="twitter:description" content="???? ?????? ???? ????? ??????.">
   <meta name="twitter:image" content="https://framerusercontent.com/images/jRnZLlPr90qwKsuUwfIlvDS9E.png?width=1200&height=630">
-  <!-- After the page's own styles, so the site's identity (titles, buttons) and the one back button win. -->
-  <link rel="stylesheet" href="/shared/identity.css" />
-  <link rel="stylesheet" href="/shared/back-button.css" />
+    <link rel="stylesheet" href="/shared/identity.css" />
   <link rel="stylesheet" href="/shared/actions.css" />
   <script src="/shared/feedback.js" defer></script>
   <script src="/shared/dialog.js" defer></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
 </head>
 
 <body>
@@ -409,7 +416,7 @@
     <div class="header-container">
       <div class="header-side">
         <button id="btnSidebarToggle" class="btn" type="button" title="القائمة" aria-label="فتح القائمة" aria-controls="sidebar" aria-expanded="false">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-menu"/></svg>
+          <i class="fas fa-bars"></i>
         </button>
       </div>
 
@@ -417,7 +424,7 @@
 
       <div class="header-side end">
         <button id="openAddTeacher" class="btn solid" type="button" aria-label="إضافة معلّم" hidden>
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-user-plus"/></svg><span>إضافة معلّم</span>
+          <i class="fas fa-user-plus"></i><span>إضافة معلّم</span>
         </button>
       </div>
     </div>
@@ -434,9 +441,9 @@
   <aside id="sidebar" class="sidebar" aria-hidden="true">
     <div class="sidebar-head">
       <img class="sidebar-school-logo" src="/images/WhiteLogo.png?v=2" alt="شعار المدرسة" width="1976" height="796">
-      <h2><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-school"/></svg><span>ثانوية أحمد البشر الرومي</span></h2>
+      <h2><i class="fas fa-school" aria-hidden="true"></i><span>ثانوية أحمد البشر الرومي</span></h2>
       <button id="sidebarClose" class="sidebar-close" type="button" aria-label="إغلاق القائمة">
-        <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-x"/></svg>
+        <i class="fas fa-times" aria-hidden="true"></i>
       </button>
     </div>
 
@@ -457,11 +464,11 @@
       <div class="sidebar-group">
         <div class="sidebar-section-label">القسم</div>
         <button class="sidebar-link" type="button" data-href="/Teachers/user.html#dept-notifications">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-bell"/></svg>
+          <i class="fas fa-bell" aria-hidden="true"></i>
           <span>إشعارات القسم</span>
         </button>
         <button class="sidebar-link is-current" type="button" aria-current="page">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-user-cog"/></svg>
+          <i class="fas fa-users-gear" aria-hidden="true"></i>
           <span>قسمي</span>
         </button>
       </div>
@@ -469,7 +476,7 @@
       <div class="sidebar-group">
         <div class="sidebar-section-label">الصفوف</div>
         <button class="sidebar-link" type="button" data-href="/Teachers/user.html#other-classes">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-class"/></svg>
+          <i class="fas fa-users-rectangle" aria-hidden="true"></i>
           <span>صفوف أخرى</span>
         </button>
       </div>
@@ -477,27 +484,27 @@
       <div class="sidebar-group">
         <div class="sidebar-section-label">الجداول</div>
         <button class="sidebar-link" type="button" data-href="/Teachers/user.html">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-calendar-day"/></svg>
+          <i class="fas fa-calendar-day" aria-hidden="true"></i>
           <span>جدولي</span>
         </button>
         <button class="sidebar-link" type="button" data-href="/Teachers/user.html#week">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-calendar-week"/></svg>
+          <i class="fas fa-calendar-week" aria-hidden="true"></i>
           <span>جدولي الأسبوعي</span>
         </button>
         <button class="sidebar-link" type="button" data-href="/Teachers/user.html#dptschedual">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-class"/></svg>
+          <i class="fas fa-users-rectangle" aria-hidden="true"></i>
           <span>جدول القسم</span>
         </button>
         <button class="sidebar-link" type="button" data-href="/Teachers/user.html#schoolschedule">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-grid"/></svg>
+          <i class="fas fa-table-cells" aria-hidden="true"></i>
           <span>جدول المدرسة</span>
         </button>
         <button class="sidebar-link" type="button" data-href="/Teachers/user.html#class-schedules">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-board"/></svg>
+          <i class="fas fa-chalkboard" aria-hidden="true"></i>
           <span>جداول الصفوف</span>
         </button>
         <button class="sidebar-link" type="button" data-href="/Teachers/user.html#teacherschedules">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-teacher"/></svg>
+          <i class="fas fa-chalkboard-user" aria-hidden="true"></i>
           <span>جداول المعلمين</span>
         </button>
       </div>
@@ -505,15 +512,15 @@
       <div class="sidebar-group" data-show="extras" hidden>
         <div class="sidebar-section-label">صلاحيات إضافية</div>
         <button class="sidebar-link" type="button" data-href="/Teachers/user.html#supervisorstudents" data-show="supervisorStudents" hidden>
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-graduation"/></svg>
+          <i class="fas fa-user-graduate" aria-hidden="true"></i>
           <span>الطلاب</span>
         </button>
         <button class="sidebar-link" type="button" data-href="/teachers/morning.html" data-show="morningLate" hidden>
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-clock"/></svg>
+          <i class="fas fa-clock" aria-hidden="true"></i>
           <span>تسجيل تأخير الصباح</span>
         </button>
         <button class="sidebar-link" type="button" data-href="/admins/adminschedule.html" data-show="editSchedule" hidden>
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-grid"/></svg>
+          <i class="fas fa-table-cells" aria-hidden="true"></i>
           <span>تعديل جدول الإدارة</span>
         </button>
       </div>
@@ -521,26 +528,26 @@
       <div class="sidebar-group" data-show="manageAttendance" hidden>
         <div class="sidebar-section-label">الغياب</div>
         <button class="sidebar-link" type="button" data-href="/Teachers/user.html#today-absence">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-calendar-day"/></svg>
+          <i class="fas fa-calendar-day" aria-hidden="true"></i>
           <span>غياب اليوم</span>
         </button>
         <button class="sidebar-link" type="button" data-href="/Teachers/user.html#overall-absence">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-list-check"/></svg>
+          <i class="fas fa-list-check" aria-hidden="true"></i>
           <span>الغياب المختصر</span>
         </button>
         <button class="sidebar-link" type="button" data-href="/Teachers/user.html#detailed-absence">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-search"/></svg>
+          <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
           <span>تدقيق في الغائب</span>
         </button>
         <button class="sidebar-link" type="button" data-href="/teachers/morning.html">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-clock"/></svg>
+          <i class="fas fa-clock" aria-hidden="true"></i>
           <span>تسجيل التأخير الصباحي</span>
         </button>
       </div>
 
       <div class="sidebar-group sidebar-group-bottom">
         <button id="sidebarLogout" class="sidebar-link sidebar-logout" type="button">
-          <svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-logout"/></svg>
+          <i class="fas fa-right-from-bracket" aria-hidden="true"></i>
           <span>تسجيل الخروج</span>
         </button>
       </div>
@@ -556,7 +563,7 @@
   <!-- TEACHER PROFILE / EDIT SHEET -->
   <section id="teacherSheet" class="sheet" aria-hidden="true">
     <div class="sheet-header">
-      <button id="closeTeacher" class="back-btn" aria-label="رجوع" title="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+      <button id="closeTeacher" class="back-btn" aria-label="رجوع"><i class="fas fa-arrow-right"></i><span>رجوع</span></button>
       <h3 class="sheet-title">ملف المعلّم</h3>
     </div>
     <div class="sheet-body">
@@ -579,7 +586,7 @@
               <div class="field"><label class="label" for="edTName">الاسم الكامل</label><div class="plain-value view-only"><span id="vEdTName" class="view-value">—</span></div><div class="input-wrap edit-only"><input id="edTName" class="input" type="text"></div></div>
               <div class="field"><label class="label">رقم البطاقة</label><div class="plain-value"><span id="vEdTEmail" class="view-value">—</span></div></div>
               <div class="field"><label class="label" for="edTPhone">رقم الهاتف</label><div class="plain-value view-only"><span id="vEdTPhone" class="view-value">—</span></div><div class="input-wrap edit-only"><input id="edTPhone" class="input" type="tel"></div></div>
-              <div class="field"><label class="label" for="edTDisplayedPassword">كلمة المرور الظاهرة</label><div class="plain-value view-only"><span id="vEdTDisplayedPassword" class="view-value">—</span></div><div class="input-wrap edit-only password-field"><input id="edTDisplayedPassword" class="input" type="password" autocomplete="off" dir="ltr"><button id="toggleDisplayedPasswordBtn" class="eye-toggle" type="button" aria-label="إظهار كلمة المرور الظاهرة" title="إظهار كلمة المرور الظاهرة"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-eye"/></svg></button></div></div>
+              <div class="field"><label class="label" for="edTDisplayedPassword">كلمة المرور الظاهرة</label><div class="plain-value view-only"><span id="vEdTDisplayedPassword" class="view-value">—</span></div><div class="input-wrap edit-only password-field"><input id="edTDisplayedPassword" class="input" type="password" autocomplete="off" dir="ltr"><button id="toggleDisplayedPasswordBtn" class="eye-toggle" type="button" aria-label="إظهار كلمة المرور الظاهرة" title="إظهار كلمة المرور الظاهرة"><span aria-hidden="true">👁</span></button></div></div>
             </div>
           </section>
 
@@ -601,7 +608,7 @@
               <button id="cancelTeacherEdit" class="btn ghost" type="button" hidden>إلغاء</button>
               <button id="saveTeacher" class="btn solid" type="button" hidden>حفظ</button>
             </div>
-            <button id="deleteTeacher" class="btn danger" type="button" aria-label="حذف المعلّم"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-user-minus"/></svg><span>حذف المعلّم</span></button>
+            <button id="deleteTeacher" class="btn danger" type="button"><i class="fas fa-user-minus"></i>حذف المعلّم</button>
           </div>
           <div id="edOk" class="ok"></div><div id="edErr" class="err"></div>
         </section>
@@ -686,8 +693,8 @@
       doc, getDoc, setDoc, updateDoc, deleteField, writeBatch, serverTimestamp
     } from "/shared/firebase.js";
     import { watchPresence, startPresenceHeartbeat } from "/shared/presence.js";
-    import { mountStudentNotesSheet } from "/shared/student-notes-sheet.js?v=2026-10-16";
-    import { mountTeacherClassSheet } from "/shared/teacher-class-sheet.js?v=2026-10-16d";
+    import { mountStudentNotesSheet } from "/shared/student-notes-sheet.js?v=2026-10-15";
+    import { mountTeacherClassSheet } from "/shared/teacher-class-sheet.js?v=2026-10-14d";
     import { fetchClassList, sortClassList, primeClassList } from "/shared/class-registry.js";
     import { resolveDepartmentName, getDepartmentSubjectFilters, isMergedDepartment, getMergedSubjectsForDepartment } from "/shared/departments.js";
     import { isTruthyFlag, canManageAttendance } from "/shared/auth-guard.js";
@@ -914,7 +921,7 @@
         const chip=document.createElement('button');
         chip.type='button';
         chip.className='class-chip';
-        chip.innerHTML=`<span class="class-chip-icon"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-users"/></svg></span><span class="class-chip-text"><span class="class-chip-name">${escapeHtml(toArabicDigits(c))}</span><span class="class-chip-sub">عرض الطلاب والملاحظات</span></span><svg class="ic class-chip-chev" aria-hidden="true"><use href="/shared/icons.svg#i-chevron-left"/></svg>`;
+        chip.innerHTML=`<span class="class-chip-icon"><i class="fas fa-users" aria-hidden="true"></i></span><span class="class-chip-text"><span class="class-chip-name">${escapeHtml(toArabicDigits(c))}</span><span class="class-chip-sub">عرض الطلاب والملاحظات</span></span><i class="fas fa-chevron-left class-chip-chev" aria-hidden="true"></i>`;
         chip.addEventListener('click',()=>{
           if(teacherEditMode || !currentTeacher?.uid) return;
           classSheet.open(c,{ teacherUid:currentTeacher.uid, teacherName:currentTeacher.data?.name||'' });

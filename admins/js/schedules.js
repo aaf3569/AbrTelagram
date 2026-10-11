@@ -68,7 +68,7 @@ function recall() {
 
 const ICON = {
   menu: '<svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>',
-  back: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>',
+  back: '<svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>',
   calendar: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>',
   download: '<svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>',
   day: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18M9 15h6"/></svg>',
@@ -157,9 +157,9 @@ async function mountShell(host, title, hooks) {
   wrap.style.cssText = "display:contents";
   wrap.innerHTML = `
     <header class="sch-header">
-      <button class="sch-icon-btn sch-back back-btn" type="button" aria-label="رجوع" title="رجوع">${ICON.back}</button>
-      <h2 class="sch-title">${escapeHtml(title)}</h2>
       <button class="sch-icon-btn sch-menu" type="button" aria-label="فتح القائمة" title="القائمة">${ICON.menu}</button>
+      <h2 class="sch-title">${escapeHtml(title)}</h2>
+      <button class="sch-icon-btn sch-back" type="button" aria-label="رجوع" title="رجوع">${ICON.back}</button>
     </header>
     <div class="sch-body"></div>
     <div class="sch-backdrop"></div>
@@ -584,8 +584,8 @@ async function mountTimetableSheet(host, hooks, { school }) {
         ? ssPopHead(`تنزيل ${what}`, "ملف PDF بصفحة واحدة بحجم A3 لكل المعلمين")
         : `<div class="sch-modal-head"><div><b>تنزيل ${what}</b></div><button class="sch-x" type="button" aria-label="إغلاق">×</button></div>`}
       <div class="${school ? "ss-pop-body" : "sch-modal-body"}">
-        <button class="sch-option" type="button" data-kind="day"><span class="opt-ic">${ICON.day}</span><span><b>جدول اليوم</b><small>${fmtLong(dateISO)}</small></span></button>
-        <button class="sch-option" type="button" data-kind="week"><span class="opt-ic">${ICON.week}</span><span><b>جدول الأسبوع</b><small>${rangeText(weekStartFor(dateISO))}</small></span></button>
+        <button class="sch-option" type="button" data-kind="day"><span class="ic">${ICON.day}</span><span><b>جدول اليوم</b><small>${fmtLong(dateISO)}</small></span></button>
+        <button class="sch-option" type="button" data-kind="week"><span class="ic">${ICON.week}</span><span><b>جدول الأسبوع</b><small>${rangeText(weekStartFor(dateISO))}</small></span></button>
         <div class="sch-dl-status" id="dlStatus" hidden></div>
       </div>`);
     modal.el.querySelectorAll(".sch-option").forEach((b) => b.addEventListener("click", () => downloadPdf(b.dataset.kind)));

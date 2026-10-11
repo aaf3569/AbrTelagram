@@ -3,13 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.gstatic.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; manifest-src 'self'; upgrade-insecure-requests; block-all-mixed-content">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.gstatic.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; manifest-src 'self'; upgrade-insecure-requests; block-all-mixed-content">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
 <!-- perf: start the module graph downloading immediately -->
+<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
 <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js" crossorigin>
 <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js" crossorigin>
 <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js" crossorigin>
@@ -38,11 +39,11 @@
       --radius-lg:18px;
       --focus:#79b3c8;
 
-      --red:#b42318;
-      --yellow:#a06d00;
-      --green:#1a7f37;
+      --red:#ef4444;
+      --yellow:#f59e0b;
+      --green:#10b981;
 
-      --yellowBg: rgba(160,109,0,.10);
+      --yellowBg: rgba(245,158,11,.10);
       --chip:#f1f5f9;
 
       --headerH: 122px;
@@ -91,8 +92,6 @@
       gap:10px;
     }
 
-    .header-inner > .back-btn{ justify-self:start; }
-
     .header-center{
       display:flex;
       flex-direction:column;
@@ -103,9 +102,11 @@
       padding:2px 0;
     }
 
-    /* Font, size and weight: /shared/identity.css. */
     .site-title{
       margin:0;
+      font-weight:900;
+      letter-spacing:.2px;
+      font-size: clamp(1.05rem, 2.8vw, 1.5rem);
       color: var(--primary);
       line-height:1.25;
     }
@@ -560,23 +561,23 @@
   <meta name="twitter:title" content="تأخير الصباح - لوحة الإدارة | ثانوية أحمد البشر الرومي">
   <meta name="twitter:description" content="???? ?????? ???? ????? ??????.">
   <meta name="twitter:image" content="https://framerusercontent.com/images/jRnZLlPr90qwKsuUwfIlvDS9E.png?width=1200&height=630">
-  <!-- After the page's own styles, so the site's identity (titles, buttons) and the one back button win. -->
-  <link rel="stylesheet" href="/shared/identity.css" />
-  <link rel="stylesheet" href="/shared/back-button.css" />
+    <link rel="stylesheet" href="/shared/identity.css" />
   <link rel="stylesheet" href="/shared/actions.css" />
   <script src="/shared/feedback.js" defer></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 
 <body>
   <header class="site-header" id="siteHeader">
     <div class="header-inner">
       <!-- رجوع → the hub (/shared/hub-title-link.js picks it, as for the title). -->
-      <button class="back-btn" id="hubBackBtn" type="button" data-hub-back aria-label="رجوع" title="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+      <button class="icon-btn" id="hubBackBtn" type="button" data-hub-back aria-label="رجوع" title="رجوع"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
 
       <div class="header-center">
         <h1 class="site-title">ثانوية أحمد البشر الرومي</h1>
         <div class="site-subtitle">تأخير الصباح | لوحة الإدارة</div>
-      </div>
+      <div></div>
+    </div>
     </div>
 
     <div class="date-chip">
@@ -773,7 +774,7 @@
           const btn = document.createElement('button');
           btn.className = 'cell-btn';
           btn.type = 'button';
-          btn.innerHTML = `<svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-user-clock"/></svg> ${toArabicDigits(cell.count)}`;
+          btn.innerHTML = `<i class="fa-solid fa-user-clock"></i> ${toArabicDigits(cell.count)}`;
           btn.addEventListener('click', (e) => {
             e.stopPropagation();
             openModalForClass(cn);
@@ -850,8 +851,8 @@
       });
 
       const headerTags = [];
-      headerTags.push(`<span class="tag warning"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-alert-triangle"/></svg> ${toArabicDigits(items.length)} متأخر</span>`);
-      headerTags.push(`<span class="tag"><svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-calendar-day"/></svg> ${toArabicDigits(toInputDate(selectedDate))}</span>`);
+      headerTags.push(`<span class="tag warning"><i class="fa-solid fa-triangle-exclamation"></i> ${toArabicDigits(items.length)} متأخر</span>`);
+      headerTags.push(`<span class="tag"><i class="fa-solid fa-calendar-day"></i> ${toArabicDigits(toInputDate(selectedDate))}</span>`);
 
       modalBody.innerHTML = `
         <div class="section">
