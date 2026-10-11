@@ -113,8 +113,10 @@
       font-size: 1.05rem; cursor: pointer; box-shadow: var(--shadow-1); transition: var(--transition);
       display: inline-flex; align-items: center; justify-content: center;
     }
-    .sidebar-toggle-btn:hover { transform: translateY(calc(-50% - 2px)); box-shadow: var(--shadow-2); border-color: rgba(2, 43, 66, 0.4); }
-    .sidebar-toggle-btn:active { transform: translateY(-50%) scale(0.97); }
+    /* Keep the hit area stationary throughout a mouse click. */
+    .sidebar-toggle-btn:hover { box-shadow: var(--shadow-2); border-color: rgba(2, 43, 66, 0.4); }
+    .sidebar-toggle-btn:active { box-shadow: var(--shadow-1); }
+    .sidebar-toggle-btn > * { pointer-events: none; }
     /* Toggle button is absolutely positioned to one side, so the title stays
        centered against the header's full width instead of the leftover
        space beside the button — symmetric padding keeps it clear of the
