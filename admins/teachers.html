@@ -666,7 +666,6 @@
                    hasManageAttendancePermission(). -->
               <div class="checkbox-wrap"><input type="checkbox" id="edTAllowManageAttendance"><label for="edTAllowManageAttendance" class="label" style="margin:0;">إدارة الغياب</label></div>
               <div class="checkbox-wrap"><input type="checkbox" id="edTAllowAllBudgets"><label for="edTAllowAllBudgets" class="label" style="margin:0;">السماح بكل الميزانيات</label></div>
-              <div class="checkbox-wrap"><input type="checkbox" id="edTIsPrincipal"><label for="edTIsPrincipal" class="label" style="margin:0;">مدير المدرسة</label></div>
             </div>
           </section>
         </div>
@@ -777,6 +776,17 @@
               <div class="inline-add"><button id="edAAddClass" class="add" type="button">+ إضافة</button></div>
             </div>
           </section>
+
+          <!-- «مدير المدرسة» (permissions.isPrincipal): the name that goes under
+               «مدير المدرسة» on the department-budget form
+               (shared/department-budgets.js). -->
+          <section class="profile-card profile-card-perms">
+            <h4 class="profile-card-title">صلاحيات المستخدم</h4>
+            <div id="adminPermissionsView" class="permissions-view view-only"></div>
+            <div class="permissions-editor edit-only">
+              <div class="checkbox-wrap"><input type="checkbox" id="edAIsPrincipal"><label for="edAIsPrincipal" class="label" style="margin:0;">مدير المدرسة</label></div>
+            </div>
+          </section>
         </div>
 
         <section class="profile-card profile-actions-card">
@@ -838,7 +848,6 @@
         <div class="field add-teacher-full"><div class="checkbox-wrap"><input type="checkbox" id="teacherAllowSupervisorStudents"><label for="teacherAllowSupervisorStudents" class="label" style="margin:0;">ملفات الطلاب</label></div></div>
         <div class="field add-teacher-full"><div class="checkbox-wrap"><input type="checkbox" id="teacherAllowManageAttendance"><label for="teacherAllowManageAttendance" class="label" style="margin:0;">إدارة الغياب</label></div></div>
         <div class="field add-teacher-full"><div class="checkbox-wrap"><input type="checkbox" id="teacherAllowAllBudgets"><label for="teacherAllowAllBudgets" class="label" style="margin:0;">السماح بكل الميزانيات</label></div></div>
-        <div class="field add-teacher-full"><div class="checkbox-wrap"><input type="checkbox" id="teacherIsPrincipal"><label for="teacherIsPrincipal" class="label" style="margin:0;">مدير المدرسة</label></div></div>
         <div class="field add-teacher-full"><label class="label">الفصول (Classes)</label><div id="auClasses" class="classes-list"></div><div class="inline-add"><button id="auAddClass" class="add" type="button">+ إضافة</button></div></div>
       </div>
       <div class="modal-footer"><button id="cancelAddTeacher" class="btn ghost" type="button">إلغاء</button><button id="createTeacherBtn" class="btn primary" type="button">إنشاء الحساب</button></div>
@@ -1044,7 +1053,6 @@
     const edTAllowSupervisorStudents=document.getElementById('edTAllowSupervisorStudents');
     const edTAllowManageAttendance=document.getElementById('edTAllowManageAttendance');
     const edTAllowAllBudgets=document.getElementById('edTAllowAllBudgets');
-    const edTIsPrincipal=document.getElementById('edTIsPrincipal');
     const editTeacherBtn=document.getElementById('editTeacher');
     const cancelTeacherEditBtn=document.getElementById('cancelTeacherEdit');
     const saveTeacher=document.getElementById('saveTeacher');
@@ -1090,7 +1098,6 @@
     const teacherAllowSupervisorStudents=document.getElementById('teacherAllowSupervisorStudents');
     const teacherAllowManageAttendance=document.getElementById('teacherAllowManageAttendance');
     const teacherAllowAllBudgets=document.getElementById('teacherAllowAllBudgets');
-    const teacherIsPrincipal=document.getElementById('teacherIsPrincipal');
     const createTeacherBtn=document.getElementById('createTeacherBtn');
     const auClasses=document.getElementById('auClasses');
     const auAddClass=document.getElementById('auAddClass');
@@ -1132,6 +1139,8 @@
     const adminClassesEditorWrap=document.getElementById('adminClassesEditorWrap');
     const edAClasses=document.getElementById('edAClasses');
     const edAAddClass=document.getElementById('edAAddClass');
+    const edAIsPrincipal=document.getElementById('edAIsPrincipal');
+    const adminPermissionsView=document.getElementById('adminPermissionsView');
     const editAdmin=document.getElementById('editAdmin');
     const cancelAdminEdit=document.getElementById('cancelAdminEdit');
     const saveAdmin=document.getElementById('saveAdmin');
@@ -1756,7 +1765,7 @@
     }
     function normalizePermissions(data){
       const p=(data&&typeof data==='object'&&data.permissions&&typeof data.permissions==='object')?data.permissions:{};
-      return { allowEditSchedule: !!p.allowEditSchedule, allowMorningLate: !!p.allowMorningLate, allowSupervisorStudents: !!p.allowSupervisorStudents, allowManageAttendance: p.allowManageAttendance === true, allowAllBudgets: p.allowAllBudgets === true, isPrincipal: p.isPrincipal === true };
+      return { allowEditSchedule: !!p.allowEditSchedule, allowMorningLate: !!p.allowMorningLate, allowSupervisorStudents: !!p.allowSupervisorStudents, allowManageAttendance: p.allowManageAttendance === true, allowAllBudgets: p.allowAllBudgets === true };
     }
     function renderPermissionsPreview(permissions){
       permissionsView.innerHTML='';
@@ -1768,7 +1777,6 @@
       if(permissions.allowManageAttendance) active.push('إدارة الغياب');
       // «السماح بتعديل الجدول» also opens ميزانيات الأقسام (firestore.rules' hasAllBudgetsPermission).
       if(permissions.allowAllBudgets || permissions.allowEditSchedule) active.push('كل الميزانيات');
-      if(permissions.isPrincipal) active.push('مدير المدرسة');
       if(!active.length){
         const empty=document.createElement('div');
         empty.className='perm-empty';
@@ -1963,7 +1971,6 @@
         allowSupervisorStudents:edTAllowSupervisorStudents.checked,
         allowManageAttendance:edTAllowManageAttendance.checked,
         allowAllBudgets:edTAllowAllBudgets.checked,
-        isPrincipal:edTIsPrincipal.checked,
         classes:getClassesFrom(edClasses),
       });
     }
@@ -1983,7 +1990,6 @@
       const allowSupervisorStudents=!!edTAllowSupervisorStudents.checked;
       const allowManageAttendance=!!edTAllowManageAttendance.checked;
       const allowAllBudgets=!!edTAllowAllBudgets.checked;
-      const isPrincipal=!!edTIsPrincipal.checked;
       profileName.textContent=name;
       profileEmail.textContent=civilId;
       teacherAvatar.textContent=getInitials(name,civilId,currentTeacher?.uid);
@@ -1998,7 +2004,7 @@
       setViewValue(vEdTRole,role==='head'?'رئيس القسم':'مدرس');
       setViewValue(vEdTSpecialization, edTSpecializationField.hidden ? '—' : (edTSpecialization.value||'—'));
       setViewValue(vEdTSpecialization2, edTSpecialization2Field.hidden ? '—' : (edTSpecialization2.value||'—'));
-      renderPermissionsPreview({ isSupervisor, supervisorGrade, allowEditSchedule, allowMorningLate, allowSupervisorStudents, allowManageAttendance, allowAllBudgets, isPrincipal });
+      renderPermissionsPreview({ isSupervisor, supervisorGrade, allowEditSchedule, allowMorningLate, allowSupervisorStudents, allowManageAttendance, allowAllBudgets });
       renderClassesPreview(getClassesFrom(edClasses));
       updateSupervisorCheckboxLabels();
       if(teacherEditMode) saveTeacher.disabled=!isEditFormDirty();
@@ -2007,7 +2013,7 @@
       teacherEditMode=!!isEdit;
       teacherProfileShell.classList.toggle('teacher-readonly', !teacherEditMode);
       teacherProfileShell.classList.toggle('teacher-editing', teacherEditMode);
-      [edTName,edTEmail,edTPhone,edTDisplayedPassword,edTRole,edTSpecialization,edTSpecialization2,edTIsSupervisor,edTAllowEditSchedule,edTAllowMorningLate,edTAllowSupervisorStudents,edTAllowManageAttendance,edTAllowAllBudgets,edTIsPrincipal].forEach(el=>el.disabled=!teacherEditMode);
+      [edTName,edTEmail,edTPhone,edTDisplayedPassword,edTRole,edTSpecialization,edTSpecialization2,edTIsSupervisor,edTAllowEditSchedule,edTAllowMorningLate,edTAllowSupervisorStudents,edTAllowManageAttendance,edTAllowAllBudgets].forEach(el=>el.disabled=!teacherEditMode);
       toggleDisplayedPasswordBtn.disabled=!teacherEditMode;
       if(!teacherEditMode) setDisplayedPasswordVisibility(false);
       classesEditorWrap.hidden=!teacherEditMode;
@@ -2122,7 +2128,15 @@
         phone:edAPhone.value.trim(),
         subject:edASubject.value.trim(),
         classes:getClassesFrom(edAClasses),
+        isPrincipal:edAIsPrincipal.checked,
       });
+    }
+    function renderAdminPermissionsPreview(){
+      adminPermissionsView.innerHTML='';
+      const item=document.createElement(edAIsPrincipal.checked?'span':'div');
+      item.className=edAIsPrincipal.checked?'perm-chip':'perm-empty';
+      item.textContent=edAIsPrincipal.checked?'مدير المدرسة':'لا توجد صلاحيات إضافية.';
+      adminPermissionsView.appendChild(item);
     }
     function captureAdminEditSnapshot(){ adminEditSnapshot=serializeAdminEditForm(); }
     function isAdminEditFormDirty(){ return adminEditSnapshot!==null && serializeAdminEditForm()!==adminEditSnapshot; }
@@ -2139,13 +2153,14 @@
       setViewValue(vEdAPhone,phone);
       setViewValue(vEdASubject,subject);
       renderClassesPreview(getClassesFrom(edAClasses), adminClassesView);
+      renderAdminPermissionsPreview();
       if(adminEditMode) saveAdmin.hidden=!isAdminEditFormDirty();
     }
     function setAdminEditMode(isEdit){
       adminEditMode=!!isEdit;
       adminProfileShell.classList.toggle('teacher-readonly', !adminEditMode);
       adminProfileShell.classList.toggle('teacher-editing', adminEditMode);
-      [edAName,edAEmail,edAPhone,edASubject].forEach(el=>el.disabled=!adminEditMode);
+      [edAName,edAEmail,edAPhone,edASubject,edAIsPrincipal].forEach(el=>el.disabled=!adminEditMode);
       adminClassesEditorWrap.hidden=!adminEditMode;
       editAdmin.hidden=adminEditMode;
       deleteAdminBtn.hidden=!adminEditMode;
@@ -2166,6 +2181,7 @@
         edAEmail.value=getTeacherCivilId(d);
         edAPhone.value=d.phone||'';
         edASubject.value=d.subject||'';
+        edAIsPrincipal.checked=d.permissions?.isPrincipal===true;
         edAClasses.innerHTML='';
         const cls=Array.isArray(d.classes)?d.classes:[];
         cls.forEach(v=>edAClasses.appendChild(makeClassRow(v, updateAdminProfileSummary)));
@@ -2188,6 +2204,7 @@
       edAEmail.value=getTeacherCivilId(d);
       edAPhone.value=d.phone||'';
       edASubject.value=d.subject||'';
+      edAIsPrincipal.checked=d.permissions?.isPrincipal===true;
       edAClasses.innerHTML='';
       const cls=Array.isArray(d.classes)?d.classes:[];
       cls.forEach(v=>edAClasses.appendChild(makeClassRow(v, updateAdminProfileSummary)));
@@ -2195,6 +2212,7 @@
     });
     edAAddClass.addEventListener('click',()=>{edAClasses.appendChild(makeClassRow("", updateAdminProfileSummary));updateAdminProfileSummary();});
     [edAName,edAEmail,edAPhone,edASubject].forEach(el=>el.addEventListener('input', updateAdminProfileSummary));
+    edAIsPrincipal.addEventListener('change', updateAdminProfileSummary);
     edAEmail.addEventListener('input',()=>{const digits=edAEmail.value.replace(/\D+/g,''); if(edAEmail.value!==digits) edAEmail.value=digits;});
     saveAdmin.addEventListener('click', async ()=>{
       edAOk.style.display='none';edAErr.style.display='none';
@@ -2209,8 +2227,10 @@
         if(!civilId) throw new Error('أدخل رقم المستخدم بالأرقام فقط.');
         if(!emailRx.test(email)) throw new Error('تعذّر توليد الحساب من رقم المستخدم.');
         await syncAuthEmailIfChanged(uid, currentAdmin?.data?.email, email);
-        await updateDoc(doc(db,'teachers',uid),{name,email,civilId,phone,subject,classes});
-        currentAdmin.data={...(currentAdmin.data||{}),name,email,civilId,phone,subject,classes};
+        const prevPermissions=(currentAdmin?.data?.permissions&&typeof currentAdmin.data.permissions==='object')?currentAdmin.data.permissions:{};
+        const permissions={...prevPermissions,isPrincipal:!!edAIsPrincipal.checked};
+        await updateDoc(doc(db,'teachers',uid),{name,email,civilId,phone,subject,classes,permissions});
+        currentAdmin.data={...(currentAdmin.data||{}),name,email,civilId,phone,subject,classes,permissions};
         adminTitle.textContent=name||civilId||uid;
         setAdminEditMode(false);
         edAOk.textContent='تم حفظ التعديلات.';edAOk.style.display='block';
@@ -2348,7 +2368,6 @@
       edTAllowSupervisorStudents.checked=!!normalizePermissions(d).allowSupervisorStudents;
       edTAllowManageAttendance.checked=!!normalizePermissions(d).allowManageAttendance;
       edTAllowAllBudgets.checked=!!normalizePermissions(d).allowAllBudgets;
-      edTIsPrincipal.checked=!!normalizePermissions(d).isPrincipal;
       edClasses.innerHTML='';
       const cls=Array.isArray(d.classes)?d.classes:[];
       if(!cls.length) edClasses.appendChild(makeClassRow(""));
@@ -2382,7 +2401,7 @@
       }
     });
     edAddClass.addEventListener('click',()=>{edClasses.appendChild(makeClassRow(""));updateProfileSummary();});
-    [edTName,edTEmail,edTPhone,edTDisplayedPassword,edTRole,edTSpecialization,edTSpecialization2,edTAllowEditSchedule,edTAllowMorningLate,edTAllowSupervisorStudents,edTAllowManageAttendance,edTAllowAllBudgets,edTIsPrincipal].forEach(el=>{
+    [edTName,edTEmail,edTPhone,edTDisplayedPassword,edTRole,edTSpecialization,edTSpecialization2,edTAllowEditSchedule,edTAllowMorningLate,edTAllowSupervisorStudents,edTAllowManageAttendance,edTAllowAllBudgets].forEach(el=>{
       const ev=el.tagName==='SELECT'||el.type==='checkbox'?'change':'input';
       el.addEventListener(ev, updateProfileSummary);
     });
@@ -2414,7 +2433,6 @@
       const absenceStaff=selectedSubject===ABSENCE_MANAGEMENT_DEPARTMENT;
       teacherAllowManageAttendance.checked=absenceStaff;
       teacherAllowAllBudgets.checked=false;
-      teacherIsPrincipal.checked=false;
       auClasses.innerHTML='';
       if(!absenceStaff) auClasses.appendChild(makeClassRow(""));
       syncAddTeacherSpecializationField();
@@ -2544,7 +2562,6 @@
         edTAllowSupervisorStudents.checked=!!normalizePermissions(d).allowSupervisorStudents;
         edTAllowManageAttendance.checked=!!normalizePermissions(d).allowManageAttendance;
         edTAllowAllBudgets.checked=!!normalizePermissions(d).allowAllBudgets;
-        edTIsPrincipal.checked=!!normalizePermissions(d).isPrincipal;
         edClasses.innerHTML='';const cls=Array.isArray(d.classes)?d.classes:[];if(!cls.length)edClasses.appendChild(makeClassRow(""));else cls.forEach(v=>edClasses.appendChild(makeClassRow(v)));
         setTeacherEditMode(false);
         updateProfileSummary();
@@ -2585,7 +2602,7 @@
         // including the French elective for French teachers.
         const subject2ToSave=(!edTSpecialization2Field.hidden && edTSpecialization2.value) ? edTSpecialization2.value : '';
         const prevPermissions=(currentTeacher?.data?.permissions&&typeof currentTeacher.data.permissions==='object')?currentTeacher.data.permissions:{};
-        const permissions={...prevPermissions,allowEditSchedule:!!edTAllowEditSchedule.checked,allowMorningLate:!!edTAllowMorningLate.checked,allowSupervisorStudents:!!edTAllowSupervisorStudents.checked,allowManageAttendance:!!edTAllowManageAttendance.checked,allowAllBudgets:!!edTAllowAllBudgets.checked,isPrincipal:!!edTIsPrincipal.checked};
+        const permissions={...prevPermissions,allowEditSchedule:!!edTAllowEditSchedule.checked,allowMorningLate:!!edTAllowMorningLate.checked,allowSupervisorStudents:!!edTAllowSupervisorStudents.checked,allowManageAttendance:!!edTAllowManageAttendance.checked,allowAllBudgets:!!edTAllowAllBudgets.checked};
         if(!name) throw new Error('أدخل الاسم.');
         if(!civilId) throw new Error('أدخل رقم البطاقة بالأرقام فقط.');
         if(!emailRx.test(email)) throw new Error('تعذّر توليد البريد الإلكتروني من رقم البطاقة.');
@@ -2732,7 +2749,7 @@
         const displayedPassword=teacherDisplayedPassword.value||password;
         const role=teacherRole.value, isSupervisor=teacherIsSupervisor.checked, classes=getClassesFrom(auClasses);
         const supervisorGrade=isSupervisor ? normalizeSupervisorGrade(addSupervisorGrade) : '';
-        const permissions={allowEditSchedule:!!teacherAllowEditSchedule.checked,allowMorningLate:!!teacherAllowMorningLate.checked,allowSupervisorStudents:!!teacherAllowSupervisorStudents.checked,allowManageAttendance:!!teacherAllowManageAttendance.checked,allowAllBudgets:!!teacherAllowAllBudgets.checked,isPrincipal:!!teacherIsPrincipal.checked};
+        const permissions={allowEditSchedule:!!teacherAllowEditSchedule.checked,allowMorningLate:!!teacherAllowMorningLate.checked,allowSupervisorStudents:!!teacherAllowSupervisorStudents.checked,allowManageAttendance:!!teacherAllowManageAttendance.checked,allowAllBudgets:!!teacherAllowAllBudgets.checked};
         const selectedSpecialization=(teacherSpecialization.value||'').trim();
         // The French elective is an optional second subject, never the
         // teacher's primary French specialization.
