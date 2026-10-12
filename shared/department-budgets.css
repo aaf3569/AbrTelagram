@@ -347,3 +347,24 @@ table.roster select.chg { border-color: var(--warn); background: #fffaf0; }
   table.roster { font-size: 13px; }
   table.roster select { min-width: 150px; }
 }
+
+/* ---- «ميزانية المدرسة» on a phone: one card per department, buttons in view ---- */
+@media (max-width: 640px) {
+  .school-list, .school-list tbody { display: block; width: 100%; }
+  .school-list thead { display: none; }
+  .school-list tr {
+    display: grid; grid-template-columns: 1fr auto; grid-template-areas: "dp st" "head head" "date date" "acts acts";
+    gap: 2px 8px; align-items: center; padding: 12px 2px; border-bottom: 1px solid var(--line);
+  }
+  .school-list td { display: block; padding: 0; border: 0; text-align: right !important; }
+  .school-list .c-dp { grid-area: dp; font-weight: 700; font-size: 1rem; color: var(--navy); }
+  .school-list .c-st { grid-area: st; }
+  .school-list .c-head { grid-area: head; font-size: 13px; color: var(--mute); }
+  .school-list .c-head::before { content: "رئيس القسم: "; }
+  .school-list .c-date { grid-area: date; font-size: 13px; color: var(--mute); }
+  .school-list .c-date::before { content: "آخر تحديث: "; }
+  .school-list .c-acts { grid-area: acts; margin-top: 8px; }
+  .school-list .acts { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 8px; }
+  .school-list .acts .btn { width: 100%; min-height: 44px; }
+  .school-list .badge { white-space: normal; text-align: center; }
+}

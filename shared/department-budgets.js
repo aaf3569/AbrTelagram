@@ -1055,17 +1055,19 @@ function renderSchool(box) {
     return { dp, b, head: headOf(dp) || "—", have, req, gap: req === null || req === undefined ? null : req - have, periods: b ? sum(b.data.teachers, nisab) : 0 };
   });
   const td = (v, cls) => el("td", { className: cls || "", textContent: v === null || v === undefined || v === "" ? "—" : v });
-  const table = el("table", { className: "bsum" },
+  // On a phone each department is a card (department-budgets.css: .school-list):
+  // name and status, head and last update, then the buttons, all in view.
+  const table = el("table", { className: "bsum school-list" },
     el("thead", {}, el("tr", {}, ...["القسم", "رئيس القسم", "آخر تحديث", "الحالة", ""].map((h) => el("th", { textContent: h })))),
     el("tbody", {}, ...rows.map((r) => {
       const edit = el("button", { className: "btn ghost small", type: "button", textContent: "تعديل" });
       edit.onclick = () => openEditor(r.dp);
       const view = r.b ? el("button", { className: "btn ghost small", type: "button", textContent: "معاينة" }) : null;
       if (view) view.onclick = () => { S.preview = r.dp; setView("preview"); };
-      return el("tr", {}, td(r.dp), td(r.head),
-        td(!r.b ? "لم تُدخل بعد" : [r.b.updatedAt ? fmtDate(r.b.updatedAt) : "", r.b.updatedBy].filter(Boolean).join(" · ") || "محفوظة"),
-        el("td", {}, r.b ? approvalBadge(r.b) : "—"),
-        el("td", {}, el("div", { className: "acts" }, view, edit, approveButton(r.dp, true))));
+      return el("tr", {}, td(r.dp, "c-dp"), td(r.head, "c-head"),
+        td(!r.b ? "لم تُدخل بعد" : [r.b.updatedAt ? fmtDate(r.b.updatedAt) : "", r.b.updatedBy].filter(Boolean).join(" · ") || "محفوظة", "c-date"),
+        el("td", { className: "c-st" }, r.b ? approvalBadge(r.b) : "—"),
+        el("td", { className: "c-acts" }, el("div", { className: "acts" }, view, edit, approveButton(r.dp, true))));
     })));
   box.append(el("div", { className: "card" },
     el("h2", { textContent: "ميزانية المدرسة" }),
