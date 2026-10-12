@@ -1268,8 +1268,14 @@ service cloud.firestore {
       // A save of the budget itself (only on «حفظ»): always leaves it
       // «غير معتمدة» — whoever saves, a head included, can't approve this way.
       allow create, update: if (isAdmin() || hasAllBudgetsPermission() || (isHead() && headDepartment() == dept))
-        && request.resource.data.keys().hasOnly(['periods', 'required', 'note', 'teachers', 'updatedAt', 'updatedBy', 'updatedByUid', 'approved'])
+        && request.resource.data.keys().hasOnly(['periods', 'required', 'note', 'teachers', 'updatedAt', 'updatedBy', 'updatedByUid', 'approved', 'approvedCopy', 'approvedCopyAt'])
         && request.resource.data.get('approved', false) == false
+        // The approved copy («ميزانية كل الأقسام» shows it) passes through a
+        // save untouched: none on a new budget, the same one on an update.
+        && (resource == null
+              ? !('approvedCopy' in request.resource.data) && !('approvedCopyAt' in request.resource.data)
+              : request.resource.data.get('approvedCopy', null) == resource.data.get('approvedCopy', null)
+                && request.resource.data.get('approvedCopyAt', null) == resource.data.get('approvedCopyAt', null))
         && (request.resource.data.periods is map)
         && (request.resource.data.teachers is list)
         && request.resource.data.teachers.size() <= 60
@@ -1284,16 +1290,26 @@ service cloud.firestore {
         && request.resource.data.updatedAt == request.time;
       // «اعتماد الميزانية» / «إلغاء الاعتماد»: those who see every
       // department, and nothing but the approval fields changes. Approving
-      // is in the approver's own name, at the server's time.
+      // is in the approver's own name, at the server's time, and copies the
+      // budget exactly as stored (approvedCopy); withdrawing it removes the copy.
       allow update: if (isAdmin() || hasAllBudgetsPermission())
         && request.resource.data.diff(resource.data).affectedKeys()
-             .hasOnly(['approved', 'approvedBy', 'approvedByUid', 'approvedAt'])
+             .hasOnly(['approved', 'approvedBy', 'approvedByUid', 'approvedAt', 'approvedCopy', 'approvedCopyAt'])
         && (request.resource.data.approved is bool)
-        && (request.resource.data.approved == false
+        && ((request.resource.data.approved == false
+              && !('approvedCopy' in request.resource.data)
+              && !('approvedCopyAt' in request.resource.data))
             || ((request.resource.data.approvedBy is string)
                 && request.resource.data.approvedBy.size() <= 120
                 && request.resource.data.approvedByUid == request.auth.uid
-                && request.resource.data.approvedAt == request.time));
+                && request.resource.data.approvedAt == request.time
+                && request.resource.data.approvedCopyAt == request.time
+                && request.resource.data.approvedCopy == {
+                     'periods': resource.data.get('periods', {}),
+                     'required': resource.data.get('required', null),
+                     'note': resource.data.get('note', ''),
+                     'teachers': resource.data.get('teachers', [])
+                   }));
       allow delete: if isAdmin();
     }
 

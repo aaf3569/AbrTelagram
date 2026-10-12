@@ -22,7 +22,11 @@
 //                  subjects: [], subj: { [class]: subject },
 //                  split: { [class]: { [subject]: n } } }],
 //     updatedAt, updatedBy, updatedByUid,
-//     approved, approvedBy, approvedByUid, approvedAt }   // «اعتماد الميزانية»
+//     approved, approvedBy, approvedByUid, approvedAt,   // «اعتماد الميزانية»
+//     approvedCopy: { periods, required, note, teachers }, approvedCopyAt }
+// approvedCopy is the budget as it was approved: «ميزانية كل الأقسام» shows
+// that, so a change reaches it only once approved again. A save keeps it as
+// it is; «إلغاء الاعتماد» removes it.
 // Nothing is saved until «حفظ» is pressed. Every save leaves the budget
 // «غير معتمدة» (approved: false); only those who see every department
 // (approvers) approve it, which changes nothing else. The teachers'
@@ -140,7 +144,12 @@ function academicYear() {
 // February–July the second.
 const semesterOf = (d) => "الفصل الدراسي " + (d.getMonth() >= 1 && d.getMonth() <= 6 ? "الثاني" : "الأول");
 // The date a department's budget was last saved (today if it never was).
-const budgetDate = (dp) => S.budgets.get(dp)?.updatedAt || new Date();
+// (For the approved copy: when it was approved.)
+const budgetDate = (dp, d) => {
+  const b = S.budgets.get(dp);
+  if (b && d && !b.approved && b.copy && sameBudget(d, b.copy)) return b.copyAt || b.updatedAt || new Date();
+  return b?.updatedAt || new Date();
+};
 const dayText = (d) => new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Kuwait", day: "numeric", month: "numeric", year: "numeric" }).format(d);
 // Classes that open a new grade (the first 11 and the first 12): a heavy
 // line before them on the official form.
@@ -546,12 +555,24 @@ async function load() {
 // One budget as kept here: its data, when and by whom it was saved, and
 // whether it is approved (a budget saved before approvals is not).
 function budgetEntry(dp, x) {
+  const hasCopy = x.approvedCopy && typeof x.approvedCopy === "object";
   return {
     dept: dp, data: cleanBudget(x), updatedAt: toDate(x.updatedAt), updatedBy: x.updatedBy || "",
     approved: x.approved === true, approvedBy: x.approved === true ? String(x.approvedBy || "") : "",
     approvedAt: x.approved === true ? toDate(x.approvedAt) : null,
+    // The content exactly as stored (an approval copies it), and the approved copy.
+    raw: { periods: x.periods ?? {}, required: x.required ?? null, note: x.note ?? "", teachers: x.teachers ?? [] },
+    copy: hasCopy ? cleanBudget(x.approvedCopy) : null, copyAt: hasCopy ? toDate(x.approvedCopyAt) : null,
+    keep: hasCopy ? { approvedCopy: x.approvedCopy, approvedCopyAt: x.approvedCopyAt } : {},
   };
 }
+const sameBudget = (a, b) => JSON.stringify(cleanBudget(a)) === JSON.stringify(cleanBudget(b));
+// What «ميزانية كل الأقسام» shows of a department: the approved budget (the
+// current one when approved, else the copy kept at its last approval), or nothing.
+const approvedData = (dp) => {
+  const b = S.budgets.get(dp);
+  return !b ? null : b.approved ? b.data : b.copy;
+};
 
 // Changes not saved: the department being edited, or «الفئة» in «كل الأقسام».
 const unsaved = () => !!(S.edit?.dirty && !S.edit.review) || Object.keys(S.catEdits || {}).length > 0;
@@ -756,11 +777,12 @@ async function saveBudget() {
   if (!E || E.review || !E.dirty) return;
   const snapshot = JSON.stringify(E.data);
   const clean = cleanBudget(E.data);
+  const keep = S.budgets.get(E.dp)?.keep || {};
   await setDoc(doc(S.db, COLLECTION, E.dp), {
-    ...clean, updatedAt: serverTimestamp(), updatedBy: S.me.name || "", updatedByUid: S.me.uid, approved: false,
+    ...clean, updatedAt: serverTimestamp(), updatedBy: S.me.name || "", updatedByUid: S.me.uid, approved: false, ...keep,
   });
   const now = new Date();
-  S.budgets.set(E.dp, { ...budgetEntry(E.dp, clean), updatedAt: now, updatedBy: S.me.name || "" });
+  S.budgets.set(E.dp, { ...budgetEntry(E.dp, { ...clean, ...keep }), updatedAt: now, updatedBy: S.me.name || "" });
   if (S.edit !== E) return;
   if (JSON.stringify(E.data) === snapshot) E.dirty = false;
   setMsg(E.ui.saveMsg, "آخر تحديث: " + stamp(now), "ok");
@@ -1103,12 +1125,12 @@ function approveButton(dp, small) {
       : { title: "اعتماد الميزانية", text: "تُعتمد ميزانية قسم " + dp + " كما هي الآن باسمك.", ok: "اعتماد", cancel: "رجوع" });
     if (!yes) return;
     const done = await busy(btn, () => updateDoc(doc(S.db, COLLECTION, dp), on
-      ? { approved: false, approvedBy: deleteField(), approvedByUid: deleteField(), approvedAt: deleteField() }
-      : { approved: true, approvedBy: S.me.name || "", approvedByUid: S.me.uid, approvedAt: serverTimestamp() }),
+      ? { approved: false, approvedBy: deleteField(), approvedByUid: deleteField(), approvedAt: deleteField(), approvedCopy: deleteField(), approvedCopyAt: deleteField() }
+      : { approved: true, approvedBy: S.me.name || "", approvedByUid: S.me.uid, approvedAt: serverTimestamp(), approvedCopy: b.raw, approvedCopyAt: serverTimestamp() }),
     on ? "أُلغي الاعتماد" : "تم الاعتماد");
     if (!done) return;
-    Object.assign(b, on ? { approved: false, approvedBy: "", approvedAt: null } : { approved: true, approvedBy: S.me.name || "", approvedAt: new Date() });
-    render();
+    // Read back from the server: the stored copy is what later saves must keep.
+    await load();
   };
   return btn;
 }
@@ -1134,7 +1156,7 @@ async function mergeOldSocial(olds, msg) {
     note: parts.map((d) => d.note).filter(Boolean).join(" · "), teachers });
   setMsg(msg, "جارٍ الحفظ...");
   try {
-    await setDoc(doc(S.db, COLLECTION, SOCIAL), { ...data, updatedAt: serverTimestamp(), updatedBy: S.me.name || "", updatedByUid: S.me.uid });
+    await setDoc(doc(S.db, COLLECTION, SOCIAL), { ...data, updatedAt: serverTimestamp(), updatedBy: S.me.name || "", updatedByUid: S.me.uid, ...(S.budgets.get(SOCIAL)?.keep || {}) });
   } catch (e) { setMsg(msg, "لم يُحفظ: " + errText(e), "err"); return; }
   // The old two now live in الاجتماعيات (firestore.rules: an admin may delete).
   try { await Promise.all(olds.map((dp) => deleteDoc(doc(S.db, COLLECTION, dp)))); }
@@ -1181,9 +1203,9 @@ function exportCsv(msg) {
   const HEAD = ["الجدول", "المعرف", "اسم الشهرة", "الاسم الثلاثي", "القسم", "الصف", "المادة", "الحصص", "الرقم المدني", "النصاب"];
   const rows = [];
   for (const dp of DEPARTMENT_LIST) {
-    const b = S.budgets.get(dp);
-    if (!b) continue;
-    for (const t of b.data.teachers) {
+    const d = approvedData(dp);
+    if (!d) continue;
+    for (const t of d.teachers) {
       const civil = (t.uid && S.teachers.find((x) => x.uid === t.uid)?.civilId) || "";
       for (const c of S.classes.classes) {
         if (!(c in t.cells)) continue;
@@ -1353,6 +1375,7 @@ function renderImport(box) {
         setMsg(out, "جارٍ الحفظ: " + e.dp + " (" + (done + 1) + " من " + plan.length + ")...");
         await setDoc(doc(S.db, COLLECTION, e.dp), {
           ...e.data, updatedAt: serverTimestamp(), updatedBy: "من الموقع القديم" + (e.updatedBy ? " — " + e.updatedBy : ""), updatedByUid: S.me.uid,
+          ...(S.budgets.get(e.dp)?.keep || {}),
         });
         done++;
       }
@@ -1382,8 +1405,8 @@ function renderImport(box) {
 /* ---- «كل الأقسام»: class × subject, one teacher per cell ---- */
 function gridColumns() {
   return schoolDepartments().map((dp) => {
-    const b = S.budgets.get(dp);
-    const subs = isMulti(dp) ? deptSubjects(dp, b ? b.data.teachers : []) : [null];
+    const d = approvedData(dp);
+    const subs = isMulti(dp) ? deptSubjects(dp, d ? d.teachers : []) : [null];
     return { dp, cols: subs.map((subj) => ({ dp, subj, label: subj || dp })) };
   });
 }
@@ -1393,9 +1416,9 @@ function gridModel() {
   // who[dp|subj][class] = [{ t, h }]
   const who = {};
   for (const { dp } of groups) {
-    const b = S.budgets.get(dp);
-    if (!b) continue;
-    for (const t of b.data.teachers) for (const c of S.classes.classes) {
+    const d = approvedData(dp);
+    if (!d) continue;
+    for (const t of d.teachers) for (const c of S.classes.classes) {
       if (!(c in t.cells)) continue;
       for (const p of partsOf(dp, t, c)) {
         const k = dp + "|" + (p.subj || "");
@@ -1405,7 +1428,7 @@ function gridModel() {
   }
   const rows = [];
   for (const g of S.classes.groups) g.classes.forEach((c, ci) => rows.push({ c, gsep: ci === 0, cells: cols.map((k) => {
-    const d = S.budgets.get(k.dp)?.data || { periods: {} };
+    const d = approvedData(k.dp) || { periods: {} };
     const def = defFor(d, k.dp, k.subj, c);
     const cur = (who[k.dp + "|" + (k.subj || "")] || {})[c] || [];
     return {
@@ -1445,9 +1468,21 @@ function renderGrid(box) {
   box.append(el("div", { className: "row", style: "margin:0 0 10px" }, back, csv, ...dl, msg), card);
   card.append(
       el("h2", { textContent: "ميزانية كل الأقسام" }),
-      el("p", { className: "lead", style: "font-size:14px", textContent: "للمعاينة فقط، والتعديل من «تعديل» في ميزانية كل قسم. الخانة الحمراء حصصها تخالف المقرر، والرمادية بلا حصص." }),
+      el("p", { className: "lead", style: "font-size:14px", textContent: "للمعاينة فقط، والتعديل من «تعديل» في ميزانية كل قسم. لا يظهر هنا إلا المعتمد. الخانة الحمراء حصصها تخالف المقرر، والرمادية بلا حصص." }),
+      approvalNotice(),
       el("div", { className: "gridWrap" }, el("table", { className: "grid" }, gridHead(groups), body)));
   box.append(teachersCard());
+}
+// Above the grid: departments not shown (never approved), and those shown
+// as last approved while a later change waits for approval.
+function approvalNotice() {
+  const depts = schoolDepartments().filter((dp) => S.budgets.has(dp));
+  const none = depts.filter((dp) => !approvedData(dp));
+  const older = depts.filter((dp) => { const b = S.budgets.get(dp); return !b.approved && b.copy; });
+  if (!none.length && !older.length) return null;
+  return el("div", { className: "review" },
+    none.length ? el("div", { textContent: "لم تُعتمد بعد، فلا تظهر هنا: " + none.join("، ") }) : null,
+    older.length ? el("div", { textContent: "تظهر بآخر نسخة معتمدة، وفيها تعديل لم يُعتمد: " + older.join("، ") }) : null);
 }
 // Re-draws «كل الأقسام» where the admin left it, not back at the first column.
 function redrawGrid() {
@@ -1468,7 +1503,7 @@ function redrawGrid() {
 function teacherRoster() {
   const periods = {};
   const byUid = new Map(S.teachers.map((t) => [t.uid, t]));
-  for (const b of S.budgets.values()) for (const t of b.data.teachers) {
+  for (const dp of S.budgets.keys()) for (const t of approvedData(dp)?.teachers || []) {
     const who = (t.uid && byUid.get(t.uid)) || (!t.uid && S.teachers.find((x) => x.name === t.name));
     if (who) periods[who.uid] = (periods[who.uid] || 0) + nisab(t);
   }
@@ -1550,7 +1585,7 @@ function pdfPage(pdf, canvas, first) {
   pdf.addImage(canvas.toDataURL("image/jpeg", 0.92), "JPEG", (W - canvas.width * k) / 2, m, canvas.width * k, canvas.height * k);
 }
 // The departments with a budget, in the school's order.
-const savedDepts = () => schoolDepartments().filter((dp) => S.budgets.has(dp));
+const savedDepts = () => schoolDepartments().filter((dp) => approvedData(dp));
 // A worksheet's name: no \ / ? * [ ] :, at most 31 characters.
 const sheetName = (t) => String(t).replace(/[\\/?*[\]:]/g, " ").slice(0, 31);
 async function downloadAll(kind, msgEl) {
@@ -1567,14 +1602,14 @@ async function downloadAll(kind, msgEl) {
       pdfPage(pdf, grid, true);
       for (const dp of savedDepts()) {
         setMsg(msgEl, "جارٍ إنشاء الملف: " + dp + "...");
-        pdfPage(pdf, await formCanvas(dp, S.budgets.get(dp).data), false);
+        pdfPage(pdf, await formCanvas(dp, approvedData(dp)), false);
       }
       saveBlob(pdf.output("blob"), base + ".pdf");
     } else {
       await needExcel();
       const wb = new window.ExcelJS.Workbook(); wb.creator = SCHOOL_NAME;
       gridSheet(wb);
-      for (const dp of savedDepts()) await buildXlsx(dp, S.budgets.get(dp).data, { wb, name: sheetName(dp) });
+      for (const dp of savedDepts()) await buildXlsx(dp, approvedData(dp), { wb, name: sheetName(dp) });
       saveBlob(new Blob([await wb.xlsx.writeBuffer()], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }), base + ".xlsx");
     }
     setMsg(msgEl, "نُزّل الملف ✓", "ok");
@@ -1689,7 +1724,9 @@ const colName = (n) => { let s = ""; for (; n > 0; n = Math.floor((n - 1) / 26))
 // form downloaded with changes not saved isn't the approved one).
 const formStatus = (dp, d) => {
   const b = S.budgets.get(dp);
-  return "الحالة: " + (b && JSON.stringify(cleanBudget(d)) === JSON.stringify(b.data) ? approvalText(b) : "غير معتمدة");
+  if (b && b.approved && sameBudget(d, b.data)) return "الحالة: " + approvalText(b);
+  if (b && b.copy && sameBudget(d, b.copy)) return "الحالة: معتمدة" + (b.copyAt ? " في " + dayText(b.copyAt) : "");
+  return "الحالة: غير معتمدة";
 };
 // into: { wb, name } → one more sheet in that workbook (every department in
 // one file): the form alone, values instead of the helper sheets' formulas
@@ -1699,7 +1736,7 @@ async function buildXlsx(dp, d, into) {
   const ExcelJS = window.ExcelJS;
   const multi = isMulti(dp), classes = S.classes.classes, subs = formSubjects(dp, d), rows = formRows(dp, d);
   const C0 = 5, CN = C0 + classes.length - 1, NOTE = CN + 1, HELP = CN + 2, HR = 9;
-  const L = colName, lastL = L(NOTE), year = academicYear(), head = headOf(dp), when = budgetDate(dp);
+  const L = colName, lastL = L(NOTE), year = academicYear(), head = headOf(dp), when = budgetDate(dp, d);
   const solo = !into;
   const wb = solo ? new ExcelJS.Workbook() : into.wb;
   if (solo) wb.creator = SCHOOL_NAME;
@@ -2031,7 +2068,7 @@ const FORM_CSS = `
 `;
 function formPage(dp, d, bare) {
   const multi = isMulti(dp), classes = S.classes.classes, rows = formRows(dp, d), year = academicYear();
-  const when = budgetDate(dp), starts = gradeStarts(classes);
+  const when = budgetDate(dp, d), starts = gradeStarts(classes);
   const th = (t) => el("th", { textContent: t });
   const table = el("table", { className: "dbf-t" },
     el("thead", {}, el("tr", {}, ...["م", "المعلم", "النصاب", "المادة"].map(th),
