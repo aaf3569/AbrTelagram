@@ -1080,14 +1080,15 @@ function renderSchool(box) {
 }
 
 /* ---------------- «اعتماد الميزانية» ---------------- */
-// The approval line: «معتمدة ✓ — who · when», or «غير معتمدة».
+// The approval line: «معتمدة ✓ · when», or «غير معتمدة». Who approved is
+// kept on the budget (approvedBy) but not shown.
 const approvalText = (b) => b?.approved
-  ? "معتمدة" + (b.approvedBy ? " من " + b.approvedBy : "") + (b.approvedAt ? " في " + dayText(b.approvedAt) : "")
+  ? "معتمدة" + (b.approvedAt ? " في " + dayText(b.approvedAt) : "")
   : "غير معتمدة";
 function approvalBadge(b) {
   if (!b) return el("span", { className: "badge mute", textContent: "لم تُحفظ بعد" });
   return el("span", { className: "badge " + (b.approved ? "ok" : "warn"), title: approvalText(b),
-    textContent: b.approved ? "معتمدة ✓" + (b.approvedBy ? " — " + b.approvedBy : "") + (b.approvedAt ? " · " + dayText(b.approvedAt) : "") : "غير معتمدة" });
+    textContent: b.approved ? "معتمدة ✓" + (b.approvedAt ? " · " + dayText(b.approvedAt) : "") : "غير معتمدة" });
 }
 // «اعتماد الميزانية» / «إلغاء الاعتماد»: for whoever sees every department
 // (S.role "admin"). Changes only the approval fields (firestore.rules).
