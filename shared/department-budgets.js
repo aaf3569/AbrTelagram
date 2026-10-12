@@ -1452,20 +1452,19 @@ function redrawGrid() {
 }
 
 /* ---- «المعلمون»: as the timetable sheet's sheet of that name ---- */
-// Every teacher of the site by department (and anyone in a budget who isn't
-// one of them, under that budget's department), with their weekly periods
-// from every budget.
+// The site's teachers only (teachers/*), by department, with their weekly
+// periods from every budget. A budget line counts for a teacher by uid, or
+// by the same name when it has none; a name that is no teacher of the site
+// (an old import, «اسم آخر…») is not listed.
 function teacherRoster() {
-  const periods = {}, all = new Map();
-  for (const t of S.teachers) all.set(teacherKey(t), { key: teacherKey(t), name: t.name, dp: t.department, isHead: t.isHead });
-  for (const [dp, b] of S.budgets) for (const t of b.data.teachers) {
-    const k = teacherKey(t);
-    periods[k] = (periods[k] || 0) + nisab(t);
-    if (!all.has(k)) all.set(k, { key: k, name: t.name, dp: resolveDepartmentName(dp) || dp, isHead: false });
+  const periods = {};
+  const byUid = new Map(S.teachers.map((t) => [t.uid, t]));
+  for (const b of S.budgets.values()) for (const t of b.data.teachers) {
+    const who = (t.uid && byUid.get(t.uid)) || (!t.uid && S.teachers.find((x) => x.name === t.name));
+    if (who) periods[who.uid] = (periods[who.uid] || 0) + nisab(t);
   }
-  const list = [...all.values()];
   return schoolDepartments().map((dp) => ({
-    dp, list: list.filter((x) => x.dp === dp).sort((a, b) => a.name.localeCompare(b.name, "ar")).map((x) => ({ ...x, periods: periods[x.key] || 0 })),
+    dp, list: deptStaff(dp).map((t) => ({ key: teacherKey(t), name: t.name, isHead: t.isHead, periods: periods[t.uid] || 0 })),
   })).filter((g) => g.list.length);
 }
 // «الفئة»: what was chosen here, else a head's «رئيس قسم بقيود صلبة», else «بلا قيود صلبة».
