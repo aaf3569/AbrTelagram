@@ -673,7 +673,7 @@ function openEditor(dp) {
     if (!/\.xlsx$/i.test(f.name)) { setMsg(ui.formMsg, "يُقرأ ملف Excel من نموذج القسم فقط. " + FORM_PLEA, "err"); return; }
     setMsg(ui.formMsg, "جارٍ قراءة الملف...");
     try { applyForm(await readForm(f, E.dp, E.data)); setMsg(ui.formMsg, ""); }
-    catch (e) { setMsg(ui.formMsg, String(e), "err"); }
+    catch (e) { refuseForm(e); }
   };
   box.append(el("div", { className: "card" }, el("h2", { textContent: "النموذج الرسمي" }),
     el("p", { className: "lead", style: "font-size:14px", textContent: "نزّل ميزانية القسم بالنموذج الرسمي، أو ارفع النموذج بعد تعبئته." }),
@@ -1055,17 +1055,19 @@ function renderSchool(box) {
     return { dp, b, head: headOf(dp) || "—", have, req, gap: req === null || req === undefined ? null : req - have, periods: b ? sum(b.data.teachers, nisab) : 0 };
   });
   const td = (v, cls) => el("td", { className: cls || "", textContent: v === null || v === undefined || v === "" ? "—" : v });
-  const table = el("table", { className: "bsum" },
+  // On a phone each department is a card (department-budgets.css: .school-list):
+  // name and status, head and last update, then the buttons, all in view.
+  const table = el("table", { className: "bsum school-list" },
     el("thead", {}, el("tr", {}, ...["القسم", "رئيس القسم", "آخر تحديث", "الحالة", ""].map((h) => el("th", { textContent: h })))),
     el("tbody", {}, ...rows.map((r) => {
       const edit = el("button", { className: "btn ghost small", type: "button", textContent: "تعديل" });
       edit.onclick = () => openEditor(r.dp);
       const view = r.b ? el("button", { className: "btn ghost small", type: "button", textContent: "معاينة" }) : null;
       if (view) view.onclick = () => { S.preview = r.dp; setView("preview"); };
-      return el("tr", {}, td(r.dp), td(r.head),
-        td(!r.b ? "لم تُدخل بعد" : [r.b.updatedAt ? fmtDate(r.b.updatedAt) : "", r.b.updatedBy].filter(Boolean).join(" · ") || "محفوظة"),
-        el("td", {}, r.b ? approvalBadge(r.b) : "—"),
-        el("td", {}, el("div", { className: "acts" }, view, edit, approveButton(r.dp, true))));
+      return el("tr", {}, td(r.dp, "c-dp"), td(r.head, "c-head"),
+        td(!r.b ? "لم تُدخل بعد" : [r.b.updatedAt ? fmtDate(r.b.updatedAt) : "", r.b.updatedBy].filter(Boolean).join(" · ") || "محفوظة", "c-date"),
+        el("td", { className: "c-st" }, r.b ? approvalBadge(r.b) : "—"),
+        el("td", { className: "c-acts" }, el("div", { className: "acts" }, view, edit, approveButton(r.dp, true))));
     })));
   box.append(el("div", { className: "card" },
     el("h2", { textContent: "ميزانية المدرسة" }),
@@ -1164,13 +1166,15 @@ function renderPreview(box) {
       el("div", { className: "wrap-x", style: "margin-top:10px" }, formPage(dp, b.data, true)));
 }
 
-// «تصدير CSV للجدول»: one row per teacher × class × subject, in the format
-// the timetable sheet's importer reads (schedule-notes: tools/import_from_platform.gs):
-// classes and subjects spelled as the sheet's «التوزيع» has them. The importer
-// also brings «المعلمون» up to date from it (User ID, name, subjects, نصاب),
-// and gives a new teacher their الرقم المدني when it is 12 digits.
+// «تصدير CSV للجدول»: one file, both tables, told apart by «الجدول»:
+//   «التوزيع»   one row per teacher × class × subject, classes and subjects
+//               spelled as the sheet's «التوزيع» has them (الرقم المدني when 12 digits);
+//   «المعلمون»  one row per teacher of the site (as «المعلمون» on the page):
+//               المعرف, the name, القسم, النصاب — for the sheet's names and نصاب only.
+// The timetable sheet's importer (schedule-notes: tools/import_from_platform.gs)
+// reads it once its developer has taught it «الجدول».
 function exportCsv(msg) {
-  const HEAD = ["المعرف", "اسم الشهرة", "الاسم الثلاثي", "القسم", "الصف", "المادة", "الحصص", "الرقم المدني"];
+  const HEAD = ["الجدول", "المعرف", "اسم الشهرة", "الاسم الثلاثي", "القسم", "الصف", "المادة", "الحصص", "الرقم المدني", "النصاب"];
   const rows = [];
   for (const dp of DEPARTMENT_LIST) {
     const b = S.budgets.get(dp);
@@ -1179,16 +1183,17 @@ function exportCsv(msg) {
       const civil = (t.uid && S.teachers.find((x) => x.uid === t.uid)?.civilId) || "";
       for (const c of S.classes.classes) {
         if (!(c in t.cells)) continue;
-        for (const p of partsOf(dp, t, c)) rows.push([t.uid || "", t.name, t.name, dp, sheetClass(c), p.subj || soleSubject(dp), p.h, civil.length === 12 ? civil : ""]);
+        for (const p of partsOf(dp, t, c)) rows.push(["التوزيع", t.uid || "", t.name, t.name, dp, sheetClass(c), p.subj || soleSubject(dp), p.h, civil.length === 12 ? civil : "", ""]);
       }
     }
   }
   if (!rows.length) { setMsg(msg, "لا توجد ميزانيات للتصدير", "err"); return; }
+  const staff = teacherRoster().flatMap((g) => g.list.map((x) => ["المعلمون", x.key, x.name, x.name, g.dp, "", "", "", "", x.periods]));
   const q = (v) => '"' + String(v ?? "").replace(/"/g, '""') + '"';
-  const csv = "\uFEFF" + [HEAD, ...rows].map((r) => r.map(q).join(",")).join("\r\n");
+  const csv = "\uFEFF" + [HEAD, ...rows, ...staff].map((r) => r.map(q).join(",")).join("\r\n");
   saveBlob(new Blob([csv], { type: "text/csv;charset=utf-8" }), "ميزانية_المنصة_" + new Date().toISOString().slice(0, 10) + ".csv");
-  const blank = rows.filter((r) => !r[5]).length;
-  setMsg(msg, rows.length + " سطراً لـ" + new Set(rows.map((r) => r[0] || r[2])).size + " معلماً" + (blank ? " — " + blank + " بلا مادة" : ""), blank ? "err" : "ok");
+  const blank = rows.filter((r) => !r[6]).length;
+  setMsg(msg, "التوزيع: " + rows.length + " سطراً · المعلمون: " + staff.length + (blank ? " — " + blank + " سطراً بلا مادة" : ""), blank ? "err" : "ok");
 }
 
 /* =====================================================================
@@ -1452,20 +1457,19 @@ function redrawGrid() {
 }
 
 /* ---- «المعلمون»: as the timetable sheet's sheet of that name ---- */
-// Every teacher of the site by department (and anyone in a budget who isn't
-// one of them, under that budget's department), with their weekly periods
-// from every budget.
+// The site's teachers only (teachers/*), by department, with their weekly
+// periods from every budget. A budget line counts for a teacher by uid, or
+// by the same name when it has none; a name that is no teacher of the site
+// (an old import, «اسم آخر…») is not listed.
 function teacherRoster() {
-  const periods = {}, all = new Map();
-  for (const t of S.teachers) all.set(teacherKey(t), { key: teacherKey(t), name: t.name, dp: t.department, isHead: t.isHead });
-  for (const [dp, b] of S.budgets) for (const t of b.data.teachers) {
-    const k = teacherKey(t);
-    periods[k] = (periods[k] || 0) + nisab(t);
-    if (!all.has(k)) all.set(k, { key: k, name: t.name, dp: resolveDepartmentName(dp) || dp, isHead: false });
+  const periods = {};
+  const byUid = new Map(S.teachers.map((t) => [t.uid, t]));
+  for (const b of S.budgets.values()) for (const t of b.data.teachers) {
+    const who = (t.uid && byUid.get(t.uid)) || (!t.uid && S.teachers.find((x) => x.name === t.name));
+    if (who) periods[who.uid] = (periods[who.uid] || 0) + nisab(t);
   }
-  const list = [...all.values()];
   return schoolDepartments().map((dp) => ({
-    dp, list: list.filter((x) => x.dp === dp).sort((a, b) => a.name.localeCompare(b.name, "ar")).map((x) => ({ ...x, periods: periods[x.key] || 0 })),
+    dp, list: deptStaff(dp).map((t) => ({ key: teacherKey(t), name: t.name, isHead: t.isHead, periods: periods[t.uid] || 0 })),
   })).filter((g) => g.list.length);
 }
 // «الفئة»: what was chosen here, else a head's «رئيس قسم بقيود صلبة», else «بلا قيود صلبة».
@@ -1869,14 +1873,31 @@ async function readForm(file, dp, d) {
   if (!meta || cellText(meta.getCell("A1")) !== FORM_MARK) throw "هذا الملف ليس نموذج القسم. نزّل النموذج من زر «تنزيل Excel» ثم عبّئه.";
   const fdp = cellText(meta.getCell("B2"));
   if (fdp !== dp) throw "هذا نموذج قسم «" + fdp + "»، لا قسم «" + dp + "».";
+  // Only the form as this site gives it today: its version, this year.
+  const fver = cellText(meta.getCell("B1")), fyear = cellText(meta.getCell("B3"));
+  if (fver !== String(FORM_VERSION)) throw "هذا نموذج بنسخة قديمة. نزّل النموذج من جديد من زر «تنزيل Excel» ثم عبّئه.";
+  if (fyear !== academicYear()) throw "هذا نموذج العام الدراسي " + (fyear || "غير المعروف") + "، لا العام " + academicYear() + ". نزّل نموذج هذا العام من زر «تنزيل Excel».";
   const ws = wb.getWorksheet("الميزانية");
   if (!ws) throw "ورقة «الميزانية» غير موجودة في الملف";
   let hr = 0;
   ws.eachRow((row, i) => { if (!hr && cellText(row.getCell(2)) === "المعلم") hr = i; });
   if (!hr) throw "لم أجد صف العناوين («المعلم») في ورقة «الميزانية»";
-  const cols = [];
+  const cols = [], strange = [];
   let noteCol = 0;
-  ws.getRow(hr).eachCell((c, i) => { const k = classOf(cellText(c)); if (k) cols.push([i, k]); if (cellText(c) === "ملاحظات") noteCol = i; });
+  ws.getRow(hr).eachCell((c, i) => {
+    const t = cellText(c), k = classOf(t);
+    if (k) cols.push([i, k]);
+    else if (t === "ملاحظات") noteCol = i;
+    else if (i > 4 && t) strange.push(t);
+  });
+  // The class columns: exactly the site's classes.
+  const missing = S.classes.classes.filter((c) => !cols.some(([, k]) => k === c)).map(compact);
+  if (missing.length || strange.length) {
+    throw { reasons: [
+      missing.length ? "صفوف المنصة الناقصة من الملف: " + missing.join("، ") : null,
+      strange.length ? "أعمدة ليست من صفوف المنصة: " + strange.join("، ") : null,
+    ].filter(Boolean) };
+  }
   const multi = isMulti(dp), subs = formSubjects(dp, d), report = { unknown: [], bad: [], orphan: [], odd: 0 };
   const byName = (n) => deptStaff(dp).find((t) => t.name === n) || S.teachers.find((t) => t.name === n);
   const out = [], index = {};
@@ -1919,8 +1940,24 @@ async function readForm(file, dp, d) {
     for (const c of S.classes.classes) if (t.parts[c]) setParts(x, c, t.parts[c]);
     return x;
   });
+  // A value the site can't read (not ✓ or 1–40, ✓ with no usual periods,
+  // a subject not of the department): the whole file is refused.
+  if (report.bad.length) throw { reasons: report.bad };
   const dup = [...subjectDupes(dp, teachers)].map((k) => k.split("|")[0]);
   return { teachers, report: { ...report, dup: [...new Set(dup)] } };
+}
+// The file is refused, and why: one reason, or a list of them.
+function refuseForm(e) {
+  const E = S.edit, ui = E.ui;
+  if (!e?.reasons) { setMsg(ui.formMsg, typeof e === "string" ? e : "تعذّرت قراءة الملف", "err"); return; }
+  setMsg(ui.formMsg, "لم يُقبل الملف، ولم يتغير شيء.", "err");
+  const close = el("button", { className: "btn ghost small", type: "button", textContent: "إغلاق" });
+  close.onclick = () => { ui.review.replaceChildren(); ui.review.hidden = true; };
+  ui.review.replaceChildren(el("b", { textContent: "لم يُقبل الملف لهذه الأسباب:" }),
+    el("ul", {}, ...e.reasons.slice(0, 20).map((t) => el("li", { textContent: t })), e.reasons.length > 20 ? el("li", { textContent: "و" + (e.reasons.length - 20) + " غيرها" }) : null),
+    el("p", { className: "plea", textContent: "صحّح ذلك في الملف ثم ارفعه مرة أخرى. " + FORM_PLEA }), close);
+  ui.review.hidden = false;
+  ui.review.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 function applyForm(parsed) {
   const E = S.edit;
@@ -1931,7 +1968,6 @@ function applyForm(parsed) {
   if (rep.unknown.length) items.push("أسماء ليست في قائمة معلمي القسم (قُبلت كما كُتبت): " + [...new Set(rep.unknown)].join("، "));
   if (rep.dup.length) items.push("مادة عند أكثر من معلم في: " + rep.dup.join("، "));
   if (rep.odd) items.push(rep.odd + " خانة تخالف الحصص المعتادة (تظهر حمراء)");
-  if (rep.bad.length) items.push("أُهملت " + rep.bad.length + " قيمة: " + rep.bad.slice(0, 8).join(" · ") + (rep.bad.length > 8 ? " …" : ""));
   if (rep.orphan.length) items.push("أسطر فيها حصص بلا معلم فوقها (أُهملت): " + rep.orphan.join("، "));
   const ok = el("button", { className: "btn", type: "button", textContent: "اعتماد وحفظ" });
   const no = el("button", { className: "btn ghost", type: "button", textContent: "إلغاء" });
