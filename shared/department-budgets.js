@@ -127,8 +127,11 @@ const teacherName = (d) => String(d?.name || d?.fullName || d?.teacherName || d?
 const teacherDept = (d) => resolveDepartmentName(d?.department || d?.dept || d?.subject || "");
 // 1 حصة واحدة · 2 حصتان · 3–10 حصص · 11+ حصة
 const toDate = (t) => (t && typeof t.toDate === "function") ? t.toDate() : (t instanceof Date ? t : null);
-const fmtDate = (d) => d ? new Intl.DateTimeFormat("ar-KW", { year: "numeric", month: "numeric", day: "numeric" }).format(d) : "";
-const fmtTime = (d) => d ? new Intl.DateTimeFormat("ar-KW", { hour: "numeric", minute: "2-digit" }).format(d) : "";
+// Dates and times as in Kuwait, whatever the device's own time zone.
+const fmtDate = (d) => d ? new Intl.DateTimeFormat("ar-KW", { timeZone: "Asia/Kuwait", year: "numeric", month: "numeric", day: "numeric" }).format(d) : "";
+const fmtTime = (d) => d ? new Intl.DateTimeFormat("ar-KW", { timeZone: "Asia/Kuwait", hour: "numeric", minute: "2-digit" }).format(d) : "";
+// «آخر تحديث»: the date and time only (not who saved).
+const stamp = (d) => d ? fmtDate(d) + " " + fmtTime(d) : "";
 function academicYear() {
   const d = new Date(), y = d.getFullYear();
   return d.getMonth() >= 7 ? `${y}/${y + 1}` : `${y - 1}/${y}`;
@@ -138,7 +141,7 @@ function academicYear() {
 const semesterOf = (d) => "الفصل الدراسي " + (d.getMonth() >= 1 && d.getMonth() <= 6 ? "الثاني" : "الأول");
 // The date a department's budget was last saved (today if it never was).
 const budgetDate = (dp) => S.budgets.get(dp)?.updatedAt || new Date();
-const dayText = (d) => `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
+const dayText = (d) => new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Kuwait", day: "numeric", month: "numeric", year: "numeric" }).format(d);
 // Classes that open a new grade (the first 11 and the first 12): a heavy
 // line before them on the official form.
 const gradeStarts = (classes) => new Set(classes.filter((c, i) => i > 0 && parseClassKey(c).grade !== parseClassKey(classes[i - 1]).grade));
@@ -652,7 +655,7 @@ function openEditor(dp) {
   renderTabs();
   const E = S.edit, ui = E.ui;
   const box = el("div");
-  ui.saveMsg = el("div", { className: "msg", textContent: b ? "آخر حفظ: " + [b.updatedAt ? fmtDate(b.updatedAt) + " " + fmtTime(b.updatedAt) : "", b.updatedBy ? "(" + b.updatedBy + ")" : ""].filter(Boolean).join(" ") : "لم تُحفظ بعد" });
+  ui.saveMsg = el("div", { className: "msg", textContent: b ? (b.updatedAt ? "آخر تحديث: " + stamp(b.updatedAt) : "") : "لم تُحفظ بعد" });
   const back = S.role === "admin" ? backButton(() => setView("school")) : null;
   // As the original page: the department and its weekly periods in one card.
   ui.periods = el("div");
@@ -760,7 +763,7 @@ async function saveBudget() {
   S.budgets.set(E.dp, { ...budgetEntry(E.dp, clean), updatedAt: now, updatedBy: S.me.name || "" });
   if (S.edit !== E) return;
   if (JSON.stringify(E.data) === snapshot) E.dirty = false;
-  setMsg(E.ui.saveMsg, "آخر حفظ: " + fmtDate(now) + " " + fmtTime(now) + " (" + (S.me.name || "") + ")", "ok");
+  setMsg(E.ui.saveMsg, "آخر تحديث: " + stamp(now), "ok");
   E.ui.badge?.replaceWith(E.ui.badge = approvalBadge(S.budgets.get(E.dp)));
   saveUi();
 }
@@ -1065,7 +1068,7 @@ function renderSchool(box) {
       const view = r.b ? el("button", { className: "btn ghost small", type: "button", textContent: "معاينة" }) : null;
       if (view) view.onclick = () => { S.preview = r.dp; setView("preview"); };
       return el("tr", {}, td(r.dp, "c-dp"), td(r.head, "c-head"),
-        td(!r.b ? "لم تُدخل بعد" : [r.b.updatedAt ? fmtDate(r.b.updatedAt) : "", r.b.updatedBy].filter(Boolean).join(" · ") || "محفوظة", "c-date"),
+        td(!r.b ? "لم تُدخل بعد" : stamp(r.b.updatedAt) || "محفوظة", "c-date"),
         el("td", { className: "c-st" }, r.b ? approvalBadge(r.b) : "—"),
         el("td", { className: "c-acts" }, el("div", { className: "acts" }, view, edit, approveButton(r.dp, true))));
     })));
@@ -1077,14 +1080,15 @@ function renderSchool(box) {
 }
 
 /* ---------------- «اعتماد الميزانية» ---------------- */
-// The approval line: «معتمدة ✓ — who · when», or «غير معتمدة».
+// The approval line: «معتمدة ✓ · when», or «غير معتمدة». Who approved is
+// kept on the budget (approvedBy) but not shown.
 const approvalText = (b) => b?.approved
-  ? "معتمدة" + (b.approvedBy ? " من " + b.approvedBy : "") + (b.approvedAt ? " في " + dayText(b.approvedAt) : "")
+  ? "معتمدة" + (b.approvedAt ? " في " + dayText(b.approvedAt) : "")
   : "غير معتمدة";
 function approvalBadge(b) {
   if (!b) return el("span", { className: "badge mute", textContent: "لم تُحفظ بعد" });
   return el("span", { className: "badge " + (b.approved ? "ok" : "warn"), title: approvalText(b),
-    textContent: b.approved ? "معتمدة ✓" + (b.approvedBy ? " — " + b.approvedBy : "") + (b.approvedAt ? " · " + dayText(b.approvedAt) : "") : "غير معتمدة" });
+    textContent: b.approved ? "معتمدة ✓" + (b.approvedAt ? " · " + dayText(b.approvedAt) : "") : "غير معتمدة" });
 }
 // «اعتماد الميزانية» / «إلغاء الاعتماد»: for whoever sees every department
 // (S.role "admin"). Changes only the approval fields (firestore.rules).
@@ -1161,7 +1165,7 @@ function renderPreview(box) {
     card);
   card.append(
       el("div", { className: "row between", style: "margin:0" }, el("h2", { textContent: "ميزانية قسم " + dp, style: "margin:0" }), approvalBadge(b), approveButton(dp)),
-      el("div", { className: "meta", textContent: (b.updatedAt ? "آخر تحديث: " + fmtDate(b.updatedAt) : "") + (b.updatedBy ? " — " + b.updatedBy : "") }),
+      el("div", { className: "meta", textContent: b.updatedAt ? "آخر تحديث: " + stamp(b.updatedAt) : "" }),
       el("div", { className: "row" }, ...downloadButtons(() => dp, () => b.data, msg), msg),
       el("div", { className: "wrap-x", style: "margin-top:10px" }, formPage(dp, b.data, true)));
 }
