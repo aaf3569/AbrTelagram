@@ -21,7 +21,13 @@
 //     teachers: [{ uid, name, cells: { [class]: n }, note,
 //                  subjects: [], subj: { [class]: subject },
 //                  split: { [class]: { [subject]: n } } }],
-//     updatedAt, updatedBy, updatedByUid }
+//     updatedAt, updatedBy, updatedByUid,
+//     approved, approvedBy, approvedByUid, approvedAt }   // «اعتماد الميزانية»
+// Nothing is saved until «حفظ» is pressed. Every save leaves the budget
+// «غير معتمدة» (approved: false); only those who see every department
+// (approvers) approve it, which changes nothing else. The teachers'
+// «الفئة» (the timetable sheet's category) lives in budgetMeta/categories:
+//   { cats: { [uid or "n:"+name]: category }, updatedAt, updatedBy, updatedByUid }
 // Who may read and write is decided by firestore.rules (admins and
 // «السماح بكل الميزانيات» every department, a head their own).
 //
@@ -30,7 +36,7 @@
 // getSession() → { user, data, classList }, role (optional override).
 import {
   firebaseConfig, initializeApp, getApp, getApps, getFirestore,
-  collection, getDocs, getDoc, doc, setDoc, deleteDoc, serverTimestamp,
+  collection, getDocs, getDoc, doc, setDoc, updateDoc, deleteDoc, deleteField, serverTimestamp,
 } from "/shared/firebase.js";
 import { DEPARTMENT_LIST, DEPARTMENTS, SUBJECT_LIST, SUBJECT_TO_DEPARTMENT, resolveDepartmentName } from "/shared/departments.js";
 import { fetchClassList, parseClassKey, sortClassList } from "/shared/class-registry.js";
@@ -54,6 +60,9 @@ const FORM_VERSION = 1;
 const FORM_PLEA = "لإدخال الميزانية من ملف: نزّل «تنزيل Excel»، وعبّئه، ثم ارفعه من «رفع Excel».";
 const TICKS = ["✓", "✔", "√", "@", "x", "X", "×"];
 const HEAD_NOTE = "رئيس القسم";
+// «الفئة»: the four values of the timetable sheet's «المعلمون» (column G).
+const CATEGORIES = ["رئيس قسم بقيود صلبة", "معلم بقيود إدارية", "معلم بقيود تخصصية", "بلا قيود صلبة"];
+const META = ["budgetMeta", "categories"];
 
 const ICON = {
   menu: '<svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>',
@@ -141,7 +150,8 @@ function errText(e) {
 const loadScript = (src) => new Promise((res, rej) => {
   if (document.querySelector(`script[src="${src}"]`)) return res();
   const s = el("script", { src });
-  s.onload = res; s.onerror = () => rej("تعذّر تحميل مكتبة التنزيل، تحقّق من الاتصال");
+  // A failed load leaves no tag behind, so the next try loads it again.
+  s.onload = res; s.onerror = () => { s.remove(); rej("تعذّر تحميل مكتبة التنزيل، تحقّق من الاتصال"); };
   document.head.append(s);
 });
 const needExcel = () => window.ExcelJS ? Promise.resolve() : loadScript(LIBS.excel);
@@ -184,6 +194,25 @@ function toast(text) {
   S.root.append(S.toast);
   const t = S.toast;
   setTimeout(() => { if (S.toast === t) { t.remove(); S.toast = null; } }, 6000);
+}
+// The site's Feedback toast (/shared/feedback.js), else the sheet's own.
+function notify(text, kind) {
+  if (window.Feedback?.notify) window.Feedback.notify(text, kind || "ok");
+  else toast(text);
+}
+// The site's in-page dialog (/shared/dialog.js); without it, yes.
+const ask = (opts) => window.Dialog?.confirm ? window.Dialog.confirm(opts) : Promise.resolve(true);
+// Runs fn on btn the site's way: disabled, a spinner, then «ok» or a red error.
+async function busy(btn, fn, ok) {
+  try {
+    await (window.Feedback?.busy && btn ? window.Feedback.busy(btn, fn, { rethrow: true }) : fn());
+    if (ok) notify(ok);
+    return true;
+  } catch (e) {
+    console.error("[department-budgets]", e);
+    notify("لم يُحفظ: " + errText(e), "err");
+    return false;
+  }
 }
 function printButton(getNode, title) {
   const b = el("button", { className: "btn ghost", type: "button", textContent: "طباعة" });
@@ -417,16 +446,17 @@ export async function mountDepartmentBudgetsSheet(host, hooks = {}) {
     scroller: root.querySelector(".scroller"), main: root.querySelector(".main"),
     tabs: root.querySelector(".tabs"), body: root.querySelector(".content"),
     role: "teacher", me: {}, teachers: [], classes: buildClassModel([]), budgets: new Map(),
-    view: null, edit: null, gridBusy: Promise.resolve(), loading: null, showDetail: false,
+    view: null, edit: null, loading: null, showDetail: false, cats: {}, catEdits: {},
   };
   S.scroller.append(creditsFooter());
   root.querySelector(".menu").addEventListener("click", () => hooks.openSidebar?.());
   root.querySelector(".back").addEventListener("click", async () => {
-    if (S.edit?.dirty) await saveBudget();
-    hooks.close?.();
+    if (await leaveOk()) hooks.close?.();
   });
+  // Nothing is saved on its own: closing the browser with changes not saved
+  // gets the browser's own warning.
   window.addEventListener("beforeunload", (e) => {
-    if (S?.edit?.dirty) { saveBudget(); e.preventDefault(); e.returnValue = ""; }
+    if (S && unsaved()) { e.preventDefault(); e.returnValue = ""; }
   });
   await load();
   return {
@@ -435,11 +465,11 @@ export async function mountDepartmentBudgetsSheet(host, hooks = {}) {
     // Switching between the host's two buttons (mode) starts that view afresh.
     refresh: async () => {
       if ((S.hooks.getMode?.() || "own") !== S.mode) {
-        if (S.edit?.dirty && !S.edit.review) await saveBudget();
-        S.edit = null; S.view = null; S.preview = null;
+        if (!(await leaveOk())) return;
+        S.edit = null; S.view = null; S.preview = null; S.catEdits = {};
         return load();
       }
-      if (!S.edit?.dirty && !S.edit?.review) return load();
+      if (!unsaved() && !S.edit?.review) return load();
     },
   };
 }
@@ -484,10 +514,16 @@ async function load() {
           civilId: String(x.civilId || "").replace(/\D+/g, ""),
         };
       }).filter((t) => DEPARTMENT_LIST.includes(t.department)).sort((a, b) => a.name.localeCompare(b.name, "ar"));
-      S.budgets = new Map(bDocs.map((d) => {
-        const x = d.data() || {};
-        return [d.id, { dept: d.id, data: cleanBudget(x), updatedAt: toDate(x.updatedAt), updatedBy: x.updatedBy || "" }];
-      }));
+      S.budgets = new Map(bDocs.map((d) => [d.id, budgetEntry(d.id, d.data() || {})]));
+      // «الفئة» of every teacher (budgetMeta/categories): the admin view only.
+      S.cats = {};
+      if (S.role === "admin") {
+        try {
+          const m = await getDoc(doc(S.db, ...META));
+          const c = m.exists() ? m.data()?.cats : null;
+          if (c && typeof c === "object") S.cats = c;
+        } catch (e) { console.warn("[department-budgets] categories not read", e); }
+      }
     } catch (e) {
       console.error("[department-budgets] load failed", e);
       S.body.replaceChildren(el("div", { className: "state err", textContent: "تعذّر تحميل الميزانيات. تحقّق من الاتصال ثم أعد المحاولة." }));
@@ -504,7 +540,35 @@ async function load() {
   return S.loading;
 }
 
-function setView(v) {
+// One budget as kept here: its data, when and by whom it was saved, and
+// whether it is approved (a budget saved before approvals is not).
+function budgetEntry(dp, x) {
+  return {
+    dept: dp, data: cleanBudget(x), updatedAt: toDate(x.updatedAt), updatedBy: x.updatedBy || "",
+    approved: x.approved === true, approvedBy: x.approved === true ? String(x.approvedBy || "") : "",
+    approvedAt: x.approved === true ? toDate(x.approvedAt) : null,
+  };
+}
+
+// Changes not saved: the department being edited, or «الفئة» in «كل الأقسام».
+const unsaved = () => !!(S.edit?.dirty && !S.edit.review) || Object.keys(S.catEdits || {}).length > 0;
+// Before leaving a view with changes not saved: «حفظ» saves them (and stays
+// if that fails), «تجاهل التعديلات» drops them. true = go on.
+async function leaveOk() {
+  if (!unsaved()) return true;
+  const save = await ask({ title: "لديك تعديلات غير محفوظة", text: "احفظها قبل الخروج، أو تجاهلها.", ok: "حفظ", cancel: "تجاهل التعديلات", icon: "!" });
+  if (save) {
+    const ok = S.edit?.dirty ? await busy(null, saveBudget, "تم الحفظ") : await busy(null, saveCategories, "تم الحفظ");
+    if (!ok) return false;
+  } else {
+    if (S.edit) { S.edit.dirty = false; S.edit.review = null; }
+    S.catEdits = {};
+  }
+  return true;
+}
+
+async function setView(v) {
+  if (S.view !== v && !(await leaveOk())) return;
   if (S.view === "dept" && v !== "dept" && S.edit) closeEditor();
   S.view = v;
   if (v === "dept") openEditor(S.role === "admin" ? S.edit?.dp : S.me.department);
@@ -583,7 +647,7 @@ function classGrid(t, dp, d, edit, dup) {
 function openEditor(dp) {
   if (!dp) { S.view = S.role === "admin" ? "school" : "none"; render(); return; }
   const b = S.budgets.get(dp);
-  S.edit = { dp, data: editable(b ? b.data : emptyData(dp)), review: null, dirty: false, timer: null, ui: {} };
+  S.edit = { dp, data: editable(b ? b.data : emptyData(dp)), review: null, dirty: false, ui: {} };
   S.view = "dept";
   renderTabs();
   const E = S.edit, ui = E.ui;
@@ -593,7 +657,7 @@ function openEditor(dp) {
   // As the original page: the department and its weekly periods in one card.
   ui.periods = el("div");
   box.append(el("div", { className: "card" },
-    el("div", { className: "row top between" }, back, el("h2", { textContent: "ميزانية قسم " + dp, style: "margin:0;flex:1;min-width:0;font-size:16px" })),
+    el("div", { className: "row top between" }, back, el("h2", { textContent: "ميزانية قسم " + dp, style: "margin:0;flex:1;min-width:0;font-size:16px" }), ui.badge = approvalBadge(b)),
     el("p", { className: "lead", textContent: "اضغط على الشعبة لتختارها، واضغطها مرة أخرى لتزيلها. الضغط المطوّل يغيّر عدد حصصها إن خالفت المعتاد." }),
     el("label", { className: "lbl", textContent: "حصص الأسبوع للفصل الواحد" }), ui.periods,
     ui.saveMsg));
@@ -631,15 +695,18 @@ function openEditor(dp) {
   ui.have = el("span", { textContent: "0" });
   ui.gap = el("span", { textContent: "—" });
   ui.note = el("textarea", { maxLength: 1000, placeholder: "أي ملاحظة على ميزانية القسم" });
-  const saveBtn = el("button", { className: "btn", type: "button", textContent: "حفظ" });
-  saveBtn.onclick = () => saveBudget();
+  // «حفظ»: always in view (pinned to the bottom), enabled once something changed.
+  ui.saveBtn = el("button", { className: "btn", type: "button", textContent: "حفظ", disabled: true });
+  // (Feedback.busy gives the button back as it found it: saveUi() after.)
+  ui.saveBtn.onclick = async () => { await busy(ui.saveBtn, saveBudget, "تم الحفظ"); saveUi(); };
+  ui.unsaved = el("span", { className: "badge warn", textContent: "تعديلات غير محفوظة", hidden: true });
   box.append(el("div", { className: "card", style: "margin-top:14px" }, el("h2", { textContent: "ميزانية المعلمين" }),
     el("div", { className: "sums" },
       el("div", {}, el("b", { textContent: "العدد المطلوب" }), ui.req),
       el("div", {}, el("b", { textContent: "الموجود" }), ui.have),
       el("div", {}, el("b", { textContent: "العجز" }), ui.gap)),
-    el("label", { className: "lbl", textContent: "ملاحظات" }), ui.note,
-    el("div", { className: "row" }, saveBtn)));
+    el("label", { className: "lbl", textContent: "ملاحظات" }), ui.note));
+  box.append(el("div", { className: "savebar" }, ui.unsaved, ui.saveBtn));
 
   ui.req.value = E.data.required ?? "";
   ui.req.oninput = () => { E.data.required = ui.req.value === "" ? null : Number(ui.req.value); changed(); };
@@ -650,14 +717,22 @@ function openEditor(dp) {
   S.scroller.scrollTop = 0;
   renderPeriods();
   renderTeachers();
+  saveUi();
+}
+// The save bar: «حفظ» enabled and «تعديلات غير محفوظة» shown while there are changes.
+function saveUi() {
+  const E = S.edit;
+  if (!E?.ui.saveBtn) return;
+  const on = E.dirty && !E.review;
+  E.ui.saveBtn.disabled = !on;
+  E.ui.unsaved.hidden = !on;
 }
 
 function closeEditor() {
   const E = S.edit;
   if (!E) return;
   // A filled form not yet approved is dropped, not saved.
-  if (E.review) { E.data = E.review; E.review = null; E.dirty = false; clearTimeout(E.timer); }
-  if (E.dirty) saveBudget();
+  if (E.review) { E.data = E.review; E.review = null; E.dirty = false; }
   S.edit = null;
 }
 
@@ -665,30 +740,29 @@ function setMsg(node, text, kind) { node.textContent = text || ""; node.classNam
 
 function changed() {
   const E = S.edit;
-  E.dirty = true; renderSums();
+  E.dirty = true; renderSums(); saveUi();
   if (E.review) { setMsg(E.ui.saveMsg, "لم يُحفظ: راجع ثم اضغط «اعتماد وحفظ»", "err"); return; }
-  clearTimeout(E.timer); E.timer = setTimeout(saveBudget, 800);
-  setMsg(E.ui.saveMsg, "جارٍ الحفظ...");
+  setMsg(E.ui.saveMsg, "");
 }
 
+// «حفظ»: the department's budget as it is on screen. Every save leaves it
+// «غير معتمدة» (firestore.rules insists). Throws on failure, the changes
+// staying on screen.
 async function saveBudget() {
   const E = S.edit;
-  if (!E || E.review) return;
-  clearTimeout(E.timer);
+  if (!E || E.review || !E.dirty) return;
   const snapshot = JSON.stringify(E.data);
   const clean = cleanBudget(E.data);
-  try {
-    await setDoc(doc(S.db, COLLECTION, E.dp), {
-      ...clean, updatedAt: serverTimestamp(), updatedBy: S.me.name || "", updatedByUid: S.me.uid,
-    });
-    const now = new Date();
-    S.budgets.set(E.dp, { dept: E.dp, data: clean, updatedAt: now, updatedBy: S.me.name || "" });
-    if (S.edit === E && JSON.stringify(E.data) === snapshot) E.dirty = false;
-    if (S.edit === E) setMsg(E.ui.saveMsg, "حُفظ ✓ " + fmtTime(now), "ok");
-  } catch (e) {
-    console.error("[department-budgets] save failed", e);
-    if (S.edit === E) setMsg(E.ui.saveMsg, "لم يُحفظ: " + errText(e), "err");
-  }
+  await setDoc(doc(S.db, COLLECTION, E.dp), {
+    ...clean, updatedAt: serverTimestamp(), updatedBy: S.me.name || "", updatedByUid: S.me.uid, approved: false,
+  });
+  const now = new Date();
+  S.budgets.set(E.dp, { ...budgetEntry(E.dp, clean), updatedAt: now, updatedBy: S.me.name || "" });
+  if (S.edit !== E) return;
+  if (JSON.stringify(E.data) === snapshot) E.dirty = false;
+  setMsg(E.ui.saveMsg, "آخر حفظ: " + fmtDate(now) + " " + fmtTime(now) + " (" + (S.me.name || "") + ")", "ok");
+  E.ui.badge?.replaceWith(E.ui.badge = approvalBadge(S.budgets.get(E.dp)));
+  saveUi();
 }
 
 function renderSums() {
@@ -982,7 +1056,7 @@ function renderSchool(box) {
   });
   const td = (v, cls) => el("td", { className: cls || "", textContent: v === null || v === undefined || v === "" ? "—" : v });
   const table = el("table", { className: "bsum" },
-    el("thead", {}, el("tr", {}, ...["القسم", "رئيس القسم", "آخر تحديث", ""].map((h) => el("th", { textContent: h })))),
+    el("thead", {}, el("tr", {}, ...["القسم", "رئيس القسم", "آخر تحديث", "الحالة", ""].map((h) => el("th", { textContent: h })))),
     el("tbody", {}, ...rows.map((r) => {
       const edit = el("button", { className: "btn ghost small", type: "button", textContent: "تعديل" });
       edit.onclick = () => openEditor(r.dp);
@@ -990,13 +1064,47 @@ function renderSchool(box) {
       if (view) view.onclick = () => { S.preview = r.dp; setView("preview"); };
       return el("tr", {}, td(r.dp), td(r.head),
         td(!r.b ? "لم تُدخل بعد" : [r.b.updatedAt ? fmtDate(r.b.updatedAt) : "", r.b.updatedBy].filter(Boolean).join(" · ") || "محفوظة"),
-        el("td", {}, el("div", { className: "acts" }, view, edit)));
+        el("td", {}, r.b ? approvalBadge(r.b) : "—"),
+        el("td", {}, el("div", { className: "acts" }, view, edit, approveButton(r.dp, true))));
     })));
   box.append(el("div", { className: "card" },
     el("h2", { textContent: "ميزانية المدرسة" }),
     el("div", { className: "meta", textContent: rows.filter((r) => r.b).length + " من " + rows.length + " أقسام أدخلت ميزانيتها" }),
     el("div", { className: "wrap-x" }, table)));
   if (S.showDetail) { setWide(true); rows.filter((r) => r.b).forEach((r) => box.append(deptTable(r))); }
+}
+
+/* ---------------- «اعتماد الميزانية» ---------------- */
+// The approval line: «معتمدة ✓ — who · when», or «غير معتمدة».
+const approvalText = (b) => b?.approved
+  ? "معتمدة" + (b.approvedBy ? " من " + b.approvedBy : "") + (b.approvedAt ? " في " + dayText(b.approvedAt) : "")
+  : "غير معتمدة";
+function approvalBadge(b) {
+  if (!b) return el("span", { className: "badge mute", textContent: "لم تُحفظ بعد" });
+  return el("span", { className: "badge " + (b.approved ? "ok" : "warn"), title: approvalText(b),
+    textContent: b.approved ? "معتمدة ✓" + (b.approvedBy ? " — " + b.approvedBy : "") + (b.approvedAt ? " · " + dayText(b.approvedAt) : "") : "غير معتمدة" });
+}
+// «اعتماد الميزانية» / «إلغاء الاعتماد»: for whoever sees every department
+// (S.role "admin"). Changes only the approval fields (firestore.rules).
+function approveButton(dp, small) {
+  const b = S.budgets.get(dp);
+  if (S.role !== "admin" || !b) return null;
+  const on = b.approved;
+  const btn = el("button", { className: "btn " + (on ? "ghost" : "approve") + (small ? " small" : ""), type: "button", textContent: on ? "إلغاء الاعتماد" : "اعتماد الميزانية" });
+  btn.onclick = async () => {
+    const yes = await ask(on
+      ? { title: "إلغاء الاعتماد", text: "تعود ميزانية قسم " + dp + " غير معتمدة.", ok: "إلغاء الاعتماد", cancel: "رجوع" }
+      : { title: "اعتماد الميزانية", text: "تُعتمد ميزانية قسم " + dp + " كما هي الآن باسمك.", ok: "اعتماد", cancel: "رجوع" });
+    if (!yes) return;
+    const done = await busy(btn, () => updateDoc(doc(S.db, COLLECTION, dp), on
+      ? { approved: false, approvedBy: deleteField(), approvedByUid: deleteField(), approvedAt: deleteField() }
+      : { approved: true, approvedBy: S.me.name || "", approvedByUid: S.me.uid, approvedAt: serverTimestamp() }),
+    on ? "أُلغي الاعتماد" : "تم الاعتماد");
+    if (!done) return;
+    Object.assign(b, on ? { approved: false, approvedBy: "", approvedAt: null } : { approved: true, approvedBy: S.me.name || "", approvedAt: new Date() });
+    render();
+  };
+  return btn;
 }
 
 // الجغرافيا والتاريخ and العلوم الفلسفية became الاجتماعيات (shared/departments.js).
@@ -1050,7 +1158,7 @@ function renderPreview(box) {
   box.append(el("div", { className: "row", style: "margin:0 0 12px" }, back, edit, printButton(() => formPage(dp, b.data), "ميزانية قسم " + dp)),
     card);
   card.append(
-      el("h2", { textContent: "ميزانية قسم " + dp }),
+      el("div", { className: "row between", style: "margin:0" }, el("h2", { textContent: "ميزانية قسم " + dp, style: "margin:0" }), approvalBadge(b), approveButton(dp)),
       el("div", { className: "meta", textContent: (b.updatedAt ? "آخر تحديث: " + fmtDate(b.updatedAt) : "") + (b.updatedBy ? " — " + b.updatedBy : "") }),
       el("div", { className: "row" }, ...downloadButtons(() => dp, () => b.data, msg), msg),
       el("div", { className: "wrap-x", style: "margin-top:10px" }, formPage(dp, b.data, true)));
@@ -1270,11 +1378,8 @@ function gridColumns() {
     return { dp, cols: subs.map((subj) => ({ dp, subj, label: subj || dp })) };
   });
 }
-function renderGrid(box) {
-  setWide(true);
-  const msg = el("span", { className: "msg" });
-  S.gridMsg = msg;
-  const back = backButton(() => setView("school"));
+// Who has each class × subject in every department: one row per class.
+function gridModel() {
   const groups = gridColumns(), cols = groups.flatMap((g) => g.cols);
   // who[dp|subj][class] = [{ t, h }]
   const who = {};
@@ -1289,70 +1394,51 @@ function renderGrid(box) {
       }
     }
   }
-  const head = el("thead", {},
+  const rows = [];
+  for (const g of S.classes.groups) g.classes.forEach((c, ci) => rows.push({ c, gsep: ci === 0, cells: cols.map((k) => {
+    const d = S.budgets.get(k.dp)?.data || { periods: {} };
+    const def = defFor(d, k.dp, k.subj, c);
+    const cur = (who[k.dp + "|" + (k.subj || "")] || {})[c] || [];
+    return {
+      names: cur.map((x) => x.t.name), off: def === 0 && !cur.length, dup: cur.length > 1,
+      odd: cur.some((x) => def !== null && x.h !== def), title: cur.map((x) => x.t.name + " (" + x.h + ")").join("\n"),
+    };
+  }) }));
+  return { groups, cols, rows };
+}
+// The grid's two header rows (a merged department over its subjects).
+function gridHead(groups) {
+  return el("thead", {},
     el("tr", {}, el("th", { className: "stick", rowSpan: 2, textContent: "الصف" }),
       ...groups.map((g) => isMulti(g.dp) ? el("th", { colSpan: g.cols.length, textContent: g.dp }) : el("th", { rowSpan: 2, textContent: g.dp }))),
     el("tr", {}, ...groups.filter((g) => isMulti(g.dp)).flatMap((g) => g.cols.map((k) => el("th", { textContent: k.subj })))));
-  const body = el("tbody");
-  for (const g of S.classes.groups) g.classes.forEach((c, ci) => {
-    body.append(el("tr", { className: ci === 0 ? "gsep" : "" }, el("th", { className: "stick", textContent: c }), ...cols.map((k) => {
-      const d = S.budgets.get(k.dp)?.data || { periods: {} };
-      const def = defFor(d, k.dp, k.subj, c);
-      const cur = (who[k.dp + "|" + (k.subj || "")] || {})[c] || [];
-      if (def === 0 && !cur.length) return el("td", { className: "off" });
-      const staff = deptStaff(k.dp).map((t) => ({ key: teacherKey(t), name: t.name }));
-      cur.forEach((x) => { if (!staff.some((s) => s.key === teacherKey(x.t))) staff.push({ key: teacherKey(x.t), name: x.t.name }); });
-      const sel = el("select", {}, el("option", { value: "", textContent: "—" }), ...staff.map((s) => el("option", { value: s.key, textContent: s.name })));
-      sel.value = cur.length ? teacherKey(cur[0].t) : "";
-      sel.onchange = () => setGridCell(k, c, staff.find((s) => s.key === sel.value) || null);
-      const bad = cur.some((x) => def !== null && x.h !== def);
-      return el("td", { className: (cur.length > 1 ? "dup" : "") + (bad ? " odd" : ""), title: cur.map((x) => x.t.name + " (" + x.h + ")").join("\n") },
-        sel, cur.length > 1 ? el("small", { textContent: "+" + (cur.length - 1) }) : null);
-    })));
-  });
+}
+// «ميزانية كل الأقسام»: read only (a department is changed from its own
+// «تعديل»), the downloads of every department, and «المعلمون» under it.
+function renderGrid(box) {
+  setWide(true);
+  const msg = el("span", { className: "msg" });
+  const back = backButton(() => setView("school"));
+  const { groups, rows } = gridModel();
+  const body = el("tbody", {}, ...rows.map((r) => el("tr", { className: r.gsep ? "gsep" : "" },
+    el("th", { className: "stick", textContent: r.c }),
+    ...r.cells.map((x) => x.off ? el("td", { className: "off" })
+      : el("td", { className: "ro" + (x.dup ? " dup" : "") + (x.odd ? " odd" : ""), title: x.title, textContent: x.names.join("، ") || "—" })))));
   const card = el("div", { className: "card keep-wide", style: "padding:10px" });
   // The timetable sheet's CSV: every department's budget, so it lives here.
   const csv = el("button", { className: "btn ghost", type: "button", textContent: "تصدير CSV للجدول" });
   csv.onclick = () => exportCsv(msg);
-  box.append(el("div", { className: "row", style: "margin:0 0 10px" }, back, printButton(() => card, "ميزانية كل الأقسام"), csv, msg),
-    card);
+  const dl = [["xlsx", "تحميل Excel"], ["pdf", "تحميل PDF"], ["png", "تحميل صورة"]].map(([kind, label]) => {
+    const b = el("button", { className: "btn ghost", type: "button", textContent: label });
+    b.onclick = async () => { b.disabled = true; await downloadAll(kind, msg); b.disabled = false; };
+    return b;
+  });
+  box.append(el("div", { className: "row", style: "margin:0 0 10px" }, back, csv, ...dl, msg), card);
   card.append(
       el("h2", { textContent: "ميزانية كل الأقسام" }),
-      el("p", { className: "lead", style: "font-size:14px", textContent: "اختر المعلم من القائمة. الخانة الحمراء حصصها تخالف المعتاد." }),
-      el("div", { className: "gridWrap" }, el("table", { className: "grid" }, head, body)));
-}
-// One cell changed: the subject leaves whoever had it in that class and goes
-// to the chosen teacher, in the department's own budget.
-function setGridCell(k, c, pick) {
-  S.gridBusy = S.gridBusy.then(async () => {
-    const msg = S.gridMsg;
-    setMsg(msg, "جارٍ الحفظ...");
-    const b = S.budgets.get(k.dp);
-    const d = editable(b ? b.data : emptyData(k.dp));
-    for (const t of d.teachers) if (c in t.cells) {
-      const parts = partsOf(k.dp, t, c), keep = parts.filter((p) => (p.subj || null) !== (k.subj || null));
-      if (keep.length !== parts.length) setParts(t, c, keep);
-    }
-    if (pick) {
-      const staff = S.teachers.find((t) => t.uid === pick.key);
-      let t = d.teachers.find((x) => teacherKey(x) === pick.key);
-      if (!t) { t = staff ? newRow(k.dp, staff) : { uid: "", name: pick.name, cells: {}, note: "", subjects: [], subj: {}, split: {} }; d.teachers.push(t); }
-      if (k.subj && !t.subjects.includes(k.subj)) t.subjects.push(k.subj);
-      const h = defFor(d, k.dp, k.subj, c) ?? 0;
-      setParts(t, c, [...(c in t.cells ? partsOf(k.dp, t, c) : []), { subj: k.subj, h }]);
-    }
-    const clean = cleanBudget(d);
-    try {
-      await setDoc(doc(S.db, COLLECTION, k.dp), { ...clean, updatedAt: serverTimestamp(), updatedBy: S.me.name || "", updatedByUid: S.me.uid });
-      S.budgets.set(k.dp, { dept: k.dp, data: clean, updatedAt: new Date(), updatedBy: S.me.name || "" });
-      redrawGrid();
-      setMsg(S.gridMsg, "حُفظ ✓ في ميزانية " + k.dp, "ok");
-    } catch (e) {
-      console.error("[department-budgets] grid save failed", e);
-      redrawGrid();
-      setMsg(S.gridMsg, "لم يُحفظ: " + errText(e), "err");
-    }
-  });
+      el("p", { className: "lead", style: "font-size:14px", textContent: "للمعاينة فقط، والتعديل من «تعديل» في ميزانية كل قسم. الخانة الحمراء حصصها تخالف المقرر، والرمادية بلا حصص." }),
+      el("div", { className: "gridWrap" }, el("table", { className: "grid" }, gridHead(groups), body)));
+  box.append(teachersCard());
 }
 // Re-draws «كل الأقسام» where the admin left it, not back at the first column.
 function redrawGrid() {
@@ -1363,6 +1449,172 @@ function redrawGrid() {
   const now = S.body.querySelector(".gridWrap");
   S.scroller.scrollTop = pos.top;
   if (now) { now.scrollTop = pos.gTop; now.scrollLeft = pos.gLeft; }
+}
+
+/* ---- «المعلمون»: as the timetable sheet's sheet of that name ---- */
+// Every teacher of the site by department (and anyone in a budget who isn't
+// one of them, under that budget's department), with their weekly periods
+// from every budget.
+function teacherRoster() {
+  const periods = {}, all = new Map();
+  for (const t of S.teachers) all.set(teacherKey(t), { key: teacherKey(t), name: t.name, dp: t.department, isHead: t.isHead });
+  for (const [dp, b] of S.budgets) for (const t of b.data.teachers) {
+    const k = teacherKey(t);
+    periods[k] = (periods[k] || 0) + nisab(t);
+    if (!all.has(k)) all.set(k, { key: k, name: t.name, dp: resolveDepartmentName(dp) || dp, isHead: false });
+  }
+  const list = [...all.values()];
+  return schoolDepartments().map((dp) => ({
+    dp, list: list.filter((x) => x.dp === dp).sort((a, b) => a.name.localeCompare(b.name, "ar")).map((x) => ({ ...x, periods: periods[x.key] || 0 })),
+  })).filter((g) => g.list.length);
+}
+// «الفئة»: what was chosen here, else a head's «رئيس قسم بقيود صلبة», else «بلا قيود صلبة».
+const savedCat = (x) => CATEGORIES.includes(S.cats[x.key]) ? S.cats[x.key] : x.isHead ? CATEGORIES[0] : CATEGORIES[3];
+function teachersCard() {
+  const roster = teacherRoster();
+  const save = el("button", { className: "btn", type: "button", textContent: "حفظ" });
+  const badge = el("span", { className: "badge warn", textContent: "تعديلات غير محفوظة" });
+  const sync = () => { const on = Object.keys(S.catEdits).length > 0; save.disabled = !on; badge.hidden = !on; };
+  save.onclick = async () => { if (await busy(save, saveCategories, "تم الحفظ")) sync(); };
+  let n = 0;
+  const rows = roster.flatMap((g) => [
+    el("tr", { className: "dep" }, el("td", { colSpan: 4 }, g.dp, el("span", { textContent: "المعلمون: " + g.list.length + " · الحصص: " + sum(g.list, (x) => x.periods) }))),
+    ...g.list.map((x) => {
+      const sel = el("select", { title: "الفئة" }, ...CATEGORIES.map((c) => el("option", { value: c, textContent: c })));
+      sel.value = S.catEdits[x.key] || savedCat(x);
+      const mark = () => sel.classList.toggle("chg", x.key in S.catEdits);
+      sel.onchange = () => {
+        if (sel.value === savedCat(x)) delete S.catEdits[x.key]; else S.catEdits[x.key] = sel.value;
+        mark(); sync();
+      };
+      mark();
+      return el("tr", {}, el("td", { textContent: ++n }), el("td", { className: "n", textContent: x.name }), el("td", { textContent: x.periods }), el("td", {}, sel));
+    }),
+  ]);
+  const total = sum(roster, (g) => sum(g.list, (x) => x.periods));
+  const card = el("div", { className: "card keep-wide" },
+    el("div", { className: "row between", style: "margin:0 0 4px" }, el("h2", { textContent: "المعلمون", style: "margin:0" }),
+      el("div", { className: "row", style: "margin:0" }, badge, save)),
+    el("p", { className: "lead", style: "font-size:14px", textContent: "من ميزانيات الأقسام، ويتحدث مع كل حفظ لها. الفئة وحدها تُعدَّل هنا." }),
+    el("div", { className: "wrap-x" }, el("table", { className: "roster" },
+      el("thead", {}, el("tr", {}, ...["م", "الاسم", "النصاب الأسبوعي", "الفئة"].map((h) => el("th", { textContent: h })))),
+      el("tbody", {}, ...rows,
+        el("tr", { className: "tot" }, el("td", { colSpan: 2, textContent: "المجموع: " + n + " معلماً" }), el("td", { textContent: total }), el("td"))))));
+  sync();
+  return card;
+}
+// «حفظ» of «الفئة»: budgetMeta/categories.
+async function saveCategories() {
+  if (!Object.keys(S.catEdits).length) return;
+  const cats = { ...S.cats, ...S.catEdits };
+  await setDoc(doc(S.db, ...META), { cats, updatedAt: serverTimestamp(), updatedBy: S.me.name || "", updatedByUid: S.me.uid });
+  S.cats = cats; S.catEdits = {};
+  S.body.querySelectorAll(".roster select.chg").forEach((x) => x.classList.remove("chg"));
+}
+
+/* ---- every department at once: Excel, PDF, image ---- */
+// The grid as a page, for the PDF and the image (whole, not cut).
+function gridPage() {
+  const { groups, rows } = gridModel();
+  const head = gridHead(groups);
+  head.querySelectorAll(".stick").forEach((x) => x.classList.remove("stick"));
+  return el("div", { className: "dbg" },
+    el("div", { className: "dbg-title", textContent: "ميزانية كل الأقسام — " + SCHOOL_NAME + " — " + academicYear() }),
+    el("table", { className: "dbf-t" }, head, el("tbody", {}, ...rows.map((r) => el("tr", { className: r.gsep ? "dbg-sep" : "" },
+      el("th", { textContent: compact(r.c) }),
+      ...r.cells.map((x) => el("td", { className: x.off ? "dbf-off" : (x.odd ? "dbg-odd" : "") + (x.dup ? " dbg-dup" : ""), textContent: x.off ? "–" : x.names.join("، ") })))))),
+    el("div", { className: "dbf-date", textContent: "تاريخ التحميل: " + dayText(new Date()) }));
+}
+async function nodeCanvas(page) {
+  await needCanvas();
+  const host = el("div", { className: "dbf-host" }, el("style", { textContent: FORM_CSS }), page);
+  document.body.append(host);
+  try {
+    await Promise.all([...page.querySelectorAll("img")].map((i) => i.complete ? 0 : new Promise((r) => { i.onload = i.onerror = r; })));
+    if (document.fonts && document.fonts.ready) await document.fonts.ready;
+    return await window.html2canvas(page, { scale: 2, backgroundColor: "#ffffff" });
+  } finally { host.remove(); }
+}
+// One canvas on one A4 landscape page, as large as fits (nothing cut).
+function pdfPage(pdf, canvas, first) {
+  if (!first) pdf.addPage("a4", "landscape");
+  const W = 297, H = 210, m = 8, k = Math.min((W - 2 * m) / canvas.width, (H - 2 * m) / canvas.height);
+  pdf.addImage(canvas.toDataURL("image/jpeg", 0.92), "JPEG", (W - canvas.width * k) / 2, m, canvas.width * k, canvas.height * k);
+}
+// The departments with a budget, in the school's order.
+const savedDepts = () => schoolDepartments().filter((dp) => S.budgets.has(dp));
+// A worksheet's name: no \ / ? * [ ] :, at most 31 characters.
+const sheetName = (t) => String(t).replace(/[\\/?*[\]:]/g, " ").slice(0, 31);
+async function downloadAll(kind, msgEl) {
+  setMsg(msgEl, "جارٍ إنشاء الملف...");
+  const base = "ميزانية_كل_الأقسام_" + new Date().toISOString().slice(0, 10);
+  try {
+    if (kind === "png") {
+      const canvas = await nodeCanvas(gridPage());
+      saveBlob(await new Promise((r) => canvas.toBlob(r, "image/png")), base + ".png");
+    }
+    else if (kind === "pdf") {
+      const grid = await nodeCanvas(gridPage());
+      const pdf = new window.jspdf.jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+      pdfPage(pdf, grid, true);
+      for (const dp of savedDepts()) {
+        setMsg(msgEl, "جارٍ إنشاء الملف: " + dp + "...");
+        pdfPage(pdf, await formCanvas(dp, S.budgets.get(dp).data), false);
+      }
+      saveBlob(pdf.output("blob"), base + ".pdf");
+    } else {
+      await needExcel();
+      const wb = new window.ExcelJS.Workbook(); wb.creator = SCHOOL_NAME;
+      gridSheet(wb);
+      for (const dp of savedDepts()) await buildXlsx(dp, S.budgets.get(dp).data, { wb, name: sheetName(dp) });
+      saveBlob(new Blob([await wb.xlsx.writeBuffer()], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }), base + ".xlsx");
+    }
+    setMsg(msgEl, "نُزّل الملف ✓", "ok");
+  } catch (e) {
+    console.error("[department-budgets] download failed", e);
+    setMsg(msgEl, "تعذّر إنشاء الملف: " + (typeof e === "string" ? e : e?.message || ""), "err");
+  }
+}
+// The Excel's first sheet: the grid of every department.
+function gridSheet(wb) {
+  const { groups, cols, rows } = gridModel();
+  const ws = wb.addWorksheet("كل الأقسام", { views: [{ rightToLeft: true, state: "frozen", xSplit: 1, ySplit: 3 }] });
+  const thin = { style: "thin", color: { argb: "FF9E9E9E" } }, box = { top: thin, left: thin, bottom: thin, right: thin };
+  const center = { horizontal: "center", vertical: "middle", wrapText: true, readingOrder: "rtl" };
+  const fill = (argb) => ({ type: "pattern", pattern: "solid", fgColor: { argb } });
+  const last = cols.length + 1;
+  ws.mergeCells(1, 1, 1, last);
+  Object.assign(ws.getCell(1, 1), { value: "ميزانية كل الأقسام — " + SCHOOL_NAME + " — " + academicYear(), font: { bold: true, size: 14 }, alignment: center });
+  ws.getColumn(1).width = 8;
+  for (let c = 2; c <= last; c++) ws.getColumn(c).width = 16;
+  // (A merged cell's value lives in its first cell: the one under it gets the look only.)
+  const head = (r, c, v) => Object.assign(ws.getCell(r, c), { ...(v === undefined ? {} : { value: v }), font: { bold: true }, alignment: center, border: box, fill: fill("FFDBE9E1") });
+  head(2, 1, "الصف"); head(3, 1); ws.mergeCells(2, 1, 3, 1);
+  let c = 2;
+  for (const g of groups) {
+    if (isMulti(g.dp)) {
+      if (g.cols.length > 1) ws.mergeCells(2, c, 2, c + g.cols.length - 1);
+      head(2, c, g.dp);
+      g.cols.forEach((k, i) => head(3, c + i, k.subj));
+    } else { head(2, c, g.dp); head(3, c); ws.mergeCells(2, c, 3, c); }
+    c += g.cols.length;
+  }
+  const heavy = { style: "medium", color: { argb: "FF000000" } };
+  rows.forEach((r, i) => {
+    const row = ws.getRow(4 + i);
+    Object.assign(row.getCell(1), { value: compact(r.c), font: { bold: true }, alignment: center, border: box });
+    r.cells.forEach((x, j) => {
+      const cell = row.getCell(2 + j);
+      cell.value = x.off ? "–" : x.names.join("، ") || null;
+      cell.alignment = center; cell.border = box;
+      if (x.off) cell.fill = fill("FFE4E4E4");
+      else if (x.dup) cell.fill = fill("FFFFE4C4");
+      if (x.odd) cell.font = { bold: true, color: { argb: "FFB42318" } };
+    });
+    if (r.gsep && i > 0) for (let k = 1; k <= last; k++) row.getCell(k).border = { ...row.getCell(k).border, top: heavy };
+  });
+  ws.pageSetup = { paperSize: 9, orientation: "landscape", fitToPage: true, fitToWidth: 1, fitToHeight: 1 };
+  return ws;
 }
 
 /* =====================================================================
@@ -1425,42 +1677,55 @@ async function imageB64(path) {
 }
 const colName = (n) => { let s = ""; for (; n > 0; n = Math.floor((n - 1) / 26)) s = String.fromCharCode(65 + (n - 1) % 26) + s; return s; };
 
-async function buildXlsx(dp, d) {
+// The approval line of the official form: only for the budget as saved (a
+// form downloaded with changes not saved isn't the approved one).
+const formStatus = (dp, d) => {
+  const b = S.budgets.get(dp);
+  return "الحالة: " + (b && JSON.stringify(cleanBudget(d)) === JSON.stringify(b.data) ? approvalText(b) : "غير معتمدة");
+};
+// into: { wb, name } → one more sheet in that workbook (every department in
+// one file): the form alone, values instead of the helper sheets' formulas
+// and lists. Otherwise the department's own fillable file.
+async function buildXlsx(dp, d, into) {
   await needExcel();
   const ExcelJS = window.ExcelJS;
   const multi = isMulti(dp), classes = S.classes.classes, subs = formSubjects(dp, d), rows = formRows(dp, d);
   const C0 = 5, CN = C0 + classes.length - 1, NOTE = CN + 1, HELP = CN + 2, HR = 9;
   const L = colName, lastL = L(NOTE), year = academicYear(), head = headOf(dp), when = budgetDate(dp);
-  const wb = new ExcelJS.Workbook(); wb.creator = SCHOOL_NAME;
-  const ws = wb.addWorksheet("الميزانية", { views: [{ rightToLeft: true, showGridLines: false }] });
-  const ref = wb.addWorksheet("الحصص", { views: [{ rightToLeft: true }] });
-  const guide = wb.addWorksheet("طريقة التعبئة", { views: [{ rightToLeft: true }] });
-  const meta = wb.addWorksheet("_منصة", { state: "veryHidden" });
+  const solo = !into;
+  const wb = solo ? new ExcelJS.Workbook() : into.wb;
+  if (solo) wb.creator = SCHOOL_NAME;
+  const ws = wb.addWorksheet(solo ? "الميزانية" : into.name, { views: [{ rightToLeft: true, showGridLines: false }] });
+  const ref = solo ? wb.addWorksheet("الحصص", { views: [{ rightToLeft: true }] }) : null;
+  const guide = solo ? wb.addWorksheet("طريقة التعبئة", { views: [{ rightToLeft: true }] }) : null;
+  const meta = solo ? wb.addWorksheet("_منصة", { state: "veryHidden" }) : null;
   const thin = { style: "thin", color: { argb: "FF9E9E9E" } }, box = { top: thin, left: thin, bottom: thin, right: thin };
   const fill = (argb) => ({ type: "pattern", pattern: "solid", fgColor: { argb } });
   const center = { horizontal: "center", vertical: "middle", wrapText: true, readingOrder: "rtl" };
 
-  // _منصة: the form's mark, the department, and the dropdown lists.
-  meta.getCell("A1").value = FORM_MARK; meta.getCell("B1").value = FORM_VERSION;
-  meta.getCell("A2").value = "القسم"; meta.getCell("B2").value = dp;
-  meta.getCell("A3").value = "العام"; meta.getCell("B3").value = year;
-  meta.getCell("A4").value = "تاريخ التنزيل"; meta.getCell("B4").value = new Date().toISOString().slice(0, 10);
-  meta.getCell("A5").value = "رئيس القسم"; meta.getCell("B5").value = head;
   const staff = [...new Set([...deptStaff(dp).map((t) => t.name), ...rows.map((r) => r.name)])];
-  staff.forEach((n, i) => { meta.getCell("D" + (i + 1)).value = n; });
-  subs.forEach((s, i) => { meta.getCell("E" + (i + 1)).value = s; });
+  if (solo) {
+    // _منصة: the form's mark, the department, and the dropdown lists.
+    meta.getCell("A1").value = FORM_MARK; meta.getCell("B1").value = FORM_VERSION;
+    meta.getCell("A2").value = "القسم"; meta.getCell("B2").value = dp;
+    meta.getCell("A3").value = "العام"; meta.getCell("B3").value = year;
+    meta.getCell("A4").value = "تاريخ التنزيل"; meta.getCell("B4").value = new Date().toISOString().slice(0, 10);
+    meta.getCell("A5").value = "رئيس القسم"; meta.getCell("B5").value = head;
+    staff.forEach((n, i) => { meta.getCell("D" + (i + 1)).value = n; });
+    subs.forEach((s, i) => { meta.getCell("E" + (i + 1)).value = s; });
 
-  // الحصص: the department's usual periods, the same class columns as the budget sheet.
-  ref.getCell("A1").value = "الحصص المعتادة لكل مادة في كل صف (من «حصص الأسبوع» في الصفحة) — للاطلاع، لا تُعدَّل";
-  ref.getCell("D2").value = "المادة";
-  classes.forEach((c, i) => { ref.getCell(2, C0 + i).value = compact(c); });
-  subs.forEach((s, j) => {
-    ref.getCell(3 + j, 4).value = s;
-    classes.forEach((c, i) => { const o = defFor(d, dp, multi ? s : null, c); if (o !== null) ref.getCell(3 + j, C0 + i).value = o; });
-  });
-  ref.getRow(2).font = { bold: true };
-  ref.getColumn(4).width = 18;
-  await ref.protect("", {});
+    // الحصص: the department's usual periods, the same class columns as the budget sheet.
+    ref.getCell("A1").value = "الحصص المعتادة لكل مادة في كل صف (من «حصص الأسبوع» في الصفحة) — للاطلاع، لا تُعدَّل";
+    ref.getCell("D2").value = "المادة";
+    classes.forEach((c, i) => { ref.getCell(2, C0 + i).value = compact(c); });
+    subs.forEach((s, j) => {
+      ref.getCell(3 + j, 4).value = s;
+      classes.forEach((c, i) => { const o = defFor(d, dp, multi ? s : null, c); if (o !== null) ref.getCell(3 + j, C0 + i).value = o; });
+    });
+    ref.getRow(2).font = { bold: true };
+    ref.getColumn(4).width = 18;
+    await ref.protect("", {});
+  }
   const REF_SUBJ = `الحصص!$D$3:$D$${2 + subs.length}`, REF_GRID = `الحصص!$${L(C0)}$3:$${L(CN)}$${2 + subs.length}`;
 
   // Header.
@@ -1489,7 +1754,7 @@ async function buildXlsx(dp, d) {
   let r = HR + 1, n = 0;
   const lines = [];
   rows.forEach((t) => { n++; lines.push({ n, t, first: true, span: t.lines.length, line: t.lines[0] }); t.lines.slice(1).forEach((line) => lines.push({ n, t, line })); });
-  for (let k = 0; k < 10; k++) lines.push({ n: ++n, t: null, first: true, span: 1, line: { subj: multi ? "" : dp, cells: {} } });
+  for (let k = 0; k < (solo ? 10 : 0); k++) lines.push({ n: ++n, t: null, first: true, span: 1, line: { subj: multi ? "" : dp, cells: {} } });
   // Every other teacher (all their lines) on a light band; dotted = no periods (reads in black and white).
   const band = fill("FFF0F6F2"), none = { type: "pattern", pattern: "lightGray", fgColor: { argb: "FF9E9E9E" }, bgColor: { argb: "FFFFFFFF" } };
   const first = r;
@@ -1499,9 +1764,14 @@ async function buildXlsx(dp, d) {
       if (x.span > 1) for (const col of [1, 2, 3]) ws.mergeCells(r, col, r + x.span - 1, col);
       row.getCell(1).value = x.n;
       if (x.t) row.getCell(2).value = x.t.name;
-      row.getCell(3).value = { formula: `SUM(${L(HELP)}${r}:${L(HELP)}${r + x.span - 1})` };
       const note = x.t ? withHeadNote(dp, x.t.name, x.t.note) : "";
-      row.getCell(NOTE).value = note || (head ? { formula: `IF($B${r}=_منصة!$B$5,"${HEAD_NOTE}","")` } : null);
+      if (solo) {
+        row.getCell(3).value = { formula: `SUM(${L(HELP)}${r}:${L(HELP)}${r + x.span - 1})` };
+        row.getCell(NOTE).value = note || (head ? { formula: `IF($B${r}=_منصة!$B$5,"${HEAD_NOTE}","")` } : null);
+      } else {
+        row.getCell(3).value = sum(x.t.lines, (l) => Object.values(l.cells).reduce((a, h) => a + h, 0));
+        row.getCell(NOTE).value = note || null;
+      }
     }
     row.getCell(4).value = x.line.subj || null;
     classes.forEach((c, i) => {
@@ -1510,7 +1780,7 @@ async function buildXlsx(dp, d) {
       // No periods for this subject in this class.
       else if (defFor(d, dp, multi ? x.line.subj || null : null, c) === 0) row.getCell(C0 + i).fill = none;
     });
-    row.getCell(HELP).value = { formula: `IFERROR(SUMPRODUCT((${L(C0)}${r}:${L(CN)}${r}="✓")*INDEX(${REF_GRID},MATCH($D${r},${REF_SUBJ},0),0)),0)+SUM(${L(C0)}${r}:${L(CN)}${r})` };
+    if (solo) row.getCell(HELP).value = { formula: `IFERROR(SUMPRODUCT((${L(C0)}${r}:${L(CN)}${r}="✓")*INDEX(${REF_GRID},MATCH($D${r},${REF_SUBJ},0),0)),0)+SUM(${L(C0)}${r}:${L(CN)}${r})` };
     for (let c = 1; c <= NOTE; c++) { const cell = row.getCell(c); cell.border = box; cell.alignment = c === 2 || c === NOTE ? { vertical: "middle", horizontal: "right", wrapText: true } : center; }
     row.getCell(2).font = { bold: true }; row.getCell(3).font = { bold: true };
     if (x.n % 2 === 0) for (let c = 1; c <= NOTE; c++) if (!row.getCell(c).fill) row.getCell(c).fill = band;
@@ -1520,7 +1790,7 @@ async function buildXlsx(dp, d) {
     r++;
   });
   const last = r - 1;
-  for (let rr = first; rr <= last; rr++) {
+  if (solo) for (let rr = first; rr <= last; rr++) {
     if (staff.length) ws.getCell(rr, 2).dataValidation = { type: "list", allowBlank: true, formulae: [`_منصة!$D$1:$D$${staff.length}`], showErrorMessage: true, errorStyle: "warning", errorTitle: "اسم غير موجود", error: "هذا الاسم ليس في قائمة معلمي القسم. يُقبل، وتنبّهك الصفحة عند الرفع." };
     if (multi && subs.length) ws.getCell(rr, 4).dataValidation = { type: "list", allowBlank: true, formulae: [`_منصة!$E$1:$E$${subs.length}`], showErrorMessage: true, errorStyle: "stop", errorTitle: "مادة غير معروفة", error: "اختر مادة من القائمة." };
     for (let c = C0; c <= CN; c++) ws.getCell(rr, c).dataValidation = { type: "custom", allowBlank: true, formulae: [`OR(${L(c)}${rr}="✓",AND(ISNUMBER(${L(c)}${rr}),${L(c)}${rr}>=0,${L(c)}${rr}<=40))`], showErrorMessage: true, errorStyle: "stop", errorTitle: "قيمة غير مقبولة", error: "اكتب ✓ (المعتاد) أو عدد الحصص من 1 إلى 40." };
@@ -1563,9 +1833,11 @@ async function buildXlsx(dp, d) {
   put(`A${f + 1}:D${f + 1}`, head, { size: 12 });
   put(`${L(NOTE - 3)}${f + 1}:${lastL}${f + 1}`, S.principal || "", { size: 12 });
   put(`${L(NOTE - 3)}${f + 2}:${lastL}${f + 2}`, "تاريخ الميزانية: " + dayText(when), { size: 8, color: { argb: "FF555555" } });
+  put(`A${f + 2}:D${f + 2}`, formStatus(dp, d), { size: 9, color: { argb: "FF555555" } });
 
   ws.pageSetup = { paperSize: 9, orientation: "landscape", fitToPage: true, fitToWidth: 1, fitToHeight: 1, horizontalCentered: true,
     margins: { left: 0.3, right: 0.3, top: 0.3, bottom: 0.3, header: 0.1, footer: 0.1 }, printArea: `A1:${lastL}${f + 2}` };
+  if (!solo) return ws;
   await ws.protect("", { selectLockedCells: true, selectUnlockedCells: true });
 
   guide.getColumn(1).width = 110;
@@ -1664,8 +1936,9 @@ function applyForm(parsed) {
   const ok = el("button", { className: "btn", type: "button", textContent: "اعتماد وحفظ" });
   const no = el("button", { className: "btn ghost", type: "button", textContent: "إلغاء" });
   const close = () => { E.ui.review.replaceChildren(); E.ui.review.hidden = true; };
-  ok.onclick = () => { E.review = null; close(); changed(); };
-  no.onclick = () => { E.data = E.review; E.review = null; E.dirty = false; close(); renderPeriods(); renderTeachers(); setMsg(E.ui.saveMsg, "أُلغي ما جاء من الملف"); };
+  // «اعتماد وحفظ» saves (the one save that doesn't wait for «حفظ»).
+  ok.onclick = () => { E.review = null; close(); changed(); busy(E.ui.saveBtn, saveBudget, "تم الحفظ").then(saveUi); };
+  no.onclick = () => { E.data = E.review; E.review = null; E.dirty = false; close(); renderPeriods(); renderTeachers(); saveUi(); setMsg(E.ui.saveMsg, "أُلغي ما جاء من الملف"); };
   E.ui.review.replaceChildren(el("b", { textContent: "راجع البيانات ثم اضغط «اعتماد وحفظ». لم يُحفظ شيء بعد." }),
     items.length ? el("ul", {}, ...items.map((t) => el("li", { textContent: t }))) : el("div", { className: "meta", textContent: "لا ملاحظات على الملف." }),
     el("div", { className: "row" }, ok, no));
@@ -1705,7 +1978,16 @@ const FORM_CSS = `
 .dbf-sem { font-size: 16px; margin-top: 4px; }
 .dbf-date { font-size: 11px; color: #444; text-align: left; margin-top: 10px; }
 .dbf-sign { display: flex; justify-content: space-between; margin: 22px 80px 4px; text-align: center; font-size: 16px; line-height: 2; }
+.dbf-foot { display: flex; justify-content: space-between; font-size: 11px; color: #444; margin-top: 10px; }
 .dbf-host { position: fixed; left: -10000px; top: 0; }
+/* «ميزانية كل الأقسام» as a page (PDF / image). */
+.dbg { width: max-content; min-width: 1200px; padding: 20px 24px; background: #fff; color: #000; font-family: "Tajawal", Tahoma, sans-serif; direction: rtl; }
+.dbg-title { text-align: center; font-size: 20px; font-weight: 800; margin-bottom: 12px; }
+.dbg .dbf-t th, .dbg .dbf-t td { font-size: 12px; padding: 3px 5px; white-space: nowrap; }
+.dbg .dbf-t tbody th { background: #f3f6f4; }
+.dbg tr.dbg-sep > * { border-top: 3px solid #000; }
+.dbg td.dbg-odd { color: #b42318; font-weight: 800; }
+.dbg td.dbg-dup { background: #ffe4c4; }
 `;
 function formPage(dp, d, bare) {
   const multi = isMulti(dp), classes = S.classes.classes, rows = formRows(dp, d), year = academicYear();
@@ -1742,16 +2024,8 @@ function formPage(dp, d, bare) {
     el("div", { className: "dbf-sign" },
       el("div", {}, el("b", { textContent: "رئيس القسم" }), el("div", { textContent: headOf(dp) || " " })),
       el("div", {}, el("b", { textContent: "مدير المدرسة" }), el("div", { textContent: S.principal || " " }))),
-    el("div", { className: "dbf-date", textContent: "تاريخ الميزانية: " + dayText(when) }));
+    el("div", { className: "dbf-foot" },
+      el("span", { textContent: formStatus(dp, d) }),
+      el("span", { textContent: "تاريخ الميزانية: " + dayText(when) })));
 }
-async function formCanvas(dp, d) {
-  await needCanvas();
-  const page = formPage(dp, d, false);
-  const host = el("div", { className: "dbf-host" }, el("style", { textContent: FORM_CSS }), page);
-  document.body.append(host);
-  try {
-    await Promise.all([...page.querySelectorAll("img")].map((i) => i.complete ? 0 : new Promise((r) => { i.onload = i.onerror = r; })));
-    if (document.fonts && document.fonts.ready) await document.fonts.ready;
-    return await window.html2canvas(page, { scale: 2, backgroundColor: "#ffffff" });
-  } finally { host.remove(); }
-}
+const formCanvas = (dp, d) => nodeCanvas(formPage(dp, d, false));

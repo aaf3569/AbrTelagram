@@ -311,3 +311,39 @@ svg.ic { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: roun
 svg.ic.ic-spin { animation: ic-spin .9s linear infinite; }
 @keyframes ic-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { svg.ic.ic-spin { animation-duration: 2.4s; } }
+
+/* ---- «ميزانية كل الأقسام» read only ---- */
+table.grid td.ro { padding: 4px 8px; font-size: 13px; }
+table.grid td.odd { color: var(--err); font-weight: 700; background: #fde8e6; }
+
+/* ---- «حفظ»: pinned to the bottom, and «تعديلات غير محفوظة» ---- */
+.savebar {
+  position: sticky; bottom: 0; z-index: 5; display: flex; align-items: center; justify-content: flex-end; gap: 10px;
+  margin: 0 -4px; padding: 10px 12px; background: rgba(255, 255, 255, .94);
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 -4px 16px rgba(3, 60, 84, .08);
+}
+.savebar .btn { min-width: 120px; }
+.btn:disabled:not([aria-busy]) { cursor: default; }
+
+/* ---- badges: approval, changes not saved ---- */
+.badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 999px; font-size: 12.5px; font-weight: 700; white-space: nowrap; line-height: 1.5; }
+.badge.ok { background: var(--ok-soft); color: var(--ok); }
+.badge.warn { background: var(--new); color: var(--warn); }
+.badge.mute { background: var(--bg); color: var(--mute); }
+.btn.approve { background: var(--ok); }
+
+/* ---- «المعلمون» ---- */
+table.roster { width: 100%; border-collapse: collapse; font-size: 14px; }
+table.roster th, table.roster td { border: 1px solid var(--line); padding: 5px 8px; text-align: center; }
+table.roster thead th { background: var(--tint); color: var(--navy); }
+table.roster td.n { text-align: right; }
+table.roster tr.dep td { background: var(--navy); color: #fff; font-weight: 700; text-align: right; }
+table.roster tr.dep td span { font-weight: 400; opacity: .85; margin-inline-start: 10px; font-size: 12px; }
+table.roster tr.tot td { font-weight: 700; background: var(--bg); }
+table.roster select { min-width: 180px; padding: 4px 8px; border: 1px solid #c9d6e3; border-radius: 8px; background: #fff; color: var(--ink); }
+table.roster select.chg { border-color: var(--warn); background: #fffaf0; }
+@media (max-width: 480px) {
+  table.roster { font-size: 13px; }
+  table.roster select { min-width: 150px; }
+}

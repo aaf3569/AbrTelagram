@@ -1262,11 +1262,14 @@ service cloud.firestore {
     // teacher with «السماح بكل الميزانيات» or «السماح بتعديل الجدول»
     // (hasAllBudgetsPermission) may read
     // and write all of them; a head only their own department's; other
-    // teachers none.
+    // teachers none. Only the first two approve («اعتماد الميزانية»).
     match /departmentBudgets/{dept} {
       allow read: if isAdmin() || hasAllBudgetsPermission() || (isHead() && headDepartment() == dept);
+      // A save of the budget itself (only on «حفظ»): always leaves it
+      // «غير معتمدة» — whoever saves, a head included, can't approve this way.
       allow create, update: if (isAdmin() || hasAllBudgetsPermission() || (isHead() && headDepartment() == dept))
-        && request.resource.data.keys().hasOnly(['periods', 'required', 'note', 'teachers', 'updatedAt', 'updatedBy', 'updatedByUid'])
+        && request.resource.data.keys().hasOnly(['periods', 'required', 'note', 'teachers', 'updatedAt', 'updatedBy', 'updatedByUid', 'approved'])
+        && request.resource.data.get('approved', false) == false
         && (request.resource.data.periods is map)
         && (request.resource.data.teachers is list)
         && request.resource.data.teachers.size() <= 60
@@ -1279,7 +1282,35 @@ service cloud.firestore {
         && (request.resource.data.updatedBy is string)
         && request.resource.data.updatedByUid == request.auth.uid
         && request.resource.data.updatedAt == request.time;
+      // «اعتماد الميزانية» / «إلغاء الاعتماد»: those who see every
+      // department, and nothing but the approval fields changes. Approving
+      // is in the approver's own name, at the server's time.
+      allow update: if (isAdmin() || hasAllBudgetsPermission())
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['approved', 'approvedBy', 'approvedByUid', 'approvedAt'])
+        && (request.resource.data.approved is bool)
+        && (request.resource.data.approved == false
+            || ((request.resource.data.approvedBy is string)
+                && request.resource.data.approvedBy.size() <= 120
+                && request.resource.data.approvedByUid == request.auth.uid
+                && request.resource.data.approvedAt == request.time));
       allow delete: if isAdmin();
+    }
+
+    // «الفئة» of every teacher, set in «ميزانية كل الأقسام»
+    // (/shared/department-budgets.js): budgetMeta/categories
+    //   { cats: { [uid or "n:"+name]: category }, updatedAt, updatedBy, updatedByUid }.
+    // Those who see every department read and write it.
+    match /budgetMeta/{docId} {
+      allow read: if docId == 'categories' && (isAdmin() || hasAllBudgetsPermission());
+      allow create, update: if docId == 'categories'
+        && (isAdmin() || hasAllBudgetsPermission())
+        && request.resource.data.keys().hasOnly(['cats', 'updatedAt', 'updatedBy', 'updatedByUid'])
+        && (request.resource.data.cats is map)
+        && request.resource.data.cats.size() <= 400
+        && (request.resource.data.updatedBy is string)
+        && request.resource.data.updatedByUid == request.auth.uid
+        && request.resource.data.updatedAt == request.time;
     }
 
     /* ---------- fallback ---------- */
