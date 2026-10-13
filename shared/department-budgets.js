@@ -23,10 +23,15 @@
 //                  split: { [class]: { [subject]: n } } }],
 //     updatedAt, updatedBy, updatedByUid,
 //     approved, approvedBy, approvedByUid, approvedAt,   // «اعتماد الميزانية»
-//     approvedCopy: { periods, required, note, teachers }, approvedCopyAt }
+//     approvedCopy: { periods, required, note, teachers }, approvedCopyAt,
+//     unapprovedBy, unapprovedByUid, unapprovedAt, unapprovedRole }  // who withdrew it
 // approvedCopy is the budget as it was approved: «ميزانية كل الأقسام» shows
 // that, so a change reaches it only once approved again. A save keeps it as
-// it is; «إلغاء الاعتماد» removes it.
+// it is, and so does withdrawing the approval: «إلغاء الاعتماد» (an approver)
+// or «إلغاء الميزانية» (the department's head), which records who withdrew
+// it (unapprovedRole "admin" / "head") until it is saved or approved again.
+// The head's «إشعار بميزانية جديدة» and the approvers' «تذكير رئيس القسم»
+// are Telegram messages sent by the bot's server (index.js: /api/budgets/*).
 // Nothing is saved until «حفظ» is pressed. Every save leaves the budget
 // «غير معتمدة» (approved: false); only those who see every department
 // (approvers) approve it, which changes nothing else. The teachers'
@@ -566,6 +571,10 @@ function budgetEntry(dp, x) {
     raw: { periods: x.periods ?? {}, required: x.required ?? null, note: x.note ?? "", teachers: x.teachers ?? [] },
     copy: hasCopy ? cleanBudget(x.approvedCopy) : null, copyAt: hasCopy ? toDate(x.approvedCopyAt) : null,
     keep: hasCopy ? { approvedCopy: x.approvedCopy, approvedCopyAt: x.approvedCopyAt } : {},
+    // Withdrawn («إلغاء الاعتماد» / «إلغاء الميزانية»): by whom, as what, and when.
+    unapproved: x.approved !== true && x.unapprovedAt
+      ? { by: String(x.unapprovedBy || ""), role: x.unapprovedRole === "head" ? "head" : "admin", at: toDate(x.unapprovedAt) }
+      : null,
   };
 }
 const sameBudget = (a, b) => JSON.stringify(cleanBudget(a)) === JSON.stringify(cleanBudget(b));
@@ -687,7 +696,8 @@ function openEditor(dp) {
   // As the original page: the department and its weekly periods in one card.
   ui.periods = el("div");
   box.append(el("div", { className: "card" },
-    el("div", { className: "row top between" }, back, el("h2", { textContent: "ميزانية قسم " + dp, style: "margin:0;flex:1;min-width:0;font-size:16px" }), ui.badge = approvalBadge(b)),
+    el("div", { className: "row top between" }, back, el("h2", { textContent: "ميزانية قسم " + dp, style: "margin:0;flex:1;min-width:0;font-size:16px" }), ui.badge = approvalBadge(b),
+      ui.headBtn = headButton(dp) || el("span", { hidden: true })),
     el("p", { className: "lead", textContent: "اضغط على الشعبة لتختارها، واضغطها مرة أخرى لتزيلها. الضغط المطوّل يغيّر عدد حصصها إن خالفت المعتاد." }),
     el("label", { className: "lbl", textContent: "حصص الأسبوع للفصل الواحد" }), ui.periods,
     ui.saveMsg));
@@ -793,6 +803,7 @@ async function saveBudget() {
   if (JSON.stringify(E.data) === snapshot) E.dirty = false;
   setMsg(E.ui.saveMsg, "آخر تحديث: " + stamp(now), "ok");
   E.ui.badge?.replaceWith(E.ui.badge = approvalBadge(S.budgets.get(E.dp)));
+  E.ui.headBtn?.replaceWith(E.ui.headBtn = headButton(E.dp) || el("span", { hidden: true }));
   saveUi();
 }
 
@@ -1147,7 +1158,7 @@ function renderSchool(box) {
       return el("tr", {}, td(r.dp, "c-dp"), td(r.head, "c-head"),
         td(!r.b ? "لم تُدخل بعد" : stamp(r.b.updatedAt) || "محفوظة", "c-date"),
         el("td", { className: "c-st" }, r.b ? approvalBadge(r.b) : "—"),
-        el("td", { className: "c-acts" }, el("div", { className: "acts" }, view, edit, approveButton(r.dp, true))));
+        el("td", { className: "c-acts" }, el("div", { className: "acts" }, view, edit, approveButton(r.dp, true), remindButton(r.dp))));
     })));
   box.append(el("div", { className: "card" },
     el("h2", { textContent: "ميزانية المدرسة" }),
@@ -1159,14 +1170,25 @@ function renderSchool(box) {
 /* ---------------- «اعتماد الميزانية» ---------------- */
 // The approval line: «معتمدة ✓ · when», or «غير معتمدة». Who approved is
 // kept on the budget (approvedBy) but not shown.
+// A withdrawn approval: «سحبها رئيس القسم» or «أُلغي الاعتماد», and when.
+const withdrawnText = (b) => (b.unapproved.role === "head" ? "سحبها رئيس القسم" : "أُلغي الاعتماد")
+  + (b.unapproved.at ? " · " + dayText(b.unapproved.at) : "");
 const approvalText = (b) => b?.approved
   ? "معتمدة" + (b.approvedAt ? " في " + dayText(b.approvedAt) : "")
-  : "غير معتمدة";
+  : b?.unapproved ? withdrawnText(b) : "غير معتمدة";
 function approvalBadge(b) {
   if (!b) return el("span", { className: "badge mute", textContent: "لم تُحفظ بعد" });
   return el("span", { className: "badge " + (b.approved ? "ok" : "warn"), title: approvalText(b),
-    textContent: b.approved ? "معتمدة ✓" + (b.approvedAt ? " · " + dayText(b.approvedAt) : "") : "غير معتمدة" });
+    textContent: b.approved ? "معتمدة ✓" + (b.approvedAt ? " · " + dayText(b.approvedAt) : "") : b.unapproved ? withdrawnText(b) : "غير معتمدة" });
 }
+// Withdrawing an approval changes only the approval fields (firestore.rules):
+// the budget and its approved copy stay (one approved before copies were
+// kept gets it now), and who withdrew it is recorded.
+const withdrawFields = (b, role) => ({
+  approved: false, approvedBy: deleteField(), approvedByUid: deleteField(), approvedAt: deleteField(),
+  ...(b.keep.approvedCopy ? {} : { approvedCopy: b.raw, approvedCopyAt: serverTimestamp() }),
+  unapprovedBy: S.me.name || "", unapprovedByUid: S.me.uid, unapprovedAt: serverTimestamp(), unapprovedRole: role,
+});
 // «اعتماد الميزانية» / «إلغاء الاعتماد»: for whoever sees every department
 // (S.role "admin"). Changes only the approval fields (firestore.rules).
 function approveButton(dp, small) {
@@ -1176,18 +1198,96 @@ function approveButton(dp, small) {
   const btn = el("button", { className: "btn " + (on ? "ghost" : "approve") + (small ? " small" : ""), type: "button", textContent: on ? "إلغاء الاعتماد" : "اعتماد الميزانية" });
   btn.onclick = async () => {
     const yes = await ask(on
-      ? { title: "إلغاء الاعتماد", text: "تعود ميزانية قسم " + dp + " غير معتمدة.", ok: "إلغاء الاعتماد", cancel: "رجوع" }
+      ? { title: "إلغاء الاعتماد", text: "تعود ميزانية قسم " + dp + " غير معتمدة، وتبقى آخر نسخة معتمدة ظاهرة في «ميزانية كل الأقسام».", ok: "إلغاء الاعتماد", cancel: "رجوع" }
       : { title: "اعتماد الميزانية", text: "تُعتمد ميزانية قسم " + dp + " كما هي الآن باسمك.", ok: "اعتماد", cancel: "رجوع" });
     if (!yes) return;
     const done = await busy(btn, () => updateDoc(doc(S.db, COLLECTION, dp), on
-      ? { approved: false, approvedBy: deleteField(), approvedByUid: deleteField(), approvedAt: deleteField(), approvedCopy: deleteField(), approvedCopyAt: deleteField() }
-      : { approved: true, approvedBy: S.me.name || "", approvedByUid: S.me.uid, approvedAt: serverTimestamp(), approvedCopy: b.raw, approvedCopyAt: serverTimestamp() }),
+      ? withdrawFields(b, "admin")
+      : { approved: true, approvedBy: S.me.name || "", approvedByUid: S.me.uid, approvedAt: serverTimestamp(), approvedCopy: b.raw, approvedCopyAt: serverTimestamp(),
+          unapprovedBy: deleteField(), unapprovedByUid: deleteField(), unapprovedAt: deleteField(), unapprovedRole: deleteField() }),
     on ? "أُلغي الاعتماد" : "تم الاعتماد");
     if (!done) return;
     // Read back from the server: the stored copy is what later saves must keep.
     await load();
   };
   return btn;
+}
+
+// The head's button in the place of the approvers' (their own department):
+// «إشعار بميزانية جديدة» while it waits for approval (a Telegram message to
+// those who approve), «إلغاء الميزانية» once approved (withdraws the
+// approval, nothing else: the approvers then wait for a new budget).
+function headButton(dp) {
+  const b = S.budgets.get(dp);
+  if (S.role !== "head" || dp !== S.me.department || !b) return null;
+  if (b.approved) {
+    const btn = el("button", { className: "btn ghost", type: "button", textContent: "إلغاء الميزانية" });
+    btn.onclick = async () => {
+      const yes = await ask({ title: "إلغاء الميزانية", text: "يُلغى اعتماد ميزانية قسم " + dp + " ولا تُحذف، فتعلم الإدارة أنك عدلت عنها وتنتظر ميزانيتك الجديدة.", ok: "إلغاء الميزانية", cancel: "رجوع" });
+      if (!yes) return;
+      const done = await busy(btn, () => updateDoc(doc(S.db, COLLECTION, dp), withdrawFields(b, "head")), "أُلغي اعتماد الميزانية");
+      if (done) await load();
+    };
+    return btn;
+  }
+  const btn = el("button", { className: "btn approve", type: "button", textContent: "إشعار بميزانية جديدة" });
+  btn.onclick = async () => {
+    if (S.edit?.dp === dp && S.edit.dirty) { notify("احفظ التعديلات أولاً، ثم أرسل الإشعار.", "err"); return; }
+    const yes = await ask({ title: "إشعار بميزانية جديدة", text: "تصل الإدارة رسالة في التلقرام بأن ميزانية قسم " + dp + " تنتظر الاعتماد.", ok: "إرسال", cancel: "رجوع" });
+    if (yes) await sendNotice(btn, "/api/budgets/notify-approvers", dp, "وصل الإشعار إلى الإدارة", "، لأن حساباتهم غير مربوطة بالتلقرام");
+  };
+  return btn;
+}
+// «تذكير رئيس القسم»: for the approvers, on a department whose budget is not
+// in or not approved — a Telegram message to its head.
+function remindButton(dp) {
+  if (S.role !== "admin" || S.budgets.get(dp)?.approved) return null;
+  const btn = el("button", { className: "btn ghost small", type: "button", textContent: "تذكير رئيس القسم" });
+  btn.onclick = async () => {
+    const head = headOf(dp);
+    const yes = await ask({ title: "تذكير رئيس القسم", text: "تصل " + (head || "رئيس قسم " + dp) + " رسالة في التلقرام بالتعجيل في إدخال ميزانية القسم لاعتمادها.", ok: "إرسال", cancel: "رجوع" });
+    if (yes) await sendNotice(btn, "/api/budgets/remind-head", dp, "وصل التذكير إلى رئيس القسم");
+  };
+  return btn;
+}
+// The bot's server (as /shared/telegram-settings.js) keeps the notice in the
+// platform («إشعارات الميزانيات» / «إشعارات القسم») and sends it on Telegram.
+const NOTICE_ERRORS = {
+  rate_limited: "أُرسل إشعار لهذا القسم قبل قليل، فأعد المحاولة بعد ساعة.",
+  no_head: "لا يوجد رئيس مسجّل لهذا القسم.",
+  forbidden: "لا تملك صلاحية الإرسال لهذا القسم.",
+  already_approved: "الميزانية معتمدة الآن.",
+  no_budget: "لم تُحفظ ميزانية لهذا القسم بعد.",
+};
+function backendUrl(path) {
+  let base = String(window.__TELEGRAM_BACKEND_BASE_URL || "").trim();
+  if (!base) { try { base = String(localStorage.getItem("telegramBackendBaseUrl") || "").trim(); } catch { /* blocked storage */ } }
+  return (base || "https://abrschool-bot.onrender.com").replace(/\/+$/, "") + path;
+}
+async function sendNotice(btn, path, dp, ok, why) {
+  const run = async () => {
+    const user = S.hooks.getSession?.()?.user;
+    if (!user?.getIdToken) throw "سجّل الدخول من جديد";
+    let res, body = {};
+    try {
+      res = await fetch(backendUrl(path), {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + await user.getIdToken() },
+        body: JSON.stringify({ department: dp }),
+      });
+      body = await res.json().catch(() => ({}));
+    } catch { throw "تعذّر الاتصال بالبوت، حاول بعد دقيقة"; }
+    if (!res.ok || !body.ok) throw NOTICE_ERRORS[body.error] || "تعذّر الإرسال، حاول مجدداً";
+    return body;
+  };
+  try {
+    let body = null;
+    await (window.Feedback?.busy ? window.Feedback.busy(btn, async () => { body = await run(); }, { rethrow: true }) : (body = await run()));
+    notify(ok + (body?.sentCount ? " في المنصة والتلقرام" : " في المنصة فقط" + (why || "، لأن حسابه غير مربوط بالتلقرام")));
+  } catch (e) {
+    console.error("[department-budgets] notice", e);
+    notify("لم يُرسل: " + (typeof e === "string" ? e : "تعذّر الإرسال، حاول مجدداً"), "err");
+  }
 }
 
 // الجغرافيا والتاريخ and العلوم الفلسفية became الاجتماعيات (shared/departments.js).
@@ -1533,11 +1633,14 @@ function renderGrid(box) {
 function approvalNotice() {
   const depts = schoolDepartments().filter((dp) => S.budgets.has(dp));
   const none = depts.filter((dp) => !approvedData(dp));
-  const older = depts.filter((dp) => { const b = S.budgets.get(dp); return !b.approved && b.copy; });
-  if (!none.length && !older.length) return null;
+  const older = depts.filter((dp) => { const b = S.budgets.get(dp); return !b.approved && b.copy && !b.unapproved; });
+  const withdrawn = depts.filter((dp) => { const b = S.budgets.get(dp); return !b.approved && b.copy && b.unapproved; });
+  if (!none.length && !older.length && !withdrawn.length) return null;
   return el("div", { className: "review" },
     none.length ? el("div", { textContent: "لم تُعتمد بعد، فلا تظهر هنا: " + none.join("، ") }) : null,
-    older.length ? el("div", { textContent: "تظهر بآخر نسخة معتمدة، وفيها تعديل لم يُعتمد: " + older.join("، ") }) : null);
+    older.length ? el("div", { textContent: "تظهر بآخر نسخة معتمدة، وفيها تعديل لم يُعتمد: " + older.join("، ") }) : null,
+    withdrawn.length ? el("div", { textContent: "أُلغي اعتمادها، وتظهر بآخر نسخة معتمدة: "
+      + withdrawn.map((dp) => dp + " (" + withdrawnText(S.budgets.get(dp)) + ")").join("، ") }) : null);
 }
 // Re-draws «كل الأقسام» where the admin left it, not back at the first column.
 function redrawGrid() {
@@ -1780,6 +1883,7 @@ const colName = (n) => { let s = ""; for (; n > 0; n = Math.floor((n - 1) / 26))
 const formStatus = (dp, d) => {
   const b = S.budgets.get(dp);
   if (b && b.approved && sameBudget(d, b.data)) return "الحالة: " + approvalText(b);
+  if (b && b.unapproved && sameBudget(d, b.data)) return "الحالة: " + approvalText(b);
   if (b && b.copy && sameBudget(d, b.copy)) return "الحالة: معتمدة" + (b.copyAt ? " في " + dayText(b.copyAt) : "");
   return "الحالة: غير معتمدة";
 };

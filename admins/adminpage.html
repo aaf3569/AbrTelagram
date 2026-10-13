@@ -1036,6 +1036,12 @@
           <i class="fas fa-clipboard-list" aria-hidden="true"></i>
           <span>ميزانيات الأقسام</span>
         </button>
+        <!-- /shared/budget-notices.js: what department heads sent about their budgets. -->
+        <button id="sidebarBudgetNotices" class="sidebar-link" type="button" hidden>
+          <i class="fas fa-bell" aria-hidden="true"></i>
+          <span>إشعارات الميزانيات</span>
+          <span id="budgetNoticesBadge" class="bn-count" hidden></span>
+        </button>
       </div>
 
       <div class="sidebar-group">
@@ -2759,6 +2765,20 @@
         modulePath: '/shared/department-budgets.js?v=2026-10-25', hooks: { role: 'admin' } }),
     ];
 
+    // إشعارات الميزانيات (/shared/budget-notices.js): its own panel; loaded once signed in.
+    let budgetNotices = null;
+    function startBudgetNotices(uid){
+      (budgetNotices ||= import('/shared/budget-notices.js?v=2026-10-13').then((m) => m.mountBudgetNotices({
+        db,
+        link: document.getElementById('sidebarBudgetNotices'),
+        badge: document.getElementById('budgetNoticesBadge'),
+        onOpenBudgets: () => scheduleSheets.find((s) => s.key === 'dept-budgets')?.open(),
+      })))
+        .then((api) => api.start(uid))
+        .catch((e) => { budgetNotices = null; console.error('[budget-notices] failed to load', e); });
+    }
+    document.getElementById('sidebarBudgetNotices').addEventListener('click', () => window.adminSidebar?.close());
+
     // Sidebar: "غياب اليوم" / "الغياب المختصر" / "تدقيق في الغائب" open
     // their sheets; "الرئيسية" brings you back out of any of them (otherwise
     // it'd be a dead button while a sheet is showing). The rest of the
@@ -2979,6 +2999,7 @@
         renderMyClasses(data?.classes);
         show(sAdmin);
         initNotificationPopup(db, { uid: user.uid, name: data?.name || '' });
+        startBudgetNotices(user.uid);
         startPresenceHeartbeat(db, user.uid);
         if(window.location.hash === '#admins') openAdminsPanel();
         if(window.location.hash === NOTIFICATIONS_HASH) openNotificationsPanel(false);

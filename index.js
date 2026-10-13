@@ -2084,6 +2084,140 @@ app.post("/api/telegram/broadcast", sensitiveLimiter, async (req, res) => {
   }
 });
 
+/* ---------- ميزانيات الأقسام (/shared/department-budgets.js) ---------- */
+// «إشعار بميزانية جديدة»: a department's head tells those who approve
+// budgets (admins, and «السماح بكل الميزانيات» / «السماح بتعديل الجدول» —
+// firestore.rules' hasAllBudgetsPermission) that the budget waits for them.
+// «تذكير رئيس القسم»: one who approves asks a head to hurry with theirs.
+// One message per department and direction an hour (budgetNotices/{id}),
+// kept in the platform too (budgetNoticeLog).
+const BUDGET_NOTICE_GAP_MS = 60 * 60 * 1000;
+
+const isAdminTeacher = (data) => ["admin", "superadmin"].includes(String(data?.role || "").toLowerCase());
+const canApproveBudgets = (data) => isAdminTeacher(data)
+  || data?.permissions?.allowAllBudgets === true
+  || data?.permissions?.allowEditSchedule === true;
+
+// The caller and their teacher doc, or null after writing an error response.
+async function budgetCaller(req, res) {
+  if (!isFirebaseReady()) {
+    res.status(503).json({ ok: false, error: "firebase_unavailable" });
+    return null;
+  }
+  const decoded = await verifyFirebaseUser(req);
+  if (!decoded?.uid) {
+    res.status(401).json({ ok: false, error: "unauthorized" });
+    return null;
+  }
+  const department = canonicalDepartment(String(req.body?.department || "").trim());
+  if (!department) {
+    res.status(400).json({ ok: false, error: "missing_department" });
+    return null;
+  }
+  const snap = await db.collection("teachers").doc(decoded.uid).get();
+  const data = snap.exists ? snap.data() || {} : {};
+  if (decoded.admin === true) data.role = data.role || "admin";
+  return { uid: decoded.uid, name: String(data.name || "").trim(), data, department };
+}
+
+// Reserves the hour for this department and direction; false if one was sent within it.
+async function reserveBudgetNotice(id, by) {
+  const ref = db.collection("budgetNotices").doc(id);
+  return db.runTransaction(async (tx) => {
+    const cur = await tx.get(ref);
+    const last = cur.exists && cur.data()?.sentAt?.toMillis ? cur.data().sentAt.toMillis() : 0;
+    if (Date.now() - last < BUDGET_NOTICE_GAP_MS) return false;
+    tx.set(ref, { sentAt: admin.firestore.Timestamp.now(), byUid: by.uid, byName: by.name || null });
+    return true;
+  });
+}
+async function releaseBudgetNotice(id) {
+  try { await db.collection("budgetNotices").doc(id).delete(); }
+  catch (error) { console.error(`[budgets] notice release failed id=${id}: ${error.message}`); }
+}
+
+// The notice in the platform (budgetNoticeLog: «إشعارات الميزانيات» for
+// approvers, «إشعارات القسم» for a head), then on Telegram to whoever of
+// its recipients connected the bot. One an hour per department and direction.
+async function sendBudgetNotice(res, id, by, { to, department }, recipients, message) {
+  if (!(await reserveBudgetNotice(id, by))) return res.status(429).json({ ok: false, error: "rate_limited" });
+  try {
+    await db.collection("budgetNoticeLog").add({
+      to, department, text: message, byUid: by.uid, byName: by.name || null,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  } catch (error) {
+    console.error(`[budgets] notice log write failed id=${id}: ${error.message}`);
+    await releaseBudgetNotice(id);
+    return res.status(500).json({ ok: false, error: "notice_failed" });
+  }
+  const targets = recipients.filter((r) => r.chatId);
+  let sentCount = 0;
+  for (const r of targets) {
+    try {
+      if (sentCount > 0) await delay(50);
+      await sendTelegramMessage(r.chatId, message);
+      sentCount += 1;
+    } catch (error) {
+      console.error(`[budgets] notice send failed id=${id} userId=${r.uid}: ${error.message}`);
+    }
+  }
+  return res.json({ ok: true, sentCount, totalRecipients: targets.length });
+}
+
+const telegramTarget = (docSnap) => {
+  const d = docSnap.data() || {};
+  const connected = TELEGRAM_BOT_TOKEN && d.telegramConnected === true;
+  return { uid: docSnap.id, data: d, chatId: connected ? String(d.telegramChatId || "").trim() : "" };
+};
+
+app.post("/api/budgets/notify-approvers", sensitiveLimiter, async (req, res) => {
+  try {
+    const caller = await budgetCaller(req, res);
+    if (!caller) return;
+    const isOwnHead = String(caller.data.role || "").toLowerCase() === "head"
+      && teacherDepartment(caller.data) === caller.department;
+    if (!isOwnHead) return res.status(403).json({ ok: false, error: "forbidden" });
+    const budget = await db.collection("departmentBudgets").doc(caller.department).get();
+    if (!budget.exists) return res.status(409).json({ ok: false, error: "no_budget" });
+    if (budget.data()?.approved === true) return res.status(409).json({ ok: false, error: "already_approved" });
+
+    const snap = await db.collection("teachers").get();
+    const recipients = snap.docs.map(telegramTarget).filter((r) => r.uid !== caller.uid && canApproveBudgets(r.data));
+    const message = `📋 ميزانية قسم ${caller.department}\n`
+      + `أدخل رئيس القسم${caller.name ? ` ${caller.name}` : ""} ميزانية القسم، وهي تنتظر الاعتماد.\n`
+      + "تفضلوا بمراجعتها واعتمادها من «ميزانيات الأقسام».";
+    return await sendBudgetNotice(res, `approvers_${caller.department}`, caller, { to: "approvers", department: caller.department }, recipients, message);
+  } catch (error) {
+    console.error(`[budgets] notify-approvers failed: ${error.message}`);
+    return res.status(500).json({ ok: false, error: "notice_failed" });
+  }
+});
+
+app.post("/api/budgets/remind-head", sensitiveLimiter, async (req, res) => {
+  try {
+    const caller = await budgetCaller(req, res);
+    if (!caller) return;
+    if (!canApproveBudgets(caller.data)) return res.status(403).json({ ok: false, error: "forbidden" });
+    const budget = await db.collection("departmentBudgets").doc(caller.department).get();
+    if (budget.exists && budget.data()?.approved === true) return res.status(409).json({ ok: false, error: "already_approved" });
+
+    const snap = await db.collection("teachers").get();
+    const heads = snap.docs.map(telegramTarget).filter((r) => String(r.data.role || "").toLowerCase() === "head"
+      && teacherDepartment(r.data) === caller.department);
+    if (!heads.length) return res.status(404).json({ ok: false, error: "no_head" });
+    const withdrawn = budget.exists && budget.data()?.unapprovedRole === "head";
+    const message = `📋 ميزانية قسم ${caller.department}\n`
+      + (withdrawn ? "ألغيتَ اعتماد ميزانية القسم، والإدارة تنتظر ميزانيتك الجديدة.\n"
+        : budget.exists ? "ميزانية القسم لم تُعتمد بعد.\n" : "لم تُدخل ميزانية القسم بعد.\n")
+      + "نرجو التعجيل بإدخالها في «ميزانية القسم» لضرورة اعتمادها وإنجاز الجدول.";
+    return await sendBudgetNotice(res, `head_${caller.department}`, caller, { to: "head", department: caller.department }, heads, message);
+  } catch (error) {
+    console.error(`[budgets] remind-head failed: ${error.message}`);
+    return res.status(500).json({ ok: false, error: "notice_failed" });
+  }
+});
+
 app.post("/api/telegram/run-reminder-sweep", async (req, res) => {
   const adminUser = await requireAdminFromRequest(req, res);
   if (!adminUser) return;

@@ -151,6 +151,22 @@ service cloud.firestore {
         );
     }
 
+    // departmentBudgets: the fields an approval or its withdrawal changes,
+    // and a budget's own content as «اعتماد الميزانية» copies it.
+    function budgetApprovalKeys() {
+      return ['approved', 'approvedBy', 'approvedByUid', 'approvedAt', 'approvedCopy', 'approvedCopyAt',
+              'unapprovedBy', 'unapprovedByUid', 'unapprovedAt', 'unapprovedRole'];
+    }
+
+    function budgetContent(d) {
+      return {
+        'periods': d.get('periods', {}),
+        'required': d.get('required', null),
+        'note': d.get('note', ''),
+        'teachers': d.get('teachers', [])
+      };
+    }
+
     function headDepartment() {
       let d = myTeacherDoc();
       let rawDept =
@@ -1255,6 +1271,28 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    /* ---------- budgetNoticeLog ---------- */
+    // Budget notices kept in the platform; only the bot's server writes them
+    // (index.js: /api/budgets/*). «إشعار بميزانية جديدة» (to: "approvers")
+    // shows in «إشعارات الميزانيات» (/shared/budget-notices.js) to those who
+    // approve; «تذكير رئيس القسم» (to: "head") in that department's head's
+    // «إشعارات القسم» (Teachers/user.html).
+    match /budgetNoticeLog/{id} {
+      allow read: if (resource.data.to == 'approvers' && (isAdmin() || hasAllBudgetsPermission()))
+        || (resource.data.to == 'head' && isHead() && headDepartment() == resource.data.department);
+      allow write: if false;
+    }
+
+    // When each approver last opened «إشعارات الميزانيات» (its count).
+    match /budget_notice_seen/{uid} {
+      allow get: if signedIn() && uid == request.auth.uid;
+      allow create, update: if signedIn()
+        && uid == request.auth.uid
+        && request.resource.data.keys().hasOnly(['seenAt'])
+        && request.resource.data.seenAt == request.time;
+      allow list, delete: if false;
+    }
+
     /* ---------- departmentBudgets ---------- */
     // ميزانية القسم (/shared/department-budgets.js, opened from
     // Teachers/user.html and admins/adminpage.html): one doc per department,
@@ -1262,7 +1300,8 @@ service cloud.firestore {
     // teacher with «السماح بكل الميزانيات» or «السماح بتعديل الجدول»
     // (hasAllBudgetsPermission) may read
     // and write all of them; a head only their own department's; other
-    // teachers none. Only the first two approve («اعتماد الميزانية»).
+    // teachers none. Only the first two approve («اعتماد الميزانية»); the
+    // head may withdraw their own department's approval («إلغاء الميزانية»).
     match /departmentBudgets/{dept} {
       allow read: if isAdmin() || hasAllBudgetsPermission() || (isHead() && headDepartment() == dept);
       // A save of the budget itself (only on «حفظ»): always leaves it
@@ -1291,25 +1330,39 @@ service cloud.firestore {
       // «اعتماد الميزانية» / «إلغاء الاعتماد»: those who see every
       // department, and nothing but the approval fields changes. Approving
       // is in the approver's own name, at the server's time, and copies the
-      // budget exactly as stored (approvedCopy); withdrawing it removes the copy.
+      // budget exactly as stored (approvedCopy).
       allow update: if (isAdmin() || hasAllBudgetsPermission())
-        && request.resource.data.diff(resource.data).affectedKeys()
-             .hasOnly(['approved', 'approvedBy', 'approvedByUid', 'approvedAt', 'approvedCopy', 'approvedCopyAt'])
-        && (request.resource.data.approved is bool)
-        && ((request.resource.data.approved == false
-              && !('approvedCopy' in request.resource.data)
-              && !('approvedCopyAt' in request.resource.data))
-            || ((request.resource.data.approvedBy is string)
-                && request.resource.data.approvedBy.size() <= 120
-                && request.resource.data.approvedByUid == request.auth.uid
-                && request.resource.data.approvedAt == request.time
-                && request.resource.data.approvedCopyAt == request.time
-                && request.resource.data.approvedCopy == {
-                     'periods': resource.data.get('periods', {}),
-                     'required': resource.data.get('required', null),
-                     'note': resource.data.get('note', ''),
-                     'teachers': resource.data.get('teachers', [])
-                   }));
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(budgetApprovalKeys())
+        && request.resource.data.approved == true
+        && (request.resource.data.approvedBy is string)
+        && request.resource.data.approvedBy.size() <= 120
+        && request.resource.data.approvedByUid == request.auth.uid
+        && request.resource.data.approvedAt == request.time
+        && request.resource.data.approvedCopyAt == request.time
+        && request.resource.data.approvedCopy == budgetContent(resource.data)
+        && !('unapprovedAt' in request.resource.data)
+        && !('unapprovedByUid' in request.resource.data);
+      // Withdrawing an approval: by an approver («إلغاء الاعتماد»), or by the
+      // department's own head («إلغاء الميزانية»). The budget stays as it is;
+      // the approved copy stays too (one approved before copies were kept
+      // gets it now), so «ميزانية كل الأقسام» keeps showing it, and who
+      // withdrew it, and when, is kept (unapproved*).
+      // (Who may: the last condition. headDepartment() is costly, so once.)
+      allow update: if resource.data.get('approved', false) == true
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(budgetApprovalKeys())
+        && request.resource.data.approved == false
+        && !('approvedBy' in request.resource.data)
+        && !('approvedByUid' in request.resource.data)
+        && !('approvedAt' in request.resource.data)
+        && request.resource.data.approvedCopy == resource.data.get('approvedCopy', budgetContent(resource.data))
+        && request.resource.data.approvedCopyAt == resource.data.get('approvedCopyAt', request.time)
+        && (request.resource.data.unapprovedBy is string)
+        && request.resource.data.unapprovedBy.size() <= 120
+        && request.resource.data.unapprovedByUid == request.auth.uid
+        && request.resource.data.unapprovedAt == request.time
+        // As whom: the head from their own ميزانية القسم, an approver from every department's.
+        && ((request.resource.data.unapprovedRole == 'head' && isHead() && headDepartment() == dept)
+            || (request.resource.data.unapprovedRole == 'admin' && (isAdmin() || hasAllBudgetsPermission())));
       allow delete: if isAdmin();
     }
 
