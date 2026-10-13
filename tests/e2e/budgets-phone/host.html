@@ -1,0 +1,9 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width"><div id="host"></div>
+<script type="module">
+import { DEFAULT_CLASS_LIST } from "/shared/class-registry.js";
+import { mountDepartmentBudgetsSheet } from "/shared/department-budgets.js?v=t";
+await mountDepartmentBudgetsSheet(document.getElementById("host"), {
+  getSession: () => ({ user: { uid: "boss" }, data: { role: "head", name: "رئيس", department: "الأحياء والجيولوجيا" }, classList: DEFAULT_CLASS_LIST }),
+});
+window.__ready = true;
+</script>

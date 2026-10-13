@@ -176,6 +176,11 @@ button.cell:hover { border-color: var(--blue); }
 .cell.ro { cursor: default; }
 .cell.ro:not(.on) { opacity: .5; }
 .cellEdit { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 8px; padding: 8px 10px; border-radius: 10px; background: var(--bg); }
+/* One class, several subjects of one teacher (cards). */
+.subjEdit { flex-direction: column; align-items: stretch; }
+.subjEdit .row { margin-top: 0; }
+.subjEdit .sub { min-width: 120px; text-align: center; }
+.subjEdit input { width: 70px; }
 .cellEdit input { width: 72px; padding: 6px 8px; text-align: center; }
 .cellEdit select { padding: 6px 8px; }
 .tnote { width: 100%; margin-top: 8px; font-size: 14px; padding: 7px 10px; }
