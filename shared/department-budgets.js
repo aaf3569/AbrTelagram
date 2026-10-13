@@ -353,11 +353,13 @@ function refuseTaken(dp, t, c, subj) {
   toast(msg);
   return true;
 }
-// Classes held by more than one teacher in the same department.
-function dupes(teachers) {
-  const seen = {}, d = new Set();
-  teachers.forEach((t) => S.classes.classes.forEach((c) => { if (c in t.cells) { if (seen[c]) d.add(c); seen[c] = true; } }));
-  return d;
+// The subject a tap on class c gives teacher t (a merged department): the
+// first of the teacher's subjects that the class has periods for and no other
+// teacher already gives it; else their first subject, as before.
+function freeSubject(dp, t, c) {
+  const subs = t.subjects || [];
+  const ok = (s) => defFor(S.edit.data, dp, s, c) !== 0 && !holderOf(dp, t, c, s);
+  return subs.find(ok) || subjOf(t, c) || subs[0] || "";
 }
 // A class × subject held by more than one teacher.
 function subjectDupes(dp, teachers) {
@@ -645,12 +647,16 @@ function classGrid(t, dp, d, edit, dup) {
       const def = defFor(d, dp, isMulti(dp) ? sj || null : null, c);
       const odd = on && def !== null && t.cells[c] !== def;
       const multiSj = on && isMulti(dp) && ((t.subjects || []).length > 1 || !edit) && sj;
+      // One teacher, two subjects in this class: each subject's periods («2+1»).
+      const parts = on ? partsOf(dp, t, c) : [];
+      const split = parts.length > 1;
+      const isDup = on && dup && parts.some((p) => dup.has(c + "|" + (isMulti(dp) ? p.subj : "")));
       const props = {
-        className: "cell" + (on ? " on" : "") + (dup && dup.has(c) && on ? " dup" : "") + (odd ? " odd" : "") + (edit ? "" : " ro"),
-        title: c + (on && sj ? " — " + sj : "") + (def !== null ? " — المعتاد " + def : ""),
+        className: "cell" + (on ? " on" : "") + (isDup ? " dup" : "") + (odd && !split ? " odd" : "") + (edit ? "" : " ro"),
+        title: c + (split ? " — " + parts.map((p) => p.subj + " " + p.h).join("، ") : (on && sj ? " — " + sj : "") + (def !== null ? " — المعتاد " + def : "")),
       };
       const kids = [el("span", { textContent: S.classes.numOf[c] }),
-        on ? el("small", { textContent: t.cells[c] + (multiSj ? " " + sj.replace(/^ال/, "").slice(0, 4) : "") }) : null];
+        on ? el("small", { textContent: split ? parts.map((p) => p.h).join("+") : t.cells[c] + (multiSj ? " " + sj.replace(/^ال/, "").slice(0, 4) : "") }) : null];
       if (!edit) { grid.append(el("div", props, ...kids)); continue; }
       const b = el("button", { ...props, type: "button" }, ...kids);
       let timer = null, held = false;
@@ -845,7 +851,7 @@ function renderTeachers() {
   setWide(table);
   if (table) renderTable();
   else {
-    const dup = dupes(E.data.teachers);
+    const dup = subjectDupes(E.dp, E.data.teachers);
     E.ui.teachers.replaceChildren(...E.data.teachers.map((t, i) => teacherCard(t, i, dup)), addTeacherSelect(false));
   }
   renderSums();
@@ -904,14 +910,23 @@ function teacherCard(t, i, dup) {
     box.append(row);
   }
   const editor = el("div");
+  // A teacher with more than one subject: a class may take several of them.
+  const many = () => isMulti(dp) && (t.subjects || []).length > 1;
   box.append(classGrid(t, dp, d, {
     onToggle(c, def, on) {
+      if (on && many()) { subjectsEditor(t, c, editor); return; }
       if (on) { delete t.cells[c]; delete t.subj[c]; delete t.split[c]; changed(); renderTeachers(); return; }
-      if (refuseTaken(dp, t, c, isMulti(dp) ? subjOf(t, c) || (t.subjects || [])[0] || "" : null)) return;
-      t.cells[c] = def ?? 0; changed(); renderTeachers();
-      if (!def) setMsg(E.ui.saveMsg, "حدد «حصص الأسبوع» لهذا الصف، أو اضغط الفصل مطوّلاً واكتب العدد", "err");
+      const sj = isMulti(dp) ? freeSubject(dp, t, c) : null;
+      if (refuseTaken(dp, t, c, sj)) return;
+      const h = isMulti(dp) ? defFor(d, dp, sj || null, c) : def;
+      t.cells[c] = h ?? 0;
+      if (sj) t.subj[c] = sj;
+      changed(); renderTeachers();
+      if (!h) setMsg(E.ui.saveMsg, "حدد «حصص الأسبوع» لهذا الصف، أو اضغط الفصل مطوّلاً واكتب العدد", "err");
+      else if (many()) setMsg(E.ui.saveMsg, "أُضيف " + c + " بمادة " + sj + ". لمادة ثانية في الشعبة نفسها: اضغطها مرة أخرى.", "ok");
     },
     onHold(c, def) {
+      if (many()) { subjectsEditor(t, c, editor); return; }
       const inp = el("input", { type: "number", inputMode: "numeric", min: 0, max: 40, value: t.cells[c] ?? def ?? "" });
       const ok = el("button", { className: "btn ghost small", type: "button", textContent: "تم" });
       // A teacher with several subjects says which one this class gets.
@@ -934,6 +949,46 @@ function teacherCard(t, i, dup) {
   note.oninput = () => { t.note = note.value; changed(); };
   box.append(editor, note);
   return box;
+}
+
+// Cards (phones): one class of a teacher with several subjects — the periods
+// of each subject in it (empty = not this subject), as the table's rows do
+// on wide screens. «إزالة الشعبة» drops the class.
+function subjectsEditor(t, c, editor) {
+  const E = S.edit, dp = E.dp, d = E.data;
+  const subs = deptSubjects(dp, d.teachers);
+  const have = c in t.cells ? partsOf(dp, t, c) : [];
+  const keys = [...new Set([...(t.subjects || []), ...have.map((p) => p.subj)])].filter(Boolean)
+    .sort((a, b) => subs.indexOf(a) - subs.indexOf(b));
+  const rows = keys.map((s) => {
+    const cur = have.find((p) => p.subj === s), def = defFor(d, dp, s, c);
+    const inp = el("input", { type: "number", inputMode: "numeric", min: 0, max: 40, value: cur ? cur.h : "", placeholder: def ? String(def) : "—" });
+    const tick = el("button", { className: "sub" + (cur ? " on" : ""), type: "button", textContent: s });
+    // The subject's name toggles it with the usual periods.
+    tick.onclick = () => { inp.value = inp.value === "" ? (def || "") : ""; tick.classList.toggle("on", inp.value !== ""); };
+    inp.oninput = () => tick.classList.toggle("on", inp.value !== "");
+    return { s, inp, tick, cur };
+  });
+  const ok = el("button", { className: "btn ghost small", type: "button", textContent: "تم" });
+  const del = el("button", { className: "btn ghost small", type: "button", textContent: "إزالة الشعبة" });
+  const cancel = el("button", { className: "btn ghost small", type: "button", textContent: "إلغاء" });
+  ok.onclick = () => {
+    let parts = rows.filter((r) => r.inp.value !== "")
+      .map((r) => ({ subj: r.s, h: Math.max(0, Math.min(40, Math.floor(Number(r.inp.value)) || 0)) }));
+    // Two subjects or more: a subject with no periods isn't one of them.
+    if (parts.length > 1) parts = parts.filter((p) => p.h > 0);
+    for (const p of parts) if (!have.some((x) => x.subj === p.subj) && refuseTaken(dp, t, c, p.subj)) return;
+    setParts(t, c, parts);
+    for (const p of parts) if (!t.subjects.includes(p.subj)) t.subjects.push(p.subj);
+    changed(); renderTeachers();
+  };
+  del.onclick = () => { setParts(t, c, []); changed(); renderTeachers(); };
+  cancel.onclick = () => editor.replaceChildren();
+  editor.replaceChildren(el("div", { className: "cellEdit subjEdit" },
+    el("b", { textContent: "حصص " + c + " لكل مادة (الفارغ: لا يدرّسها فيها)" }),
+    ...rows.map((r) => el("div", { className: "row" }, r.tick, r.inp)),
+    el("div", { className: "row" }, ok, c in t.cells ? del : null, cancel)));
+  (rows.find((r) => !r.cur) || rows[0])?.inp.focus();
 }
 
 /* ---- Wide screens: one row per teacher × subject, like the official form ---- */
