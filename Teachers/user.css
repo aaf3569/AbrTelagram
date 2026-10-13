@@ -2668,3 +2668,6 @@
       width: 56px; height: 56px; border-radius: 18px; display: grid; place-items: center; margin-bottom: 4px;
       background: var(--primary-light); color: var(--primary); font-size: 1.3rem;
     }
+
+.oc-download-all { width: 100%; justify-content: center; min-height: 50px; margin-top: 16px; }
+.oc-download-all:disabled { opacity: .65; cursor: wait; }

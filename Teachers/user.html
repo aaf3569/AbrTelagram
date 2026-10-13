@@ -332,6 +332,7 @@
     <div class="sheet-body">
       <p class="oc-hint">اختر الصف ثم الفصل لعرض الطلاب وتسجيل الغياب.</p>
       <div id="ocGroups" class="oc-groups"></div>
+      <button id="ocDownloadAllBtn" class="mc-btn-download oc-download-all" type="button"><i class="fas fa-download" aria-hidden="true"></i><span>تنزيل قائمة جميع الطلاب</span></button>
     </div>
   </section>
 
@@ -6643,18 +6644,16 @@
       });
     }
 
-    async function slDownloadPdf(){
-      const students = mcCachedStudents;
-      const cls = mcCurrentClass;
-      if (!cls || !students.length) return;
+    async function slDownloadPdf(groups = [{ cls: mcCurrentClass, students: mcCachedStudents }], button = mcDownloadBtn, all = false){
+      if (!groups.length || !groups[0].students.length) return;
       if (!window.html2canvas || !window.jspdf?.jsPDF) {
         toast({ title: 'خطأ', text: 'مكتبة إنشاء PDF غير متاحة حالياً.', icon: 'fa-exclamation-circle' });
         return;
       }
 
-      const label = mcDownloadBtn.querySelector('span');
+      const label = button.querySelector('span');
       const original = label.textContent;
-      mcDownloadBtn.disabled = true;
+      button.disabled = true;
       label.textContent = 'جاري التجهيز…';
 
       try {
@@ -6665,6 +6664,9 @@
 
         const { jsPDF } = window.jspdf;
         const docPdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4', compress: true });
+        for (const [index, { cls, students }] of groups.entries()) {
+        label.textContent = 'جاري التجهيز… ' + toArabicDigits(index + 1) + '/' + toArabicDigits(groups.length);
+        if (index) docPdf.addPage();
         const host = slBuildPageHost({ cls, rows: students });
         document.body.appendChild(host);
         try {
@@ -6678,21 +6680,24 @@
           host.remove();
         }
 
-        docPdf.save(filenameSafe(`قائمة-طلاب-${toArabicDigits(cls)}`) + '.pdf');
+        }
+        docPdf.save(filenameSafe(all ? 'قائمة-جميع-الطلاب' : `قائمة-طلاب-${toArabicDigits(groups[0].cls)}`) + '.pdf');
         toast({ title: 'تم', text: 'تم تنزيل قائمة الطلاب.', icon: 'fa-check-circle' });
       } catch (e) {
         console.error(e);
         toast({ title: 'خطأ', text: 'تعذّر إنشاء ملف PDF.', icon: 'fa-exclamation-circle' });
       } finally {
         label.textContent = original;
-        mcDownloadBtn.disabled = false;
+        button.disabled = false;
       }
     }
     /* ========= Download choice (PDF / Excel) ========= */
     const dlChoiceModal = document.getElementById('dlChoiceModal');
     const dlChoiceSub = document.getElementById('dlChoiceSub');
 
+    let dlAllStudents = false;
     function openDlChoice(){
+      dlAllStudents = false;
       if (!mcCurrentClass || !mcCachedStudents.length) {
         toast({ title: 'تنبيه', text: 'لا يوجد طلاب لتنزيل القائمة.', icon: 'fa-circle-info' });
         return;
@@ -6710,9 +6715,56 @@
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && dlChoiceModal.classList.contains('open')) closeDlChoice();
     });
-    document.getElementById('dlChoicePdf').addEventListener('click', () => { closeDlChoice(); slDownloadPdf(); });
-    document.getElementById('dlChoiceExcel').addEventListener('click', () => { closeDlChoice(); slDownloadExcel(); });
+    document.getElementById('dlChoicePdf').addEventListener('click', () => { closeDlChoice(); if (dlAllStudents) slDownloadAll('pdf'); else slDownloadPdf(); });
+    document.getElementById('dlChoiceExcel').addEventListener('click', () => { closeDlChoice(); if (dlAllStudents) slDownloadAll('excel'); else slDownloadExcel(); });
     mcDownloadBtn.addEventListener('click', openDlChoice);
+
+    const ocDownloadAllBtn = document.getElementById('ocDownloadAllBtn');
+    ocDownloadAllBtn.addEventListener('click', () => {
+      dlAllStudents = true;
+      dlChoiceSub.textContent = 'جميع الطلاب · مرتبة حسب الصف والفصل';
+      dlChoiceModal.classList.add('open');
+      dlChoiceModal.setAttribute('aria-hidden', 'false');
+    });
+    async function slDownloadAll(format){
+      if (ocDownloadAllBtn.disabled) return;
+      const label = ocDownloadAllBtn.querySelector('span');
+      const original = label.textContent;
+      ocDownloadAllBtn.disabled = true;
+      label.textContent = 'جاري تحميل الطلاب…';
+      try {
+        const snap = await getDocs(collection(db, 'students'));
+        const grouped = new Map();
+        const add = (data, uid) => {
+          const cls = normalizeClassKey(data.class || data.className || '');
+          if (!cls || ![10, 11, 12].includes(ocGradeOf(cls))) return;
+          if (!grouped.has(cls)) grouped.set(cls, []);
+          grouped.get(cls).push({ ...data, uid, name: normalizeArabicNameForDisplay(data.name || data.fullName || uid) });
+        };
+        snap.forEach(d => { if (d.id !== 'uids') add(d.data(), d.id); });
+        const legacy = snap.docs.find(d => d.id === 'uids');
+        if (legacy) {
+          const directClasses = new Set(grouped.keys());
+          Object.values(legacy.data()).filter(s => s && typeof s === 'object').forEach(s => {
+            if (!directClasses.has(normalizeClassKey(s.class || s.className || ''))) add(s, s.uid || '');
+          });
+        }
+        const groups = Array.from(grouped, ([cls, students]) => ({ cls, students: mcSortStudentsByNumber(students) }))
+          .sort((a, b) => a.cls.localeCompare(b.cls, 'ar', { numeric: true }));
+        if (!groups.length) {
+          toast({ title: 'تنبيه', text: 'لا يوجد طلاب لتنزيل القائمة.', icon: 'fa-circle-info' });
+          return;
+        }
+        if (format === 'pdf') await slDownloadPdf(groups, ocDownloadAllBtn, true);
+        else await slDownloadExcel(groups, ocDownloadAllBtn, true);
+      } catch (e) {
+        console.error(e);
+        toast({ title: 'خطأ', text: 'تعذّر تحميل قائمة الطلاب. حاول مرة أخرى.', icon: 'fa-exclamation-circle' });
+      } finally {
+        label.textContent = original;
+        ocDownloadAllBtn.disabled = false;
+      }
+    }
 
     function slLoadExcelJs(){
       if (window.ExcelJS) return Promise.resolve();
@@ -6728,14 +6780,12 @@
     // A styled, right-to-left workbook: school + title rows, a navy header,
     // one row per student (number, name, blank notes), zebra rows, and print
     // settings that put the whole class on one A4 page.
-    async function slDownloadExcel(){
-      const students = mcCachedStudents;
-      const cls = mcCurrentClass;
-      if (!cls || !students.length) return;
+    async function slDownloadExcel(groups = [{ cls: mcCurrentClass, students: mcCachedStudents }], button = mcDownloadBtn, all = false){
+      if (!groups.length || !groups[0].students.length) return;
 
-      const label = mcDownloadBtn.querySelector('span');
+      const label = button.querySelector('span');
       const original = label.textContent;
-      mcDownloadBtn.disabled = true;
+      button.disabled = true;
       label.textContent = 'جاري التجهيز…';
 
       try {
@@ -6745,6 +6795,7 @@
         wb.creator = 'ثانوية أحمد البشر الرومي';
         wb.created = new Date();
 
+        for (const { cls, students } of groups) {
         const sheetName = `الصف ${cls}`.replace(/[\\/?*\[\]:]/g, '-').slice(0, 31);
         const ws = wb.addWorksheet(sheetName, {
           views: [{ rightToLeft: true, state: 'frozen', ySplit: 3 }],
@@ -6796,12 +6847,13 @@
           });
         });
 
+        }
         const buffer = await wb.xlsx.writeBuffer();
         const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = filenameSafe(`قائمة-طلاب-${toArabicDigits(cls)}`) + '.xlsx';
+        a.download = filenameSafe(all ? 'قائمة-جميع-الطلاب' : `قائمة-طلاب-${toArabicDigits(groups[0].cls)}`) + '.xlsx';
         document.body.appendChild(a);
         a.click();
         a.remove();
@@ -6813,7 +6865,7 @@
         toast({ title: 'خطأ', text: 'تعذّر إنشاء ملف Excel.', icon: 'fa-exclamation-circle' });
       } finally {
         label.textContent = original;
-        mcDownloadBtn.disabled = false;
+        button.disabled = false;
       }
     }
 
