@@ -2670,4 +2670,5 @@
     }
 
 .oc-download-all { width: 100%; justify-content: center; min-height: 50px; margin-top: 16px; }
+.mc-btn-download.oc-download-all span { display: inline; }
 .oc-download-all:disabled { opacity: .65; cursor: wait; }

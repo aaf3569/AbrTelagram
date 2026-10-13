@@ -6795,37 +6795,44 @@
         wb.creator = 'ثانوية أحمد البشر الرومي';
         wb.created = new Date();
 
+        let combinedSheet = null;
         for (const { cls, students } of groups) {
         const sheetName = `الصف ${cls}`.replace(/[\\/?*\[\]:]/g, '-').slice(0, 31);
-        const ws = wb.addWorksheet(sheetName, {
+        const ws = combinedSheet || wb.addWorksheet(sheetName, {
           views: [{ rightToLeft: true, state: 'frozen', ySplit: 3 }],
           pageSetup: {
-            paperSize: 9, orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 1,
+            paperSize: 9, orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: all ? 0 : 1,
             horizontalCentered: true, printTitlesRow: '3:3',
             margins: { left: 0.5, right: 0.5, top: 0.6, bottom: 0.6, header: 0.3, footer: 0.3 }
           }
         });
+        if (all && !combinedSheet) {
+          combinedSheet = ws;
+          ws.name = 'جميع الطلاب';
+        }
+        const offset = ws.rowCount ? ws.rowCount + 1 : 0;
+        if (offset) ws.getRow(offset).addPageBreak();
         ws.columns = [{ width: 10 }, { width: 44 }, { width: 42 }];
 
         const navy = 'FF0E3A5C';
         const border = { style: 'thin', color: { argb: 'FFB9CFE3' } };
         const allBorders = { top: border, left: border, bottom: border, right: border };
 
-        ws.mergeCells('A1:C1');
-        const school = ws.getCell('A1');
+        ws.mergeCells(`A${offset + 1}:C${offset + 1}`);
+        const school = ws.getCell(`A${offset + 1}`);
         school.value = 'ثانوية أحمد البشر الرومي';
         school.font = { name: 'Arial', size: 16, bold: true, color: { argb: 'FF0E3554' } };
         school.alignment = { horizontal: 'center', vertical: 'middle' };
-        ws.getRow(1).height = 30;
+        ws.getRow(offset + 1).height = 30;
 
-        ws.mergeCells('A2:C2');
-        const title = ws.getCell('A2');
+        ws.mergeCells(`A${offset + 2}:C${offset + 2}`);
+        const title = ws.getCell(`A${offset + 2}`);
         title.value = `قائمة طلاب الصف ${toArabicDigits(cls)}`;
         title.font = { name: 'Arial', size: 13, bold: true, color: { argb: 'FF1D4D72' } };
         title.alignment = { horizontal: 'center', vertical: 'middle' };
-        ws.getRow(2).height = 24;
+        ws.getRow(offset + 2).height = 24;
 
-        const head = ws.getRow(3);
+        const head = ws.getRow(offset + 3);
         head.values = ['الرقم', 'اسم الطالب', 'ملاحظات'];
         head.height = 26;
         head.eachCell((cell) => {
