@@ -1234,7 +1234,7 @@ function headButton(dp) {
   btn.onclick = async () => {
     if (S.edit?.dp === dp && S.edit.dirty) { notify("احفظ التعديلات أولاً، ثم أرسل الإشعار.", "err"); return; }
     const yes = await ask({ title: "إشعار بميزانية جديدة", text: "تصل الإدارة رسالة في التلقرام بأن ميزانية قسم " + dp + " تنتظر الاعتماد.", ok: "إرسال", cancel: "رجوع" });
-    if (yes) await sendNotice(btn, "/api/budgets/notify-approvers", dp, "وصل الإشعار إلى الإدارة");
+    if (yes) await sendNotice(btn, "/api/budgets/notify-approvers", dp, "وصل الإشعار إلى الإدارة", "، لأن حساباتهم غير مربوطة بالتلقرام");
   };
   return btn;
 }
@@ -1250,10 +1250,10 @@ function remindButton(dp) {
   };
   return btn;
 }
-// The bot's server (as /shared/telegram-settings.js) sends the message.
+// The bot's server (as /shared/telegram-settings.js) keeps the notice in the
+// platform («إشعارات الميزانيات» / «إشعارات القسم») and sends it on Telegram.
 const NOTICE_ERRORS = {
   rate_limited: "أُرسل إشعار لهذا القسم قبل قليل، فأعد المحاولة بعد ساعة.",
-  no_recipients: "لم يربط أحدٌ ممن تصلهم الرسالة حسابه ببوت التلقرام.",
   no_head: "لا يوجد رئيس مسجّل لهذا القسم.",
   forbidden: "لا تملك صلاحية الإرسال لهذا القسم.",
   already_approved: "الميزانية معتمدة الآن.",
@@ -1264,7 +1264,7 @@ function backendUrl(path) {
   if (!base) { try { base = String(localStorage.getItem("telegramBackendBaseUrl") || "").trim(); } catch { /* blocked storage */ } }
   return (base || "https://abrschool-bot.onrender.com").replace(/\/+$/, "") + path;
 }
-async function sendNotice(btn, path, dp, ok) {
+async function sendNotice(btn, path, dp, ok, why) {
   const run = async () => {
     const user = S.hooks.getSession?.()?.user;
     if (!user?.getIdToken) throw "سجّل الدخول من جديد";
@@ -1278,10 +1278,12 @@ async function sendNotice(btn, path, dp, ok) {
       body = await res.json().catch(() => ({}));
     } catch { throw "تعذّر الاتصال بالبوت، حاول بعد دقيقة"; }
     if (!res.ok || !body.ok) throw NOTICE_ERRORS[body.error] || "تعذّر الإرسال، حاول مجدداً";
+    return body;
   };
   try {
-    await (window.Feedback?.busy ? window.Feedback.busy(btn, run, { rethrow: true }) : run());
-    notify(ok);
+    let body = null;
+    await (window.Feedback?.busy ? window.Feedback.busy(btn, async () => { body = await run(); }, { rethrow: true }) : (body = await run()));
+    notify(ok + (body?.sentCount ? " في المنصة والتلقرام" : " في المنصة فقط" + (why || "، لأن حسابه غير مربوط بالتلقرام")));
   } catch (e) {
     console.error("[department-budgets] notice", e);
     notify("لم يُرسل: " + (typeof e === "string" ? e : "تعذّر الإرسال، حاول مجدداً"), "err");

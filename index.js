@@ -2089,7 +2089,8 @@ app.post("/api/telegram/broadcast", sensitiveLimiter, async (req, res) => {
 // budgets (admins, and «السماح بكل الميزانيات» / «السماح بتعديل الجدول» —
 // firestore.rules' hasAllBudgetsPermission) that the budget waits for them.
 // «تذكير رئيس القسم»: one who approves asks a head to hurry with theirs.
-// One message per department and direction an hour (budgetNotices/{id}).
+// One message per department and direction an hour (budgetNotices/{id}),
+// kept in the platform too (budgetNoticeLog).
 const BUDGET_NOTICE_GAP_MS = 60 * 60 * 1000;
 
 const isAdminTeacher = (data) => ["admin", "superadmin"].includes(String(data?.role || "").toLowerCase());
@@ -2101,10 +2102,6 @@ const canApproveBudgets = (data) => isAdminTeacher(data)
 async function budgetCaller(req, res) {
   if (!isFirebaseReady()) {
     res.status(503).json({ ok: false, error: "firebase_unavailable" });
-    return null;
-  }
-  if (!TELEGRAM_BOT_TOKEN) {
-    res.status(503).json({ ok: false, error: "telegram_token_missing" });
     return null;
   }
   const decoded = await verifyFirebaseUser(req);
@@ -2139,10 +2136,22 @@ async function releaseBudgetNotice(id) {
   catch (error) { console.error(`[budgets] notice release failed id=${id}: ${error.message}`); }
 }
 
-async function sendBudgetNotice(res, id, by, recipients, message) {
-  const targets = recipients.filter((r) => r.chatId);
-  if (!targets.length) return res.status(404).json({ ok: false, error: "no_recipients" });
+// The notice in the platform (budgetNoticeLog: «إشعارات الميزانيات» for
+// approvers, «إشعارات القسم» for a head), then on Telegram to whoever of
+// its recipients connected the bot. One an hour per department and direction.
+async function sendBudgetNotice(res, id, by, { to, department }, recipients, message) {
   if (!(await reserveBudgetNotice(id, by))) return res.status(429).json({ ok: false, error: "rate_limited" });
+  try {
+    await db.collection("budgetNoticeLog").add({
+      to, department, text: message, byUid: by.uid, byName: by.name || null,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  } catch (error) {
+    console.error(`[budgets] notice log write failed id=${id}: ${error.message}`);
+    await releaseBudgetNotice(id);
+    return res.status(500).json({ ok: false, error: "notice_failed" });
+  }
+  const targets = recipients.filter((r) => r.chatId);
   let sentCount = 0;
   for (const r of targets) {
     try {
@@ -2153,16 +2162,13 @@ async function sendBudgetNotice(res, id, by, recipients, message) {
       console.error(`[budgets] notice send failed id=${id} userId=${r.uid}: ${error.message}`);
     }
   }
-  if (!sentCount) {
-    await releaseBudgetNotice(id);
-    return res.status(502).json({ ok: false, error: "send_failed" });
-  }
   return res.json({ ok: true, sentCount, totalRecipients: targets.length });
 }
 
 const telegramTarget = (docSnap) => {
   const d = docSnap.data() || {};
-  return { uid: docSnap.id, data: d, chatId: d.telegramConnected === true ? String(d.telegramChatId || "").trim() : "" };
+  const connected = TELEGRAM_BOT_TOKEN && d.telegramConnected === true;
+  return { uid: docSnap.id, data: d, chatId: connected ? String(d.telegramChatId || "").trim() : "" };
 };
 
 app.post("/api/budgets/notify-approvers", sensitiveLimiter, async (req, res) => {
@@ -2176,12 +2182,12 @@ app.post("/api/budgets/notify-approvers", sensitiveLimiter, async (req, res) => 
     if (!budget.exists) return res.status(409).json({ ok: false, error: "no_budget" });
     if (budget.data()?.approved === true) return res.status(409).json({ ok: false, error: "already_approved" });
 
-    const snap = await db.collection("teachers").where("telegramConnected", "==", true).get();
+    const snap = await db.collection("teachers").get();
     const recipients = snap.docs.map(telegramTarget).filter((r) => r.uid !== caller.uid && canApproveBudgets(r.data));
     const message = `📋 ميزانية قسم ${caller.department}\n`
       + `أدخل رئيس القسم${caller.name ? ` ${caller.name}` : ""} ميزانية القسم، وهي تنتظر الاعتماد.\n`
       + "تفضلوا بمراجعتها واعتمادها من «ميزانيات الأقسام».";
-    return await sendBudgetNotice(res, `approvers_${caller.department}`, caller, recipients, message);
+    return await sendBudgetNotice(res, `approvers_${caller.department}`, caller, { to: "approvers", department: caller.department }, recipients, message);
   } catch (error) {
     console.error(`[budgets] notify-approvers failed: ${error.message}`);
     return res.status(500).json({ ok: false, error: "notice_failed" });
@@ -2205,7 +2211,7 @@ app.post("/api/budgets/remind-head", sensitiveLimiter, async (req, res) => {
       + (withdrawn ? "ألغيتَ اعتماد ميزانية القسم، والإدارة تنتظر ميزانيتك الجديدة.\n"
         : budget.exists ? "ميزانية القسم لم تُعتمد بعد.\n" : "لم تُدخل ميزانية القسم بعد.\n")
       + "نرجو التعجيل بإدخالها في «ميزانية القسم» لضرورة اعتمادها وإنجاز الجدول.";
-    return await sendBudgetNotice(res, `head_${caller.department}`, caller, heads, message);
+    return await sendBudgetNotice(res, `head_${caller.department}`, caller, { to: "head", department: caller.department }, heads, message);
   } catch (error) {
     console.error(`[budgets] remind-head failed: ${error.message}`);
     return res.status(500).json({ ok: false, error: "notice_failed" });

@@ -154,6 +154,12 @@
           <i class="fas fa-table-list" aria-hidden="true"></i>
           <span>ميزانيات الأقسام</span>
         </button>
+        <!-- «إشعارات الميزانيات» (/shared/budget-notices.js): what heads sent those who approve. -->
+        <button id="sidebarBudgetNotices" class="sidebar-link" type="button" hidden>
+          <i class="fas fa-bell" aria-hidden="true"></i>
+          <span>إشعارات الميزانيات</span>
+          <span id="budgetNoticesBadge" class="sidebar-count" hidden></span>
+        </button>
       </div>
 
       <div id="sidebarSupervisorGroup" class="sidebar-group" hidden>
@@ -347,7 +353,7 @@
       <h3 class="sheet-title">إشعارات القسم</h3>
     </div>
     <div class="sheet-body">
-      <p class="dn-hint">تسجيلات الغياب لحصص ليست في جدول من سجّلها، عندما يكون المسجِّل أو صاحب الحصة من قسمك — آخر ٣٠ يوماً.</p>
+      <p class="dn-hint">تسجيلات الغياب لحصص ليست في جدول من سجّلها، عندما يكون المسجِّل أو صاحب الحصة من قسمك، وتذكيرات الإدارة بميزانية القسم — آخر ٣٠ يوماً.</p>
       <div id="dnList" class="dn-list"></div>
     </div>
   </section>
@@ -6026,9 +6032,25 @@
       sidebarBudget.hidden = currentRole !== 'head';
       sidebarAllBudgets.hidden = !allBudgets;
       sidebarBudgetGroup.hidden = sidebarBudget.hidden && sidebarAllBudgets.hidden;
+      if (allBudgets && currentUser) startBudgetNotices(currentUser.uid); else stopBudgetNotices();
       const openLink = budgetMode === 'all' ? sidebarAllBudgets : sidebarBudget;
       if (sidebarBudgetGroup.hidden || openLink.hidden) closeBudgetSheet();
     }
+
+    // إشعارات الميزانيات: for those who see every department (as ميزانيات الأقسام).
+    let budgetNotices = null;
+    function startBudgetNotices(uid){
+      (budgetNotices ||= import('/shared/budget-notices.js?v=2026-10-13').then((m) => m.mountBudgetNotices({
+        db,
+        link: document.getElementById('sidebarBudgetNotices'),
+        badge: document.getElementById('budgetNoticesBadge'),
+        onOpenBudgets: () => openBudgetSheet('all'),
+      })))
+        .then((api) => api.start(uid))
+        .catch((e) => { budgetNotices = null; console.error('[budget-notices] failed to load', e); });
+    }
+    function stopBudgetNotices(){ budgetNotices?.then((api) => api.stop()).catch(() => {}); }
+    document.getElementById('sidebarBudgetNotices').addEventListener('click', () => closeSidebar());
 
     sidebarBudget.addEventListener('click', () => { closeSidebar(); openBudgetSheet('own'); });
     sidebarAllBudgets.addEventListener('click', () => { closeSidebar(); openBudgetSheet('all'); });
@@ -7187,7 +7209,7 @@
     const DN_DAYS = 30; // Firestore's `in` takes at most 30 values
     const DN_SEEN_COLLECTION = 'dept_notif_seen';
     let dnUnsubs = [];
-    let dnBySide = { sub: new Map(), orig: new Map() };
+    let dnBySide = { sub: new Map(), orig: new Map(), budget: new Map() };
     let dnItems = [];
     let dnSeenMs = 0;
     let dnNewIds = new Set(); // tagged "جديد" while the sheet is showing them
@@ -7231,6 +7253,24 @@
         if (x.date !== lastDay) {
           lastDay = x.date;
           html += `<div class="dn-day">${escapeHtml(dnDayLabel(x.date))}</div>`;
+        }
+        const isNewItem = dnNewIds.has(x.id);
+        // «تذكير رئيس القسم» from ميزانيات الأقسام (budgetNoticeLog, to: "head").
+        if (x.kind === 'budget') {
+          html += `
+          <div class="dn-card${isNewItem ? ' is-new' : ''}">
+            <span class="dn-avatar" aria-hidden="true"><i class="fas fa-clipboard-list"></i></span>
+            <div class="dn-main">
+              <div class="dn-top">
+                <b class="dn-name">${escapeHtml(x.byName || 'الإدارة')}</b>
+                ${isNewItem ? '<span class="dn-new">جديد</span>' : ''}
+                <span class="dn-time">${escapeHtml(dnTimeLabel(x.createdAt))}</span>
+              </div>
+              <div class="dn-line" style="white-space:pre-line">${escapeHtml(x.text || '')}</div>
+              <div class="dn-meta"><span class="dn-reason">ميزانية القسم</span></div>
+            </div>
+          </div>`;
+          return;
         }
         const name = x.substituteTeacherName || '—';
         const lesson = LESSONS_AR[Number(x.lesson) - 1] || `الحصة ${toArabicDigits(x.lesson)}`;
@@ -7288,6 +7328,18 @@
         .catch(e => console.warn('[deptNotifs] mark seen failed:', e?.message || e));
     }
 
+    const dnKuwaitISO = (ms) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kuwait', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(ms));
+    function dnRefresh(){
+      const uid = currentUser?.uid;
+      // A cover inside the department matches both queries — one card.
+      dnItems = [...new Map([...dnBySide.orig, ...dnBySide.sub]).values()]
+        .filter(x => x.teacherUid !== uid) // the head's own records aren't news to them
+        .concat([...dnBySide.budget.values()])
+        .sort((a, b) => dnMs(b.createdAt) - dnMs(a.createdAt));
+      dnRenderBadge();
+      if (dnSheet.classList.contains('open')) { dnMarkSeen(); dnRender(); }
+    }
+
     async function startDeptNotifs(){
       stopDeptNotifs();
       const uid = currentUser?.uid;
@@ -7309,22 +7361,30 @@
         query(collection(db, 'attendanceSessions'), where(field, 'in', keys)),
         (snap) => {
           dnBySide[side] = new Map(snap.docs.map(d => [d.id, { id: d.id, ...d.data() }]));
-          // A cover inside the department matches both queries — one card.
-          dnItems = [...new Map([...dnBySide.orig, ...dnBySide.sub]).values()]
-            .filter(x => x.teacherUid !== uid) // the head's own records aren't news to them
-            .sort((a, b) => dnMs(b.createdAt) - dnMs(a.createdAt));
-          dnRenderBadge();
-          if (dnSheet.classList.contains('open')) { dnMarkSeen(); dnRender(); }
+          dnRefresh();
         },
         (e) => console.error(`[deptNotifs] ${side} listener:`, e)
       );
-      dnUnsubs = [listen('sub', 'substituteDeptDay'), listen('orig', 'originalDeptDay')];
+      // «تذكير رئيس القسم» (ميزانيات الأقسام → the bot's server → budgetNoticeLog).
+      const fromMs = Date.now() - DN_DAYS * 86400000;
+      const budgetUnsub = onSnapshot(
+        query(collection(db, 'budgetNoticeLog'), where('to', '==', 'head'), where('department', '==', department)),
+        (snap) => {
+          dnBySide.budget = new Map(snap.docs
+            .map(d => ({ id: 'budget_' + d.id, kind: 'budget', ...d.data() }))
+            .filter(x => dnMs(x.createdAt) >= fromMs)
+            .map(x => [x.id, { ...x, date: dnKuwaitISO(dnMs(x.createdAt)) }]));
+          dnRefresh();
+        },
+        (e) => console.error('[deptNotifs] budget listener:', e)
+      );
+      dnUnsubs = [listen('sub', 'substituteDeptDay'), listen('orig', 'originalDeptDay'), budgetUnsub];
     }
 
     function stopDeptNotifs(){
       dnUnsubs.forEach(fn => fn());
       dnUnsubs = [];
-      dnBySide = { sub: new Map(), orig: new Map() };
+      dnBySide = { sub: new Map(), orig: new Map(), budget: new Map() };
       dnItems = [];
       dnNewIds = new Set();
       sidebarDeptNotifs.hidden = true;
@@ -7446,6 +7506,7 @@
           sidebarAttendanceGroup.hidden = true;
           closeBudgetSheet();
           sidebarBudgetGroup.hidden = true;
+          stopBudgetNotices();
           stopDeptNotifs();
           closeDeptNotifs();
           dsAttendance.setCanEditOthers(false);
@@ -7469,6 +7530,7 @@
       sidebarHeadDept.hidden = true;
       sidebarAttendanceGroup.hidden = true;
       sidebarBudgetGroup.hidden = true;
+      stopBudgetNotices();
       stopDeptNotifs();
       dsAttendance.setCanEditOthers(false);
       currentUser = user;

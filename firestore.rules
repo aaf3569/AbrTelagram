@@ -1271,6 +1271,28 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    /* ---------- budgetNoticeLog ---------- */
+    // Budget notices kept in the platform; only the bot's server writes them
+    // (index.js: /api/budgets/*). «إشعار بميزانية جديدة» (to: "approvers")
+    // shows in «إشعارات الميزانيات» (/shared/budget-notices.js) to those who
+    // approve; «تذكير رئيس القسم» (to: "head") in that department's head's
+    // «إشعارات القسم» (Teachers/user.html).
+    match /budgetNoticeLog/{id} {
+      allow read: if (resource.data.to == 'approvers' && (isAdmin() || hasAllBudgetsPermission()))
+        || (resource.data.to == 'head' && isHead() && headDepartment() == resource.data.department);
+      allow write: if false;
+    }
+
+    // When each approver last opened «إشعارات الميزانيات» (its count).
+    match /budget_notice_seen/{uid} {
+      allow get: if signedIn() && uid == request.auth.uid;
+      allow create, update: if signedIn()
+        && uid == request.auth.uid
+        && request.resource.data.keys().hasOnly(['seenAt'])
+        && request.resource.data.seenAt == request.time;
+      allow list, delete: if false;
+    }
+
     /* ---------- departmentBudgets ---------- */
     // ميزانية القسم (/shared/department-budgets.js, opened from
     // Teachers/user.html and admins/adminpage.html): one doc per department,
