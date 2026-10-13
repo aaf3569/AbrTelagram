@@ -1325,8 +1325,8 @@ service cloud.firestore {
       // the approved copy stays too (one approved before copies were kept
       // gets it now), so «ميزانية كل الأقسام» keeps showing it, and who
       // withdrew it, and when, is kept (unapproved*).
-      allow update: if (isAdmin() || hasAllBudgetsPermission() || (isHead() && headDepartment() == dept))
-        && resource.data.get('approved', false) == true
+      // (Who may: the last condition. headDepartment() is costly, so once.)
+      allow update: if resource.data.get('approved', false) == true
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(budgetApprovalKeys())
         && request.resource.data.approved == false
         && !('approvedBy' in request.resource.data)
@@ -1338,7 +1338,9 @@ service cloud.firestore {
         && request.resource.data.unapprovedBy.size() <= 120
         && request.resource.data.unapprovedByUid == request.auth.uid
         && request.resource.data.unapprovedAt == request.time
-        && request.resource.data.unapprovedRole == ((isAdmin() || hasAllBudgetsPermission()) ? 'admin' : 'head');
+        // As whom: the head from their own ميزانية القسم, an approver from every department's.
+        && ((request.resource.data.unapprovedRole == 'head' && isHead() && headDepartment() == dept)
+            || (request.resource.data.unapprovedRole == 'admin' && (isAdmin() || hasAllBudgetsPermission())));
       allow delete: if isAdmin();
     }
 
