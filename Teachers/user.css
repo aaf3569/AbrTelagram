@@ -751,6 +751,93 @@
     }
     #sidebarLogout { justify-content: center; text-align: center; }
 
+    /* === Liquid-glass sidebar links (/teachers/sidebar-glass.js) ===
+       The sidebar looks as it always did; the script only adds a glass lens
+       to each group's links. Inside an invisible .sg-track it adds:
+         .sg-glass  lens body (tint + shadow), under the links
+         .sg-row    the real links; a lens-shaped hole is cut out of it
+         .sg-lens   a tinted, magnified copy of the links, bent at the rim
+         .sg-rim    specular rim on top */
+    .sg-track {
+      position: relative; isolation: isolate;
+      touch-action: pan-y; /* the sidebar still scrolls; holding picks up the lens instead */
+      user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+    }
+
+    .sg-row { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 2px; }
+    .sg-row .sidebar-link { -webkit-user-drag: none; }
+    /* The lens is the current link's background now; the link keeps its blue
+       stripe and filled icon, which stay put when the lens is carried away. */
+    .sg-row .sidebar-link.is-current { background: transparent; border-color: transparent; }
+    .sg-row .sidebar-link:focus-visible { outline: 3px solid var(--focus); outline-offset: -3px; }
+    .sg-row .sidebar-link:active i { transform: scale(0.88); }
+    .sg-row .sidebar-link i { transition: transform 0.35s cubic-bezier(0.3, 1.5, 0.5, 1), background-color 0.2s, color 0.2s; }
+    /* While the lens is carried, only what is under it is highlighted */
+    .sg-track.dragging .sg-row:not(.sg-clone) .sidebar-link.is-current i { background: var(--primary-light); color: var(--primary-2); }
+    /* A keyboard focus ring must not vanish into the lens hole */
+    .sg-track:has(:focus-visible) .sg-row:not(.sg-clone) { clip-path: none !important; -webkit-clip-path: none !important; }
+
+    /* The copy inside the lens: everything under it takes the accent colour */
+    .sg-clone { position: absolute; left: 0; top: 0; transform-origin: 0 0; pointer-events: none; }
+    .sg-clone .sidebar-link { color: var(--primary); transition: none; }
+    .sg-clone .sidebar-link i {
+      background: linear-gradient(145deg, var(--primary-2), var(--primary)); color: #fff;
+      box-shadow: 0 4px 10px rgba(2, 43, 66, 0.25); transform: scale(1.06); transition: none;
+    }
+
+    .sg-glass, .sg-lens, .sg-rim {
+      position: absolute; left: 0; top: 0; border-radius: 12px; /* the links' own radius (also LENS_RADIUS in the script) */
+      pointer-events: none; will-change: transform, width, height, opacity;
+    }
+    .sg-glass { z-index: 0; }
+    .sg-glass::before, .sg-glass::after { content: ""; position: absolute; inset: 0; border-radius: inherit; }
+    /* Resting lens: clear, pearly glass rather than a blue fill — near-white,
+       a cool shade low down where the glass is thickest, light pooling along
+       the bottom edge, a bright top edge and a soft drop shadow. */
+    .sg-glass::before {
+      opacity: var(--tint, 1);
+      background:
+        radial-gradient(110% 80% at 50% 130%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0) 60%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(243, 246, 249, 0.92) 55%, rgba(234, 240, 245, 0.95) 100%);
+      box-shadow:
+        0 1px 2px rgba(2, 43, 66, 0.07),
+        0 8px 18px -6px rgba(2, 43, 66, 0.2),
+        inset 0 1px 0 #fff,
+        inset 0 -1px 0 rgba(2, 43, 66, 0.05);
+    }
+    /* Lifted lens: clear, floating, with a faint prism fringe at the edge */
+    .sg-glass::after {
+      opacity: var(--lift, 0);
+      background: rgba(255, 255, 255, 0.1);
+      box-shadow:
+        0 14px 30px rgba(2, 43, 66, 0.22),
+        0 2px 6px rgba(2, 43, 66, 0.1),
+        inset 0 2px 3px rgba(255, 70, 130, 0.16),
+        inset 0 -2px 3px rgba(40, 160, 255, 0.2),
+        inset 3px 0 5px rgba(255, 210, 90, 0.14);
+    }
+    .sg-lens { z-index: 2; overflow: hidden; clip-path: inset(0 round 12px); }
+    .sg-rim { z-index: 5; }
+    .sg-rim::before, .sg-rim::after { content: ""; position: absolute; inset: 0; border-radius: inherit; }
+    .sg-rim::before {
+      padding: 1px;
+      /* A hairline edge: bright where the light hits, a faint shade opposite,
+         so the glass reads on the white sidebar. */
+      background: linear-gradient(var(--la), #fff, rgba(2, 43, 66, 0.06) 30%, rgba(2, 43, 66, 0.14) 62%, rgba(255, 255, 255, 0.9));
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor;
+      mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+    }
+    /* A soft sheen sweeping across the upper half */
+    .sg-rim::after {
+      inset: 1px 1px auto; height: 50%; border-radius: 11px 11px 40% 40% / 11px 11px 14px 14px;
+      background: linear-gradient(100deg, rgba(255, 255, 255, 0) 8%, rgba(255, 255, 255, 0.75) 30%, rgba(255, 255, 255, 0.15) 55%, rgba(255, 255, 255, 0) 80%);
+      opacity: calc(var(--tint, 1) * 0.9);
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .sg-row .sidebar-link i { transition: none; }
+    }
+
     /* Sheet */
     .sheet {
       position: fixed; inset: 0; z-index: 50; background: var(--page);
