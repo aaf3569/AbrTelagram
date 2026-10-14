@@ -1,4 +1,4 @@
-// The school's real department/subject taxonomy — 15 departments, 25
+// The school's real department/subject taxonomy — 16 departments, 25
 // subjects — ported from the school's Google Sheet scheduling system
 // (its config_Constants.js: CONSTANTS.DEPARTMENTS, CONSTANTS.SUBJECTS,
 // SUBJECT_TO_ALLOWED_DEPARTMENTS), which is the authority this was checked
@@ -36,10 +36,12 @@
 //     subject — it would let someone edit data outside their real
 //     department.
 //   - SUBJECT_TO_ALLOWED_DEPARTMENTS answers "whose teachers may be
-//     assigned to *teach* this subject". Since الجغرافيا والتاريخ and
-//     العلوم الفلسفية merged into الاجتماعيات every subject has one
-//     department here too; keep the map for scheduling/cover-teacher
-//     pickers should a subject ever be shared again — never authorization.
+//     assigned to *teach* this subject" — several subjects allow two
+//     departments, because الجغرافيا والتاريخ and العلوم الفلسفية sit
+//     under one shared academic supervision at this school (a Geography
+//     teacher can be scheduled to cover a Philosophy lesson, and vice
+//     versa). This is what scheduling/cover-teacher pickers should widen
+//     against — never authorization.
 
 export const DEPARTMENTS = Object.freeze({
   ARABIC:              'اللغة العربية',
@@ -48,10 +50,8 @@ export const DEPARTMENTS = Object.freeze({
   MATH:                'الرياضيات',
   PHYSICS_CHEMISTRY:   'الفيزياء والكيمياء',
   BIOLOGY_GEOLOGY:     'الأحياء والجيولوجيا',
-  // One department since الجغرافيا والتاريخ and العلوم الفلسفية merged
-  // (as the school's timetable sheet has it); the two old names still
-  // resolve here (LEGACY_DEPARTMENTS).
-  SOCIAL_STUDIES:      'الاجتماعيات',
+  GEOGRAPHY_HISTORY:   'الجغرافيا والتاريخ',
+  PHILOSOPHY_SCIENCES: 'العلوم الفلسفية',
   COMPUTER:            'الحاسوب',
   PE:                  'التربية البدنية',
   ART:                 'التربية الفنية',
@@ -63,16 +63,6 @@ export const DEPARTMENTS = Object.freeze({
 });
 
 export const DEPARTMENT_LIST = Object.freeze(Object.values(DEPARTMENTS));
-
-// Department names teacher records (and older data) may still carry →
-// the department they are now. firestore.rules' canonicalDepartment() and
-// index.js' canonicalDepartment() resolve the same names the same way.
-export const LEGACY_DEPARTMENTS = Object.freeze({
-  'الجغرافيا والتاريخ':  DEPARTMENTS.SOCIAL_STUDIES,
-  'التاريخ والجغرافيا':  DEPARTMENTS.SOCIAL_STUDIES,
-  'العلوم الفلسفية':     DEPARTMENTS.SOCIAL_STUDIES,
-  'علم النفس والفلسفة':  DEPARTMENTS.SOCIAL_STUDIES,
-});
 
 // Not a teaching department: staff who run attendance/absence. Kept out of
 // DEPARTMENTS/DEPARTMENT_LIST on purpose so it never shows up in subject,
@@ -91,11 +81,11 @@ export const SUBJECT_TO_DEPARTMENT = Object.freeze({
   'الكيمياء':                    DEPARTMENTS.PHYSICS_CHEMISTRY,
   'الأحياء':                     DEPARTMENTS.BIOLOGY_GEOLOGY,
   'الجيولوجيا':                  DEPARTMENTS.BIOLOGY_GEOLOGY,
-  'الجغرافيا':                   DEPARTMENTS.SOCIAL_STUDIES,
-  'التاريخ':                     DEPARTMENTS.SOCIAL_STUDIES,
-  'الفلسفة':                     DEPARTMENTS.SOCIAL_STUDIES,
-  'علم النفس':                   DEPARTMENTS.SOCIAL_STUDIES,
-  'الدستور':                     DEPARTMENTS.SOCIAL_STUDIES,
+  'الجغرافيا':                   DEPARTMENTS.GEOGRAPHY_HISTORY,
+  'التاريخ':                     DEPARTMENTS.GEOGRAPHY_HISTORY,
+  'الفلسفة':                     DEPARTMENTS.PHILOSOPHY_SCIENCES,
+  'علم النفس':                   DEPARTMENTS.PHILOSOPHY_SCIENCES,
+  'الدستور':                     DEPARTMENTS.PHILOSOPHY_SCIENCES,
   'الحاسوب':                     DEPARTMENTS.COMPUTER,
   'التربية البدنية':             DEPARTMENTS.PE,
   'التربية الفنية':              DEPARTMENTS.ART,
@@ -104,7 +94,7 @@ export const SUBJECT_TO_DEPARTMENT = Object.freeze({
   'المكتبات':                    DEPARTMENTS.LIBRARY,
   'الدراسات العملية':            DEPARTMENTS.PRACTICAL_STUDIES,
   'التجاري':                     DEPARTMENTS.COMMERCE,
-  'الاجتماعيات':                 DEPARTMENTS.SOCIAL_STUDIES,
+  'الاجتماعيات':                 DEPARTMENTS.GEOGRAPHY_HISTORY,
   'التربية البيئية':             DEPARTMENTS.BIOLOGY_GEOLOGY,
   'الإحصاء':                     DEPARTMENTS.MATH,
   'اللغة الفرنسية (اختيار حرّ)': DEPARTMENTS.FRENCH,
@@ -113,8 +103,8 @@ export const SUBJECT_TO_DEPARTMENT = Object.freeze({
 export const SUBJECT_LIST = Object.freeze(Object.keys(SUBJECT_TO_DEPARTMENT));
 
 // subject name -> every department whose teachers may be assigned to
-// teach it. Today every subject lists only its own department (as in
-// SUBJECT_TO_DEPARTMENT).
+// teach it. Only six subjects list two departments — the rest list the
+// same single department as SUBJECT_TO_DEPARTMENT.
 export const SUBJECT_TO_ALLOWED_DEPARTMENTS = Object.freeze({
   'التربية الإسلامية':           [DEPARTMENTS.ISLAMIC],
   'اللغة العربية':               [DEPARTMENTS.ARABIC],
@@ -125,12 +115,12 @@ export const SUBJECT_TO_ALLOWED_DEPARTMENTS = Object.freeze({
   'الفيزياء':                    [DEPARTMENTS.PHYSICS_CHEMISTRY],
   'الأحياء':                     [DEPARTMENTS.BIOLOGY_GEOLOGY],
   'الجيولوجيا':                  [DEPARTMENTS.BIOLOGY_GEOLOGY],
-  'التاريخ':                     [DEPARTMENTS.SOCIAL_STUDIES],
-  'الجغرافيا':                   [DEPARTMENTS.SOCIAL_STUDIES],
-  'الاجتماعيات':                 [DEPARTMENTS.SOCIAL_STUDIES],
-  'الفلسفة':                     [DEPARTMENTS.SOCIAL_STUDIES],
-  'علم النفس':                   [DEPARTMENTS.SOCIAL_STUDIES],
-  'الدستور':                     [DEPARTMENTS.SOCIAL_STUDIES],
+  'التاريخ':                     [DEPARTMENTS.GEOGRAPHY_HISTORY, DEPARTMENTS.PHILOSOPHY_SCIENCES],
+  'الجغرافيا':                   [DEPARTMENTS.GEOGRAPHY_HISTORY, DEPARTMENTS.PHILOSOPHY_SCIENCES],
+  'الاجتماعيات':                 [DEPARTMENTS.GEOGRAPHY_HISTORY, DEPARTMENTS.PHILOSOPHY_SCIENCES],
+  'الفلسفة':                     [DEPARTMENTS.PHILOSOPHY_SCIENCES, DEPARTMENTS.GEOGRAPHY_HISTORY],
+  'علم النفس':                   [DEPARTMENTS.PHILOSOPHY_SCIENCES, DEPARTMENTS.GEOGRAPHY_HISTORY],
+  'الدستور':                     [DEPARTMENTS.GEOGRAPHY_HISTORY, DEPARTMENTS.PHILOSOPHY_SCIENCES],
   'الحاسوب':                     [DEPARTMENTS.COMPUTER],
   'التربية البدنية':             [DEPARTMENTS.PE],
   'التربية الموسيقية':           [DEPARTMENTS.MUSIC],
@@ -154,9 +144,8 @@ export const SUBJECT_TO_ALLOWED_DEPARTMENTS = Object.freeze({
 // two departments have their own separate leaders and their own distinct
 // (overlapping, not identical) pools.
 //
-//   الاجتماعيات          → الجغرافيا، التاريخ، الاجتماعيات، الدستور،
-//                          علم النفس، الفلسفة (the two old departments,
-//                          الجغرافيا والتاريخ and العلوم الفلسفية, merged)
+//   الجغرافيا والتاريخ   → الجغرافيا، الاجتماعيات
+//   العلوم الفلسفية      → الدستور، علم النفس، الفلسفة، الاجتماعيات
 //   الرياضيات            → الرياضيات، الإحصاء
 //   الأحياء والجيولوجيا  → الأحياء، الجيولوجيا، التربية البيئية
 //   الفيزياء والكيمياء   → الفيزياء، الكيمياء
@@ -177,7 +166,8 @@ export const SUBJECT_TO_ALLOWED_DEPARTMENTS = Object.freeze({
 const DEPARTMENT_SPECIALIZATIONS = Object.freeze({
   [DEPARTMENTS.PHYSICS_CHEMISTRY]:   ['الفيزياء', 'الكيمياء'],
   [DEPARTMENTS.BIOLOGY_GEOLOGY]:     ['الأحياء', 'الجيولوجيا', 'التربية البيئية'],
-  [DEPARTMENTS.SOCIAL_STUDIES]:      ['الجغرافيا', 'التاريخ', 'الاجتماعيات', 'الدستور', 'علم النفس', 'الفلسفة'],
+  [DEPARTMENTS.GEOGRAPHY_HISTORY]:   ['الجغرافيا', 'التاريخ', 'الاجتماعيات', 'الدستور'],
+  [DEPARTMENTS.PHILOSOPHY_SCIENCES]: ['الدستور', 'علم النفس', 'الفلسفة', 'الاجتماعيات'],
   [DEPARTMENTS.MATH]:                ['الرياضيات', 'الإحصاء'],
 });
 
@@ -197,7 +187,7 @@ export function resolveDepartmentName(rawValue) {
   const value = (rawValue || '').toString().trim();
   if (!value) return '';
   if (DEPARTMENT_LIST.includes(value)) return value;
-  return LEGACY_DEPARTMENTS[value] || SUBJECT_TO_DEPARTMENT[value] || value;
+  return SUBJECT_TO_DEPARTMENT[value] || value;
 }
 
 /** True for a department built around more than one specialization. */
@@ -219,8 +209,10 @@ export function getMergedDepartmentSpecializationMessage(department) {
 
 /**
  * Every subject whose eligible teachers include this department —
- * derived from SUBJECT_TO_ALLOWED_DEPARTMENTS, with no separate list to
- * keep in sync.
+ * derived from SUBJECT_TO_ALLOWED_DEPARTMENTS, so الجغرافيا والتاريخ and
+ * العلوم الفلسفية each widen to the full shared set (التاريخ، الجغرافيا،
+ * الاجتماعيات، الفلسفة، علم النفس، الدستور) automatically, with no
+ * separate list to keep in sync.
  *
  * This is the *scheduling* mapping — use it for "which teachers can cover
  * this subject", never for authorization (use resolveDepartmentName for
@@ -243,8 +235,8 @@ export function getDepartmentSubjectFilters(department) {
  *
  * Grade 10 has no track and doesn't split a merged department into its
  * separate subjects at all: every البيولوجيا/الجيولوجيا teacher shows as
- * الأحياء, and every الاجتماعيات teacher shows as الاجتماعيات,
- * regardless of their own specific
+ * الأحياء, and every teacher from EITHER الجغرافيا والتاريخ or العلوم
+ * الفلسفية shows as الاجتماعيات, regardless of their own specific
  * تخصص داخلي.
  *
  * In the د (أدبي) track — 11د and 12د — the departments DO split into
@@ -255,7 +247,8 @@ export function getDepartmentSubjectFilters(department) {
  */
 const GRADE_10_DEPARTMENT_SUBJECT = Object.freeze({
   [DEPARTMENTS.BIOLOGY_GEOLOGY]: 'الأحياء',
-  [DEPARTMENTS.SOCIAL_STUDIES]: 'الاجتماعيات',
+  [DEPARTMENTS.GEOGRAPHY_HISTORY]: 'الاجتماعيات',
+  [DEPARTMENTS.PHILOSOPHY_SCIENCES]: 'الاجتماعيات',
 });
 const TRACK_D_SUBJECT_OVERRIDES = Object.freeze({
   'الرياضيات': 'الإحصاء',

@@ -1133,11 +1133,10 @@ function renderSchool(box) {
   // The one-time upload of the old site's data: admins only.
   const imp = S.realAdmin ? el("button", { className: "btn ghost", type: "button", textContent: "رفع بيانات الموقع القديم" }) : null;
   if (imp) imp.onclick = () => setView("import");
-  // Budgets still saved under الجغرافيا والتاريخ / العلوم الفلسفية: one move into الاجتماعيات.
-  const olds = OLD_SOCIAL.filter((dp) => S.budgets.has(dp));
-  const merge = olds.length && S.realAdmin ? el("button", { className: "btn", type: "button", textContent: "دمج ميزانيتي القسمين في الاجتماعيات" }) : null;
-  if (merge) confirmFirst(merge, "تُجمع ميزانية " + olds.join(" و") + " في ميزانية الاجتماعيات" + (S.budgets.has(SOCIAL) ? " مع الموجودة فيها" : "") + ".", () => mergeOldSocial(olds, msg));
-  box.append(gridBtn, el("div", { className: "row", style: "margin:0 0 12px" }, detail, printButton(() => S.body, "ميزانية المدرسة"), imp, merge, msg));
+  // A budget saved while the two were one الاجتماعيات department: one move back into the two.
+  const split = S.budgets.has(SOCIAL) && S.realAdmin ? el("button", { className: "btn", type: "button", textContent: "فصل ميزانية الاجتماعيات إلى القسمين" }) : null;
+  if (split) confirmFirst(split, "تُوزّع ميزانية الاجتماعيات على " + SPLIT_SOCIAL.join(" و") + " حسب قسم كل معلم.", () => splitSocial(msg));
+  box.append(gridBtn, el("div", { className: "row", style: "margin:0 0 12px" }, detail, printButton(() => S.body, "ميزانية المدرسة"), imp, split, msg));
   const depts = schoolDepartments();
   const rows = depts.map((dp) => {
     const b = S.budgets.get(dp);
@@ -1290,34 +1289,45 @@ async function sendNotice(btn, path, dp, ok, why) {
   }
 }
 
-// الجغرافيا والتاريخ and العلوم الفلسفية became الاجتماعيات (shared/departments.js).
+// الجغرافيا والتاريخ and العلوم الفلسفية were one department, الاجتماعيات,
+// for a while; a budget saved then goes back into the two (shared/departments.js).
 const SOCIAL = "الاجتماعيات";
-const OLD_SOCIAL = ["الجغرافيا والتاريخ", "العلوم الفلسفية"];
-async function mergeOldSocial(olds, msg) {
-  const parts = [S.budgets.get(SOCIAL), ...olds.map((dp) => S.budgets.get(dp))].filter(Boolean).map((b) => b.data);
-  const teachers = [];
-  for (const d of parts) for (const t of d.teachers) {
-    const same = teachers.find((x) => sameTeacher(x, t));
-    if (!same) { teachers.push(clone(t)); continue; }
-    // The same teacher in both: their classes (and subjects) together.
-    Object.assign(same.cells, t.cells); Object.assign(same.subj, t.subj || {}); Object.assign(same.split, t.split || {});
-    same.subjects = [...new Set([...(same.subjects || []), ...(t.subjects || [])])];
-    if (t.note && t.note !== same.note) same.note = [same.note, t.note].filter(Boolean).join(" · ");
+const SPLIT_SOCIAL = ["الجغرافيا والتاريخ", "العلوم الفلسفية"];
+// A teacher's department: their own record's, else their subjects' home department.
+function socialDeptOf(t) {
+  const own = S.teachers.find((x) => sameTeacher(x, t))?.department;
+  if (SPLIT_SOCIAL.includes(own)) return own;
+  const homes = (t.subjects || []).map((s) => SUBJECT_TO_DEPARTMENT[s]);
+  return homes.includes(SPLIT_SOCIAL[1]) && !homes.includes(SPLIT_SOCIAL[0]) ? SPLIT_SOCIAL[1] : SPLIT_SOCIAL[0];
+}
+async function splitSocial(msg) {
+  const src = S.budgets.get(SOCIAL).data;
+  const out = {};
+  for (const dp of SPLIT_SOCIAL) {
+    const have = S.budgets.get(dp)?.data;
+    out[dp] = have ? clone(have) : { periods: {}, required: null, note: "", teachers: [] };
   }
-  const periods = {};
-  for (const d of parts) for (const [k, row] of Object.entries(d.periods || {})) periods[k] = { ...(periods[k] || {}), ...row };
-  const reqs = parts.map((d) => d.required).filter((n) => n !== null && n !== undefined);
-  const data = cleanBudget({ periods, required: reqs.length ? reqs.reduce((a, n) => a + n, 0) : null,
-    note: parts.map((d) => d.note).filter(Boolean).join(" · "), teachers });
+  for (const t of src.teachers) {
+    const d = out[socialDeptOf(t)];
+    if (!d.teachers.some((x) => sameTeacher(x, t))) d.teachers.push(clone(t));
+  }
+  // The official periods are per subject: each to its subject's department (an unknown one to both).
+  for (const [k, row] of Object.entries(src.periods || {})) {
+    const home = SUBJECT_TO_DEPARTMENT[k];
+    for (const dp of SPLIT_SOCIAL) if (!SPLIT_SOCIAL.includes(home) || home === dp) out[dp].periods[k] = { ...(out[dp].periods[k] || {}), ...row };
+  }
+  // «المطلوب» cannot be split: each department enters its own again.
+  for (const dp of SPLIT_SOCIAL) if (src.note && !out[dp].note) out[dp].note = src.note;
   setMsg(msg, "جارٍ الحفظ...");
   try {
-    await setDoc(doc(S.db, COLLECTION, SOCIAL), { ...data, updatedAt: serverTimestamp(), updatedBy: S.me.name || "", updatedByUid: S.me.uid, ...(S.budgets.get(SOCIAL)?.keep || {}) });
+    await Promise.all(SPLIT_SOCIAL.map((dp) => setDoc(doc(S.db, COLLECTION, dp), { ...cleanBudget(out[dp]),
+      updatedAt: serverTimestamp(), updatedBy: S.me.name || "", updatedByUid: S.me.uid, ...(S.budgets.get(dp)?.keep || {}) })));
   } catch (e) { setMsg(msg, "لم يُحفظ: " + errText(e), "err"); return; }
-  // The old two now live in الاجتماعيات (firestore.rules: an admin may delete).
-  try { await Promise.all(olds.map((dp) => deleteDoc(doc(S.db, COLLECTION, dp)))); }
-  catch (e) { console.warn("[department-budgets] old budgets not deleted", e); }
+  // Both departments have it now (firestore.rules: an admin may delete).
+  try { await deleteDoc(doc(S.db, COLLECTION, SOCIAL)); }
+  catch (e) { console.warn("[department-budgets] الاجتماعيات budget not deleted", e); }
   await load();
-  toast("ميزانية الاجتماعيات: " + data.teachers.length + " معلماً من " + olds.join(" و") + ".");
+  toast(SPLIT_SOCIAL.map((dp) => dp + ": " + out[dp].teachers.length + " معلماً").join(" · ") + ".");
 }
 
 // «عرض التفاصيل»: each department's budget as the official form (the same table as «معاينة»).
