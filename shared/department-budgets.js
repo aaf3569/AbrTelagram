@@ -411,12 +411,23 @@ const newRow = (dp, t) => ({
 });
 // A department with nothing saved yet: its teachers, no classes.
 const emptyData = (dp) => ({ periods: {}, required: null, note: "", teachers: deptStaff(dp).map((t) => newRow(dp, t)) });
-function editable(d) {
+// The department's teachers come from the site's accounts: anyone in it who
+// is missing from the saved budget is added to it when the editor opens.
+function editable(d, dp) {
   const x = clone(d);
   x.periods = x.periods || {};
+  // A row typed by name that is exactly an account's name becomes that account's.
+  for (const t of x.teachers) {
+    const acc = !t.uid && deptStaff(dp).find((s) => normName(s.name) === normName(t.name));
+    if (acc && !x.teachers.some((y) => y.uid === acc.uid)) { t.uid = acc.uid; t.name = acc.name; delete t.added; }
+  }
+  for (const t of deptStaff(dp)) if (!x.teachers.some((y) => sameTeacher(y, t))) x.teachers.push(newRow(dp, t));
   x.teachers.forEach((t) => { t.cells = t.cells || {}; t.subj = t.subj || {}; t.split = t.split || {}; t.subjects = t.subjects || []; });
   return x;
 }
+// A row that is no longer one of the department's accounts (moved, removed,
+// or a name typed in) — the only rows that can be deleted by hand.
+const staleRow = (dp, t) => !deptStaff(dp).some((x) => sameTeacher(x, t));
 
 // «السماح بكل الميزانيات» or «السماح بتعديل الجدول»; strictly true, like
 // firestore.rules' hasAllBudgetsPermission().
@@ -686,7 +697,7 @@ function classGrid(t, dp, d, edit, dup) {
 function openEditor(dp) {
   if (!dp) { S.view = S.role === "admin" ? "school" : "none"; render(); return; }
   const b = S.budgets.get(dp);
-  S.edit = { dp, data: editable(b ? b.data : emptyData(dp)), review: null, dirty: false, ui: {} };
+  S.edit = { dp, data: editable(b ? b.data : emptyData(dp), dp), review: null, dirty: false, ui: {} };
   S.view = "dept";
   renderTabs();
   const E = S.edit, ui = E.ui;
@@ -863,35 +874,41 @@ function renderTeachers() {
   if (table) renderTable();
   else {
     const dup = subjectDupes(E.dp, E.data.teachers);
-    E.ui.teachers.replaceChildren(...E.data.teachers.map((t, i) => teacherCard(t, i, dup)), addTeacherSelect(false));
+    E.ui.teachers.replaceChildren(...E.data.teachers.map((t, i) => teacherCard(t, i, dup)));
   }
   renderSums();
 }
 
-// The department's teachers not yet in its budget, or any other name.
-function addTeacherSelect(inTable) {
-  const E = S.edit, d = E.data;
-  const others = deptStaff(E.dp).filter((t) => !d.teachers.some((x) => sameTeacher(x, t)));
-  const sel = el("select", { className: "addSel", title: "إضافة معلم" }, el("option", { value: "", textContent: "+ إضافة معلم" }),
-    ...others.map((t) => el("option", { value: t.uid, textContent: t.name })), el("option", { value: "*", textContent: "اسم آخر…" }));
-  sel.onchange = () => {
-    if (!sel.value) return;
-    const t = others.find((x) => x.uid === sel.value);
-    d.teachers.push(t ? newRow(E.dp, t) : { uid: "", name: "", cells: {}, note: "", subjects: [], subj: {}, split: {}, added: true });
-    if (t) changed();
-    if (t && isMulti(E.dp)) renderPeriods();
-    renderTeachers();
-    if (!t) { const ins = E.ui.teachers.querySelectorAll('input[placeholder="اسم المعلم"]'); ins[ins.length - 1]?.focus(); }
-  };
-  if (inTable) return sel;
-  return el("div", { style: "margin-top:4px" }, sel);
-}
-
 function removeButton(i, short) {
   const t = S.edit.data.teachers[i];
+  if (!staleRow(S.edit.dp, t)) return null;
   const del = el("button", { className: "del", type: "button", innerHTML: '<svg class="ic" aria-hidden="true"><use href="/shared/icons.svg#i-trash"/></svg>', title: "حذف المعلم من الميزانية", ariaLabel: "حذف المعلم من الميزانية" });
   confirmFirst(del, "حذف " + ((t.name || "").split(" ").slice(0, short ? 1 : 2).join(" ") || "المعلم") + "؟", () => { S.edit.data.teachers.splice(i, 1); changed(); renderTeachers(); });
   return del;
+}
+
+// «ربط بحساب»: a row that is not one of the department's accounts (a name
+// typed in before, or a teacher who moved) keeps its classes and becomes the
+// chosen account's row. Offered: the accounts whose own row is still empty.
+function linkSelect(i) {
+  const E = S.edit, d = E.data, t = d.teachers[i];
+  if (!staleRow(E.dp, t)) return null;
+  const free = deptStaff(E.dp).filter((s) => {
+    const r = d.teachers.find((x) => sameTeacher(x, s));
+    return !r || (!nisab(r) && !r.note);
+  });
+  if (!free.length) return null;
+  const sel = el("select", { className: "addSel", title: "ربط بحساب معلم", style: "width:auto;padding:6px 10px;font-size:13px" }, el("option", { value: "", textContent: "ربط بحساب…" }),
+    ...free.map((s) => el("option", { value: s.uid, textContent: s.name })));
+  sel.onchange = () => {
+    const acc = free.find((s) => s.uid === sel.value);
+    if (!acc) return;
+    d.teachers = d.teachers.filter((x) => x === t || !sameTeacher(x, acc));
+    t.uid = acc.uid; t.name = acc.name; delete t.added;
+    changed();
+    renderTeachers();
+  };
+  return sel;
 }
 
 function teacherCard(t, i, dup) {
@@ -899,7 +916,7 @@ function teacherCard(t, i, dup) {
   const box = el("div", { className: "card" });
   const nameEl = t.added ? el("input", { className: "tname-input", value: t.name, placeholder: "اسم المعلم", maxLength: 120 }) : el("span", { className: "tname", textContent: (i + 1) + ". " + t.name });
   if (t.added) nameEl.oninput = () => { t.name = nameEl.value.trim(); changed(); };
-  box.append(el("div", { className: "row top between" }, nameEl, el("div", { className: "row top" }, el("span", { className: "nisab", textContent: "النصاب: " + nisab(t) }), removeButton(i))));
+  box.append(el("div", { className: "row top between" }, nameEl, el("div", { className: "row top" }, el("span", { className: "nisab", textContent: "النصاب: " + nisab(t) }), linkSelect(i), removeButton(i))));
   // Merged departments: the teacher's subjects, one tap each.
   if (isMulti(dp)) {
     const row = el("div", { className: "subjects" });
@@ -1043,7 +1060,7 @@ function renderTable(focus) {
       if (li === 0) {
         const name = t.added ? el("input", { value: t.name, placeholder: "اسم المعلم", maxLength: 120 }) : el("span", { textContent: t.name });
         if (t.added) name.oninput = () => { t.name = name.value.trim(); changed(); };
-        const cell = el("td", { rowSpan: span, className: "s2 nm" }, name);
+        const cell = el("td", { rowSpan: span, className: "s2 nm" }, name, linkSelect(i));
         if (multi) {
           const rest = deptSubjects(dp, d.teachers).filter((x) => !lines.includes(x));
           if (rest.length) {
@@ -1108,7 +1125,6 @@ function renderTable(focus) {
   const lead = 3 + (multi ? 1 : 0);
   body.append(el("tr", { className: "tot" }, el("td", { colSpan: lead, className: "st0", textContent: "المجموع: " + sum(d.teachers, nisab) }),
     ...classes.map((c) => el("td", { textContent: sum(d.teachers, (t) => t.cells[c] || 0) || "" })), el("td", { colSpan: 2 })));
-  body.append(el("tr", {}, el("td", { colSpan: lead + classes.length + 2, style: "text-align:right" }, el("div", { className: "st0" }, addTeacherSelect(true)))));
   const wrap = el("div", { className: "btWrap" }, el("table", { className: "bedT" }, head, body));
   E.ui.teachers.replaceChildren(el("p", { className: "meta", style: "margin:0 0 6px;text-align:center", textContent: "الضغطة تضع المعتاد (✓) أو تزيله؛ اكتب رقماً لعدد آخر؛ Delete يفرّغ؛ الأسهم وEnter وTab للتنقل." }), wrap);
   if (focus) wrap.querySelector(`td.hc[data-r="${focus.r}"][data-c="${focus.c}"]`)?.focus();
