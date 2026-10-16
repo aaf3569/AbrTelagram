@@ -24,6 +24,7 @@
 
   <link rel="stylesheet" href="/shared/base.css" />
   <link rel="stylesheet" href="/teachers/user.css">
+  <link rel="stylesheet" href="/teachers/lesson-swap.css">
   <script src="/teachers/pull-to-refresh.js" defer></script>
 
   <!-- iOS home screen icon -->
@@ -121,6 +122,14 @@
         <button id="btnWeek" class="sidebar-link" type="button">
           <i class="fas fa-calendar-week"></i>
           <span>جدولي الأسبوعي</span>
+        </button>
+        <!-- تبديل حصة (/teachers/lesson-swap.js): offer a lesson to a
+             colleague for one of theirs; the count is requests waiting for
+             this teacher's answer. -->
+        <button id="sidebarLessonSwap" class="sidebar-link" type="button">
+          <i class="fas fa-right-left" aria-hidden="true"></i>
+          <span>تبديل حصة</span>
+          <span id="lessonSwapBadge" class="sidebar-count" hidden></span>
         </button>
         <button id="sidebarDeptSchedule" class="sidebar-link" type="button" hidden>
           <i class="fas fa-users-rectangle"></i>
@@ -353,7 +362,7 @@
       <h3 class="sheet-title">إشعارات القسم</h3>
     </div>
     <div class="sheet-body">
-      <p class="dn-hint">تسجيلات الغياب لحصص ليست في جدول من سجّلها، عندما يكون المسجِّل أو صاحب الحصة من قسمك، وتذكيرات الإدارة بميزانية القسم — آخر ٣٠ يوماً.</p>
+      <p class="dn-hint">تسجيلات الغياب لحصص ليست في جدول من سجّلها، عندما يكون المسجِّل أو صاحب الحصة من قسمك، وتبديلات الحصص بين المعلمين، وتذكيرات الإدارة بميزانية القسم — آخر ٣٠ يوماً.</p>
       <div id="dnList" class="dn-list"></div>
     </div>
   </section>
@@ -1195,6 +1204,7 @@
     import { parseTimeToMinutes } from "/shared/kuwait-time.js";
     import { isTruthyFlag, canManageAttendance } from "/shared/auth-guard.js";
     import { startPresenceHeartbeat, stopPresenceHeartbeat } from "/shared/presence.js";
+    import { mountLessonSwap } from "/teachers/lesson-swap.js";
 
 
 
@@ -2454,7 +2464,21 @@
       return teacherScheduleUids(uid, await scheduleProfilesPromise);
     }
 
+    // تبديل حصة reads a teacher's lessons on up to ten dates at once — for
+    // a few seconds one schedules read per teacher serves them all instead
+    // of one per date (weekDocsMemo is declared just below).
     async function fetchWeekDocsForTeacher(uid){
+      const hit = weekDocsMemo.get(uid);
+      if (hit && Date.now() - hit.at < WEEK_DOCS_MEMO_MS) return hit.promise;
+      const promise = fetchWeekDocsForTeacherFresh(uid);
+      weekDocsMemo.set(uid, { at: Date.now(), promise });
+      promise.catch(() => weekDocsMemo.delete(uid));
+      return promise;
+    }
+    const weekDocsMemo = new Map(); // uid -> { at, promise }
+    const WEEK_DOCS_MEMO_MS = 10000;
+
+    async function fetchWeekDocsForTeacherFresh(uid){
       const uids = await getScheduleUids(uid);
       // Filter weekdays after reading: admin also accepts numeric strings.
       const snapshots = await Promise.all(uids.map(id => getDocs(query(
@@ -4251,6 +4275,7 @@
         [moreSheet, () => btnMore],
         [ocSheet, () => sidebarOtherClasses],
         [dnSheet, () => sidebarDeptNotifs],
+        [document.getElementById('lsSheet'), () => document.getElementById('sidebarLessonSwap')],
         [dsSheetEl, () => sidebarDeptSchedule],
         [document.getElementById('tsSheet'), () => document.getElementById('sidebarTeacherSchedules')],
         [document.getElementById('dwSheet'), () => sidebarDeptSchedule],
@@ -7110,6 +7135,7 @@
         '#week': () => btnWeek.click(),
         '#other-classes': openOtherClasses,
         '#dept-notifications': () => { if (!sidebarDeptNotifs.hidden) openDeptNotifs(); },
+        '#lessonswap': openLessonSwap,
         '#dptschedual': openDeptSchedSheet,
         '#schoolschedule': openSchoolSchedSheet,
         '#class-schedules': openMore,
@@ -7209,7 +7235,7 @@
     const DN_DAYS = 30; // Firestore's `in` takes at most 30 values
     const DN_SEEN_COLLECTION = 'dept_notif_seen';
     let dnUnsubs = [];
-    let dnBySide = { sub: new Map(), orig: new Map(), budget: new Map() };
+    let dnBySide = { sub: new Map(), orig: new Map(), budget: new Map(), swap: new Map() };
     let dnItems = [];
     let dnSeenMs = 0;
     let dnNewIds = new Set(); // tagged "جديد" while the sheet is showing them
@@ -7221,7 +7247,7 @@
       const n = dnUnread().length;
       deptNotifBadge.hidden = n === 0;
       deptNotifBadge.textContent = n > 99 ? '٩٩+' : toArabicDigits(n);
-      sidebarToggleDot.hidden = n === 0;
+      updateSidebarToggleDot();
       sidebarDeptNotifs.setAttribute('aria-label', n ? `إشعارات القسم، ${toArabicDigits(n)} جديدة` : 'إشعارات القسم');
     }
 
@@ -7268,6 +7294,26 @@
               </div>
               <div class="dn-line" style="white-space:pre-line">${escapeHtml(x.text || '')}</div>
               <div class="dn-meta"><span class="dn-reason">ميزانية القسم</span></div>
+            </div>
+          </div>`;
+          return;
+        }
+        // تبديل حصة: two teachers swapped lessons (one or both from this department).
+        if (x.kind === 'swap') {
+          const slot = (iso, lesson, ck) => `<b><bdi>${escapeHtml(toArabicDigits(ck || '—'))}</bdi></b> — ${escapeHtml(LESSONS_AR[Number(lesson) - 1] || `الحصة ${toArabicDigits(lesson)}`)}، ${escapeHtml(dnDayLabel(iso))}`;
+          const deptOf = (d) => d && d !== myDeptSchedDepartment ? ` <span class="dn-dept">(قسم ${escapeHtml(d)})</span>` : '';
+          html += `
+          <div class="dn-card${isNewItem ? ' is-new' : ''}">
+            <span class="dn-avatar" aria-hidden="true"><i class="fas fa-right-left"></i></span>
+            <div class="dn-main">
+              <div class="dn-top">
+                <b class="dn-name">تبديل حصص</b>
+                ${isNewItem ? '<span class="dn-new">جديد</span>' : ''}
+                <span class="dn-time">${escapeHtml(dnTimeLabel(x.createdAt))}</span>
+              </div>
+              <div class="dn-line"><b>${escapeHtml(x.toName || '—')}</b>${deptOf(x.toDepartment)} يأخذ حصة <b>${escapeHtml(x.fromName || '—')}</b>${deptOf(x.fromDepartment)}: ${slot(x.fromDate, x.fromLesson, x.fromClassKey)}</div>
+              <div class="dn-line"><b>${escapeHtml(x.fromName || '—')}</b> يأخذ حصة <b>${escapeHtml(x.toName || '—')}</b>: ${slot(x.toDate, x.toLesson, x.toClassKey)}</div>
+              <div class="dn-meta"><span class="dn-reason">تبديل حصة</span><span class="dn-orig">بموافقة المعلمَين</span></div>
             </div>
           </div>`;
           return;
@@ -7334,7 +7380,7 @@
       // A cover inside the department matches both queries — one card.
       dnItems = [...new Map([...dnBySide.orig, ...dnBySide.sub]).values()]
         .filter(x => x.teacherUid !== uid) // the head's own records aren't news to them
-        .concat([...dnBySide.budget.values()])
+        .concat([...dnBySide.budget.values()], [...dnBySide.swap.values()])
         .sort((a, b) => dnMs(b.createdAt) - dnMs(a.createdAt));
       dnRenderBadge();
       if (dnSheet.classList.contains('open')) { dnMarkSeen(); dnRender(); }
@@ -7378,13 +7424,26 @@
         },
         (e) => console.error('[deptNotifs] budget listener:', e)
       );
-      dnUnsubs = [listen('sub', 'substituteDeptDay'), listen('orig', 'originalDeptDay'), budgetUnsub];
+      // تبديل حصة accepted between teachers where either one is from this
+      // department (lessonSwaps.departments, see /teachers/lesson-swap.js).
+      const swapUnsub = onSnapshot(
+        query(collection(db, 'lessonSwaps'), where('departments', 'array-contains', department)),
+        (snap) => {
+          dnBySide.swap = new Map(snap.docs
+            .map(d => ({ id: 'swap_' + d.id, kind: 'swap', ...d.data() }))
+            .filter(x => x.status === 'accepted' && dnMs(x.respondedAt) >= fromMs && x.fromUid !== uid && x.toUid !== uid)
+            .map(x => [x.id, { ...x, createdAt: x.respondedAt, date: dnKuwaitISO(dnMs(x.respondedAt)) }]));
+          dnRefresh();
+        },
+        (e) => console.error('[deptNotifs] swap listener:', e)
+      );
+      dnUnsubs = [listen('sub', 'substituteDeptDay'), listen('orig', 'originalDeptDay'), budgetUnsub, swapUnsub];
     }
 
     function stopDeptNotifs(){
       dnUnsubs.forEach(fn => fn());
       dnUnsubs = [];
-      dnBySide = { sub: new Map(), orig: new Map(), budget: new Map() };
+      dnBySide = { sub: new Map(), orig: new Map(), budget: new Map(), swap: new Map() };
       dnItems = [];
       dnNewIds = new Set();
       sidebarDeptNotifs.hidden = true;
@@ -7406,6 +7465,75 @@
     }
     sidebarDeptNotifs.addEventListener('click', () => { closeSidebar(); openDeptNotifs(); });
     document.getElementById('dnClose').addEventListener('click', closeDeptNotifs);
+
+    /* ========= تبديل حصة (/teachers/lesson-swap.js) =========
+       The module owns the sheet, popups and lessonSwaps; this page lends it
+       its own schedule logic, so a lesson there is exactly what جدولي shows
+       (covers, swaps and special-day schedules included). */
+    const sidebarLessonSwap = document.getElementById('sidebarLessonSwap');
+    const lessonSwapBadge = document.getElementById('lessonSwapBadge');
+    let lessonSwapPending = 0;
+
+    // The ☰ dot: anything waiting in إشعارات القسم or تبديل حصة.
+    function updateSidebarToggleDot(){
+      sidebarToggleDot.hidden = !(dnUnread().length || lessonSwapPending);
+    }
+
+    const lessonSwap = mountLessonSwap({
+      db,
+      hooks: {
+        todayISO: kuwaitTodayISO,
+        nowMinutes: getCurrentKuwaitMinutes,
+        lessonTimes: () => LESSON_TIMES,
+        lessonCount: () => FIXED_LESSON_COUNT,
+        lessonName: (i) => LESSONS_AR[i - 1] || '',
+        departmentList: DEPARTMENT_LIST,
+        loadTeachers: loadTeachersList,
+        toast,
+        // iso -> Map(lesson -> { classKey, swappable }) for each date. Only a
+        // lesson from the teacher's own timetable can be swapped — not one
+        // they're covering, nor one on a class's special-day schedule (an
+        // override doesn't apply to those).
+        lessonsForDates: async (uid, dates) => {
+          cache.overridesByTeacher.delete(uid);
+          await loadOverridesForTeacherInDates(uid, dates);
+          const out = new Map();
+          await Promise.all(dates.map(async (iso) => {
+            const byLesson = await buildTodayMapWithOverrides(uid, iso);
+            const day = new Map();
+            byLesson.forEach((row, key) => {
+              const lesson = Number(key);
+              if (!row || row._coveredAway || !Number.isInteger(lesson)) return;
+              const classKey = classKeyFromRow(row) || buildClassKeyFromScheduleData(row);
+              if (!classKey || classKey === '—') return;
+              day.set(lesson, {
+                classKey,
+                swappable: !row._isOverride && row._source !== 'custom' && lesson <= FIXED_LESSON_COUNT,
+              });
+            });
+            out.set(iso, day);
+          }));
+          return out;
+        },
+        onSwapApplied: (uids) => {
+          uids.forEach(u => { cache.overridesByTeacher.delete(u); weekDocsMemo.delete(u); });
+          cache.teacherWeek.clear();
+          const uid = currentUser?.uid;
+          if (!uid || !uids.includes(uid)) return;
+          if (currentView === 'week') loadWeekForTeacher(uid);
+          else loadTodayForTeacher(uid, activeTodayISO || undefined);
+        },
+        onPendingCount: (n) => {
+          lessonSwapPending = n;
+          lessonSwapBadge.hidden = !n;
+          lessonSwapBadge.textContent = toArabicDigits(n);
+          sidebarLessonSwap.setAttribute('aria-label', n ? `تبديل حصة، ${toArabicDigits(n)} بانتظار ردك` : 'تبديل حصة');
+          updateSidebarToggleDot();
+        },
+      },
+    });
+    function openLessonSwap(){ lessonSwap.open(); }
+    sidebarLessonSwap.addEventListener('click', () => { closeSidebar(); openLessonSwap(); });
 
     btnMore.addEventListener('click', () => { closeSidebar(); openMore(); });
     closeMore.addEventListener('click', closeMoreSheet);
@@ -7509,6 +7637,7 @@
           stopBudgetNotices();
           stopDeptNotifs();
           closeDeptNotifs();
+          lessonSwap.stop();
           dsAttendance.setCanEditOthers(false);
           closeAllManageAttendanceSheets();
           stopPresenceHeartbeat();
@@ -7593,6 +7722,11 @@
             sidebarHeadDept.hidden = !isHead;
             sidebarDeptGroup.hidden = !isHead;
             if (isHead) startDeptNotifs(); else stopDeptNotifs();
+            lessonSwap.start({
+              uid: user.uid,
+              name: displayTeacherNameFromDoc(currentTeacherProfile),
+              department: myDeptSchedDepartment,
+            });
 
             // Own classes plus anything being covered today — same
             // convention as Teachers/user.html's own class buttons.

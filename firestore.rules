@@ -952,15 +952,109 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    /* ---------- lessonSwaps (تبديل حصة, Teachers/lesson-swap.js) ----------
+       A teacher (from) offers one of their lessons to a colleague (to) for
+       one of the colleague's. The colleague accepts or declines; the
+       requester may cancel while it's pending. Accepting writes, in the same
+       transaction, scheduleOverrides lswap_{id}_1 (from's lesson → to) and
+       lswap_{id}_2 (to's lesson → from) — see the override branch below.
+       Heads read them for «إشعارات القسم». */
+    match /lessonSwaps/{swapId} {
+      function swapOverridePath(n) {
+        return /databases/$(database)/documents/scheduleOverrides/$('lswap_' + swapId + '_' + n);
+      }
+
+      allow read: if signedIn() && (
+        isAdmin()
+        || isHead()
+        || resource.data.fromUid == request.auth.uid
+        || resource.data.toUid == request.auth.uid
+      );
+
+      allow create: if isTeacherOrAdmin()
+        && request.resource.data.keys().hasOnly([
+          'status', 'fromUid', 'fromName', 'fromDepartment', 'toUid', 'toName', 'toDepartment',
+          'departments', 'fromDate', 'fromLesson', 'fromClassKey', 'toDate', 'toLesson', 'toClassKey', 'createdAt'
+        ])
+        && request.resource.data.status == 'pending'
+        && request.resource.data.fromUid == request.auth.uid
+        && nonEmptyString(request.resource.data.toUid)
+        && request.resource.data.toUid != request.auth.uid
+        && exists(/databases/$(database)/documents/teachers/$(request.resource.data.toUid))
+        && (request.resource.data.fromName is string)
+        && (request.resource.data.toName is string)
+        && (request.resource.data.fromDepartment is string)
+        && (request.resource.data.toDepartment is string)
+        && (request.resource.data.departments is list)
+        && request.resource.data.departments.size() <= 2
+        && isISODate(request.resource.data.fromDate)
+        && isISODate(request.resource.data.toDate)
+        && isValidLessonIndex(request.resource.data.fromLesson)
+        && isValidLessonIndex(request.resource.data.toLesson)
+        && nonEmptyString(request.resource.data.fromClassKey)
+        && nonEmptyString(request.resource.data.toClassKey)
+        && request.resource.data.createdAt == request.time;
+
+      // Only the status changes, once, from pending: cancelled by the
+      // requester; declined or accepted by the colleague — accepted only
+      // together with both overrides.
+      allow update: if signedIn()
+        && resource.data.status == 'pending'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'respondedAt'])
+        && request.resource.data.respondedAt == request.time
+        && (
+          (request.auth.uid == resource.data.fromUid && request.resource.data.status == 'cancelled')
+          || (request.auth.uid == resource.data.toUid && request.resource.data.status == 'declined')
+          || (
+            request.auth.uid == resource.data.toUid
+            && request.resource.data.status == 'accepted'
+            && existsAfter(swapOverridePath('1'))
+            && existsAfter(swapOverridePath('2'))
+          )
+        );
+
+      allow delete: if isAdmin();
+    }
+
     /* ---------- scheduleOverrides ---------- */
     match /scheduleOverrides/{overrideId} {
 
       allow read: if isTeacherSupervisorOrAdmin();
 
+      // تبديل حصة: the colleague accepting lessonSwaps/{id} writes the two
+      // overrides in the same transaction that moves it from pending to
+      // accepted, each matching one side of the swap exactly.
+      function lessonSwapPath() {
+        return /databases/$(database)/documents/lessonSwaps/$(request.resource.data.lessonSwapId);
+      }
+      function matchesSwapSide(d, s) {
+        return (
+            overrideId == 'lswap_' + request.resource.data.lessonSwapId + '_1'
+            && d.date == s.fromDate && d.lesson == s.fromLesson && d.classKey == s.fromClassKey
+            && d.originalTeacherUid == s.fromUid && d.newTeacherUid == s.toUid
+          ) || (
+            overrideId == 'lswap_' + request.resource.data.lessonSwapId + '_2'
+            && d.date == s.toDate && d.lesson == s.toLesson && d.classKey == s.toClassKey
+            && d.originalTeacherUid == s.toUid && d.newTeacherUid == s.fromUid
+          );
+      }
+      function isAcceptedLessonSwapOverride() {
+        return ('lessonSwapId' in request.resource.data)
+          && nonEmptyString(request.resource.data.lessonSwapId)
+          && request.resource.data.get('type', '') == 'swap'
+          && request.resource.data.active == true
+          && exists(lessonSwapPath())
+          && get(lessonSwapPath()).data.status == 'pending'
+          && getAfter(lessonSwapPath()).data.status == 'accepted'
+          && request.auth.uid == get(lessonSwapPath()).data.toUid
+          && matchesSwapSide(request.resource.data, get(lessonSwapPath()).data);
+      }
+
       allow create, update: if
         (
           hasScheduleEditPermission()
           || isHead()
+          || isAcceptedLessonSwapOverride()
         )
         && isISODate(request.resource.data.date)
         && isValidLessonIndex(request.resource.data.lesson)
