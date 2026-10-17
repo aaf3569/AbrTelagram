@@ -1142,44 +1142,6 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
-    /* ---------- accountLogs ---------- */
-    /* سجل الحسابات in admins/teachers.html (/shared/account-logs.js): one  */
-    /* entry per account created / edited / password changed / deleted /   */
-    /* stored password revealed, by                                        */
-    /* an admin (admins/teachers.html) or a head (depHead/department.html). */
-    /* Append-only and pinned to the writer's own uid and the server time, */
-    /* like scheduleLogs; only admins read it. Never holds a password.     */
-    match /accountLogs/{logId} {
-      allow read: if isAdmin();
-      allow create: if (isAdmin() || isHead())
-        && request.resource.data.keys().hasOnly([
-          'type', 'targetUid', 'targetName', 'targetCivilId', 'targetRole', 'department',
-          'summary', 'changes', 'actorUid', 'actorName', 'actorRole', 'at'
-        ])
-        && request.resource.data.type in ['create', 'update', 'delete', 'password', 'reveal']
-        && nonEmptyString(request.resource.data.targetUid)
-        && request.resource.data.targetUid.size() <= 128
-        && request.resource.data.targetName is string
-        && request.resource.data.targetName.size() <= 120
-        && request.resource.data.targetCivilId is string
-        && request.resource.data.targetCivilId.size() <= 20
-        && request.resource.data.targetRole is string
-        && request.resource.data.targetRole.size() <= 20
-        && request.resource.data.department is string
-        && request.resource.data.department.size() <= 80
-        && request.resource.data.summary is string
-        && request.resource.data.summary.size() <= 400
-        && request.resource.data.changes is list
-        && request.resource.data.changes.size() <= 60
-        && request.resource.data.actorUid == request.auth.uid
-        && request.resource.data.actorName is string
-        && request.resource.data.actorName.size() <= 120
-        && request.resource.data.actorRole is string
-        && request.resource.data.actorRole.size() <= 20
-        && request.resource.data.at == request.time;
-      allow update, delete: if false;
-    }
-
     /* ---------- settings ---------- */
     match /settings/lessonTimes {
       allow read: if isTeacherSupervisorOrAdmin();

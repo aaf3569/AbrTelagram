@@ -703,7 +703,6 @@
     import { resolveDepartmentName, getDepartmentSubjectFilters, isMergedDepartment, getMergedSubjectsForDepartment } from "/shared/departments.js";
     import { isTruthyFlag, canManageAttendance } from "/shared/auth-guard.js";
     import { showActionPopup } from "/shared/action-popup.js";
-    import { setAccountLogActor, logAccountEvent, fieldChange, listChange, compactChanges } from "/shared/account-logs.js?v=2026-10-17";
 
 
 
@@ -760,12 +759,6 @@
 
     /* ========= Data Loading ========= */
     let headDept = '';
-    // Who an سجل الحسابات entry (/shared/account-logs.js) is about. A head
-    // only ever manages plain teachers in their own department.
-    function accountLogTarget(uid, d){
-      const data = d || {};
-      return { uid, name:data.name||'', civilId:getTeacherCivilId(data), role:(data.role||'user'), department:headDept };
-    }
     async function loadHeadProfileAndCheck(user){
       const snap = await getDoc(doc(db,'teachers', user.uid));
       if(!snap.exists()){
@@ -1173,7 +1166,6 @@
       try{
         await reauthenticateHeadForPasswordReveal();
         setDisplayedPasswordVisibility(true);
-        logAccountEvent(db, { type:'reveal', target:accountLogTarget(currentTeacher.uid, currentTeacher.data) });
       }catch(error){
         setDisplayedPasswordVisibility(false);
         if(error?.message==='تم الإلغاء') return;
@@ -1209,20 +1201,8 @@
           updateDoc(doc(db,'teachers',uid), { name, phone, classes, displayedPassword: deleteField(), viewedPassword: deleteField() }),
           setDoc(doc(db,'teachers',uid,'private','credentials'), { displayedPassword }, { merge:true })
         ]);
-        const before = currentTeacher.data || {};
-        const displayedPasswordChanged = displayedPassword !== (currentTeacher.displayedPassword || '');
-        currentTeacher.data = { ...before, name, phone, classes };
+        currentTeacher.data = { ...(currentTeacher.data||{}), name, phone, classes };
         currentTeacher.displayedPassword = displayedPassword;
-        logAccountEvent(db, {
-          type:'update',
-          target:accountLogTarget(uid, currentTeacher.data),
-          changes:compactChanges([
-            fieldChange('name','الاسم',before.name,name),
-            fieldChange('phone','رقم الهاتف',before.phone,phone),
-            listChange('classes','الفصول',before.classes,classes),
-            displayedPasswordChanged ? { key:'displayedPassword', label:'كلمة المرور الظاهرة' } : null,
-          ]),
-        });
         setTeacherEditMode(false);
         edOk.textContent='تم حفظ التعديلات.'; edOk.style.display='block';
         setTimeout(()=>{ edOk.style.display='none'; closeTeacherView(); }, 900);
@@ -1290,7 +1270,6 @@
       confirmDeleteTeacher.textContent='جارٍ الحذف...';
       try{
         await deleteTeacherAccount(uid);
-        logAccountEvent(db, { type:'delete', target:accountLogTarget(uid, currentTeacher.data) });
         closeModal(deleteTeacherModal,{fallbackFocus:deleteTeacherBtn});
         edOk.textContent='تم الحذف.'; edOk.style.display='block';
         setTimeout(()=>{ edOk.style.display='none'; closeTeacherView(); }, 700);
@@ -1371,7 +1350,6 @@
         }
         // The backend also updates the displayed-password mirror to match —
         // keep the open edit form in sync so it doesn't show a stale value.
-        logAccountEvent(db, { type:'password', target:accountLogTarget(uid, currentTeacher.data) });
         currentTeacher.displayedPassword = newPassword;
         edTDisplayedPassword.value = newPassword;
         updateProfileSummary();
@@ -1474,19 +1452,6 @@
         batch.set(doc(db,'teachers',newUid,'private','credentials'), { displayedPassword:password });
         await batch.commit();
         newUser=null;
-        logAccountEvent(db, {
-          type:'create',
-          target:accountLogTarget(newUid, { name, civilId, role:'user', department:headDept }),
-          changes:compactChanges([
-            fieldChange('name','الاسم',null,name),
-            fieldChange('civilId','رقم البطاقة',null,civilId),
-            fieldChange('phone','رقم الهاتف',null,phone),
-            fieldChange('role','الدور',null,'مدرس'),
-            fieldChange('department','القسم',null,headDept),
-            subject!==headDept ? fieldChange('subject','التخصص',null,subject) : null,
-            listChange('classes','الفصول',[],classes),
-          ]),
-        });
         try{ await signOut(helperAuth); }catch{}
         closeModal(addTeacherModal,{fallbackFocus:openAddTeacherBtn});
         await loadTeachers();
@@ -1604,7 +1569,6 @@
 
       try{
         const headProfile = await loadHeadProfileAndCheck(user);
-        setAccountLogActor({ uid:user.uid, name:headProfile.name||getTeacherCivilId(headProfile)||user.email, role:'head' });
         initSidebarUser(user, headProfile);
         startPresenceHeartbeat(db, user.uid);
         classOptions = sortClassList(await fetchClassList(db));
