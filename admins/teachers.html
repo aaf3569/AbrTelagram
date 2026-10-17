@@ -511,6 +511,104 @@
       .add-teacher-body{display:grid;grid-template-columns:1fr 1fr;gap:14px 18px}
       .add-teacher-body > .add-teacher-full{grid-column:1 / -1}
     }
+
+    /* ================================================================
+       سجل الحسابات — the sidebar entry at the bottom and its panel.
+       Entries come from accountLogs (/shared/account-logs.js).
+       ================================================================ */
+    .sidebar-logs-btn{width:100%;margin-top:10px;display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:14px;border:1px solid #d6e4f2;background:#fff;box-shadow:0 3px 10px rgba(3,60,84,.06);color:#0f2743;font-family:inherit;cursor:pointer;text-align:right;transition:border-color .14s ease,box-shadow .14s ease,background .14s ease}
+    .sidebar-logs-btn:hover{border-color:#a3bfd8;box-shadow:0 10px 22px rgba(3,60,84,.1)}
+    .sidebar-logs-btn:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+    .sidebar-logs-btn.subject-selected{border-color:rgba(3,60,84,.35);background:#f3f8fd}
+    .sidebar-logs-icon{width:38px;height:38px;border-radius:11px;flex-shrink:0;display:grid;place-items:center;background:linear-gradient(160deg,#eef6fb,#e2eef8);color:var(--primary);box-shadow:inset 0 0 0 1px rgba(3,60,84,.08)}
+    .sidebar-logs-icon svg{width:19px;height:19px;stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+    .sidebar-logs-text{display:flex;flex-direction:column;gap:1px;flex:1;min-width:0}
+    .sidebar-logs-title{font-weight:900;font-size:.95rem}
+    .sidebar-logs-sub{font-size:.76rem;font-weight:700;color:#8a9bb3}
+
+    .logs-toolbar{display:flex;flex-direction:column;gap:12px}
+    .logs-search-row{display:flex;gap:8px;align-items:center}
+    .logs-search-row .teacher-search-box{flex:1;min-width:0}
+    .logs-icon-btn{width:48px;height:48px;flex-shrink:0;border-radius:14px;border:1px solid #d6e4f2;background:#fff;color:var(--primary);display:grid;place-items:center;cursor:pointer;box-shadow:0 3px 10px rgba(3,60,84,.06);transition:border-color .14s ease}
+    .logs-icon-btn:hover{border-color:#a3bfd8}
+    .logs-icon-btn:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+    .logs-icon-btn svg{width:19px;height:19px;stroke:currentColor;stroke-width:2.2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+    .logs-icon-btn.is-spinning svg{animation:spin .8s linear infinite}
+    .logs-filters{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:2px 0}
+    .logs-filters::-webkit-scrollbar{display:none}
+    .logs-filter{flex:0 0 auto;display:inline-flex;align-items:center;gap:8px;height:38px;padding:0 14px;border-radius:999px;border:1px solid #d6e4f2;background:#fff;color:#33475b;font-family:inherit;font-weight:800;font-size:.86rem;cursor:pointer;transition:background .14s ease,border-color .14s ease,color .14s ease}
+    .logs-filter:hover{border-color:#a3bfd8}
+    .logs-filter:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+    .logs-filter .dot{width:8px;height:8px;border-radius:50%;background:var(--lc,#94a3b8)}
+    .logs-filter .n{min-width:22px;height:20px;padding:0 6px;border-radius:999px;background:#eef3f8;color:#46607a;font-size:.72rem;font-weight:900;display:inline-flex;align-items:center;justify-content:center}
+    .logs-filter.active{background:var(--primary);border-color:var(--primary);color:#fff}
+    .logs-filter.active .dot{box-shadow:0 0 0 2px rgba(255,255,255,.85)}
+    .logs-filter.active .n{background:rgba(255,255,255,.2);color:#fff}
+    .logs-scope{display:flex;align-items:center;gap:10px;padding:10px 12px 10px 14px;border-radius:14px;background:#f3f8fd;border:1px solid #d8e8f8;color:#0f2743;font-weight:800;font-size:.9rem}
+    .logs-scope strong{font-weight:900;color:var(--primary)}
+    .logs-scope button{margin-inline-start:auto;height:32px;padding:0 12px;border-radius:10px;border:1px solid rgba(3,60,84,.25);background:#fff;color:var(--primary);font-family:inherit;font-weight:900;font-size:.8rem;cursor:pointer;white-space:nowrap}
+
+    .logs-list{display:flex;flex-direction:column;gap:10px}
+    .logs-day{display:flex;align-items:center;gap:10px;margin:10px 2px 0;font-size:.8rem;font-weight:900;color:#8a9bb3}
+    .logs-day:first-child{margin-top:0}
+    .logs-day::after{content:"";flex:1;height:1px;background:var(--border)}
+    .log-card{--lc:#0b6f95;--lc-bg:#e8f4fa;display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:4px 12px;align-items:start;padding:14px;border:1px solid var(--border);border-radius:16px;background:#fff;box-shadow:0 3px 12px rgba(3,60,84,.06);position:relative;overflow:hidden}
+    .log-card::before{content:"";position:absolute;inset-block:0;inset-inline-start:0;width:3px;background:var(--lc);opacity:.7}
+    .log-card.t-create,.logs-filter.t-create{--lc:#15803d;--lc-bg:#e8f7ee}
+    .log-card.t-password,.logs-filter.t-password{--lc:#b45309;--lc-bg:#fff4e0}
+    .log-card.t-delete,.logs-filter.t-delete{--lc:#c62828;--lc-bg:#fdecec}
+    .log-card.t-reveal,.logs-filter.t-reveal{--lc:#6d28d9;--lc-bg:#f1ecfd}
+    .logs-filter.t-update{--lc:#0b6f95}
+    .log-ic{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:var(--lc-bg);color:var(--lc)}
+    .log-ic svg{width:19px;height:19px;stroke:currentColor;stroke-width:2.1;fill:none;stroke-linecap:round;stroke-linejoin:round}
+    .log-body{min-width:0}
+    .log-line{font-size:.95rem;font-weight:700;color:#475569;line-height:1.75;overflow-wrap:anywhere}
+    .log-line b{font-weight:900;color:#0f2743}
+    .log-target{font:inherit;font-weight:900;color:var(--primary);background:none;border:none;padding:0;cursor:pointer;text-decoration:underline;text-decoration-color:rgba(3,60,84,.25);text-underline-offset:5px}
+    .log-target:hover{text-decoration-color:var(--primary)}
+    .log-target.is-gone{cursor:default;color:#0f2743;text-decoration:none}
+    .log-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+    .log-tag{height:24px;padding:0 9px;border-radius:999px;background:#f2f5f9;color:#5b6f88;font-size:.74rem;font-weight:800;display:inline-flex;align-items:center;white-space:nowrap}
+    .log-tag.by-head{background:#fffaf0;color:#7a5a00;box-shadow:inset 0 0 0 1px rgba(203,160,18,.3)}
+    .log-tag.gone{background:#fdecec;color:#b42318}
+    .log-time{text-align:left;font-size:.82rem;font-weight:900;color:#475569;white-space:nowrap;line-height:1.5;direction:rtl}
+    .log-time small{display:block;font-size:.72rem;color:#9aabc2;font-weight:700}
+    .log-changes{list-style:none;margin:10px 0 0;padding:10px 0 0;border-top:1px dashed var(--border);display:grid;gap:8px}
+    .log-change{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;font-size:.86rem;font-weight:700;color:#334155;line-height:1.6}
+    .lc-label{font-weight:900;color:#0f2743}
+    .lc-label::after{content:":";color:#9aabc2;margin-inline-start:1px}
+    .lc-from{color:#94a3b8;text-decoration:line-through;text-decoration-color:rgba(148,163,184,.7);overflow-wrap:anywhere}
+    .lc-arrow{width:14px;height:14px;flex-shrink:0;stroke:#9aabc2;stroke-width:2.4;fill:none;stroke-linecap:round;stroke-linejoin:round}
+    .lc-to{color:#0f2743;background:#f3f8fd;border-radius:8px;padding:0 8px;overflow-wrap:anywhere}
+    .lc-chip{height:24px;padding:0 9px;border-radius:999px;font-size:.78rem;font-weight:900;display:inline-flex;align-items:center;white-space:nowrap}
+    .lc-chip.add{background:#e8f7ee;color:#15803d}
+    .lc-chip.rem{background:#fdecec;color:#c62828;text-decoration:line-through;text-decoration-color:rgba(198,40,40,.45)}
+    .lc-chip.note{background:#fff4e0;color:#b45309}
+    .log-more-changes{justify-self:start;font:inherit;font-size:.8rem;font-weight:900;color:var(--primary);background:none;border:none;padding:0;cursor:pointer}
+    .logs-empty{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;padding:48px 16px;color:var(--muted);font-weight:700;font-size:.92rem;line-height:1.8;border:1px dashed #d6e4f2;border-radius:16px;background:#fff}
+    .logs-empty-icon{width:56px;height:56px;border-radius:16px;display:grid;place-items:center;background:linear-gradient(160deg,#eef6fb,#e2eef8);color:var(--primary)}
+    .logs-empty-icon svg{width:26px;height:26px;stroke:currentColor;stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round}
+    .logs-empty strong{color:#0f2743;font-weight:900;font-size:1rem}
+    .logs-skeleton{height:84px;border-radius:16px;background:linear-gradient(90deg,#eef3f8 25%,#f7fafc 50%,#eef3f8 75%);background-size:200% 100%;animation:logsShimmer 1.2s linear infinite}
+    @keyframes logsShimmer{to{background-position:-200% 0}}
+    .logs-footer{display:flex;flex-direction:column;align-items:center;gap:6px;padding-top:4px}
+    .logs-footer .btn{height:44px}
+    .logs-footer-note{font-size:.78rem;font-weight:700;color:#9aabc2}
+    .profile-log-btn{display:inline-flex;align-items:center;gap:8px}
+    .profile-log-btn svg{width:17px;height:17px;stroke:currentColor;stroke-width:2.2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+    .teacher-editing .profile-log-btn{display:none}
+    @media (max-width:560px){
+      .log-card{grid-template-columns:36px minmax(0,1fr);padding:12px}
+      .log-ic{width:36px;height:36px}
+      .log-time{grid-column:2;text-align:right;display:flex;gap:6px;align-items:baseline}
+      .log-time small{display:inline}
+    }
+    @media (min-width:980px){
+      body:has(#logsSheet.open) #desktopWelcome{display:none}
+      #stateTeachers .sidebar-logs-btn{box-shadow:none}
+      .logs-list{gap:12px}
+      .log-card{padding:16px 18px}
+    }
   </style>
     <link rel="stylesheet" href="/shared/identity.css" />
   <link rel="stylesheet" href="/shared/actions.css" />
@@ -565,6 +663,11 @@
         </button>
         <div id="subjectsList" class="stack"></div>
         <button id="downloadTeachersBtn" class="btn ghost" type="button" style="width:100%; margin-top:14px;">تنزيل قائمة المعلمين (Excel)</button>
+        <button id="openLogsBtn" class="sidebar-logs-btn" type="button">
+          <span class="sidebar-logs-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/><path d="M12 7v5l3 2"/></svg></span>
+          <span class="sidebar-logs-text"><span class="sidebar-logs-title">سجل الحسابات</span><span class="sidebar-logs-sub">الإنشاء، التعديل، كلمات المرور والحذف</span></span>
+          <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+        </button>
       </section>
     </div>
   </main>
@@ -684,6 +787,7 @@
           <div class="profile-actions">
             <div class="profile-actions-group">
               <button id="editTeacher" class="btn ghost" type="button">تعديل</button>
+              <button id="teacherLogBtn" class="btn ghost profile-log-btn" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/><path d="M12 7v5l3 2"/></svg>سجل الحساب</button>
               <button id="saveTeacher" class="btn primary" type="button" hidden>حفظ التغييرات</button>
               <button id="cancelTeacherEdit" class="btn ghost" type="button" hidden>إلغاء</button>
             </div>
@@ -713,6 +817,34 @@
       <div class="section">
         <div class="label">قائمة المتصلين</div>
         <div id="telegramList" class="stack"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="logsSheet" class="sheet" aria-hidden="true">
+    <div class="sheet-header">
+      <button id="closeLogs" class="back-btn" aria-label="رجوع"><svg class="back-btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg><span>رجوع</span></button>
+      <h3 class="sheet-title">سجل الحسابات</h3>
+    </div>
+    <div class="sheet-body">
+      <div class="logs-toolbar">
+        <div id="logsScope" class="logs-scope" hidden>
+          <span>سجل حساب <strong id="logsScopeName"></strong></span>
+          <button id="logsScopeClear" type="button">عرض كل السجلات</button>
+        </div>
+        <div class="logs-search-row">
+          <div class="teacher-search-box">
+            <svg class="teacher-search-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+            <input id="logsSearch" class="teacher-search-input" type="text" placeholder="ابحث باسم الحساب، من قام بالإجراء، القسم أو رقم البطاقة..." autocomplete="off" aria-label="بحث في السجل">
+          </div>
+          <button id="logsRefresh" class="logs-icon-btn" type="button" aria-label="تحديث" title="تحديث"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg></button>
+        </div>
+        <div id="logsFilters" class="logs-filters" role="tablist" aria-label="نوع الإجراء"></div>
+      </div>
+      <div id="logsList" class="logs-list" aria-live="polite"></div>
+      <div id="logsFooter" class="logs-footer" hidden>
+        <button id="logsMore" class="btn ghost" type="button">عرض سجلات أقدم</button>
+        <span id="logsFooterNote" class="logs-footer-note"></span>
       </div>
     </div>
   </section>
@@ -793,6 +925,7 @@
           <div class="profile-actions">
             <div class="profile-actions-group">
               <button id="editAdmin" class="btn ghost" type="button">تعديل</button>
+              <button id="adminLogBtn" class="btn ghost profile-log-btn" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/><path d="M12 7v5l3 2"/></svg>سجل الحساب</button>
               <button id="cancelAdminEdit" class="btn ghost" type="button" hidden>إلغاء</button>
               <button id="saveAdmin" class="btn primary" type="button" hidden>حفظ</button>
             </div>
@@ -914,7 +1047,8 @@
     import { firebaseConfig } from "/shared/firebase.js";
     import { initializeApp, getApp, getApps } from "/shared/firebase.js";
     import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signOut, EmailAuthProvider, reauthenticateWithCredential } from "/shared/firebase.js";
-    import { initializeFirestore, persistentSingleTabManager, collection, getDocs, query, where, doc, getDoc, setDoc, updateDoc, deleteField, serverTimestamp } from "/shared/firebase.js";
+    import { initializeFirestore, persistentSingleTabManager, collection, getDocs, query, where, orderBy, limit, doc, getDoc, setDoc, updateDoc, deleteField, serverTimestamp } from "/shared/firebase.js";
+    import { setAccountLogActor, logAccountEvent, fieldChange, listChange, flagChange, compactChanges } from "/shared/account-logs.js?v=2026-10-17";
     import { startPresenceHeartbeat, watchPresence } from "/shared/presence.js";
     import { mountStudentNotesSheet } from "/shared/student-notes-sheet.js?v=2026-10-15";
     import { mountTeacherClassSheet } from "/shared/teacher-class-sheet.js?v=2026-10-14d";
@@ -1497,6 +1631,8 @@
       statTelegramBtn.classList.add('subject-selected');
       [subjectSheet,teacherSheet,adminsSheet,adminSheet].forEach(s=>closeSheet(s));
       leaveTeacherProfile();
+      closeLogsPanel();
+      profileOpenedFromLogs=false;
       openSheet(telegramSheet);
       // Show what's already loaded straight away, then refresh — a teacher
       // may have connected since this page was opened.
@@ -1674,6 +1810,7 @@
       closeTeacherSearchResults();
       teacherSearchInput.blur();
       teacherOpenedFromTelegram=false;
+      profileOpenedFromLogs=false;
       if((t.role||'').toString().toLowerCase()==='admin') openAdminEditor(t.uid);
       else openTeacherEditor(t.uid);
     }
@@ -2042,7 +2179,9 @@
       [teacherSheet,adminsSheet,adminSheet].forEach(s=>closeSheet(s));
       leaveTeacherProfile();
       closeTelegramPanel();
+      closeLogsPanel();
       teacherOpenedFromTelegram=false;
+      profileOpenedFromLogs=false;
       openSheet(subjectSheet);
       loadTeachers(label);
       // Desktop sidebar only — highlights which subject is currently open.
@@ -2064,7 +2203,9 @@
       [subjectSheet,teacherSheet,adminSheet].forEach(s=>closeSheet(s));
       leaveTeacherProfile();
       closeTelegramPanel();
+      closeLogsPanel();
       teacherOpenedFromTelegram=false;
+      profileOpenedFromLogs=false;
       openSheet(adminsSheet);
       loadAdmins();
     }
@@ -2076,6 +2217,7 @@
     function closeAdminView(){
       if(unsubscribeAdminPresence){ unsubscribeAdminPresence(); unsubscribeAdminPresence=null; }
       closeSheet(adminSheet);
+      if(profileOpenedFromLogs){ profileOpenedFromLogs=false; reopenLogsPanel(); return; }
       // openAdminEditor() now closes adminsSheet on the way in (so it can't
       // stack on top of it — see openSubject()'s comment), so it has to be
       // explicitly reopened here rather than relying on it having been left
@@ -2187,6 +2329,7 @@
         cls.forEach(v=>edAClasses.appendChild(makeClassRow(v, updateAdminProfileSummary)));
         setAdminEditMode(false);
         [subjectSheet,teacherSheet,adminsSheet].forEach(s=>closeSheet(s));
+        closeLogsPanel();
         openSheet(adminSheet);
         if(unsubscribeAdminPresence) unsubscribeAdminPresence();
         unsubscribeAdminPresence=watchPresence(db, uid, (state)=>{
@@ -2230,7 +2373,9 @@
         const prevPermissions=(currentAdmin?.data?.permissions&&typeof currentAdmin.data.permissions==='object')?currentAdmin.data.permissions:{};
         const permissions={...prevPermissions,isPrincipal:!!edAIsPrincipal.checked};
         await updateDoc(doc(db,'teachers',uid),{name,email,civilId,phone,subject,classes,permissions});
-        currentAdmin.data={...(currentAdmin.data||{}),name,email,civilId,phone,subject,classes,permissions};
+        const adminBefore=currentAdmin.data||{};
+        currentAdmin.data={...adminBefore,name,email,civilId,phone,subject,classes,permissions};
+        logAccountEvent(db,{ type:'update', target:accountLogTarget(uid,currentAdmin.data), changes:adminLogChanges(adminBefore,currentAdmin.data) });
         adminTitle.textContent=name||civilId||uid;
         setAdminEditMode(false);
         edAOk.textContent='تم حفظ التعديلات.';edAOk.style.display='block';
@@ -2261,6 +2406,7 @@
       confirmDeleteAdmin.textContent='جارٍ الحذف...';
       try{
         await deleteTeacherAccountRemote(uid);
+        logAccountEvent(db,{ type:'delete', target:accountLogTarget(uid,currentAdmin.data) });
         closeModal(deleteAdminModal,{fallbackFocus:deleteAdminBtn});
         edAOk.textContent='تم الحذف.';edAOk.style.display='block';
         setTimeout(()=>{edAOk.style.display='none';closeAdminView();},700);
@@ -2306,6 +2452,8 @@
         const cred=await createUserWithEmailAndPassword(helperAuth,email,pass);
         const newUid=cred.user.uid;
         await setDoc(doc(db,'teachers',newUid),{uid:newUid,name,email,civilId,phone,classes,role:'admin',createdAt:serverTimestamp()},{merge:true});
+        const newAdmin={name,civilId,phone,classes,role:'admin'};
+        logAccountEvent(db,{ type:'create', target:accountLogTarget(newUid,newAdmin), changes:adminLogChanges({},newAdmin) });
         try{await signOut(helperAuth);}catch{}
         closeModal(addAdminModal,{fallbackFocus:openAddAdmin});
         openSuccessModal();
@@ -2327,6 +2475,13 @@
     function closeTeacherView(){
       classSheet.close();
       if(unsubscribeTeacherPresence){ unsubscribeTeacherPresence(); unsubscribeTeacherPresence=null; }
+      if(profileOpenedFromLogs){
+        profileOpenedFromLogs=false;
+        if(getRouteTeacherId()){ clearTeacherRoute(); syncTeacherRouteMode(); }
+        closeSheet(teacherSheet);
+        reopenLogsPanel();
+        return;
+      }
       if(teacherOpenedFromTelegram){
         teacherOpenedFromTelegram=false;
         if(getRouteTeacherId()){ clearTeacherRoute(); syncTeacherRouteMode(); }
@@ -2389,6 +2544,7 @@
       try{
         await reauthenticateAdminForPasswordReveal();
         setDisplayedPasswordVisibility(true);
+        logAccountEvent(db,{ type:'reveal', target:accountLogTarget(currentTeacher.uid,currentTeacher.data) });
       }catch(error){
         setDisplayedPasswordVisibility(false);
         if(error?.message==='تم الإلغاء') return;
@@ -2567,6 +2723,7 @@
         updateProfileSummary();
         [subjectSheet,adminsSheet,adminSheet,telegramSheet].forEach(s=>closeSheet(s));
         clearTelegramListPresence();
+        closeLogsPanel();
         openSheet(teacherSheet);
         if(syncRoute){ setTeacherRoute(uid); }
         syncTeacherRouteMode();
@@ -2613,8 +2770,11 @@
           updateDoc(doc(db,'teachers',uid),{name,email,civilId,phone,role,subject:subjectToSave,subject2:subject2ToSave,isSupervisor,supervisorGrade:isSupervisor?supervisorGrade:null,classes,permissions,displayedPassword:deleteField(),viewedPassword:deleteField()}),
           setDoc(doc(db,'teachers',uid,'private','credentials'),{displayedPassword},{merge:true})
         ]);
-        currentTeacher.data={...(currentTeacher.data||{}),name,email,civilId,phone,role,subject:subjectToSave,subject2:subject2ToSave,isSupervisor,supervisorGrade:isSupervisor?supervisorGrade:null,classes,permissions};
+        const teacherBefore=currentTeacher.data||{};
+        const displayedPasswordChanged=displayedPassword!==(currentTeacher.displayedPassword||'');
+        currentTeacher.data={...teacherBefore,name,email,civilId,phone,role,subject:subjectToSave,subject2:subject2ToSave,isSupervisor,supervisorGrade:isSupervisor?supervisorGrade:null,classes,permissions};
         currentTeacher.displayedPassword=displayedPassword;
+        logAccountEvent(db,{ type:'update', target:accountLogTarget(uid,currentTeacher.data), changes:teacherLogChanges(teacherBefore,currentTeacher.data,{ displayedPasswordChanged }) });
         setTeacherEditMode(false);
         edOk.textContent='تم حفظ التعديلات.';edOk.style.display='block';setTimeout(()=>{edOk.style.display='none';closeTeacherView();},900);
         if(selectedSubject) await loadTeachers(selectedSubject);
@@ -2644,6 +2804,7 @@
       confirmDeleteTeacher.textContent='جارٍ الحذف...';
       try{
         await deleteTeacherAccountRemote(uid);
+        logAccountEvent(db,{ type:'delete', target:accountLogTarget(uid,currentTeacher.data) });
         closeModal(deleteTeacherModal,{fallbackFocus:deleteTeacherBtn});
         edOk.textContent='تم الحذف.';edOk.style.display='block';setTimeout(()=>{edOk.style.display='none';closeTeacherView();},700);
         if(selectedSubject) await loadTeachers(selectedSubject);
@@ -2716,6 +2877,7 @@
         if(!response.ok || !body?.ok){
           throw new Error(body?.error||`set_password_failed_${response.status}`);
         }
+        logAccountEvent(db,{ type:'password', target:accountLogTarget(uid,currentTeacher.data) });
         cpOk.textContent='تم تغيير كلمة المرور بنجاح.';
         cpOk.style.display='block';
         setTimeout(()=>closeModal(changePasswordModal,{fallbackFocus:changeTeacherPasswordBtn}),900);
@@ -2775,6 +2937,8 @@
           setDoc(doc(db,'teachers',newUid),{uid:newUid,name,email,civilId,phone,role,isSupervisor,supervisorGrade:isSupervisor?supervisorGrade:null,subject:subjectToSave,subject2:selectedSpecialization2,department:departmentToSave,classes,permissions,createdAt:serverTimestamp()},{merge:true}),
           setDoc(doc(db,'teachers',newUid,'private','credentials'),{displayedPassword})
         ]);
+        const newTeacher={name,civilId,phone,role,isSupervisor,supervisorGrade:isSupervisor?supervisorGrade:null,subject:subjectToSave,subject2:selectedSpecialization2,department:departmentToSave,classes,permissions};
+        logAccountEvent(db,{ type:'create', target:accountLogTarget(newUid,newTeacher), changes:teacherLogChanges({},newTeacher) });
         try{await signOut(helperAuth);}catch{}
         closeModal(addTeacherModal);openSuccessModal();
         await loadTeachers(selectedSubject);
@@ -2782,10 +2946,369 @@
       }catch(e){Feedback.notify('تعذّر إنشاء الحساب: ' + (e?.message||''),'err');}finally{setBusy(createTeacherBtn,false);}
     });
 
+    // ==== سجل الحسابات (accountLogs, /shared/account-logs.js) ====
+    // Who made / changed / deleted which account, when, and exactly what
+    // changed. Written by this page and by depHead/department.html.
+    const ROLE_LABELS={ user:'مدرس', head:'رئيس القسم', admin:'مشرف' };
+    const roleLabel=(r)=>ROLE_LABELS[(r||'user').toString().toLowerCase()]||'مدرس';
+    const PERMISSION_LOG_LABELS=[
+      ['allowEditSchedule','السماح بتعديل الجدول'],
+      ['allowMorningLate','تسجيل تأخير الصباح'],
+      ['allowSupervisorStudents','ملفات الطلاب'],
+      ['allowManageAttendance','إدارة الغياب'],
+      ['allowAllBudgets','السماح بكل الميزانيات'],
+    ];
+    function accountLogTarget(uid, d){
+      const data=d||{};
+      const role=(data.role||'user').toString().toLowerCase();
+      return {
+        uid,
+        name:data.name||'',
+        civilId:getTeacherCivilId(data),
+        role,
+        department: role==='admin' ? 'الإدارة' : (resolveDepartmentName(data.department||data.subject)||''),
+      };
+    }
+    function teacherLogChanges(before, after, { displayedPasswordChanged=false }={}){
+      const b=before||{}, a=after||{};
+      const bp=normalizePermissions(b), ap=normalizePermissions(a);
+      return compactChanges([
+        fieldChange('name','الاسم',b.name,a.name),
+        fieldChange('civilId','رقم البطاقة',getTeacherCivilId(b),a.civilId),
+        fieldChange('phone','رقم الهاتف',b.phone,a.phone),
+        fieldChange('role','الدور',b.role?roleLabel(b.role):null,roleLabel(a.role)),
+        fieldChange('department','القسم',resolveDepartmentName(b.department||b.subject),resolveDepartmentName(a.department||a.subject)),
+        fieldChange('subject','التخصص',b.subject,a.subject),
+        fieldChange('subject2','المادة الثانية',b.subject2,a.subject2),
+        fieldChange('supervisor','الإشراف',getSupervisorStatusLabel(!!b.isSupervisor,b.supervisorGrade),getSupervisorStatusLabel(!!a.isSupervisor,a.supervisorGrade)),
+        ...PERMISSION_LOG_LABELS.map(([k,label])=>flagChange('perm.'+k,label,bp[k],ap[k])),
+        listChange('classes','الفصول',b.classes,a.classes),
+        displayedPasswordChanged ? { key:'displayedPassword', label:'كلمة المرور الظاهرة' } : null,
+      ]);
+    }
+    function adminLogChanges(before, after){
+      const b=before||{}, a=after||{};
+      return compactChanges([
+        fieldChange('name','الاسم',b.name,a.name),
+        fieldChange('civilId','رقم المستخدم',getTeacherCivilId(b),a.civilId),
+        fieldChange('phone','رقم الهاتف',b.phone,a.phone),
+        fieldChange('subject','المادة',b.subject,a.subject),
+        listChange('classes','الفصول',b.classes,a.classes),
+        flagChange('perm.isPrincipal','مدير المدرسة',b.permissions?.isPrincipal===true,a.permissions?.isPrincipal===true),
+      ]);
+    }
+
+    const logsSheet=document.getElementById('logsSheet');
+    const closeLogs=document.getElementById('closeLogs');
+    const openLogsBtn=document.getElementById('openLogsBtn');
+    const logsList=document.getElementById('logsList');
+    const logsFilters=document.getElementById('logsFilters');
+    const logsSearch=document.getElementById('logsSearch');
+    const logsRefresh=document.getElementById('logsRefresh');
+    const logsFooter=document.getElementById('logsFooter');
+    const logsMore=document.getElementById('logsMore');
+    const logsFooterNote=document.getElementById('logsFooterNote');
+    const logsScope=document.getElementById('logsScope');
+    const logsScopeName=document.getElementById('logsScopeName');
+    const logsScopeClear=document.getElementById('logsScopeClear');
+    const teacherLogBtn=document.getElementById('teacherLogBtn');
+    const adminLogBtn=document.getElementById('adminLogBtn');
+
+    const LOGS_PAGE=100;
+    const LOG_TYPES=[
+      { key:'all', label:'الكل' },
+      { key:'create', label:'إنشاء حساب' },
+      { key:'update', label:'تعديل بيانات' },
+      { key:'password', label:'تغيير كلمة المرور' },
+      { key:'reveal', label:'عرض كلمة المرور' },
+      { key:'delete', label:'حذف حساب' },
+    ];
+    const LOG_ICONS={
+      create:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/>',
+      update:'<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
+      password:'<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+      reveal:'<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+      delete:'<path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/>',
+    };
+    const LOG_ARROW='<svg class="lc-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>';
+    const KUWAIT_TZ='Asia/Kuwait';
+    const logDayKeyFmt=new Intl.DateTimeFormat('en-CA',{ timeZone:KUWAIT_TZ, year:'numeric', month:'2-digit', day:'2-digit' });
+    const logDayFmt=new Intl.DateTimeFormat('ar',{ timeZone:KUWAIT_TZ, weekday:'long', day:'numeric', month:'long', year:'numeric' });
+    const logTimeFmt=new Intl.DateTimeFormat('ar',{ timeZone:KUWAIT_TZ, hour:'numeric', minute:'2-digit' });
+    const logFullFmt=new Intl.DateTimeFormat('ar',{ timeZone:KUWAIT_TZ, dateStyle:'full', timeStyle:'medium' });
+
+    let logsEntries=[];
+    let logsLimit=LOGS_PAGE;
+    let logsHasMore=false;
+    let logsFilter='all';
+    let logsScopeTarget=null;   // { uid, name } when showing one account's log
+    let logsReturnTo=null;      // { kind:'teacher'|'admin', uid } — where رجوع goes
+    let logsLoadFailed=false;
+    let logsLoaded=false;
+    let profileOpenedFromLogs=false;
+
+    function logDayLabel(ms){
+      const key=logDayKeyFmt.format(new Date(ms));
+      const today=logDayKeyFmt.format(new Date());
+      const yesterday=logDayKeyFmt.format(new Date(Date.now()-86400000));
+      if(key===today) return 'اليوم';
+      if(key===yesterday) return 'أمس';
+      return logDayFmt.format(new Date(ms));
+    }
+    function logRelative(ms){
+      const mins=Math.floor((Date.now()-ms)/60000);
+      if(mins<1) return 'الآن';
+      if(mins<60) return `منذ ${toArabicDigits(String(mins))} د`;
+      const hours=Math.floor(mins/60);
+      if(hours<24) return `منذ ${toArabicDigits(String(hours))} س`;
+      return '';
+    }
+    function logHaystack(e){
+      return normalizeArabic([
+        e.actorName, e.targetName, e.targetCivilId, e.department, e.summary,
+        ...(Array.isArray(e.changes)?e.changes.map(c=>c.label):[]),
+      ].filter(Boolean).join(' ')).toLowerCase();
+    }
+    function logKindLabel(role){
+      const r=(role||'').toString().toLowerCase();
+      return r==='admin' ? 'المشرف' : (r==='head' ? 'رئيس القسم' : 'المعلّم');
+    }
+    function logValueText(key, v){
+      if(v==null || v==='') return 'فارغ';
+      const s=String(v);
+      return key==='classes' ? toArabicDigits(s) : s;
+    }
+    function renderLogChange(c){
+      const li=document.createElement('li');
+      li.className='log-change';
+      let html=`<span class="lc-label">${escapeHtml(c.label||c.key||'')}</span>`;
+      const hasList=Array.isArray(c.added)||Array.isArray(c.removed);
+      if(hasList){
+        (c.added||[]).forEach(v=>{ html+=`<span class="lc-chip add">+ ${escapeHtml(logValueText(c.key,v))}</span>`; });
+        (c.removed||[]).forEach(v=>{ html+=`<span class="lc-chip rem">${escapeHtml(logValueText(c.key,v))}</span>`; });
+      }else if(typeof c.to==='boolean'){
+        html+= c.to ? '<span class="lc-chip add">مُنحت</span>' : '<span class="lc-chip rem">سُحبت</span>';
+      }else if(!('from' in c) && !('to' in c)){
+        html+='<span class="lc-chip note">تم تغييرها</span>';
+      }else{
+        if(c.from!=null && c.from!=='') html+=`<span class="lc-from">${escapeHtml(logValueText(c.key,c.from))}</span>${LOG_ARROW}`;
+        html+=`<span class="lc-to">${escapeHtml(logValueText(c.key,c.to))}</span>`;
+      }
+      li.innerHTML=html;
+      return li;
+    }
+    function buildLogCard(e){
+      const type=LOG_ICONS[e.type] ? e.type : 'update';
+      const card=document.createElement('article');
+      card.className=`log-card t-${type}`;
+      const kind=logKindLabel(e.targetRole);
+      const targetName=e.targetName||(e.targetCivilId?toArabicDigits(e.targetCivilId):'')||'حساب';
+      const stillExists=allTeachersCache.some(t=>t.uid===e.targetUid);
+      const verbs={
+        create:`أنشأ حساب ${kind}`,
+        update:`عدّل بيانات ${kind}`,
+        password:`غيّر كلمة مرور دخول ${kind}`,
+        reveal:`اطّلع على كلمة المرور الظاهرة لـ${kind}`,
+        delete:`حذف حساب ${kind}`,
+      };
+      const tags=[];
+      if(e.department) tags.push(`<span class="log-tag">${escapeHtml(e.department)}</span>`);
+      if(e.targetCivilId) tags.push(`<span class="log-tag">رقم البطاقة ${escapeHtml(toArabicDigits(e.targetCivilId))}</span>`);
+      if((e.actorRole||'')==='head') tags.push('<span class="log-tag by-head">بواسطة رئيس القسم</span>');
+      if(type!=='delete' && allTeachersCache.length && !stillExists) tags.push('<span class="log-tag gone">الحساب محذوف الآن</span>');
+      const date=e._ms ? new Date(e._ms) : null;
+      const rel=e._ms ? logRelative(e._ms) : '';
+      card.innerHTML=`
+        <div class="log-ic"><svg viewBox="0 0 24 24" aria-hidden="true">${LOG_ICONS[type]}</svg></div>
+        <div class="log-body">
+          <div class="log-line"><b>${escapeHtml(e.actorName||'غير معروف')}</b> ${escapeHtml(verbs[type])} <button type="button" class="log-target${stillExists?'':' is-gone'}"${stillExists?'':' disabled'}>${escapeHtml(targetName)}</button></div>
+          ${tags.length?`<div class="log-tags">${tags.join('')}</div>`:''}
+        </div>
+        <time class="log-time"${date?` datetime="${date.toISOString()}" title="${escapeHtml(logFullFmt.format(date))}"`:''}>${date?escapeHtml(logTimeFmt.format(date)):'—'}${rel?`<small>${escapeHtml(rel)}</small>`:''}</time>`;
+      const changes=Array.isArray(e.changes)?e.changes:[];
+      if(changes.length){
+        const ul=document.createElement('ul');
+        ul.className='log-changes';
+        const VISIBLE=5;
+        changes.forEach((c,i)=>{
+          const li=renderLogChange(c);
+          if(i>=VISIBLE) li.hidden=true;
+          ul.appendChild(li);
+        });
+        if(changes.length>VISIBLE){
+          const more=document.createElement('button');
+          more.type='button';
+          more.className='log-more-changes';
+          more.textContent=`عرض كل التغييرات (${toArabicDigits(String(changes.length))})`;
+          more.addEventListener('click',()=>{ ul.querySelectorAll('li[hidden]').forEach(li=>li.hidden=false); more.remove(); });
+          ul.appendChild(more);
+        }
+        card.querySelector('.log-body').appendChild(ul);
+      }
+      if(stillExists){
+        card.querySelector('.log-target').addEventListener('click',()=>{
+          const t=allTeachersCache.find(x=>x.uid===e.targetUid);
+          profileOpenedFromLogs=true;
+          if((t?.role||'').toString().toLowerCase()==='admin') openAdminEditor(e.targetUid);
+          else openTeacherEditor(e.targetUid,{ syncRoute:true });
+        });
+      }
+      return card;
+    }
+    function logsEmptyState(title, text){
+      return `<div class="logs-empty"><div class="logs-empty-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/><path d="M12 7v5l3 2"/></svg></div><strong>${escapeHtml(title)}</strong><span>${escapeHtml(text)}</span></div>`;
+    }
+    function renderAccountLogs(){
+      const tokens=normalizeArabic(logsSearch.value).trim().toLowerCase().split(/\s+/).filter(Boolean);
+      const searched=tokens.length ? logsEntries.filter(e=>{ const h=logHaystack(e); return tokens.every(t=>h.includes(t)); }) : logsEntries;
+      const counts={ all:searched.length };
+      searched.forEach(e=>{ counts[e.type]=(counts[e.type]||0)+1; });
+      logsFilters.innerHTML=LOG_TYPES.map(t=>`<button type="button" role="tab" class="logs-filter t-${t.key}${logsFilter===t.key?' active':''}" aria-selected="${logsFilter===t.key}" data-type="${t.key}">${t.key!=='all'?'<span class="dot"></span>':''}${escapeHtml(t.label)}<span class="n">${toArabicDigits(String(counts[t.key]||0))}</span></button>`).join('');
+      const shown=logsFilter==='all' ? searched : searched.filter(e=>e.type===logsFilter);
+      logsList.innerHTML='';
+      if(logsLoadFailed){
+        logsList.innerHTML=logsEmptyState('تعذّر تحميل السجل','تحقق من الاتصال ثم اضغط زر التحديث.');
+      }else if(!logsEntries.length){
+        logsList.innerHTML=logsScopeTarget
+          ? logsEmptyState('لا توجد سجلات لهذا الحساب','ستظهر هنا أي عملية إنشاء أو تعديل أو تغيير لكلمة المرور تتم على هذا الحساب.')
+          : logsEmptyState('لا توجد سجلات بعد','من الآن: كل إنشاء أو تعديل أو حذف لحساب، وكل تغيير أو عرض لكلمة مرور، يُسجَّل هنا مع من قام به ووقته وما الذي تغيّر.');
+      }else if(!shown.length){
+        logsList.innerHTML=logsEmptyState('لا توجد نتائج مطابقة','جرّب كلمة بحث أخرى أو نوع إجراء مختلف.');
+      }else{
+        let lastDay='';
+        shown.forEach(e=>{
+          const day=e._ms ? logDayLabel(e._ms) : 'الآن';
+          if(day!==lastDay){
+            const h=document.createElement('div');
+            h.className='logs-day';
+            h.textContent=day;
+            logsList.appendChild(h);
+            lastDay=day;
+          }
+          logsList.appendChild(buildLogCard(e));
+        });
+      }
+      logsFooter.hidden=logsLoadFailed || !logsEntries.length;
+      logsMore.hidden=!logsHasMore;
+      logsFooterNote.textContent=logsEntries.length
+        ? (logsHasMore ? `يُعرض آخر ${toArabicDigits(String(logsEntries.length))} سجل` : `${toArabicDigits(String(logsEntries.length))} سجل — هذه كل السجلات`)
+        : '';
+    }
+    async function loadAccountLogs(){
+      logsRefresh.classList.add('is-spinning');
+      logsRefresh.disabled=true;
+      if(!logsLoaded) logsList.innerHTML='<div class="logs-skeleton"></div>'.repeat(4);
+      try{
+        let docs;
+        if(logsScopeTarget){
+          // Equality only (no orderBy), so no composite index is needed;
+          // one account's history is small — sorted below.
+          const snap=await getDocs(query(collection(db,'accountLogs'), where('targetUid','==',logsScopeTarget.uid)));
+          docs=snap.docs;
+          logsHasMore=false;
+        }else{
+          const snap=await getDocs(query(collection(db,'accountLogs'), orderBy('at','desc'), limit(logsLimit+1)));
+          logsHasMore=snap.docs.length>logsLimit;
+          docs=snap.docs.slice(0,logsLimit);
+        }
+        logsEntries=docs.map(d=>{
+          // 'estimate' so an entry written moments ago still has a time.
+          const x=d.data({ serverTimestamps:'estimate' })||{};
+          return { id:d.id, ...x, _ms:(x.at && typeof x.at.toMillis==='function') ? x.at.toMillis() : 0 };
+        }).sort((a,b)=>b._ms-a._ms);
+        logsLoadFailed=false;
+      }catch(e){
+        console.error('[accountLogs] load failed:', e?.message||e);
+        logsLoadFailed=true;
+      }finally{
+        logsLoaded=true;
+        logsRefresh.classList.remove('is-spinning');
+        logsRefresh.disabled=false;
+        renderAccountLogs();
+      }
+    }
+    function openLogsPanel({ uid=null, name='', returnTo=null }={}){
+      Array.from(subjectsList.children).forEach(b=>b.classList.remove('subject-selected'));
+      openAdminsTop.classList.remove('subject-selected');
+      [subjectSheet,teacherSheet,adminsSheet,adminSheet].forEach(s=>closeSheet(s));
+      leaveTeacherProfile();
+      closeTelegramPanel();
+      clearTeacherListPresence();
+      clearAdminListPresence();
+      teacherOpenedFromTelegram=false;
+      const scopeChanged=(logsScopeTarget?.uid||null)!==(uid||null);
+      logsScopeTarget=uid ? { uid, name } : null;
+      logsReturnTo=returnTo;
+      if(scopeChanged){
+        logsFilter='all';
+        logsSearch.value='';
+        logsEntries=[];
+        logsLoaded=false;
+        logsLimit=LOGS_PAGE;
+      }
+      logsScope.hidden=!uid;
+      logsScopeName.textContent=name||'';
+      openLogsBtn.classList.toggle('subject-selected', !uid);
+      openSheet(logsSheet);
+      if(logsLoaded) renderAccountLogs();
+      loadAccountLogs();
+      // Needed to tell which accounts still exist (and to open them).
+      if(!allTeachersCache.length) loadAllTeachersCache().then(()=>{ if(logsSheet.classList.contains('open')) renderAccountLogs(); });
+    }
+    // Back to the log after a profile opened from it — same scope, filter
+    // and search as before.
+    function reopenLogsPanel(){
+      openLogsPanel({ uid:logsScopeTarget?.uid||null, name:logsScopeTarget?.name||'', returnTo:logsReturnTo });
+    }
+    function closeLogsPanel(){
+      if(!logsSheet.classList.contains('open')) return;
+      closeSheet(logsSheet);
+      openLogsBtn.classList.remove('subject-selected');
+    }
+    openLogsBtn.addEventListener('click',()=>{ profileOpenedFromLogs=false; openLogsPanel(); });
+    closeLogs.addEventListener('click',()=>{
+      const back=logsReturnTo;
+      logsReturnTo=null;
+      closeLogsPanel();
+      if(back?.kind==='teacher') openTeacherEditor(back.uid,{ syncRoute:true });
+      else if(back?.kind==='admin') openAdminEditor(back.uid);
+    });
+    logsScopeClear.addEventListener('click',()=>openLogsPanel());
+    logsRefresh.addEventListener('click', loadAccountLogs);
+    logsMore.addEventListener('click', async ()=>{
+      logsLimit+=LOGS_PAGE;
+      setBusy(logsMore,true);
+      try{ await loadAccountLogs(); }finally{ setBusy(logsMore,false); }
+    });
+    logsSearch.addEventListener('input', renderAccountLogs);
+    logsFilters.addEventListener('click',(e)=>{
+      const btn=e.target.closest('.logs-filter');
+      if(!btn) return;
+      logsFilter=btn.dataset.type||'all';
+      renderAccountLogs();
+    });
+    teacherLogBtn.addEventListener('click',()=>{
+      if(!currentTeacher.uid) return;
+      profileOpenedFromLogs=false;
+      openLogsPanel({ uid:currentTeacher.uid, name:currentTeacher.data?.name||'', returnTo:{ kind:'teacher', uid:currentTeacher.uid } });
+    });
+    adminLogBtn.addEventListener('click',()=>{
+      if(!currentAdmin.uid) return;
+      profileOpenedFromLogs=false;
+      openLogsPanel({ uid:currentAdmin.uid, name:currentAdmin.data?.name||'', returnTo:{ kind:'admin', uid:currentAdmin.uid } });
+    });
+
     async function applyTeacherRoute(){
       const routeTeacherId = getRouteTeacherId();
       syncTeacherRouteMode();
       if(!routeTeacherId){
+        // Browser back from a profile opened out of سجل الحسابات.
+        if(profileOpenedFromLogs && teacherSheet.classList.contains('open')){
+          profileOpenedFromLogs=false;
+          closeSheet(teacherSheet);
+          reopenLogsPanel();
+          return;
+        }
         // Browser back from a profile opened out of the Telegram list.
         if(teacherOpenedFromTelegram && teacherSheet.classList.contains('open')){
           teacherOpenedFromTelegram=false;
@@ -2806,6 +3329,7 @@
         const data=snap.exists()?snap.data():{};
         if((data?.role||'').toString().toLowerCase()!=='admin'){isCurrentUserAdmin=false;show(sDenied);return;}
         isCurrentUserAdmin=true;
+        setAccountLogActor({ uid:user.uid, name:data.name||getTeacherCivilId(data)||user.email, role:'admin' });
         startPresenceHeartbeat(db, user.uid);
         classOptions = sortClassList(await fetchClassList(db));
         renderSubjects();
@@ -2824,7 +3348,9 @@
         }
         [subjectSheet,teacherSheet,adminsSheet,adminSheet].forEach(s=>closeSheet(s));
         closeTelegramPanel();
+        closeLogsPanel();
         teacherOpenedFromTelegram=false;
+        profileOpenedFromLogs=false;
         openAdminsTop.classList.remove('subject-selected');
         Array.from(subjectsList.children).forEach(b=>b.classList.remove('subject-selected'));
         if(addTeacherModal.classList.contains('active')) closeModal(addTeacherModal);
